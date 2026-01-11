@@ -1,177 +1,189 @@
-SE Limited Edition Fashion - MERN Stack Website
-Project Overview
+# SE Limited Edition Fashion – MERN Stack Website
 
-SE is a limited-edition fashion brand based in Colombo, Sri Lanka, focused on youth-driven, unisex streetwear. This website is designed to provide a modern, premium online shopping experience with limited-edition product drops, real-time stock updates, and surprise gifts for customers.
+## Project Overview
 
-The design references Moderno Demo
-, but all features are customized for SE to stand out against competitors.
+**SE Limited Edition Fashion** is a premium, youth-focused, unisex streetwear brand based in **Colombo, Sri Lanka**.  
+This project is a **full-stack MERN e-commerce website** designed to deliver a modern online shopping experience featuring:
 
-Project Team
-Role	Name	Responsibilities
-Lead Developer	Mohamed Hajith	Overall project management, architecture design, MERN stack integration, code review
-Frontend Developer	Member 1	React.js components, responsive UI, Redux state management
-Backend Developer	Member 2	Node.js / Express API, MongoDB database design, authentication, stock management
-Fullstack / Admin Panel	Member 3	Admin panel, email notifications, WhatsApp integration, deployment assistance
-Tech Stack
+- Limited-edition product drops  
+- Real-time stock updates  
+- Surprise gifts and premium branding  
 
-Frontend: React.js, Redux Toolkit, Tailwind CSS / Styled Components
+The UI inspiration is taken from the **Moderno Demo**, but all features and implementations are fully customized to differentiate SE from competitors.
 
-Backend: Node.js, Express.js
+---
 
-Database: MongoDB (Atlas / Cluster)
+## Project Team
 
-Payment Gateways: Stripe, PayPal, Google Pay, Apple Pay
+| Role | Name | Responsibilities |
+|-----|------|------------------|
+| **Lead Developer** | Mohamed Hajith | Overall project management, system architecture, MERN stack integration, code review |
+| **Frontend Developer** | Member 1 | React.js components, responsive UI, Redux state management |
+| **Backend Developer** | Member 2 | Node.js & Express APIs, MongoDB schema design, authentication, stock management |
+| **Fullstack / Admin Panel Developer** | Member 3 | Admin panel, email notifications, WhatsApp integration, deployment support |
 
-Real-Time Updates: Socket.io for live stock alerts
+---
 
-Email Notifications: NodeMailer / SendGrid
+## Tech Stack
 
-Chat Support: WhatsApp API
+### Frontend
+- React.js  
+- Redux Toolkit  
+- Tailwind CSS / Styled Components  
 
-Hosting & Deployment: Vercel / Netlify (Frontend), Render / AWS EC2 / Heroku (Backend)
+### Backend
+- Node.js  
+- Express.js  
 
-Security: JWT Authentication, SSL Certificates
+### Database
+- MongoDB (Atlas / Cluster)
 
-Features
-Customer-Facing
+### Payments
+- Stripe  
+- PayPal  
+- Google Pay  
+- Apple Pay  
 
-Modern homepage with featured collections & limited-edition products
+### Real-Time Features
+- Socket.io (live stock updates & alerts)
 
-Product categories, listing pages, and detailed product pages
+### Notifications & Support
+- NodeMailer / SendGrid (Email notifications)  
+- WhatsApp API (Customer chat support)
 
-Real-time stock updates and limited-stock alerts (“Only 3 left”, “Selling fast”)
+### Hosting & Deployment
+- **Frontend:** Vercel / Netlify  
+- **Backend:** Render / AWS EC2 / Heroku  
 
-Cart and checkout with secure payments (cards, Google Pay, Apple Pay)
+### Security
+- JWT Authentication  
+- SSL Certificates  
 
-Customer accounts with login, signup, order history, saved addresses
+---
 
-Email notifications: signup, order confirmation, low-stock alerts
+## Features
 
-WhatsApp one-click chat support
+### Customer-Facing Features
+- Modern homepage with featured collections and limited-edition drops  
+- Product categories, listings, and detailed product pages  
+- Real-time stock alerts (e.g., *“Only 3 left”*, *“Selling fast”*)  
+- Cart and secure checkout system  
+- Multiple payment options (Card, Google Pay, Apple Pay)  
+- Customer accounts (signup, login, order history, saved addresses)  
+- Email notifications (signup, order confirmation, low-stock alerts)  
+- One-click WhatsApp chat support  
+- Fully responsive design (mobile, tablet, desktop)
 
-Fully responsive on mobile, tablet, and desktop
+---
 
-Admin Panel
+### Admin Panel Features
+- Product, category, and stock management  
+- View and manage customer orders  
+- Email notification configuration  
+- Sales and stock analytics dashboard  
+- Role-based authentication for admin users  
 
-Manage products, stock levels, and categories
+---
 
-View and manage customer orders
+## Development Process
 
-Configure email notifications
+### 1. Planning & Design (1–2 Weeks)
+- Analyze client requirements  
+- Create wireframes and UI/UX mockups based on Moderno demo  
+- Finalize color palette, typography, and responsive layouts  
 
-Dashboard for sales and stock analytics
+### 2. Frontend Development (2–3 Weeks)
+- React project setup  
+- Homepage, product pages, cart, and checkout components  
+- Redux state management  
+- Responsive UI implementation  
 
-Role-based authentication for admin users
+### 3. Backend Development (2–3 Weeks)
+- Express.js server setup  
+- MongoDB schemas for users, products, orders, and notifications  
+- JWT authentication and secure API endpoints  
 
-Development Process
-1. Planning & Design (1–2 weeks)
+### 4. Payment Integration (1 Week)
+- Stripe, PayPal, Google Pay integration  
+- Secure checkout with SSL  
+- Payment testing for global usage  
 
-Analyze client requirements
+### 5. Admin Panel & Notifications (1–2 Weeks)
+- React-based admin dashboard  
+- Product, order, and stock management  
+- Email alerts and notifications  
+- Real-time stock updates via Socket.io  
 
-Wireframes & UI/UX mockups based on Moderno demo
+### 6. Testing & QA (1 Week)
+- Cross-browser and device testing  
+- Checkout and email notification testing  
+- Performance and security optimization  
 
-Finalize color palette, typography, and responsive layout
+### 7. Deployment & Launch (1 Week)
+- Frontend deployment (Vercel / Netlify)  
+- Backend deployment (Render / AWS / Heroku)  
+- Domain setup and SSL configuration  
+- Post-launch monitoring  
 
-2. Frontend Development (2–3 weeks)
+---
 
-React project setup
-
-Homepage, product pages, cart, and checkout components
-
-Responsive design implementation
-
-3. Backend Development (2–3 weeks)
-
-Express.js server setup
-
-MongoDB schema design for users, products, orders, notifications
-
-Authentication (JWT) and secure API endpoints
-
-4. Payment Integration (1 week)
-
-Stripe, PayPal, Google Pay integration
-
-Secure checkout workflow with SSL
-
-Testing payments for global support
-
-5. Admin Panel & Notifications (1–2 weeks)
-
-React-based admin panel
-
-Manage products, orders, stock, and email alerts
-
-Real-time stock updates using Socket.io
-
-6. Testing & QA (1 week)
-
-Cross-browser and device testing
-
-Checkout and email notification testing
-
-Performance optimization
-
-7. Deployment & Launch (1 week)
-
-Frontend deployment (Vercel / Netlify)
-
-Backend deployment (Render / AWS / Heroku)
-
-Domain setup & SSL certificate
-
-Post-launch monitoring
-
-Project Structure
+## Project Structure
 
 /SE-Fashion-Website
-├── frontend/          # React app
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── redux/
-│   │   └── App.js
-├── backend/           # Node.js + Express API
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── utils/
-│   └── server.js
-├── admin/             # React Admin Panel
+├── frontend/ # React customer-facing application
+│ ├── src/
+│ │ ├── components/
+│ │ ├── pages/
+│ │ ├── redux/
+│ │ └── App.js
+├── backend/ # Node.js + Express REST API
+│ ├── controllers/
+│ ├── models/
+│ ├── routes/
+│ ├── utils/
+│ └── server.js
+├── admin/ # React Admin Panel
 ├── README.md
 └── package.json
 
-Roles & Responsibilities (Team Collaboration)
 
-Lead (Mohamed Hajith): Architecture, code review, MERN integration, project management
+---
 
-Frontend Developer: React components, responsive design, Redux state management
+## Roles & Responsibilities
 
-Backend Developer: Node.js API, MongoDB database, JWT authentication, stock management
+- **Lead Developer:** Architecture design, code reviews, MERN integration, project coordination  
+- **Frontend Developer:** UI components, responsive design, Redux state handling  
+- **Backend Developer:** API development, database design, authentication, stock control  
+- **Fullstack / Admin Developer:** Admin panel, notifications, WhatsApp integration, deployment support  
 
-Fullstack / Admin Panel Developer: Admin panel, email notifications, WhatsApp integration, deployment assistance
+---
 
-Deployment
+## Deployment
 
-Frontend: Vercel / Netlify
+- **Frontend:** Vercel / Netlify  
+- **Backend:** Render / AWS EC2 / Heroku  
+- **Domain & SSL:** Configured through hosting provider  
 
-Backend: Render / AWS EC2 / Heroku
+---
 
-Domain & SSL: Configured via hosting provider
+## Maintenance
 
-Maintenance
+- Monthly dependency updates and security patches  
+- Product and stock management via admin panel  
+- Continuous monitoring of payments and email services  
+- Future feature additions (new collections, promotions, campaigns)  
 
-Monthly updates for dependencies & security patches
+---
 
-Product & stock management via admin panel
+## References
 
-Email notifications & payment monitoring
+- **Design Reference:** Moderno Demo  
+- **Client Requirements:** SE Fashion (PDF provided)
 
-Feature additions (new collections, promotions)
+---
 
-References
+## Author
 
-Reference Website Design: Moderno Demo
-
-Client Requirements: PDF provided by SE Fashion
-
+**Mohamed Hajith**  
+Lead Developer – MERN Stack  
+SE Limited Edition Fashion Project
