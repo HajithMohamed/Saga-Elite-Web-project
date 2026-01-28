@@ -1,89 +1,136 @@
 # SE Limited Edition Fashion  
 _Unisex | Youth-Driven | Statement Style_  
-**Tagline:** Rare Fit Forever
+**Tagline:** Rare Fit Forever  
 
 ---
 
 ## 📌 Project Overview
 
-**SE Limited Edition Fashion (Sagaa Elite)** is a drop-based, limited-edition fashion e-commerce website developed using the **MERN stack**.
+**SE Limited Edition Fashion (Sagaa Elite)** is a limited-edition fashion e-commerce platform developed using the **MERN stack**.
 
-The platform is designed for a Sri Lankan startup clothing brand that focuses on **unisex streetwear**, exclusivity, and emotional brand connection rather than traditional mass-market categories.
+The platform is designed for a **Sri Lankan startup clothing brand**, focusing on **unisex streetwear**, while also supporting **Boys and Girls collections** when required.
 
-Instead of standard product categories, SE follows a **Drop Selling Model**, where each collection is released in limited quantities and archived once sold out.
+The website follows a **Drop Selling Model**, where products are released in limited quantities under themed drops rather than traditional long-term catalogs.
 
 ---
 
 ## 🎯 Project Objectives
 
-- Build a modern e-commerce platform for a fashion startup
-- Implement drop-based product releases (no fixed categories)
-- Provide real-time stock updates for limited-edition items
-- Develop a secure admin panel for product and order management
-- Ensure a responsive and premium user experience
-- Use industry-standard MERN stack technologies
+- Build a modern MERN-based e-commerce system
+- Support **unisex products** with optional **Boys / Girls** classification
+- Implement drop-based product releases
+- Provide real-time stock updates
+- Enable Sri Lanka–friendly manual payment confirmation
+- Offer a powerful admin panel for business control
 
 ---
 
 ## 👥 Target Audience
 
-- Teenagers and young adults (16–30)
+- Teenagers & young adults (16–30)
 - Fashion-forward individuals
-- Customers who value exclusivity and limited drops
-- Unisex streetwear and casual wear enthusiasts
+- Customers who value exclusivity and limited editions
+- **Unisex, Boys, and Girls streetwear customers**
 
 ---
 
 ## 🎨 Brand Tone & Identity
 
 - **Tone:** Friendly, confident, luxury with emotion  
-- **Style:** Clean, modern, minimal  
-- **Brand Feel:** Exclusive, meaningful, bold  
+- **Style:** Clean, minimal, modern  
+- **Brand Feel:** Exclusive, expressive, meaningful  
 
 ---
 
-## 🧠 Core Concept: Drop-Based Selling
+## 🧠 Product Structure & Categorization
 
-- No traditional categories (Men / Women / Accessories)
-- Products are grouped into **Drops**
-- Each drop includes:
-  - A unique theme or story
-  - Limited stock items
+This platform supports **flexible product classification**:
+
+### Primary Model – Drop-Based Selling
+- Products are released under **Drops**
+- Each drop has:
+  - A theme or concept
+  - Limited stock
   - Temporary availability
-- Once stock reaches zero, the drop is archived
+
+### Product Type Classification
+Each product belongs to one of the following:
+- **Unisex**
+- **Boys**
+- **Girls**
+
+> This allows flexibility while keeping the brand minimal and modern.
 
 ---
 
 ## ✨ Features
 
 ### 🛍️ Customer-Facing Features
-- Modern and premium homepage
-- Highlighted current drops
-- Drop listing and single product pages
-- Real-time stock warnings:
+- Premium modern homepage
+- Active & upcoming drops
+- Product listing & detailed product pages
+- Product labels:
+  - Unisex / Boys / Girls
+- Real-time stock messages:
   - “Selling Fast”
   - “Only Few Left”
-- Shopping cart and secure checkout
-- User authentication (signup & login)
-- Customer dashboard with order history
+- Shopping cart & checkout
+- Customer authentication (Signup / Login)
+- Order history dashboard
 - One-click WhatsApp customer support
-- Fully responsive design (mobile, tablet, desktop)
+- Fully responsive design
 
 ---
 
-### ⚡ Real-Time Features (Socket.io)
-- Live stock updates
-- Instant sold-out status
-- Prevents overselling
-- Admin receives low-stock alerts in real time
+## 💳 Payment System (Sri Lanka Friendly – Manual Verification)
+
+The system uses a **manual payment confirmation model**, suitable for Sri Lankan customers and startup operations.
+
+### Supported Payment Methods
+- Bank transfer (online banking)
+- Mobile banking apps (Commercial, Sampath, BOC, FriMi, Genie)
+- ATM deposits
+- Cash deposit slips
+
+### Payment Flow
+1. Customer places an order
+2. Order status → `Pending Payment`
+3. Customer receives payment instructions
+4. Payment proof sent via WhatsApp
+5. Admin manually verifies payment
+6. Order status updated accordingly
 
 ---
 
-### 🛠️ Admin Panel Features
-- Create and manage Drops
-- Product management with limited stock
-- Separate image management system
-- Order management
+## 🔔 Notifications System
+
+### Email Notifications
+**Customer**
+- Signup confirmation
+- Order placed
+- Payment confirmed / rejected
+- Order shipped
+
+**Admin**
+- New order received
+- Payment proof received
+- Low stock alerts
+- Drop sold out notifications
+
+### Web Notifications (Socket.io)
+- Real-time order updates
+- Live stock changes
+- Admin alerts dashboard
+
+---
+
+## 🛠️ Admin Panel Features
+
+- Manage Drops
+- Manage Products (Unisex / Boys / Girls)
+- Image management (separate image model)
+- Manual payment confirmation
+- Order & customer management
 - Real-time stock monitoring
 - Role-based admin access
 
@@ -94,7 +141,7 @@ Instead of standard product categories, SE follows a **Drop Selling Model**, whe
 ### Frontend
 - React.js
 - Redux Toolkit
-- Tailwind CSS / Styled Components
+- Tailwind CSS
 
 ### Backend
 - Node.js
@@ -103,123 +150,61 @@ Instead of standard product categories, SE follows a **Drop Selling Model**, whe
 ### Database
 - MongoDB Atlas
 
-### Real-Time Communication
+### Real-Time
 - Socket.io
 
-### Payments
-- PayHere (Sri Lanka supported)
-- Visa / MasterCard (via gateway)
-
 ### Image Storage
-- Cloudinary (separate Image model)
-
-### Notifications & Support
-- NodeMailer / SendGrid
-- WhatsApp API
+- Cloudinary
 
 ---
 
-## 🏗️ System Architecture
+## 👨‍💻 Team Members (3-Member Group)
 
-- Customer Website (React)
-- Admin Panel (React)
-- Backend REST API (Node.js + Express)
-- MongoDB Atlas (Database)
-- Cloudinary (Image storage)
+### Member 1 – Lead Developer
+- System architecture
+- MERN integration
+- Code review & coordination
 
-All protected routes use **JWT-based authentication**.
+### Member 2 – Frontend Developer
+- React UI
+- Responsive design
+- Redux state handling
 
----
-
-
----
-
-## 👨‍💻 Team Members & Responsibilities
-
-### 👤 Member 1 – Lead Developer
-- Overall system architecture
-- MERN stack integration
-- Backend–Frontend coordination
-- Code review and project management
-
-### 👤 Member 2 – Frontend Developer
-- React UI components
-- Responsive design implementation
-- Redux state management
-- Customer-facing pages
-
-### 👤 Member 3 – Backend / Admin Developer
-- REST API development
-- MongoDB schema design
-- Authentication & authorization
-- Admin panel development
+### Member 3 – Backend / Admin Developer
+- REST APIs
+- MongoDB schemas
+- Authentication
+- Admin panel
 - Socket.io integration
-
----
-
-## 🗓️ Development Timeline (Estimated)
-
-| Phase | Duration |
-|-----|----------|
-| Planning & UI Design | 1–2 Weeks |
-| Frontend Development | 2–3 Weeks |
-| Backend Development | 2–3 Weeks |
-| Payment Integration | 1 Week |
-| Admin Panel | 1–2 Weeks |
-| Testing & QA | 1 Week |
-| Deployment | 1 Week |
 
 ---
 
 ## 🚀 Deployment
 
-- **Frontend:** Vercel / Netlify
-- **Backend:** Render / AWS EC2 / Heroku
-- **Database:** MongoDB Atlas
-- **Domain & SSL:** Configured via hosting provider
-
----
-
-## 🔧 Maintenance Plan
-
-- Monthly dependency updates
-- Security patches
-- Drop & product updates
-- Performance monitoring
-- Feature enhancements
-
----
-
-## 🔗 Reference
-
-- **Design Inspiration:**  
-  https://parkofideas.com/moderno/demo/home-3/
+- Frontend: Vercel / Netlify
+- Backend: Render / AWS / Heroku
+- Database: MongoDB Atlas
+- SSL & Domain: Hosting provider
 
 ---
 
 ## 📚 Academic Context
 
-This project is developed as a **group project** by undergraduate students, following modern full-stack development practices and real-world startup requirements.
+This project is developed as a **group project** by undergraduate students, applying real-world business logic and modern full-stack development practices.
 
 ---
 
-## ✍️ Author(s)
+## 🔗 Design Reference
+
+- https://parkofideas.com/moderno/demo/home-3/
+
+---
+
+## ✍️ Authors
 
 SE Limited Edition Fashion – Group Project  
 Faculty of Technology  
 Bachelor of ICT (Honours)
 
 ---
-
-## ✅ Final Note
-
-This project demonstrates:
-- Real-world e-commerce concepts
-- Modern MERN stack usage
-- Drop-based business logic
-- Team collaboration and system design
-
----
-
-
 
