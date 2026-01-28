@@ -1,189 +1,225 @@
-# SE Limited Edition Fashion – MERN Stack Website
-
-## Project Overview
-
-**SE Limited Edition Fashion** is a premium, youth-focused, unisex streetwear brand based in **Colombo, Sri Lanka**.  
-This project is a **full-stack MERN e-commerce website** designed to deliver a modern online shopping experience featuring:
-
-- Limited-edition product drops  
-- Real-time stock updates  
-- Surprise gifts and premium branding  
-
-The UI inspiration is taken from the **Moderno Demo**, but all features and implementations are fully customized to differentiate SE from competitors.
+# SE Limited Edition Fashion  
+_Unisex | Youth-Driven | Statement Style_  
+**Tagline:** Rare Fit Forever
 
 ---
 
-## Project Team
+## 📌 Project Overview
 
-| Role | Name | Responsibilities |
-|-----|------|------------------|
-| **Lead Developer** | Mohamed Hajith | Overall project management, system architecture, MERN stack integration, code review |
-| **Frontend Developer** | Member 1 | React.js components, responsive UI, Redux state management |
-| **Backend Developer** | Member 2 | Node.js & Express APIs, MongoDB schema design, authentication, stock management |
-| **Fullstack / Admin Panel Developer** | Member 3 | Admin panel, email notifications, WhatsApp integration, deployment support |
+**SE Limited Edition Fashion (Sagaa Elite)** is a drop-based, limited-edition fashion e-commerce website developed using the **MERN stack**.
 
----
+The platform is designed for a Sri Lankan startup clothing brand that focuses on **unisex streetwear**, exclusivity, and emotional brand connection rather than traditional mass-market categories.
 
-## Tech Stack
-
-### Frontend
-- React.js  
-- Redux Toolkit  
-- Tailwind CSS / Styled Components  
-
-### Backend
-- Node.js  
-- Express.js  
-
-### Database
-- MongoDB (Atlas / Cluster)
-
-### Payments
-- Stripe  
-- PayPal  
-- Google Pay  
-- Apple Pay  
-
-### Real-Time Features
-- Socket.io (live stock updates & alerts)
-
-### Notifications & Support
-- NodeMailer / SendGrid (Email notifications)  
-- WhatsApp API (Customer chat support)
-
-### Hosting & Deployment
-- **Frontend:** Vercel / Netlify  
-- **Backend:** Render / AWS EC2 / Heroku  
-
-### Security
-- JWT Authentication  
-- SSL Certificates  
+Instead of standard product categories, SE follows a **Drop Selling Model**, where each collection is released in limited quantities and archived once sold out.
 
 ---
 
-## Features
+## 🎯 Project Objectives
 
-### Customer-Facing Features
-- Modern homepage with featured collections and limited-edition drops  
-- Product categories, listings, and detailed product pages  
-- Real-time stock alerts (e.g., *“Only 3 left”*, *“Selling fast”*)  
-- Cart and secure checkout system  
-- Multiple payment options (Card, Google Pay, Apple Pay)  
-- Customer accounts (signup, login, order history, saved addresses)  
-- Email notifications (signup, order confirmation, low-stock alerts)  
-- One-click WhatsApp chat support  
+- Build a modern e-commerce platform for a fashion startup
+- Implement drop-based product releases (no fixed categories)
+- Provide real-time stock updates for limited-edition items
+- Develop a secure admin panel for product and order management
+- Ensure a responsive and premium user experience
+- Use industry-standard MERN stack technologies
+
+---
+
+## 👥 Target Audience
+
+- Teenagers and young adults (16–30)
+- Fashion-forward individuals
+- Customers who value exclusivity and limited drops
+- Unisex streetwear and casual wear enthusiasts
+
+---
+
+## 🎨 Brand Tone & Identity
+
+- **Tone:** Friendly, confident, luxury with emotion  
+- **Style:** Clean, modern, minimal  
+- **Brand Feel:** Exclusive, meaningful, bold  
+
+---
+
+## 🧠 Core Concept: Drop-Based Selling
+
+- No traditional categories (Men / Women / Accessories)
+- Products are grouped into **Drops**
+- Each drop includes:
+  - A unique theme or story
+  - Limited stock items
+  - Temporary availability
+- Once stock reaches zero, the drop is archived
+
+---
+
+## ✨ Features
+
+### 🛍️ Customer-Facing Features
+- Modern and premium homepage
+- Highlighted current drops
+- Drop listing and single product pages
+- Real-time stock warnings:
+  - “Selling Fast”
+  - “Only Few Left”
+- Shopping cart and secure checkout
+- User authentication (signup & login)
+- Customer dashboard with order history
+- One-click WhatsApp customer support
 - Fully responsive design (mobile, tablet, desktop)
 
 ---
 
-### Admin Panel Features
-- Product, category, and stock management  
-- View and manage customer orders  
-- Email notification configuration  
-- Sales and stock analytics dashboard  
-- Role-based authentication for admin users  
+### ⚡ Real-Time Features (Socket.io)
+- Live stock updates
+- Instant sold-out status
+- Prevents overselling
+- Admin receives low-stock alerts in real time
 
 ---
 
-## Development Process
-
-### 1. Planning & Design (1–2 Weeks)
-- Analyze client requirements  
-- Create wireframes and UI/UX mockups based on Moderno demo  
-- Finalize color palette, typography, and responsive layouts  
-
-### 2. Frontend Development (2–3 Weeks)
-- React project setup  
-- Homepage, product pages, cart, and checkout components  
-- Redux state management  
-- Responsive UI implementation  
-
-### 3. Backend Development (2–3 Weeks)
-- Express.js server setup  
-- MongoDB schemas for users, products, orders, and notifications  
-- JWT authentication and secure API endpoints  
-
-### 4. Payment Integration (1 Week)
-- Stripe, PayPal, Google Pay integration  
-- Secure checkout with SSL  
-- Payment testing for global usage  
-
-### 5. Admin Panel & Notifications (1–2 Weeks)
-- React-based admin dashboard  
-- Product, order, and stock management  
-- Email alerts and notifications  
-- Real-time stock updates via Socket.io  
-
-### 6. Testing & QA (1 Week)
-- Cross-browser and device testing  
-- Checkout and email notification testing  
-- Performance and security optimization  
-
-### 7. Deployment & Launch (1 Week)
-- Frontend deployment (Vercel / Netlify)  
-- Backend deployment (Render / AWS / Heroku)  
-- Domain setup and SSL configuration  
-- Post-launch monitoring  
+### 🛠️ Admin Panel Features
+- Create and manage Drops
+- Product management with limited stock
+- Separate image management system
+- Order management
+- Real-time stock monitoring
+- Role-based admin access
 
 ---
 
-## Project Structure
+## 🧩 Tech Stack
 
-/SE-Fashion-Website
-├── frontend/ # React customer-facing application
-│ ├── src/
-│ │ ├── components/
-│ │ ├── pages/
-│ │ ├── redux/
-│ │ └── App.js
-├── backend/ # Node.js + Express REST API
-│ ├── controllers/
-│ ├── models/
-│ ├── routes/
-│ ├── utils/
-│ └── server.js
-├── admin/ # React Admin Panel
-├── README.md
-└── package.json
+### Frontend
+- React.js
+- Redux Toolkit
+- Tailwind CSS / Styled Components
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- MongoDB Atlas
+
+### Real-Time Communication
+- Socket.io
+
+### Payments
+- PayHere (Sri Lanka supported)
+- Visa / MasterCard (via gateway)
+
+### Image Storage
+- Cloudinary (separate Image model)
+
+### Notifications & Support
+- NodeMailer / SendGrid
+- WhatsApp API
+
+---
+
+## 🏗️ System Architecture
+
+- Customer Website (React)
+- Admin Panel (React)
+- Backend REST API (Node.js + Express)
+- MongoDB Atlas (Database)
+- Cloudinary (Image storage)
+
+All protected routes use **JWT-based authentication**.
+
+---
 
 
 ---
 
-## Roles & Responsibilities
+## 👨‍💻 Team Members & Responsibilities
 
-- **Lead Developer:** Architecture design, code reviews, MERN integration, project coordination  
-- **Frontend Developer:** UI components, responsive design, Redux state handling  
-- **Backend Developer:** API development, database design, authentication, stock control  
-- **Fullstack / Admin Developer:** Admin panel, notifications, WhatsApp integration, deployment support  
+### 👤 Member 1 – Lead Developer
+- Overall system architecture
+- MERN stack integration
+- Backend–Frontend coordination
+- Code review and project management
 
----
+### 👤 Member 2 – Frontend Developer
+- React UI components
+- Responsive design implementation
+- Redux state management
+- Customer-facing pages
 
-## Deployment
-
-- **Frontend:** Vercel / Netlify  
-- **Backend:** Render / AWS EC2 / Heroku  
-- **Domain & SSL:** Configured through hosting provider  
-
----
-
-## Maintenance
-
-- Monthly dependency updates and security patches  
-- Product and stock management via admin panel  
-- Continuous monitoring of payments and email services  
-- Future feature additions (new collections, promotions, campaigns)  
+### 👤 Member 3 – Backend / Admin Developer
+- REST API development
+- MongoDB schema design
+- Authentication & authorization
+- Admin panel development
+- Socket.io integration
 
 ---
 
-## References
+## 🗓️ Development Timeline (Estimated)
 
-- **Design Reference:** Moderno Demo  
-- **Client Requirements:** SE Fashion (PDF provided)
+| Phase | Duration |
+|-----|----------|
+| Planning & UI Design | 1–2 Weeks |
+| Frontend Development | 2–3 Weeks |
+| Backend Development | 2–3 Weeks |
+| Payment Integration | 1 Week |
+| Admin Panel | 1–2 Weeks |
+| Testing & QA | 1 Week |
+| Deployment | 1 Week |
 
 ---
 
-## Author
+## 🚀 Deployment
 
-**Mohamed Hajith**  
-Lead Developer – MERN Stack  
-SE Limited Edition Fashion Project
+- **Frontend:** Vercel / Netlify
+- **Backend:** Render / AWS EC2 / Heroku
+- **Database:** MongoDB Atlas
+- **Domain & SSL:** Configured via hosting provider
+
+---
+
+## 🔧 Maintenance Plan
+
+- Monthly dependency updates
+- Security patches
+- Drop & product updates
+- Performance monitoring
+- Feature enhancements
+
+---
+
+## 🔗 Reference
+
+- **Design Inspiration:**  
+  https://parkofideas.com/moderno/demo/home-3/
+
+---
+
+## 📚 Academic Context
+
+This project is developed as a **group project** by undergraduate students, following modern full-stack development practices and real-world startup requirements.
+
+---
+
+## ✍️ Author(s)
+
+SE Limited Edition Fashion – Group Project  
+Faculty of Technology  
+Bachelor of ICT (Honours)
+
+---
+
+## ✅ Final Note
+
+This project demonstrates:
+- Real-world e-commerce concepts
+- Modern MERN stack usage
+- Drop-based business logic
+- Team collaboration and system design
+
+---
+
+
+
