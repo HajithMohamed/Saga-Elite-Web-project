@@ -1,6 +1,6 @@
 # SE Limited Edition Fashion  
 _Unisex | Youth-Driven | Statement Style_  
-**Tagline:** Rare Fit Forever  
+**Tagline:** Rare Fit Forever     
 
 ---
 
@@ -207,5 +207,6 @@ Faculty of Technology
 Bachelor of ICT (Honours)
 
 ---
+
 
 
