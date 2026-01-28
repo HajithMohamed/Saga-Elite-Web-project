@@ -14,7 +14,7 @@ The website follows a **Drop Selling Model**, where products are released in lim
 
 ---
 
-## 🎯 Project Objectives
+## 🎯 Project Objective
 
 - Build a modern MERN-based e-commerce system
 - Support **unisex products** with optional **Boys / Girls** classification
@@ -207,4 +207,5 @@ Faculty of Technology
 Bachelor of ICT (Honours)
 
 ---
+
 
