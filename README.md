@@ -4,7 +4,7 @@ _Unisex | Youth-Driven | Statement Style_
 
 ---
 
-## 📌 Project Overview
+## 📌 Project Overview 
 
 **SE Limited Edition Fashion (Sagaa Elite)** is a limited-edition fashion e-commerce platform developed using the **MERN stack**.
 
@@ -207,6 +207,7 @@ Faculty of Technology
 Bachelor of ICT (Honours)
 
 ---
+
 
 
 
