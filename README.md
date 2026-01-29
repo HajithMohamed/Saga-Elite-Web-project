@@ -174,20 +174,104 @@ Admins:
 
 ---
 
-## 👨‍💻 Project Contributors
+## 👥 Contributors & Page-Wise Work Distribution  
+---
 
-This project is built collaboratively with multiple contributors (from the GitHub repository).  
-Replace the placeholders with the actual GitHub usernames from the **Contributors** section in your repo settings.
+### 🔹 HajithMohamed – Mohamed Hajith  
+**Role:** Lead Developer / Project Coordinator  
 
-- **@HajithMohamed** – Lead Developer / Team Coordinator  
-- **@<collaborator2-github>** – Drop & Homepage System  
-- **@<collaborator3-github>** – Product Pages & Stock Logic  
-- **@<collaborator4-github>** – Orders, Manual Payment, Surprise Gift Logic  
-- **@<collaborator5-github>** – Admin Panel & Notifications
-
-*(Update each username exactly from GitHub Insights → Contributors)*
+**Assigned Modules / Pages:**
+- 🏠 **Landing Page & Hero Section**
+  - Drop showcase UI  
+  - Brand story section  
+  - Limited edition banners  
+  - API integration for featured drops  
+  - Admin drop controller  
+- 🎁 **Surprise Gift System**
+  - Gift tier logic  
+  - Purchase amount mapping  
+  - Admin gift configuration panel  
+  - Gift assignment after order confirmation  
+  - Email & web notification triggers  
+- 🧠 **System Architecture**
+  - Global API structure  
+  - Socket.io core setup  
+  - Authentication middleware  
+  - Database design validation  
 
 ---
+
+### 🔹 AKMJafran – AK. Mohamed Jafran  
+
+**Assigned Modules / Pages:**
+- 🛍️ **Product Listing & Drop Pages**
+  - Drop-based product UI  
+  - Filters (Unisex / Boys / Girls)  
+  - Product cards  
+  - Backend product APIs  
+  - Stock validation logic  
+  - Admin product management  
+- 📦 **Stock System**
+  - Real-time stock updates  
+  - Low-stock alerts  
+  - “Selling Fast” logic  
+  - Socket.io stock broadcasting  
+
+---
+
+### 🔹 DhanuiyaJey – Dhanushiya  
+
+**Assigned Modules / Pages:**
+- 🧾 **Checkout & Order Flow**
+  - Checkout UI  
+  - Order creation logic  
+  - Order status system  
+  - Database order models  
+- 💳 **Manual Payment System (Sri Lanka Model)**
+  - Payment instruction page  
+  - WhatsApp payment proof submission  
+  - Payment states:
+    - Pending  
+    - Verified  
+    - Rejected  
+  - Admin payment confirmation panel  
+- 📧 **Customer Notifications**
+  - Order confirmation emails  
+  - Payment status emails  
+  - Web notifications  
+
+---
+
+### 🔹 Dharshika2018 – Thamilvanan Dharshika  
+
+**Assigned Modules / Pages:**
+- 👤 **User System**
+  - Signup / Login pages  
+  - JWT authentication  
+  - User dashboard  
+  - Order history  
+  - Profile management  
+- 🛠️ **Admin Panel Core**
+  - Admin dashboard UI  
+  - Order management  
+  - User management  
+  - Role-based access control  
+- 🔔 **Admin Notifications**
+  - New order alerts  
+  - Payment proof alerts  
+  - Stock alerts  
+  - Drop alerts  
+
+---
+
+✅ This project follows a **page-wise full-stack collaboration model**, where each contributor:
+- Designs UI  
+- Builds APIs  
+- Manages database schemas  
+- Implements business logic  
+- Develops admin controls  
+- Handles notifications  
+
 
 ---
 
@@ -216,6 +300,7 @@ https://parkofideas.com/moderno/demo/home-3/
 ## 📝 License
 
 Open for academic and portfolio use.
+
 
 
 
