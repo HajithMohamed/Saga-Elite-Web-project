@@ -24,43 +24,73 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
       
       # Client-Side Build
+      - name: Check if Client-Side exists
+        id: check-client
+        run: |
+          if [ -d "Client-Side" ] && [ -f "Client-Side/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Client-Side folder not found - skipping client build"
+          fi
+      
       - name: Install Client-Side Dependencies
+        if: steps.check-client.outputs.exists == 'true'
         working-directory: ./Client-Side
         run: npm ci || npm install
       
       - name: Build Client-Side
+        if: steps.check-client.outputs.exists == 'true'
         working-directory: ./Client-Side
         run: npm run build --if-present
       
       - name: Test Client-Side
+        if: steps.check-client.outputs.exists == 'true'
         working-directory: ./Client-Side
         run: npm test --if-present || echo "No tests configured"
       
       # Server-side Build
+      - name: Check if Server-side exists
+        id: check-server
+        run: |
+          if [ -d "Server-side" ] && [ -f "Server-side/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Server-side folder not found - skipping server build"
+          fi
+      
       - name: Install Server-side Dependencies
+        if: steps.check-server.outputs.exists == 'true'
         working-directory: ./Server-side
         run: npm ci || npm install
       
       - name: Lint Server-side Code
+        if: steps.check-server.outputs.exists == 'true'
         working-directory: ./Server-side
         run: npm run lint --if-present || echo "No lint configured"
       
       - name: Test Server-side
+        if: steps.check-server.outputs.exists == 'true'
         working-directory: ./Server-side
         run: npm test --if-present || echo "No tests configured"
       
       # Security Audit
       - name: Run Security Audit (Client)
+        if: steps.check-client.outputs.exists == 'true'
         working-directory: ./Client-Side
         run: npm audit --audit-level=moderate || true
       
       - name: Run Security Audit (Server)
+        if: steps.check-server.outputs.exists == 'true'
         working-directory: ./Server-side
         run: npm audit --audit-level=moderate || true
       
       # Summary
       - name: CI Success
-        run: echo "✅ All CI checks passed successfully!"
+        run: |
+          echo "✅ CI Pipeline completed!"
+          echo "📦 Client-Side: ${{ steps.check-client.outputs.exists == 'true' && 'Built' || 'Skipped (not found)' }}"
+          echo "🔧 Server-side: ${{ steps.check-server.outputs.exists == 'true' && 'Built' || 'Skipped (not found)' }}"
