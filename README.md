@@ -22,17 +22,6 @@ This project is developed as a **university group project**, while applying **re
 
 ---
 
-## 👥 Project Team
-
-| Role | Name | Responsibilities |
-|-----|------|------------------|
-| **Lead Developer** | Mohamed Hajith | Overall project management, system architecture, MERN stack integration, code review |
-| **Frontend Developer** | Member 1 | React.js components, responsive UI, Redux state management |
-| **Backend Developer** | Member 2 | Node.js & Express APIs, MongoDB schema design, authentication, stock management |
-| **Fullstack / Admin Panel Developer** | Member 3 | Admin panel, email notifications, WhatsApp integration, deployment support |
-
----
-
 ## 🎯 Business Model
 
 ### 🔹 Drop-Based Selling
@@ -294,3 +283,4 @@ Academic & portfolio use only.
 **Mohamed Hajith**  
 Lead Developer – MERN Stack  
 SE Limited Edition Fashion Project
+
