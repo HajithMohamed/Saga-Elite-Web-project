@@ -64,14 +64,19 @@ Gift tier is based on purchase value:
 
 ### 🔹 Online Payments (Automated)
 Supported methods:
-- **PayHere (Sri Lanka Gateway)**
-- **Card Payments (Visa / MasterCard)**
+- **PayHere (Sri Lankan Payment Gateway)**
 - **Google Pay**
 
 **Flow:**
 ```
-Checkout → Online Payment → Success → Auto-confirm Order → Gift Assigned → Notifications
+Checkout → Select Online Payment → PayHere/Google Pay → Payment Success → Auto-confirm Order → Gift Assigned → Notifications
 ```
+
+**Features:**
+- Instant payment confirmation
+- Automatic order processing
+- Real-time payment status updates
+- Secure payment gateway integration
 
 ---
 
@@ -79,13 +84,20 @@ Checkout → Online Payment → Success → Auto-confirm Order → Gift Assigned
 
 Supported methods:
 - Bank transfer  
-- Mobile banking  
-- ATM slips / deposit slips  
+- Mobile banking (Commercial Bank, Sampath Bank, etc.)
+- ATM deposits
+- Cash deposits
 
 **Flow:**
 ```
-Checkout → Manual Payment → Instructions → WhatsApp Proof → Admin Verify → Confirm → Gift Assigned
+Checkout → Select Manual Payment → View Bank Details → Make Payment → Upload Proof via WhatsApp → Admin Verification → Order Confirmation → Gift Assigned → Notifications
 ```
+
+**Features:**
+- Flexibility for customers without online payment options
+- WhatsApp-based proof submission
+- Admin verification system
+- Manual confirmation process
 
 ---
 
