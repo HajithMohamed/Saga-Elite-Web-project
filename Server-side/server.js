@@ -1,10 +1,10 @@
-const express = require("express")
-const cors = require("cors")
+const express = require("express");
+const cors = require("cors");
 const cookieParser = require("cookie-parser")
 
-require("dotenv").config()
+require("dotenv").config();
 
-const globalErrorController = require("./Controllers/errorController")
+const globalErrorController = require("./Controllers/errorController");
 
 const app = express();
 
@@ -28,11 +28,11 @@ app.get("/",(req,res)=>{
     res.status(200).json({
         message : "this is the home page"
     })
-})
+});
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5000;
 
-const connectToDB = require("./DataBase/db")
+const connectToDB = require("./DataBase/db");
 
 connectToDB();
 
