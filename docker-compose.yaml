@@ -1,18 +1,30 @@
+version: '3.8'
+
 services:
   backend:
-    build: ./Server-side
-    container_name: backend
-    restart: always
+    build:
+      context: ./Server-side
+      dockerfile: Dockerfile
+    container_name: sagaelite-backend
+    ports:
+      - "5001:5000"
     env_file:
       - ./Server-side/.env
-    ports:
-      - "5000:5000"
+    volumes:
+      - ./Server-side:/app
+      - /app/node_modules
+    command: npm run dev
 
   frontend:
-    build: ./Client-Side/Saga-Elite-Front-End
-    container_name: frontend
-    restart: always
+    build:
+      context: ./Client-Side/Saga-Elite-Front-End
+      dockerfile: Dockerfile
+    container_name: sagaelite-frontend
     ports:
-      - "5173:5173"
-    depends_on:
-      - backend
+      - "5174:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5001/api
+    volumes:
+      - ./Client-Side/Saga-Elite-Front-End:/app
+      - /app/node_modules
+    command: npm run dev -- --host

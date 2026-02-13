@@ -2,9 +2,91 @@
 _Unisex | Youth-Driven | Statement Style_  
 **Tagline:** Rare Fit Forever
 
----
 
 ## 📌 Project Overview
+
+---
+
+## 🚀 Getting Started (For Developers)
+
+### Prerequisites
+
+- [Git](https://git-scm.com/downloads)
+- [Docker & Docker Compose](https://docs.docker.com/get-docker/)
+- [Node.js & npm](https://nodejs.org/) (for manual/local dev)
+
+---
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/<your-org-or-username>/Saga-Elite-Web-Project.git
+cd Saga-Elite-Web-Project
+```
+
+---
+
+### 2. Environment Variables
+
+Copy the example environment file and fill in your secrets:
+
+```bash
+cp Server-side/.env.example Server-side/.env
+# Edit Server-side/.env with your DB, JWT, Cloudinary, Email, etc.
+```
+
+---
+
+### 3. Start the Project
+
+#### (A) Using Docker (Recommended)
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:5174
+- Backend API: http://localhost:5001/api
+
+#### (B) Manual/Local Development
+
+Open two terminals:
+
+**Backend:**
+```bash
+cd Server-side
+npm install
+npm run dev
+# Runs on http://localhost:5000
+```
+
+**Frontend:**
+```bash
+cd Client-Side/Saga-Elite-Front-End
+npm install
+npm run dev -- --host
+# Runs on http://localhost:5173
+```
+
+---
+
+### 4. Useful Scripts
+
+- `npm run dev` – Start dev server (frontend/backend)
+- `npm run build` – Build frontend for production
+- `npm run lint` – Lint frontend code
+- `npm start` – Start backend in production mode
+
+---
+
+### 5. Troubleshooting
+
+- Ensure MongoDB URI is correct in `.env`
+- If ports are busy, change them in `docker-compose.yaml` and `.env`
+- For Docker issues, try `docker compose down -v` then `docker compose up --build`
+- For Windows: Use Git Bash or WSL for best compatibility
+
+---
 
 **Saga Elite (SE Limited Edition Fashion)** is a full-stack **MERN e-commerce platform** developed for a Sri Lankan limited-edition fashion brand.
 
