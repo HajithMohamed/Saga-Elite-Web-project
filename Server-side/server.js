@@ -24,6 +24,12 @@ app.use(
 
 app.use(express.json({ limit: "10kb" }));
 
+app.get("/",(req,res)=>{
+    res.status(200).json({
+        message : "this is the home page"
+    })
+})
+
 const PORT = process.env.PORT || 5000
 
 const connectToDB = require("./DataBase/db")

@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   backend:
+    # Backend URL: http://localhost:5001
     build:
       context: ./Server-side
       dockerfile: Dockerfile
@@ -16,15 +17,15 @@ services:
     command: npm run dev
 
   frontend:
+    # Frontend URL: http://localhost:5174
     build:
       context: ./Client-Side/Saga-Elite-Front-End
       dockerfile: Dockerfile
     container_name: sagaelite-frontend
     ports:
-      - "5174:5173"
+      - "5174:80"
     environment:
       - VITE_API_URL=http://localhost:5001/api
     volumes:
       - ./Client-Side/Saga-Elite-Front-End:/app
       - /app/node_modules
-    command: npm run dev -- --host
