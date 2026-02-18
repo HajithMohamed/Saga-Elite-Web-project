@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
-const validator = require("validator")
-const bcrypt = require("bcryptjs")
-
+const validator = require("validator");
+const bcrypt = require("bcryptjs");
 
 
 const userSchema = new mongoose.Schema(
@@ -42,7 +41,8 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
-         otp: String,
+
+        otp: String,
         otpExpires: Date,
 
         resetPasswordOtp: String,
@@ -60,6 +60,7 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        
     },{timestamps : true}
 )
 
