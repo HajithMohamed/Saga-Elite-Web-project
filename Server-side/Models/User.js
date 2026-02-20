@@ -2,81 +2,97 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 
-
 const userSchema = new mongoose.Schema(
-    {
-        email : {
-            type : String,
-            required : true,
-            unique : true,
-            lowercase : true,
-            trim : true,
-            validator : [validator.isEmail,"provide a valid email address"]
-        },
-        password : {
-            type : String,
-            required : true,
-            minlength : 8,
-            select : false,
-            validate : {
-                validator : function(value){
-                    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
-                },
-                message:
-                    "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
-            }
-        },
-        role : {
-            type : String,
-            enum : ["admin", "superadmin", "user"],
-            default : "user"
-        },
-        
-        isVerified: {
-            type: Boolean,
-            default: false,
-        },
+{
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+        validate: [validator.isEmail, "Provide a valid email address"]
+    },
 
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
+    password: {
+        type: String,
+        minlength: 8,
+        select: false,
+        validate: {
+            validator: function (value) {
+                if (this.provider === "google") return true;
+                return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
+            },
+            message:
+                "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
+        }
+    },
 
-        otp: String,
-        otpExpires: Date,
+    role: {
+        type: String,
+        enum: ["admin", "superadmin", "user"],
+        default: "user"
+    },
 
-        resetPasswordOtp: String,
-        resetPasswordOtpExpires: Date,
+    provider: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    },
 
-        resetPasswordOtpVerified: {
-            type: Boolean,
-            default: false,
-        },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
 
-        changePasswordOtp: String,
-        changePasswordOtpExpires: Date,
+    profilePicture: String,
 
-        changePasswordOtpVerified: {
-            type: Boolean,
-            default: false,
-        },
-        
-    },{timestamps : true}
-)
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
 
-userSchema.pre("save",async function (next){
-    if(!this.isModified("password")){
-        return next();
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+
+    otp: String,
+    otpExpires: Date,
+
+    resetPasswordOtp: String,
+    resetPasswordOtpExpires: Date,
+    resetPasswordOtpVerified: {
+        type: Boolean,
+        default: false
+    },
+
+    changePasswordOtp: String,
+    changePasswordOtpExpires: Date,
+    changePasswordOtpVerified: {
+        type: Boolean,
+        default: false
     }
 
-    this.password = await bcrypt.hash(this.password, 12)
+},
+{ timestamps: true }
+);
+
+userSchema.pre("save", async function (next) {
+    if (!this.password) return next();
+    if (!this.isModified("password")) return next();
+
+    this.password = await bcrypt.hash(this.password, 12);
     next();
-})
+});
 
-userSchema.method.correctedPassword = async function(candidatePassword, userPassword){
-    return bcrypt.compare(candidatePassword, userPassword);
-}
+userSchema.methods.correctPassword = async function (
+    candidatePassword,
+    userPassword
+) {
+    return await bcrypt.compare(candidatePassword, userPassword);
+};
 
-module.exports = mongoose.model("User",userSchema);
+userSchema.index({ googleId: 1 });
 
-
+module.exports = mongoose.model("User", userSchema);

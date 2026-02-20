@@ -38,91 +38,49 @@ const creatSendToken = (user, statusCode, res, message) =>{
 
 }
 
-const registerUser = catchAsync(async(req, res, next)=>{
-    const {userData} = filterObj(req.body, "email","password","confirmPassword");
+const registerUser = catchAsync(async (req, res, next) => {
 
-    if(Object.keys(userData).length===0){
-        return next(AppError("All fields are required",400));
+    const userData = filterObj(req.body, "email", "password", "confirmPassword");
+    const { email, password, confirmPassword } = userData;
+
+    if (!email || !password || !confirmPassword) {
+        return next(new AppError("All fields are required", 400));
     }
 
-    if(userData.password !== userData.confirmPassword){
-        return next(AppError("Passwords do not match", 400));
+    if (password !== confirmPassword) {
+        return next(new AppError("Passwords do not match", 400));
     }
 
-    const existingUser = await User.findOne({email});
+    const existingUser = await User.findOne({ email });
 
-    if(existingUser){
-        return next(new AppError("Provided email already exists, try a different one", 400));
+    if (existingUser) {
+        return next(new AppError("Provided email already exists", 400));
     }
 
     const otp = generateOtp();
-    const otpExpires = Date.now() * 15*60*1000
+    const otpExpires = Date.now() + 15 * 60 * 1000;
 
-    const newUser = new User({
+    const newUser = await User.create({
         email,
         password,
         otp,
-        otpExpires : otpExpires,
-        isVerified : false
-    })
-
-    await newUser.save()
-
-    await sendEmail({
-        email: savedUser.email,
-        subject: "Saga Elite – Email Verification Code",
-        html: `
-        <div style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 30px;">
-            <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px;">
-                
-                <h1 style="text-align: center; color: #000;">SAGAA ELITE</h1>
-                <p style="text-align: center; letter-spacing: 2px; font-size: 12px; color: #777;">
-                    RARE FIT FOREVER
-                </p>
-
-                <hr style="margin: 25px 0;" />
-
-                <h2 style="color: #000;">Verify Your Email Address</h2>
-
-                <p style="color: #555; font-size: 14px;">
-                    Welcome to <strong>Saga Elite</strong> — Limited Edition Fashion built for the bold.
-                </p>
-
-                <p style="color: #555; font-size: 14px;">
-                    Please use the verification code below to complete your registration:
-                </p>
-
-                <div style="text-align: center; margin: 30px 0;">
-                    <span style="font-size: 28px; letter-spacing: 6px; font-weight: bold; color: #000;">
-                        ${otp}
-                    </span>
-                </div>
-
-                <p style="color: #555; font-size: 14px;">
-                    This code will expire in <strong>10 minutes</strong>.
-                </p>
-
-                <p style="color: #555; font-size: 14px;">
-                    If you did not request this, please ignore this email.
-                </p>
-
-                <hr style="margin: 25px 0;" />
-
-                <p style="font-size: 12px; color: #999; text-align: center;">
-                    © ${new Date().getFullYear()} Saga Elite. All rights reserved.
-                </p>
-            </div>
-        </div>
-        `,
+        otpExpires,
+        isVerified: false,
+        provider: "local"
     });
 
+    await sendMail({
+        email: newUser.email,
+        subject: "Saga Elite – Email Verification Code",
+        html: `<h2>Your OTP is ${otp}</h2>`
+    });
 
-    res.status(200).json({
-        success : true,
-        message : "new user created successfully",
-        data : newUser
-    })
-})
+    res.status(201).json({
+        status: "success",
+        message: "User registered successfully. Please verify OTP.",
+    });
+
+});
 
 module.exports = {
     registerUser
