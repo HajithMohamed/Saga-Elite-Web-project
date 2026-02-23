@@ -31,7 +31,7 @@
     "mailtrap": "^4.4.0",
     "mongoose": "^9.2.1",
     "multer": "^2.0.2",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "^7.0.13",
     "validator": "^13.15.26"
   },
   "devDependencies": {
