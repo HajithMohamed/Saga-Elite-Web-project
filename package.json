@@ -1,0 +1,36 @@
+{
+  "name": "saga-elite-web-project",
+  "version": "1.0.0",
+  "description": "_Unisex | Youth-Driven | Statement Style_  \r **Tagline:** Rare Fit Forever",
+  "private": true,
+  "main": "index.js",
+  "type": "commonjs",
+ "scripts": {
+  "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm run dev --prefix Server-side\" \"npm run dev --prefix Client-Side/Saga-Elite-Front-End\"",
+  "start": "node Server-side/server.js",                  
+  "build": "npm run build --prefix Client-Side/Saga-Elite-Front-End",
+  "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore",
+  "test": "echo \"Error: no test specified\" && exit 1"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HajithMohamed/Saga-Elite-Web-project.git"
+  },
+  "keywords": [
+    "mern",
+    "ecommerce",
+    "saga-elite",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Hajith Mohamed",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HajithMohamed/Saga-Elite-Web-project/issues"
+  },
+  "homepage": "https://github.com/HajithMohamed/Saga-Elite-Web-project#readme",
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

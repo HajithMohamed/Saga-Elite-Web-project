@@ -28,13 +28,29 @@ cd Saga-Elite-Web-Project
 
 ### 2. Environment Variables
 
-Copy the example environment file and fill in your secrets:
+The preferred pattern is to maintain a single `.env` file at the workspace root
+which contains **all** the variables needed by both backend and frontend.
+The backend code will automatically load the root `.env` (even when run from
+`Server-side/`), so you normally do **not** need a second file.  A
+`Server-side/.env` can still be used for overrides during isolated local
+development, but it’s optional.
 
 ```bash
+# create the shared workspace environment file
+cp .env.example .env
+
+# (optional) copy backend template if you need a local override
 cp Server-side/.env.example Server-side/.env
-# Edit Server-side/.env with your DB, JWT, Cloudinary, Email, etc.
 ```
 
+Fill the resulting file(s) with your Mongo URI, JWT secret, Cloudinary keys,
+mail credentials, etc.  The root `.env` additionally defines `BACKEND_PORT`
+(mirrored to `PORT` for the server) and `VITE_API_URL` for the frontend.
+
+> **Note:** Changing port numbers? Update both `.env` and
+> `docker-compose.yaml` (they use variable substitution).  The root npm
+> scripts already read from the workspace `.env` when running
+> `npm run dev`.
 ---
 
 ### 3. Start the Project
