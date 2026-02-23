@@ -4,24 +4,29 @@ const mongoose = require("mongoose");
 let isConnected = false;
 
 const connectToDB = async () => {
-  // If already connected → reuse existing connection (good for serverless / hot reload)
   if (isConnected) {
     console.log("→ Using existing MongoDB connection");
     return;
   }
 
-  // Make sure we have the URI
-  const mongoUri = process.env.MONGO_DB_URI || process.env.MONGODB_URI;
+  let mongoUri = process.env.MONGO_DB_URI;
 
   if (!mongoUri) {
     console.error("❌ MONGO_DB_URI is not defined in environment variables");
     process.exit(1);
   }
 
+  // ensure the URI specifies the intended database; if not, append a default
+  // (Atlas URIs often end with a slash and no database name)
+  const hasDatabase = /\/[^\/?]+(\?.*)?$/.test(mongoUri);
+  if (!hasDatabase) {
+    const defaultDb = "sagaelite";
+    mongoUri = mongoUri.replace(/\/?$/, "") + "/" + defaultDb;
+  }
+
   try {
     console.log("→ Attempting to connect to MongoDB...");
 
-    // Optional: mask credentials in log (for safety in dev/staging)
     const safeUri = mongoUri.replace(/\/\/.*@/, '//<credentials>@');
     console.log("  URI:", safeUri);
 
