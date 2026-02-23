@@ -3,23 +3,21 @@ FROM node:20-alpine
 WORKDIR /app
 
 
-# Copy package files and install dependencies
-COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
+# Copy package files and install dependencies (cache-friendly)
+COPY package*.json ./
+# use --production here if you don't need devDependencies in image
+RUN npm ci --legacy-peer-deps
 
-
-# Copy all source files
+# copy the rest of the sources
 COPY . .
 
-# Copy .env file
-COPY .env .
-
+# The .env file is mounted by docker-compose or provided at runtime,
+# so we don't copy it into the image to avoid leaking secrets into layers.
 
 # Expose port from environment variable or default to 5001
 ARG PORT=5001
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
-
-# Start the application
+# default command (in compose we use dev script; in production use start)
 CMD ["npm", "start"]

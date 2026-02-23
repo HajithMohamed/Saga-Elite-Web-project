@@ -1,8 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const path = require("path");
 
-require("dotenv").config();
+// Load configuration from the workspace root, falling back to a
+// backend‑local file if present.  This lets you keep a single shared
+// `.env` at the project root for both frontend and backend.
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+require("dotenv").config();  // load Server-side/.env if it exists
 
 const globalErrorController = require("./Controllers/errorController");
 

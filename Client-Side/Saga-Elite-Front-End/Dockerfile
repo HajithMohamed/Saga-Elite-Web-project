@@ -5,7 +5,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm install
-
+# you can override VITE_ environment variables at build time by
+# setting build args, e.g. `docker build --build-arg VITE_API_URL=https://api.example.com`
 COPY . .
 RUN npm run build
 
