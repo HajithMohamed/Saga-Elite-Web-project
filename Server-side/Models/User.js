@@ -2,81 +2,97 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 
-
 const userSchema = new mongoose.Schema(
-    {
-        email : {
-            type : String,
-            required : true,
-            unique : true,
-            lowercase : true,
-            trim : true,
-            validator : [validator.isEmail,"provide a valid email address"]
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: [validator.isEmail, "Provide a valid email address"],
+    },
+
+    password: {
+      type: String,
+      minlength: 8,
+      select: false,
+      validate: {
+        validator: function (value) {
+          if (this.provider === "google") return true;
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
         },
-        password : {
-            type : String,
-            required : true,
-            minlength : 8,
-            select : false,
-            validate : {
-                validator : function(value){
-                    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
-                },
-                message:
-                    "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
-            }
-        },
-        role : {
-            type : String,
-            enum : ["admin", "superadmin", "user"],
-            default : "user"
-        },
-        
-        isVerified: {
-            type: Boolean,
-            default: false,
-        },
+        message:
+          "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
+      },
+    },
 
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
+    role: {
+      type: String,
+      enum: ["admin", "superadmin", "user"],
+      default: "user",
+    },
 
-        otp: String,
-        otpExpires: Date,
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
 
-        resetPasswordOtp: String,
-        resetPasswordOtpExpires: Date,
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
 
-        resetPasswordOtpVerified: {
-            type: Boolean,
-            default: false,
-        },
+    profilePicture: String,
 
-        changePasswordOtp: String,
-        changePasswordOtpExpires: Date,
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
 
-        changePasswordOtpVerified: {
-            type: Boolean,
-            default: false,
-        },
-        
-    },{timestamps : true}
-)
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
 
-userSchema.pre("save",async function (next){
-    if(!this.isModified("password")){
-        return next();
-    }
+    otp: String,
+    otpExpires: Date,
 
-    this.password = await bcrypt.hash(this.password, 12)
-    next();
-})
+    resetPasswordOtp: String,
+    resetPasswordOtpExpires: Date,
+    resetPasswordOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
 
-userSchema.method.correctedPassword = async function(candidatePassword, userPassword){
-    return bcrypt.compare(candidatePassword, userPassword);
-}
+    changePasswordOtp: String,
+    changePasswordOtpExpires: Date,
+    changePasswordOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model("User",userSchema);
+// ── Fixed pre-save hook (Mongoose 9.x style) ──
+userSchema.pre("save", async function () {
+  // Skip if no password or not modified
+  if (!this.password || !this.isModified("password")) {
+    return; // ← just return — Mongoose continues automatically
+  }
 
+  // Hash the password
+  this.password = await bcrypt.hash(this.password, 12);
+  // No need for next() — async function resolves → save proceeds
+});
 
+userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
+
+userSchema.index({ googleId: 1 });
+
+module.exports = mongoose.model("User", userSchema);
