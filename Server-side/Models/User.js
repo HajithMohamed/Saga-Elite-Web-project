@@ -3,58 +3,58 @@ const validator = require("validator");
 const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
-{
+  {
     email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-        validate: [validator.isEmail, "Provide a valid email address"]
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: [validator.isEmail, "Provide a valid email address"],
     },
 
     password: {
-        type: String,
-        minlength: 8,
-        select: false,
-        validate: {
-            validator: function (value) {
-                if (this.provider === "google") return true;
-                return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
-            },
-            message:
-                "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
-        }
+      type: String,
+      minlength: 8,
+      select: false,
+      validate: {
+        validator: function (value) {
+          if (this.provider === "google") return true;
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
+        },
+        message:
+          "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
+      },
     },
 
     role: {
-        type: String,
-        enum: ["admin", "superadmin", "user"],
-        default: "user"
+      type: String,
+      enum: ["admin", "superadmin", "user"],
+      default: "user",
     },
 
     provider: {
-        type: String,
-        enum: ["local", "google"],
-        default: "local"
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
 
     googleId: {
-        type: String,
-        unique: true,
-        sparse: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
 
     profilePicture: String,
 
     isVerified: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
 
     isActive: {
-        type: Boolean,
-        default: true
+      type: Boolean,
+      default: true,
     },
 
     otp: String,
@@ -63,34 +63,34 @@ const userSchema = new mongoose.Schema(
     resetPasswordOtp: String,
     resetPasswordOtpExpires: Date,
     resetPasswordOtpVerified: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
 
     changePasswordOtp: String,
     changePasswordOtpExpires: Date,
     changePasswordOtpVerified: {
-        type: Boolean,
-        default: false
-    }
-
-},
-{ timestamps: true }
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true }
 );
 
-userSchema.pre("save", async function (next) {
-    if (!this.password) return next();
-    if (!this.isModified("password")) return next();
+// ── Fixed pre-save hook (Mongoose 9.x style) ──
+userSchema.pre("save", async function () {
+  // Skip if no password or not modified
+  if (!this.password || !this.isModified("password")) {
+    return; // ← just return — Mongoose continues automatically
+  }
 
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
+  // Hash the password
+  this.password = await bcrypt.hash(this.password, 12);
+  // No need for next() — async function resolves → save proceeds
 });
 
-userSchema.methods.correctPassword = async function (
-    candidatePassword,
-    userPassword
-) {
-    return await bcrypt.compare(candidatePassword, userPassword);
+userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+  return await bcrypt.compare(candidatePassword, userPassword);
 };
 
 userSchema.index({ googleId: 1 });

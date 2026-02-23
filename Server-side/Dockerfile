@@ -15,8 +15,8 @@ COPY . .
 COPY .env .
 
 
-# Expose port from environment variable or default to 5000
-ARG PORT=5000
+# Expose port from environment variable or default to 5001
+ARG PORT=5001
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
