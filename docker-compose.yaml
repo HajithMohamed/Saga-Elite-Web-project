@@ -10,11 +10,9 @@ services:
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     env_file:
-      # prefer the root .env that contains values for both services
-      - ././.env
-      # you may also keep a separate Server-side/.env, docker-compose will
-      # load both and latter values override earlier ones
-      - ./Server-side/.env
+      # only the workspace-root .env is required; backend-specific overrides
+      # can be added later if needed
+      - ./.env
     volumes:
       - ./Server-side:/app
       - /app/node_modules
