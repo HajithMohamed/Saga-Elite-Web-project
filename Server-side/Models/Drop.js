@@ -1,3 +1,4 @@
+// models/Drop.js
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 
@@ -15,22 +16,14 @@ const dropSchema = new mongoose.Schema(
       index: true
     },
 
-    description: {
-      type: String
-    },
-
-    bannerImage: {
-      type: String
-    },
+    description: String,
 
     releaseDate: {
       type: Date,
       required: true
     },
 
-    endDate: {
-      type: Date
-    },
+    endDate: Date,
 
     isPublished: {
       type: Boolean,
@@ -52,5 +45,15 @@ dropSchema.pre("save", function (next) {
   }
   next();
 });
+
+/* Virtual populate for images */
+dropSchema.virtual("images", {
+  ref: "Image",
+  localField: "_id",
+  foreignField: "refId"
+});
+
+dropSchema.set("toObject", { virtuals: true });
+dropSchema.set("toJSON", { virtuals: true });
 
 module.exports = mongoose.model("Drop", dropSchema);

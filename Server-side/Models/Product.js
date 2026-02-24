@@ -1,3 +1,7 @@
+// models/Product.js
+const mongoose = require("mongoose");
+const slugify = require("slugify");
+
 const variantSchema = new mongoose.Schema(
   {
     sku: {
@@ -50,9 +54,7 @@ const productSchema = new mongoose.Schema(
       unique: true
     },
 
-    description: {
-      type: String
-    },
+    description: String,
 
     brand: {
       type: String,
@@ -110,3 +112,31 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+/* Auto slug generation */
+productSchema.pre("save", function (next) {
+  if (!this.slug) {
+    this.slug = slugify(this.name, { lower: true, strict: true });
+  }
+
+  // Auto calculate total stock
+  if (this.variants && this.variants.length > 0) {
+    this.totalStock = this.variants.reduce(
+      (sum, variant) => sum + variant.stock,
+      0
+    );
+  }
+
+  next();
+});
+
+/* Virtual populate for images */
+productSchema.virtual("images", {
+  ref: "Image",
+  localField: "_id",
+  foreignField: "refId"
+});
+
+productSchema.set("toObject", { virtuals: true });
+productSchema.set("toJSON", { virtuals: true });
+
+module.exports = mongoose.model("Product", productSchema);
