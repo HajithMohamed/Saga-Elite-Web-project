@@ -55,7 +55,30 @@ mail credentials, etc.  The root `.env` additionally defines `BACKEND_PORT`
 
 ### 3. Start the Project
 
-#### (A) Using Docker (Recommended)
+You now have two primary ways to start the system: via the workspace npm scripts or with Docker. The **workspace root** `package.json` contains helpers that run both backend and frontend in parallel, so you rarely need to navigate into subfolders manually.
+
+#### (A) Workspace npm commands (recommended for manual development)
+
+```bash
+# from the repo root
+npm install              # installs dependencies for both Server-side and Client-Side
+npm run dev              # starts backend + frontend concurrently
+```
+
+- Backend will listen on the port defined by `BACKEND_PORT`/`PORT` in your `.env` (default 5000).
+- Frontend runs on port 5173 (or 5174 when served through Docker).
+
+Other root-level scripts:
+
+```bash
+npm run build            # builds the frontend for production
+npm run lint             # runs ESLint across both projects
+npm start                # launches the backend in production mode
+```
+
+The root scripts simply proxy into the corresponding `Server-side` or `Client-Side/Saga-Elite-Front-End` commands using [`concurrently`](https://www.npmjs.com/package/concurrently). Feel free to run the individual projects manually if you prefer.
+
+#### (B) Using Docker (Recommended for full-stack environment)
 
 ```bash
 docker compose up --build
@@ -64,9 +87,11 @@ docker compose up --build
 - Frontend: http://localhost:5174
 - Backend API: http://localhost:5001/api
 
-#### (B) Manual/Local Development
+This is the same as before and remains the easiest way to get a fully containerised environment.
 
-Open two terminals:
+#### (C) Manual/Local Development (alternate two-terminal approach)
+
+You can still open separate shells if you like:
 
 **Backend:**
 ```bash
@@ -84,14 +109,20 @@ npm run dev -- --host
 # Runs on http://localhost:5173
 ```
 
+The behaviours are identical to the workspace commands above, just executed from inside each subfolder.
+
 ---
 
 ### 4. Useful Scripts
 
-- `npm run dev` – Start dev server (frontend/backend)
-- `npm run build` – Build frontend for production
-- `npm run lint` – Lint frontend code
-- `npm start` – Start backend in production mode
+All of these may be executed from the **workspace root**; the root `package.json` will delegate to the appropriate sub‑project:
+
+- `npm run dev` – start both backend and frontend concurrently
+- `npm run build` – build the frontend for production
+- `npm run lint` – run ESLint across the entire repository (JS/JSX/TS/TSX)
+- `npm start` – start the backend in production mode
+
+You can also execute the equivalent commands inside `Server-side` or `Client-Side/Saga-Elite-Front-End` if you prefer working in isolated terminals.
 
 ---
 
@@ -322,12 +353,14 @@ Push → CI Run → Build → Test → PR → Review → Merge to main
 
 ```
 Saga-Elite-Web-project
-├── Client-Side/     # React App
-├── Server-side/     # Node.js + Express API
+├── .env                # shared environment variables for both services
+├── package.json        # root npm scripts (dev/build/lint/start)
+├── docker-compose.yml
+├── Client-Side/        # React App
+├── Server-side/        # Node.js + Express API
 ├── .github/
 │   └── workflows/
-│       └── ci.yml   # GitHub CI Pipeline
-├── docker-compose.yml
+│       └── ci.yml      # GitHub CI Pipeline
 └── README.md
 ```
 
