@@ -19,16 +19,16 @@ services:
     command: npm run dev
 
   frontend:
-    # Frontend URL: http://localhost:5174
+    # Frontend URL: http://localhost:5174 (maps to 5173 inside container)
     build:
-      context: ./Client-Side/Saga-Elite-Front-End
+      context: ./Client-Side
       dockerfile: Dockerfile
     container_name: sagaelite-frontend
     ports:
-      - "5174:80"
+      - "5174:5173"
     environment:
       # pass any VITE_ variables from root .env (or override here)
       - VITE_API_URL=${VITE_API_URL}
     volumes:
-      - ./Client-Side/Saga-Elite-Front-End:/app
+      - ./Client-Side:/app
       - /app/node_modules

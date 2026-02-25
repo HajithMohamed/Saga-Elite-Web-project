@@ -5,13 +5,17 @@
   "private": true,
   "main": "index.js",
   "type": "commonjs",
- "scripts": {
-  "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm run dev --prefix Server-side\" \"npm run dev --prefix Client-Side/Saga-Elite-Front-End\"",
-  "start": "node Server-side/server.js",                  
-  "build": "npm run build --prefix Client-Side/Saga-Elite-Front-End",
-  "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
+  "workspaces": [
+    "Server-side",
+    "Client-Side"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm run dev --workspace=Server-side\" \"npm run dev --workspace=Client-Side\"",
+    "start": "node Server-side/server.js",
+    "build": "npm run build --workspace=Client-Side",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HajithMohamed/Saga-Elite-Web-project.git"
