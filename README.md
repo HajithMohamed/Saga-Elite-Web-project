@@ -13,7 +13,7 @@ _Unisex | Youth-Driven | Statement Style_
 
 - [Git](https://git-scm.com/downloads)
 - [Docker & Docker Compose](https://docs.docker.com/get-docker/)
-- [Node.js & npm](https://nodejs.org/) (for manual/local dev)
+- [Node.js & npm](https://nodejs.org/) (for manual/local dev; **Node 18+ is required**)
 
 ---
 

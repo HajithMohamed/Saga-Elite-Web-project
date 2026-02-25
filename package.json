@@ -34,6 +34,9 @@
     "url": "https://github.com/HajithMohamed/Saga-Elite-Web-project/issues"
   },
   "homepage": "https://github.com/HajithMohamed/Saga-Elite-Web-project#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
     "concurrently": "^9.0.1"
   }
