@@ -14,6 +14,7 @@ const globalErrorController = require("./Controllers/errorController");
 const app = express();
 
 const authRoutes = require("./Routes/authRoutes");
+const productRoutes = require("./Routes/product-routes");
 
 app.use(cookieParser());
 
@@ -28,7 +29,7 @@ app.use(
 );
 
 app.use(express.json({ limit: "10kb" }));
-
+ 
 app.get("/", (req, res) => {
   res.status(200).json({
     message: "this is the home page",
@@ -36,7 +37,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/products", productRoutes);
 app.use(globalErrorController);
 
 const PORT = process.env.PORT || 5001;
