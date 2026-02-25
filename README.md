@@ -13,7 +13,7 @@ _Unisex | Youth-Driven | Statement Style_
 
 - [Git](https://git-scm.com/downloads)
 - [Docker & Docker Compose](https://docs.docker.com/get-docker/)
-- [Node.js & npm](https://nodejs.org/) (for manual/local dev)
+- [Node.js & npm](https://nodejs.org/) (for manual/local dev; **Node 18+ is required**)
 
 ---
 
@@ -76,7 +76,7 @@ npm run lint             # runs ESLint across both projects
 npm start                # launches the backend in production mode
 ```
 
-The root scripts simply proxy into the corresponding `Server-side` or `Client-Side/Saga-Elite-Front-End` commands using [`concurrently`](https://www.npmjs.com/package/concurrently). Feel free to run the individual projects manually if you prefer.
+The root scripts simply proxy into the corresponding `Server-side` or `Client-Side` commands using [`concurrently`](https://www.npmjs.com/package/concurrently). Feel free to run the individual projects manually if you prefer.
 
 #### (B) Using Docker (Recommended for full-stack environment)
 
@@ -103,7 +103,7 @@ npm run dev
 
 **Frontend:**
 ```bash
-cd Client-Side/Saga-Elite-Front-End
+cd Client-Side
 npm install
 npm run dev -- --host
 # Runs on http://localhost:5173
@@ -122,7 +122,7 @@ All of these may be executed from the **workspace root**; the root `package.json
 - `npm run lint` – run ESLint across the entire repository (JS/JSX/TS/TSX)
 - `npm start` – start the backend in production mode
 
-You can also execute the equivalent commands inside `Server-side` or `Client-Side/Saga-Elite-Front-End` if you prefer working in isolated terminals.
+You can also execute the equivalent commands inside `Server-side` or `Client-Side` if you prefer working in isolated terminals.
 
 ---
 
