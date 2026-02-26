@@ -56,6 +56,9 @@ const connectToDB = require("./DataBase/db");
 
 connectToDB();
 
+console.log(PORT);
+
+
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });

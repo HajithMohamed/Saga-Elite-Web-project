@@ -65,7 +65,10 @@ npm install              # installs dependencies for both Server-side and Client
 npm run dev              # starts backend + frontend concurrently
 ```
 
-- Backend will listen on the port defined by `BACKEND_PORT`/`PORT` in your `.env` (default 5000).
+- Backend will listen on the port defined by `BACKEND_PORT`/`PORT` in your `.env` (defaults to 5001 if you omit the variable).
+  The `docker-compose.yaml` file uses `:${BACKEND_PORT:-5001}` so a container
+  will still publish port 5001 even when no `.env` file is present; however you
+  should still create a `.env` so your own value is persisted.
 - Frontend runs on port 5173 (or 5174 when served through Docker).
 
 Other root-level scripts:
@@ -81,11 +84,16 @@ The root scripts simply proxy into the corresponding `Server-side` or `Client-Si
 #### (B) Using Docker (Recommended for full-stack environment)
 
 ```bash
+# make sure you have a `.env` file at the root; you can copy
+# `.env.example` and edit as needed.  If you forget, Docker will still start
+# and publish port 5001 using the built-in default, but the service won’t
+# reflect your custom configuration.
+
 docker compose up --build
 ```
 
 - Frontend: http://localhost:5174
-- Backend API: http://localhost:5001/api
+- Backend API: http://localhost:5001/api (or whatever `BACKEND_PORT` you set)
 
 This is the same as before and remains the easiest way to get a fully containerised environment.
 
