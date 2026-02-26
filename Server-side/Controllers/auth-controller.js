@@ -3,14 +3,8 @@ const AppError = require("../Utils/appError");
 const sendMail = require("../Utils/send-mail");     // ← use your real util name
 const generateOtp = require("../Utils/generate-otp");
 const User = require("../Models/User");
-const jwt = require("jsonwebtoken");
 const filterObj = require("../Utils/filter-object");
-
-const signToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN,
-    });
-};
+const signToken = require("../Utils/signin-token");
 
 // how long (in minutes) our one‑time codes stay valid. defaults to 10.
 const otpExpiryMinutes = () => Number(process.env.OTP_EXPIRES_IN || 10);

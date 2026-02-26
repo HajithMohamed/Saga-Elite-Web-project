@@ -14,7 +14,9 @@ const globalErrorController = require("./Controllers/errorController");
 const app = express();
 
 const authRoutes = require("./Routes/authRoutes");
+const googleAuthRoute = require("./Routes/google-routes")
 const productRoutes = require("./Routes/product-routes");
+
 
 app.use(cookieParser());
 
@@ -44,13 +46,18 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/google",googleAuthRoute)
 app.use(globalErrorController);
+
 
 const PORT = process.env.PORT || 5001;
 
 const connectToDB = require("./DataBase/db");
 
 connectToDB();
+
+console.log(PORT);
+
 
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
