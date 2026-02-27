@@ -2,7 +2,7 @@ import { Route, Routes } from "react-router-dom";
 // auth page imports
 import Layout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
-import Register from "./pages/auth/register";
+import Register from "./pages/auth/Register";
 // admin page importsw
 import AdminLayout from "./components/admin-components/Layout";
 import AdminDashboard from "./pages/admin-view/Dashboard";
