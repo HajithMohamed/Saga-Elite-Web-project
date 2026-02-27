@@ -18,7 +18,7 @@ const googleAuth = catchAsync(async(req, res, next)=>{
         audience : process.env.GOOGLE_CLIENT_ID
     })
 
-    const payload = ticket.getPayload()
+    const payload = ticket.getPayload() 
 
     const {email, sub, picture, email_verified} = payload
 
