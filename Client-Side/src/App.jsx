@@ -7,8 +7,8 @@ import Register from "./pages/auth/Register";
 import AdminLayout from "./components/admin-components/Layout";
 import AdminDashboard from "./pages/admin-view/Dashboard";
 import AdminFeatures from "./pages/admin-view/Features";
-import AdminOrders from "./pages/admin-view/orders";
-import AdminProduct from "./pages/admin-view/product";
+import AdminOrders from "./pages/admin-view/Orders";
+import AdminProduct from "./pages/admin-view/Product";
 //shopping page imports
 import ShoppinLayout from "./components/shopping-components/Layout";
 import NotFound from "./pages/Not-Found/Index";
