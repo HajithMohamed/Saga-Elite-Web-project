@@ -123,15 +123,29 @@ const registerUser = catchAsync(async (req, res, next) => {
             </p>
         `;
 
-    await sendMail({
-        email: newUser.email,
-        subject: "Saga Elite – Email Verification Code",
-        html: buildEmailTemplate("Verify Your Email Address", registrationBody),
-    });
+    let mailError = null;
+    try {
+        await sendMail({
+            email: newUser.email,
+            subject: "Saga Elite – Email Verification Code",
+            html: buildEmailTemplate("Verify Your Email Address", registrationBody),
+        });
+    } catch (err) {
+        // log for debugging, but do not crash the whole request
+        console.error("[registerUser] mail send failed", err);
+        mailError = err;
+    }
+
+    const responseMessage = mailError
+        ? "User registered successfully but verification email could not be sent. Please contact support."
+        : "User registered successfully. Please verify your email with the OTP sent.";
+
+    // always return 201 so client doesn’t see a 500 on mail failures
     res.status(201).json({
         status: "success",
-        message: "User registered successfully. Please verify your email with the OTP sent.",
-        data : newUser
+        message: responseMessage,
+        data: newUser,
+        mailError: mailError ? mailError.message : undefined,
     });
 });
 
