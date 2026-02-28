@@ -1,22 +1,44 @@
-import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import CommonForm from '@/components/common-components/CommonForm'
 import { loginFormControl } from '@/config'
 import { Mail, Facebook, Twitter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FcGoogle } from 'react-icons/fc'
+import { toast } from '@/hooks/use-toast'
 
 const Login = () => {
   const [formData,setFormData] = useState({
     email : "",
     password : ""
   })
+  const [errors,setErrors] = useState({})
+  const [isLoading,setIsLoading] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(()=>{
+    const newErrors = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if(formData.email && !emailRegex.test(formData.email)){
+      newErrors.email = "Please enter a valid email address."
+    }
+    if(formData.password && formData.password.length < 8){
+      newErrors.password = "Password must be at least 8 characters."
+    }
+    setErrors(newErrors)
+  },[formData])
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if(Object.keys(errors).length > 0){
+      toast({title:'Invalid form',description:'Fix the errors above before logging in.',variant:'destructive'})
+      return
+    }
+    setIsLoading(true)
     // TODO: perform login action
     console.log('login data', formData)
+    setIsLoading(false)
   }
 
   // style helpers
@@ -58,8 +80,10 @@ const Login = () => {
             formControls={loginFormControl}
             formData={formData}
             setFormData={setFormData}
+            formErrors={errors}
             onSubmit={handleSubmit}
-            buttonText="Log In"
+            buttonText={isLoading ? 'Logging in…' : 'Log In'}
+            buttonDisabled={isLoading}
             inputClass={inputClasses}
             labelClass={labelClasses}
             buttonClass={buttonClasses}

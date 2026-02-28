@@ -50,7 +50,10 @@ app.use("/api/google",googleAuthRoute)
 app.use(globalErrorController);
 
 
-const PORT = process.env.PORT || 5001;
+// resolve port: dotenv doesn't expand variables, so PORT may literally be "${BACKEND_PORT}".
+// fall back to BACKEND_PORT directly and coerce to a number when possible.
+const rawPort = process.env.PORT || process.env.BACKEND_PORT;
+const PORT = Number(rawPort) || 5001;
 
 const connectToDB = require("./DataBase/db");
 

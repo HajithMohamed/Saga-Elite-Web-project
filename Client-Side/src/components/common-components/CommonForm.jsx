@@ -12,7 +12,18 @@ import {
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 
-const CommonForm = ({ formControls, formData, setFormData, onSubmit, buttonText, inputClass = '', labelClass = '', buttonClass = '' }) => {
+const CommonForm = ({
+  formControls,
+  formData,
+  setFormData,
+  onSubmit,
+  buttonText,
+  inputClass = '',
+  labelClass = '',
+  buttonClass = '',
+  formErrors = {},
+  buttonDisabled = false,
+}) => {
   const renderInputByComponentType = (getControlItem) => {
     let element = null;
     const value = formData[getControlItem.name]
@@ -125,6 +136,11 @@ const CommonForm = ({ formControls, formData, setFormData, onSubmit, buttonText,
               {controlItem.label}
             </Label>
             {renderInputByComponentType(controlItem)}
+            {formErrors[controlItem.name] && (
+              <p className="text-xs text-red-500 mt-1">
+                {formErrors[controlItem.name]}
+              </p>
+            )}
           </motion.div>
         ))}
       </div>
@@ -133,6 +149,7 @@ const CommonForm = ({ formControls, formData, setFormData, onSubmit, buttonText,
         whileHover={{ scale: 1.02 }}
         className={`w-full ${buttonClass}`}
         type="submit"
+        disabled={buttonDisabled}
       >
         {buttonText || 'Submit'}
       </motion.button>
