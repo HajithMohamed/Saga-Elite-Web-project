@@ -45,3 +45,12 @@ export const registerFormControl = [
     componentType : "INPUT"
   },
 ];
+
+export const verifyOtpFormControls = [
+  {
+    name: "otp",
+    id: "otp",
+    label: "",
+    componentType: "OTP_INPUT"
+  }
+];

@@ -7,7 +7,8 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
     !isAuthenticated &&
     !(
       location.pathname.includes("login") ||
-      location.pathname.includes("register")
+      location.pathname.includes("register")||
+      location.pathname.includes('verify-otp')
     )
   ) {
     return <Navigate to="/auth/login" />;
