@@ -140,8 +140,8 @@ const productSchema = new mongoose.Schema(
    Index Optimization
 =================================*/
 productSchema.index({ drop: 1, isActive: 1 });
-productSchema.index({ slug: 1 });
-productSchema.index({ artNo: 1 });
+// productSchema.index({ slug: 1 }); // Removed duplicate index
+// productSchema.index({ artNo: 1 }); // Removed duplicate index
 
 /* ===============================
    Slug Generation

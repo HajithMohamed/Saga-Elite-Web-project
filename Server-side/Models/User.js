@@ -93,6 +93,6 @@ userSchema.methods.correctPassword = async function (candidatePassword, userPass
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-userSchema.index({ googleId: 1 });
+// userSchema.index({ googleId: 1 }); // Removed duplicate index
 
 module.exports = mongoose.model("User", userSchema);
