@@ -1,8 +1,10 @@
 import { Route, Routes, Outlet } from "react-router-dom";
 
 // auth page imports
+import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+
 
 // admin page imports
 import AdminLayout from "./components/admin-components/Layout";
@@ -24,6 +26,7 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 
 // checking authentication page import
 import CheckAuth from "./components/common-components/CheckAuth";
+import VerifyOtp from "./pages/auth/VerifyOtp";
 
 function App() {
   const isAuthenticated = false;
@@ -41,13 +44,14 @@ function App() {
           path="/auth"
           element={
             <CheckAuth isAuthenticated={isAuthenticated} user={user}>
-              <Outlet />
+              <AuthLayout />
             </CheckAuth>
           }
         >
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
+          <Route path="verify-otp" element={<VerifyOtp/>}/>
         </Route>
 
         {/* ADMIN ROUTES */}

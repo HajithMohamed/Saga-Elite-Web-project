@@ -3,22 +3,23 @@ import { Outlet } from 'react-router-dom'
 
 const Layout = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome to Saga Elite Youth Fashion
-          </h1>
+    <div className="min-h-screen flex bg-black text-white">
+      {/* left branding panel */}
+      <div className="hidden md:flex md:w-1/2 relative bg-[#080808]">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img src="/Logo.png" alt="Saga Elite" className="max-w-full h-auto" />
         </div>
-      </header>
-      <main className="flex-grow container mx-auto px-4 py-8">
+        <div className="absolute bottom-8 w-full text-center">
+          <span className="font-serif text-xs tracking-widest text-[#D4AF37]">
+            RARE FIT FOREVER
+          </span>
+        </div>
+      </div>
+      
+      {/* right dynamic panel */}
+      <div className="flex flex-1 items-center justify-center p-8">
         <Outlet />
-      </main>
-      <footer className="bg-white py-4 shadow-inner">
-        <div className="text-center text-sm text-gray-500">
-          &copy; {new Date().getFullYear()} Saga Elite Fashion. All rights reserved.
-        </div>
-      </footer>
+      </div>
     </div>
   )
 }
