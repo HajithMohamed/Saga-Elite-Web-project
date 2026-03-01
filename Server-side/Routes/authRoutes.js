@@ -1,10 +1,11 @@
 const express = require("express");
-const {registerUser,login,otpVerify,logout,resendOTP,forgotPassword,resendResetPasswordOtp,resetPassword,changePassword} = require("../Controllers/auth-controller");
+const {registerUser,login,otpVerify,logout,resendOTP,forgotPassword,resendResetPasswordOtp,resetPassword,changePassword,checkAuth} = require("../Controllers/auth-controller");
 
 const authMiddleware = require("../Middlewares/auth-middleware")
 
 const router = express.Router();
 
+router.get("/check-auth", authMiddleware, checkAuth);
 router.post("/register",registerUser);
 router.post('/login', login);
 router.post('/logout', authMiddleware,logout);

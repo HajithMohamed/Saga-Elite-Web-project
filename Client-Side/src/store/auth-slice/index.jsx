@@ -20,7 +20,7 @@ export const registerUserAction = createAsyncThunk(
         {
           withCredentials: true,
         },
-      );
+      ); 
       return respose.data;
     } catch (err) {
       const serverMsg = err?.response?.data?.message;
@@ -61,6 +61,55 @@ export const resendOtpAction = createAsyncThunk(
     }
   }
 )
+
+export const loginUserAction = createAsyncThunk('auth/login',
+  async(formData, thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/login`,formData,{
+        withCredentials:true
+      })
+      return apiResponse.data
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Login Failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+
+)
+
+export const checkAuthAction = createAsyncThunk(
+    "/auth/checkauth",
+    async (_, thunkAPI) => {
+      try {
+        const response = await axios.get(`${API_BASE}/auth/check-auth`, {
+          withCredentials: true,
+        });
+  
+        return response.data;
+      } catch (error) {
+        const serverMsg = error?.response?.data?.message;
+        const message = serverMsg || error.message || "Check Auth Failed";
+        return thunkAPI.rejectWithValue(message);
+      }
+    }
+);
+
+export const forgotPasswordAction = createAsyncThunk('auth/forgot-password',
+  async(formData)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/forgot-password`,formData,{
+        withCredentials : true
+      })
+      return response.data
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+        const message = serverMsg || error.message || "Forgot password request failed";
+        return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -97,7 +146,46 @@ const authSlice = createSlice({
     }).addCase(resendOtpAction.rejected,(state,action)=>{
         state.isLoading = false;
     })
-  }
+    .addCase(loginUserAction.pending,(state)=>{
+        state.isLoading = true
+    }).addCase(loginUserAction.fulfilled,(state,action)=>{
+        state.isLoading = false;
+        state.user = action.payload.data.user;
+        state.isAuthenticated = true
+    }).addCase(loginUserAction.rejected,(state,action)=>{
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false
+    })    .addCase(checkAuthAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(checkAuthAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.success ? action.payload.data.user : null;
+        state.isAuthenticated = action.payload.success;
+      })
+      .addCase(checkAuthAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      }).addCase(loginUserAction.rejected,(state,action)=>{
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false
+    }).addCase(forgotPasswordAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(forgotPasswordAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.success ? action.payload.data.user : null;
+        state.isAuthenticated = action.payload.success;
+      })
+      .addCase(forgotPasswordAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false
+      }) 
+    }
 });
 
 export const { setUser } = authSlice.actions;

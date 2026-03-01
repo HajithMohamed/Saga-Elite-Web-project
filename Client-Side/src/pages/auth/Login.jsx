@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { useDispatch } from "react-redux";
+import { loginUserAction } from "@/store/auth-slice";
 import CommonForm from '@/components/common-components/CommonForm'
 import { loginFormControl } from '@/config'
 import { Mail, Facebook, Twitter } from 'lucide-react'
@@ -15,7 +17,7 @@ const Login = () => {
   const [errors,setErrors] = useState({})
   const [isLoading,setIsLoading] = useState(false)
   const location = useLocation()
-  const navigate = useNavigate()
+  const dispatch = useDispatch();
 
   useEffect(()=>{
     const newErrors = {}
@@ -29,16 +31,27 @@ const Login = () => {
     setErrors(newErrors)
   },[formData])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if(Object.keys(errors).length > 0){
       toast({title:'Invalid form',description:'Fix the errors above before logging in.',variant:'destructive'})
       return
     }
     setIsLoading(true)
-    // TODO: perform login action
-    console.log('login data', formData)
-    setIsLoading(false)
+    try {
+      const response = await dispatch(loginUserAction(formData)).unwrap();
+      toast({
+        title: "Login successful",
+        description: response.message || "Welcome back!",
+        variant: "success",
+      });
+      // Navigation handled by CheckAuth
+    } catch (err) {
+      const msg = typeof err === 'string' ? err : err?.response?.data?.message || err.message || "Login failed";
+      toast({ title: "Login failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   // style helpers
