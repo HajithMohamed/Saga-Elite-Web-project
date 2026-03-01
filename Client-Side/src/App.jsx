@@ -1,4 +1,5 @@
 import { Route, Routes, Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
@@ -29,12 +30,7 @@ import CheckAuth from "./components/common-components/CheckAuth";
 import VerifyOtp from "./pages/auth/VerifyOtp";
 
 function App() {
-  const isAuthenticated = false;
-
-  const user = {
-    name: "",
-    role: "",
-  };
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   return (
     <div>

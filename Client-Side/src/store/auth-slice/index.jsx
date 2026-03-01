@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// use Vite env variable for API url; fall back to the common local default
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 const initialState = {
@@ -24,7 +23,6 @@ export const registerUserAction = createAsyncThunk(
       );
       return respose.data;
     } catch (err) {
-      // prefer server-sent message when available
       const serverMsg = err?.response?.data?.message;
       const message = serverMsg || err.message || "Registration failed";
       return thunkAPI.rejectWithValue(message);
@@ -32,6 +30,37 @@ export const registerUserAction = createAsyncThunk(
   },
 );
 
+export const verifyOtpAction = createAsyncThunk(
+  'auth/otp-verify',
+  async(formData,thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/otp-verify`,formData,{
+        withCredentials : true
+      })
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "OTP verification failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
+
+export const resendOtpAction = createAsyncThunk(
+  'auth/resend-otp',
+  async(formData,thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/resend-otp`,formData,{
+        withCredentials : true
+      })
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Resend OTP failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -43,12 +72,30 @@ const authSlice = createSlice({
         state.isLoading = true
     }).addCase(registerUserAction.fulfilled,(state,action)=>{
         state.isLoading = false;
-        state.user = null;
+        state.user = action.payload.data;
         state.isAuthenticated = false
     }).addCase(registerUserAction.rejected,(state,action)=>{
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false
+    })
+    .addCase(verifyOtpAction.pending,(state)=>{
+        state.isLoading = true
+    }).addCase(verifyOtpAction.fulfilled,(state,action)=>{
+        state.isLoading = false;
+        state.user = action.payload.data.user;
+        state.isAuthenticated = true
+    }).addCase(verifyOtpAction.rejected,(state,action)=>{
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false
+    })
+    .addCase(resendOtpAction.pending,(state)=>{
+        state.isLoading = true
+    }).addCase(resendOtpAction.fulfilled,(state,action)=>{
+        state.isLoading = false;
+    }).addCase(resendOtpAction.rejected,(state,action)=>{
+        state.isLoading = false;
     })
   }
 });

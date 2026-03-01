@@ -1,13 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import CommonForm from "@/components/common-components/CommonForm";
 import { verifyOtpFormControls } from "@/config";
+import { useDispatch, useSelector } from "react-redux";
+import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
 
 const VerifyOtp = () => {
-  const [formData, setFormData] = useState({ otp: "" });
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isLoading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({ 
+    otp: "",
+    userId: ''
+  });
+
+  useEffect(() => {
+    if (user && user._id) {
+      setFormData((prev) => ({ ...prev, userId: user._id }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && user.isVerified) {
+      toast({
+        title: "Verified",
+        description: "Your account is successfully verified.",
+        variant: "success",
+      });
+      setTimeout(() => {
+        navigate("/shopping/home");
+      }, 1000); 
+    }
+  }, [user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -22,27 +48,45 @@ const VerifyOtp = () => {
       return;
     }
 
-    setIsLoading(true);
-    // TODO: perform OTP verification action here
-    console.log("Submitting verify OTP data:", otpString);
-
-    // Simulated API response
-    setTimeout(() => {
-      setIsLoading(false);
+    if (!formData.userId) {
       toast({
-        title: "Verified",
-        description: "Your account is successfully verified.",
-        variant: "success",
+        title: "Error",
+        description: "User ID is missing. Please try registering again.",
+        variant: "destructive",
       });
-      // Example of where you might route them next:
-      // navigate("/auth/login");
-    }, 1500);
+      return;
+    }
+
+    dispatch(verifyOtpAction(formData)).unwrap().catch((error) => {
+      toast({
+        title: "Verification Failed",
+        description: error,
+        variant: "destructive",
+      });
+    });
   };
   
   const handleResend = () => {
-    toast({
-      title: "OTP Resent",
-      description: "A fresh verification code has been sent to your email.",
+    if (!user || !user.email) {
+      toast({
+        title: "Error",
+        description: "User email is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    dispatch(resendOtpAction({ email: user.email })).unwrap().then(() => {
+      toast({
+        title: "OTP Resent",
+        description: "A fresh verification code has been sent to your email.",
+      });
+    }).catch((error) => {
+      toast({
+        title: "Resend Failed",
+        description: error,
+        variant: "destructive",
+      });
     });
   }
 
