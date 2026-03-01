@@ -1,10 +1,17 @@
 import { Route, Routes, Outlet } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { checkAuthAction } from "./store/auth-slice";
+import { Loader2 } from "lucide-react";
 
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPasswordOtp from "./pages/auth/ResetPasswordOtp";
+import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
+import SetNewPassword from "./pages/auth/SetNewPassword";
 
 
 // admin page imports
@@ -30,7 +37,20 @@ import CheckAuth from "./components/common-components/CheckAuth";
 import VerifyOtp from "./pages/auth/VerifyOtp";
 
 function App() {
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(checkAuthAction());
+  }, [dispatch]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-black">
+        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -47,6 +67,9 @@ function App() {
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password-otp" element={<VerifyResetOtp />} />
+          <Route path="set-new-password" element={<SetNewPassword />} />
           <Route path="verify-otp" element={<VerifyOtp/>}/>
         </Route>
 

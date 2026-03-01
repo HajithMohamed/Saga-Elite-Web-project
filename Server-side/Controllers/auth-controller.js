@@ -433,6 +433,29 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
     });
 });
 
+const verifyResetOtp = catchAsync(async (req, res, next) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return next(new AppError("Email and OTP are required", 400));
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user || user.resetPasswordOtp.toString() !== otp.toString()) {
+        return next(new AppError("Invalid or expired OTP", 400));
+    }
+
+    if (Date.now() > new Date(user.resetPasswordOtpExpires).getTime()) {
+        return next(new AppError("OTP expired, please request a new one", 400));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "OTP verified successfully",
+    });
+});
+
 const resetPassword = catchAsync(async(req, res, next)=>{
     const {email, otp, newPassword, confirmPassword} = req.body;
 
@@ -482,6 +505,20 @@ const resetPassword = catchAsync(async(req, res, next)=>{
 });
 
 
+const checkAuth = catchAsync(async (req, res, next) => {
+    const user = req.userInfo;
+    if (!user) {
+        return next(new AppError("User not found", 404));
+    }
+    res.status(200).json({
+        success: true,
+        message: "Authenticated user",
+        data: {
+            user,
+        },
+    });
+});
+
 module.exports = {
     registerUser,
     otpVerify,
@@ -490,6 +527,8 @@ module.exports = {
     changePassword,
     forgotPassword,
     resendResetPasswordOtp,
+    verifyResetOtp,
     resetPassword,
-    logout
+    logout,
+    checkAuth,
 };

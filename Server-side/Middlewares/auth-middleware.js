@@ -4,16 +4,20 @@ const AppError = require("../Utils/appError");
 const User = require("../Models/User")
 
 const authMiddleware = catchAsync(async (req,res,next)=>{
-    // Express stores headers in req.headers (plural)
-    const authHeader = req.headers.authorization;
+    let token;
 
-    // If header missing or doesn't start with Bearer token, user is not authenticated
-    if(!authHeader || !authHeader.startsWith("Bearer")){
-        // set 401 unauthorized status
-        return next(new AppError("user not authenticated. Please login first", 401));
+    // 1) Check if token is in headers (Bearer token)
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        token = req.headers.authorization.split(" ")[1];
+    }
+    // 2) Check if token is in cookies
+    else if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
     }
 
-    const token = authHeader.split(" ")[1];
+    if (!token) {
+        return next(new AppError("User not authenticated. Please login first", 401));
+    }
 
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
 
