@@ -1,7 +1,26 @@
 import React from 'react'
 import { Bell, Search, LogOut, Menu, User } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
+import { logoutUserAction } from '@/store/auth-slice'
+import { toast } from '@/hooks/use-toast'
 
 const Header = () => {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const { isLoading } = useSelector((state) => state.auth)
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUserAction()).unwrap()
+      toast({ title: 'Logged out', description: 'Redirecting to login.', variant: 'success' })
+      navigate('/auth/login')
+    } catch (err) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Logout failed'
+      toast({ title: 'Logout failed', description: msg, variant: 'destructive' })
+    }
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-800 bg-black/80 px-8 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-6">
@@ -36,8 +55,12 @@ const Header = () => {
             <User className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
           </div>
           <button 
-            className="ml-2 group p-2 text-gray-400 hover:text-red-500 transition-colors"
+            onClick={handleLogout}
+            disabled={isLoading}
             title="Log out from system"
+            className={`ml-2 group p-2 transition-colors
+              ${isLoading ? 'cursor-not-allowed text-gray-500' : 'text-gray-400 hover:text-red-500'}
+            `}
           >
             <LogOut className="h-5 w-5" />
           </button>

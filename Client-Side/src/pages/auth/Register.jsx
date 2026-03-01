@@ -25,11 +25,15 @@ const Register = () => {
   useEffect(() => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // password must be at least 8 chars and contain uppercase, lowercase, and a symbol
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address.";
     }
-    if (formData.password && formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters.";
+    if (formData.password && !passwordRegex.test(formData.password)) {
+      newErrors.password =
+        "Password must be at least 8 characters and include uppercase, lowercase, and a symbol.";
     }
     if (
       formData.confirmPassword &&

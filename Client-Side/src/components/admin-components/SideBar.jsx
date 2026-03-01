@@ -1,9 +1,15 @@
 import React from 'react'
 import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, X } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { logoutUserAction } from '@/store/auth-slice'
+import { toast } from '@/hooks/use-toast'
 
 const SideBar = () => {
   const location = useLocation()
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const { isLoading } = useSelector((state) => state.auth)
   
   const menuItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -11,6 +17,21 @@ const SideBar = () => {
     { label: 'Orders', path: '/admin/order', icon: <ShoppingCart className="h-5 w-5" /> },
     { label: 'Features', path: '/admin/feature', icon: <Star className="h-5 w-5" /> },
   ]
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUserAction()).unwrap()
+      toast({
+        title: 'Logged out',
+        description: 'You have been signed out.',
+        variant: 'success',
+      })
+      navigate('/auth/login')
+    } catch (err) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Logout failed'
+      toast({ title: 'Logout failed', description: msg, variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="fixed inset-y-0 left-0 z-50 w-64 bg-black border-r border-gray-800 flex flex-col transform transition-transform duration-300 lg:translate-x-0">
@@ -53,10 +74,14 @@ const SideBar = () => {
 
       {/* Logout / Footer Section */}
       <div className="p-6 border-t border-gray-800">
-        <button className="flex w-full items-center gap-4 px-4 py-3 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20 group">
+        <button
+          onClick={handleLogout}
+          disabled={isLoading}
+                  className={`flex w-full items-center gap-4 px-4 py-3 rounded-lg transition-all border border-transparent ${isLoading ? 'cursor-not-allowed bg-gray-700 text-gray-400' : 'text-gray-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'}`}
+        >
           <LogOut className="h-5 w-5 group-hover:animate-pulse" />
           <span className="font-bold text-sm tracking-wide uppercase font-sans">
-            Log Out
+            {isLoading ? 'Logging out…' : 'Log Out'}
           </span>
         </button>
         <div className="mt-6 flex flex-col items-center gap-1 opacity-50 grayscale hover:grayscale-0 transition-all">

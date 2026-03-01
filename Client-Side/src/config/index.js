@@ -54,3 +54,59 @@ export const verifyOtpFormControls = [
     componentType: "OTP_INPUT"
   }
 ];
+
+export const forgotPasswordControls = [
+  {
+    name: "email",
+    type: "email",
+    placeholder: "exampl@gmail.com",
+    id: "email",
+    label: "Email",
+    componentType : "INPUT"
+  },
+];
+
+export const resetPasswordOtpFormControls = [
+  {
+    name: "otp",
+    id: "otp",
+    label: "",
+    componentType: "OTP_INPUT"
+  },
+  {
+    name: "newPassword",
+    type: "password",
+    placeholder: "Enter new password",
+    id: "newPassword",
+    label: "New Password",
+    componentType : "INPUT"
+  },
+  {
+    name: "confirmPassword",
+    type: "password",
+    placeholder: "Confirm new password",
+    id: "confirmPassword",
+    label: "Confirm Password",
+    componentType : "INPUT"
+  },
+];
+
+export const setPasswordFormControls = [
+  {
+    name: "newPassword",
+    type: "password",
+    placeholder: "Enter new password",
+    id: "newPassword",
+    label: "New Password",
+    componentType : "INPUT"
+  },
+  {
+    name: "confirmPassword",
+    type: "password",
+    placeholder: "Confirm new password",
+    id: "confirmPassword",
+    label: "Confirm Password",
+    componentType : "INPUT"
+  },
+];
+

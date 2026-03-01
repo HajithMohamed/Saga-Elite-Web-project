@@ -96,12 +96,12 @@ export const checkAuthAction = createAsyncThunk(
 );
 
 export const forgotPasswordAction = createAsyncThunk('auth/forgot-password',
-  async(formData)=>{
+  async(formData, thunkAPI)=>{
     try {
       const apiResponse = await axios.post(`${API_BASE}/auth/forgot-password`,formData,{
         withCredentials : true
       })
-      return response.data
+      return apiResponse.data
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
         const message = serverMsg || error.message || "Forgot password request failed";
@@ -109,6 +109,72 @@ export const forgotPasswordAction = createAsyncThunk('auth/forgot-password',
     }
   }
 )
+
+export const resetPasswordAction = createAsyncThunk('auth/reset-password',
+  async(formData, thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/reset-password`,formData,{
+        withCredentials : true
+      })
+      return apiResponse.data
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+        const message = serverMsg || error.message || "Password reset failed";
+        return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
+
+export const resendResetPasswordOtpAction = createAsyncThunk('auth/resend-reset-otp',
+  async(formData, thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/resend-reset-otp`,formData,{
+        withCredentials : true
+      })
+      return apiResponse.data
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+        const message = serverMsg || error.message || "Failed to resend reset OTP";
+        return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
+
+export const verifyResetOtpAction = createAsyncThunk('auth/verify-reset-otp',
+  async(formData, thunkAPI)=>{
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/verify-reset-otp`,formData,{
+        withCredentials : true
+      })
+      return apiResponse.data
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+        const message = serverMsg || error.message || "OTP verification failed";
+        return thunkAPI.rejectWithValue(message);
+    }
+  }
+)
+
+// thunk action for logging the user out
+export const logoutUserAction = createAsyncThunk(
+  'auth/logout',
+  async (_, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/auth/logout`,
+        {},
+        {
+          withCredentials: true,
+        },
+      );
+      return response.data;
+    } catch (err) {
+      const serverMsg = err?.response?.data?.message;
+      const message = serverMsg || err.message || 'Logout failed';
+      return thunkAPI.rejectWithValue(message);
+    }
+  },
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -168,23 +234,56 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
-      }).addCase(loginUserAction.rejected,(state,action)=>{
-        state.isLoading = false;
-        state.user = null;
-        state.isAuthenticated = false
-    }).addCase(forgotPasswordAction.pending, (state) => {
+      }).addCase(forgotPasswordAction.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(forgotPasswordAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.success ? action.payload.data.user : null;
-        state.isAuthenticated = action.payload.success;
+        // Don't change auth state for forgot password
       })
       .addCase(forgotPasswordAction.rejected, (state) => {
         state.isLoading = false;
+        // Don't change auth state for forgot password
+      }).addCase(resetPasswordAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(resetPasswordAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        // Password reset successful, but user needs to login again
+      })
+      .addCase(resetPasswordAction.rejected, (state) => {
+        state.isLoading = false;
+      }).addCase(resendResetPasswordOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(resendResetPasswordOtpAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+      })
+      .addCase(resendResetPasswordOtpAction.rejected, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(verifyResetOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(verifyResetOtpAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+      })
+      .addCase(verifyResetOtpAction.rejected, (state, action) => {
+        state.isLoading = false;
+      })
+      // logout handling
+      .addCase(logoutUserAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutUserAction.fulfilled, (state) => {
+        state.isLoading = false;
+        // reset to initial state on successful logout
         state.user = null;
-        state.isAuthenticated = false
-      }) 
+        state.isAuthenticated = false;
+      })
+      .addCase(logoutUserAction.rejected, (state) => {
+        state.isLoading = false;
+      });
     }
 });
 

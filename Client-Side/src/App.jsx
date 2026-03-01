@@ -8,6 +8,10 @@ import { Loader2 } from "lucide-react";
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPasswordOtp from "./pages/auth/ResetPasswordOtp";
+import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
+import SetNewPassword from "./pages/auth/SetNewPassword";
 
 
 // admin page imports
@@ -63,6 +67,9 @@ function App() {
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password-otp" element={<VerifyResetOtp />} />
+          <Route path="set-new-password" element={<SetNewPassword />} />
           <Route path="verify-otp" element={<VerifyOtp/>}/>
         </Route>
 
