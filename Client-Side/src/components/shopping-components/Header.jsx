@@ -16,7 +16,7 @@ const Header = () => {
         {/* Center/Left: Logo */}
         <Link to="/shopping/home" className="flex items-center gap-3">
           <img 
-            src="/Logo.jpeg" 
+            src="/LOGO.png" 
             alt="Saga Elite Logo" 
             className="h-12 w-12 object-cover rounded-md"
           />
