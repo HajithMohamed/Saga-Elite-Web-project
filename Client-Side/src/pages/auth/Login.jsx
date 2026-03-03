@@ -4,11 +4,11 @@ import { useDispatch } from "react-redux";
 import { loginUserAction, googleAuthAction } from "@/store/auth-slice";
 import CommonForm from '@/components/common-components/CommonForm'
 import { loginFormControl } from '@/config'
-import { Mail, Facebook, Twitter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FcGoogle } from 'react-icons/fc'
 import { toast } from '@/hooks/use-toast'
-import { useGoogleLogin } from '@react-oauth/google'
+import GoogleAuthButton from '@/components/auth-components/GoogleAuthButton'
+
+const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
 
 const Login = () => {
   const [formData,setFormData] = useState({
@@ -74,12 +74,8 @@ const Login = () => {
     }
   }
 
-  const googleLogin = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: handleGoogleSuccess,
-    onError: () =>
-      toast({ title: 'Google sign-in failed', description: 'Could not open Google sign-in.', variant: 'destructive' }),
-  })
+  const handleGoogleError = () =>
+    toast({ title: 'Google sign-in failed', description: 'Could not open Google sign-in.', variant: 'destructive' })
 
   // style helpers
   const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans"
@@ -129,15 +125,22 @@ const Login = () => {
         <hr className="flex-grow border-gray-600" />
       </div>
 
-      <Button
-        variant="outline"
-        onClick={googleLogin}
-        disabled={isLoading}
-        className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-200"
-      >
-        <FcGoogle className="h-5 w-5" />
-        Continue with Google
-      </Button>
+      {GOOGLE_ENABLED ? (
+        <GoogleAuthButton
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={isLoading}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          disabled
+          className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-400 cursor-not-allowed"
+        >
+          Continue with Google (not configured)
+        </Button>
+      )}
 
       <p className="text-sm text-center mt-4">
         Don&apos;t have an account?{' '}
