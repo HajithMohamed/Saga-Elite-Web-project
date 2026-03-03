@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CommonForm from "@/components/common-components/CommonForm";
 import { registerFormControl } from "@/config";
-import { Mail, Facebook, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FcGoogle } from "react-icons/fc";
-import { registerUserAction } from "@/store/auth-slice";
+import { registerUserAction, googleAuthAction } from "@/store/auth-slice";
 import { useDispatch } from "react-redux";
 import { toast } from "@/hooks/use-toast";
+import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+
+const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -79,6 +80,26 @@ const Register = () => {
     }
   };
 
+  const handleGoogleSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(googleAuthAction({ accessToken: access_token })).unwrap();
+      toast({
+        title: "Signed in with Google",
+        description: response.message || "Welcome!",
+        variant: "success",
+      });
+    } catch (err) {
+      const msg = typeof err === "string" ? err : err?.message || "Google sign-in failed";
+      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () =>
+    toast({ title: "Google sign-in failed", description: "Could not open Google sign-in.", variant: "destructive" });
+
   const inputClasses =
     "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans";
   const labelClasses = "text-white";
@@ -121,13 +142,22 @@ const Register = () => {
         <hr className="flex-grow border-gray-600" />
       </div>
 
-      <Button
-        variant="outline"
-        className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-200"
-      >
-        <FcGoogle className="h-5 w-5" />
-        Continue with Google
-      </Button>
+      {GOOGLE_ENABLED ? (
+        <GoogleAuthButton
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={isLoading}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          disabled
+          className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-400 cursor-not-allowed"
+        >
+          Continue with Google (not configured)
+        </Button>
+      )}
 
       <p className="text-sm text-center mt-4">
         Already have an account?{" "}

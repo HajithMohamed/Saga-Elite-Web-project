@@ -155,6 +155,42 @@ export const verifyResetOtpAction = createAsyncThunk('auth/verify-reset-otp',
   }
 )
 
+export const googleAuthAction = createAsyncThunk(
+  "auth/google",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(
+        `${API_BASE}/google/google-auth`,
+        { accessToken },
+        { withCredentials: true }
+      );
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Google sign-in failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const changePasswordAction = createAsyncThunk(
+  "auth/change-password",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(
+        `${API_BASE}/auth/change-password`,
+        formData,
+        { withCredentials: true }
+      );
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Password change failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 // thunk action for logging the user out
 export const logoutUserAction = createAsyncThunk(
   'auth/logout',
@@ -282,6 +318,28 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       })
       .addCase(logoutUserAction.rejected, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(googleAuthAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(googleAuthAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.data.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(googleAuthAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      .addCase(changePasswordAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(changePasswordAction.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(changePasswordAction.rejected, (state) => {
         state.isLoading = false;
       });
     }

@@ -6,13 +6,25 @@ import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import store from "./store/store";
 import { Toaster } from "@/components/ui/toaster";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
-createRoot(document.getElementById("root")).render(
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
+const app = (
   <BrowserRouter>
     <Provider store={store}>
       <App />
       {/* toast popup container */}
       <Toaster />
     </Provider>
-  </BrowserRouter>,
+  </BrowserRouter>
+);
+
+// GoogleOAuthProvider requires a non-empty clientId — only mount it when the env var is set
+createRoot(document.getElementById("root")).render(
+  GOOGLE_CLIENT_ID ? (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{app}</GoogleOAuthProvider>
+  ) : (
+    app
+  ),
 );

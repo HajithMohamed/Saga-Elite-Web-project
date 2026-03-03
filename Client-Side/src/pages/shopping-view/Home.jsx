@@ -11,7 +11,7 @@ const Home = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black z-10 hidden md:block"></div>
         <div className="absolute inset-0 opacity-40 flex items-center justify-center">
            {/* If we had a banner image, we'd use it here. We use the logo as a placeholder faded background */}
-           <img src="/Logo.jpeg" alt="Hero bg" className="object-cover w-full h-full blur-sm opacity-30 saturate-200" />
+           <img src="/LOGO.png" alt="Hero bg" className="object-cover w-full h-full blur-sm opacity-30 saturate-200" />
         </div>
         
         <div className="relative z-20 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
