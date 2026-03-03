@@ -173,6 +173,24 @@ export const googleAuthAction = createAsyncThunk(
   }
 );
 
+export const changePasswordAction = createAsyncThunk(
+  "auth/change-password",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(
+        `${API_BASE}/auth/change-password`,
+        formData,
+        { withCredentials: true }
+      );
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Password change failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 // thunk action for logging the user out
 export const logoutUserAction = createAsyncThunk(
   'auth/logout',
@@ -314,6 +332,15 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+      })
+      .addCase(changePasswordAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(changePasswordAction.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(changePasswordAction.rejected, (state) => {
+        state.isLoading = false;
       });
     }
 });

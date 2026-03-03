@@ -110,3 +110,30 @@ export const setPasswordFormControls = [
   },
 ];
 
+export const changePasswordFormControls = [
+  {
+    name: "oldPassword",
+    type: "password",
+    placeholder: "Current password",
+    id: "oldPassword",
+    label: "Current Password",
+    componentType: "INPUT",
+  },
+  {
+    name: "newPassword",
+    type: "password",
+    placeholder: "New password",
+    id: "newPassword",
+    label: "New Password",
+    componentType: "INPUT",
+  },
+  {
+    name: "passwordConfirm",
+    type: "password",
+    placeholder: "Confirm new password",
+    id: "passwordConfirm",
+    label: "Confirm New Password",
+    componentType: "INPUT",
+  },
+];
+
