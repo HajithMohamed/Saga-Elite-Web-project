@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useDispatch } from "react-redux";
-import { loginUserAction } from "@/store/auth-slice";
+import { loginUserAction, googleAuthAction } from "@/store/auth-slice";
 import CommonForm from '@/components/common-components/CommonForm'
 import { loginFormControl } from '@/config'
 import { Mail, Facebook, Twitter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FcGoogle } from 'react-icons/fc'
 import { toast } from '@/hooks/use-toast'
+import { useGoogleLogin } from '@react-oauth/google'
 
 const Login = () => {
   const [formData,setFormData] = useState({
@@ -55,6 +56,30 @@ const Login = () => {
       setIsLoading(false);
     }
   }
+
+  const handleGoogleSuccess = async ({ access_token }) => {
+    setIsLoading(true)
+    try {
+      const response = await dispatch(googleAuthAction({ accessToken: access_token })).unwrap()
+      toast({
+        title: 'Signed in',
+        description: response.message || 'Welcome!',
+        variant: 'success',
+      })
+    } catch (err) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Google sign-in failed'
+      toast({ title: 'Google sign-in failed', description: msg, variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const googleLogin = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: handleGoogleSuccess,
+    onError: () =>
+      toast({ title: 'Google sign-in failed', description: 'Could not open Google sign-in.', variant: 'destructive' }),
+  })
 
   // style helpers
   const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans"
@@ -106,6 +131,8 @@ const Login = () => {
 
       <Button
         variant="outline"
+        onClick={googleLogin}
+        disabled={isLoading}
         className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-200"
       >
         <FcGoogle className="h-5 w-5" />
