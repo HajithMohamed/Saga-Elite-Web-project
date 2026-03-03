@@ -1,7 +1,7 @@
 import React from 'react'
 import { Bell, Search, LogOut, Menu, User } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
 
@@ -47,13 +47,15 @@ const Header = () => {
         </button>
 
         <div className="flex items-center gap-4 border-l border-gray-800 pl-6 ml-2">
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-bold tracking-wide text-white font-sans uppercase">Admin Profile</span>
-            <span className="text-[10px] uppercase font-medium tracking-widest text-[#D4AF37]">System Controller</span>
-          </div>
-          <div className="h-10 w-10 rounded-full border-2 border-[#D4AF37]/50 bg-gray-900 flex items-center justify-center group cursor-pointer hover:border-[#D4AF37] transition-all overflow-hidden ring-2 ring-[#D4AF37]/5">
-            <User className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
-          </div>
+          <Link to="/admin/account" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+            <div className="flex flex-col items-end">
+              <span className="text-sm font-bold tracking-wide text-white font-sans uppercase">Admin Profile</span>
+              <span className="text-[10px] uppercase font-medium tracking-widest text-[#D4AF37]">System Controller</span>
+            </div>
+            <div className="h-10 w-10 rounded-full border-2 border-[#D4AF37]/50 bg-gray-900 flex items-center justify-center group cursor-pointer hover:border-[#D4AF37] transition-all overflow-hidden ring-2 ring-[#D4AF37]/5">
+              <User className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
+            </div>
+          </Link>
           <button 
             onClick={handleLogout}
             disabled={isLoading}

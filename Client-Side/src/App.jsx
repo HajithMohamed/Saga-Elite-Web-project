@@ -9,7 +9,6 @@ import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPasswordOtp from "./pages/auth/ResetPasswordOtp";
 import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
 
@@ -86,6 +85,7 @@ function App() {
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
+          <Route path="account" element={<Account />} />
         </Route>
 
         {/* SHOPPING ROUTES */}

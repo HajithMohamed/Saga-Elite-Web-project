@@ -19,12 +19,21 @@ const authMiddleware = catchAsync(async (req,res,next)=>{
         return next(new AppError("User not authenticated. Please login first", 401));
     }
 
+    // reject the placeholder cookie value set on logout
+    if (token === "loggedout") {
+        return next(new AppError("Session expired. Please login again", 401));
+    }
+
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decodedToken.id);
 
     if (!user) {
         return next(new AppError("User no longer exists.", 401));
+    }
+
+    if (!user.isActive) {
+        return next(new AppError("Your account has been deactivated. Please contact support.", 403));
     }
 
     req.userInfo = user;

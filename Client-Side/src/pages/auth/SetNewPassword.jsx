@@ -24,16 +24,17 @@ const SetNewPassword = () => {
     const newErrors = {};
     const pwd = formData.newPassword;
 
-    // complexity: min 8, uppercase, lowercase, symbol
+    // complexity: min 8, uppercase, lowercase, number, symbol — matches server Mongoose validator
     if (pwd) {
       if (
         pwd.length < 8 ||
         !/[A-Z]/.test(pwd) ||
         !/[a-z]/.test(pwd) ||
-        !/[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+        !/\d/.test(pwd) ||
+        !/[@$!%*?&]/.test(pwd)
       ) {
         newErrors.newPassword =
-          "Password must be at least 8 characters and include uppercase, lowercase, and a symbol.";
+          "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (@$!%*?&).";
       }
     }
 
