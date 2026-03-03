@@ -54,14 +54,9 @@ const googleAuth = catchAsync(async (req, res, next) => {
 
     const existingUser = await User.findOne({ email });
 
-    // account registered with email & password — block Google sign-in for this email
+    // account registered with email & password — sign them in directly
     if (existingUser && existingUser.provider === "local") {
-        return next(
-            new AppError(
-                "This email is registered with email & password. Please sign in with your credentials.",
-                400
-            )
-        );
+        return createSendToken(existingUser, 200, res, "Signed in successfully");
     }
 
     // existing Google user — sign in
