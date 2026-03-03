@@ -1,54 +1,86 @@
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const signToken = require("../Utils/signin-token");
-const {OAuth2Client} = require("google-auth-library");
-const User = require("../Models/User")
+const User = require("../Models/User");
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+// mirrors createSendToken in auth-controller — issues httpOnly JWT cookie + JSON response
+const createSendToken = (user, statusCode, res, message) => {
+    const token = signToken(user._id);
 
-const googleAuth = catchAsync(async(req, res, next)=>{
-    const {token} = req.body;
+    const cookieOption = {
+        expires: new Date(
+            Date.now() +
+                (process.env.JWT_COOKIE_EXPIRES_IN || 7) * 24 * 60 * 60 * 1000
+        ),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    };
 
-    if(!token){
-        return next(new AppError("Google Token is required",400))
+    res.cookie("token", token, cookieOption);
+
+    user.password = undefined;
+    user.otp = undefined;
+
+    res.status(statusCode).json({
+        status: "success",
+        message,
+        token,
+        data: { user },
+    });
+};
+
+const googleAuth = catchAsync(async (req, res, next) => {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+        return next(new AppError("Google access token is required", 400));
     }
-    
-    const ticket = await client.verifyIdToken({
-        idToken : token,
-        audience : process.env.GOOGLE_CLIENT_ID
-    })
 
-    const payload = ticket.getPayload() 
+    // exchange access token for user profile via Google's userinfo endpoint
+    const googleRes = await fetch(
+        `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
+    );
 
-    const {email, sub, picture, email_verified} = payload
-
-    if(!email_verified){
-        return next(new AppError("Google email not verified",400))
+    if (!googleRes.ok) {
+        return next(new AppError("Failed to verify Google token", 400));
     }
 
-    const user = await User.findOne({email})
+    const { email, sub, picture, email_verified } = await googleRes.json();
 
-    if(user){
-        return next(new AppError("This user is already exist",400));
+    if (!email_verified) {
+        return next(new AppError("Google email is not verified", 400));
     }
 
-    const newUser = new User({
+    const existingUser = await User.findOne({ email });
+
+    // account registered with email & password — block Google sign-in for this email
+    if (existingUser && existingUser.provider === "local") {
+        return next(
+            new AppError(
+                "This email is registered with email & password. Please sign in with your credentials.",
+                400
+            )
+        );
+    }
+
+    // existing Google user — sign in
+    if (existingUser && existingUser.provider === "google") {
+        return createSendToken(existingUser, 200, res, "Signed in successfully");
+    }
+
+    // new user — create Google account
+    const newUser = await User.create({
         email,
-        googleId : sub,
-        profilePicture : picture,
-        provider : "google",
-        isVerified : true
-    })
+        googleId: sub,
+        profilePicture: picture,
+        provider: "google",
+        isVerified: true,
+    });
 
-    await newUser.save()
-
-    res.status(200).json({
-        success : true,
-        message : "Ne User created successfully",
-        User : newUser
-    })
-})
+    return createSendToken(newUser, 201, res, "Account created successfully");
+});
 
 module.exports = {
-    googleAuth
-}
+    googleAuth,
+};
