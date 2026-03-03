@@ -3,9 +3,11 @@ import { Link, useLocation } from 'react-router-dom'
 import { useDispatch } from "react-redux";
 import { loginUserAction, googleAuthAction } from "@/store/auth-slice";
 import CommonForm from '@/components/common-components/CommonForm'
+import PasswordStrengthMeter from '@/components/common-components/PasswordStrengthMeter'
 import { loginFormControl } from '@/config'
 import { Button } from '@/components/ui/button'
 import { toast } from '@/hooks/use-toast'
+import { PASSWORD_REGEX, PASSWORD_ERROR_MSG } from '@/lib/password-strength'
 import GoogleAuthButton from '@/components/auth-components/GoogleAuthButton'
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
@@ -23,13 +25,12 @@ const Login = () => {
   useEffect(()=>{
     const newErrors = {}
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/
 
     if(formData.email && !emailRegex.test(formData.email)){
       newErrors.email = "Please enter a valid email address."
     }
-    if(formData.password && !passwordRegex.test(formData.password)){
-      newErrors.password = "Password must be at least 8 characters and include uppercase, lowercase, and a symbol."
+    if(formData.password && !PASSWORD_REGEX.test(formData.password)){
+      newErrors.password = PASSWORD_ERROR_MSG
     }
     setErrors(newErrors)
   },[formData])
@@ -106,12 +107,15 @@ const Login = () => {
         setFormData={setFormData}
         formErrors={errors}
         onSubmit={handleSubmit}
-        buttonText={isLoading ? 'Logging in…' : 'Log In'}
-        buttonDisabled={isLoading}
+        buttonText="Log In"
+        isLoading={isLoading}
         inputClass={inputClasses}
         labelClass={labelClasses}
         buttonClass={buttonClasses}
       />
+
+      {/* password strength meter */}
+      <PasswordStrengthMeter password={formData.password} />
 
       <p className="text-sm text-right mt-2">
         <Link to="/auth/forgot-password" className="text-[#D4AF37] hover:underline">

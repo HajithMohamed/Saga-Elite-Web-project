@@ -114,8 +114,8 @@ const VerifyResetOtp = () => {
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
-        buttonText={isLoading ? "Verifying..." : "Verify Code"}
-        buttonDisabled={isLoading}
+        buttonText="Verify Code"
+        isLoading={isLoading}
         inputClass={inputClasses}
         labelClass={labelClasses}
         buttonClass={buttonClasses}

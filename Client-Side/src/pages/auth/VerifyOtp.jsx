@@ -105,8 +105,8 @@ const VerifyOtp = () => {
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleSubmit}
-          buttonText={isLoading ? "Verifying..." : "Verify OTP"}
-          buttonDisabled={isLoading}
+          buttonText="Verify OTP"
+          isLoading={isLoading}
           buttonClass="bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow w-full mt-8 disabled:opacity-50"
         />
       </div>

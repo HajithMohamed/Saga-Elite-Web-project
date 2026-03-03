@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -16,23 +16,7 @@ import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import { toast } from "@/hooks/use-toast";
-
-/* ──────────────────────── password-strength helper ──────────────────────── */
-const getPasswordStrength = (pwd) => {
-  if (!pwd) return { label: "", percent: 0, color: "bg-gray-700" };
-
-  let score = 0;
-  if (pwd.length >= 8) score++;
-  if (/[A-Z]/.test(pwd)) score++;
-  if (/[a-z]/.test(pwd)) score++;
-  if (/\d/.test(pwd)) score++;
-  if (/[@$!%*?&]/.test(pwd)) score++;
-
-  if (score <= 2) return { label: "Weak", percent: 25, color: "bg-red-500" };
-  if (score <= 3) return { label: "Fair", percent: 50, color: "bg-yellow-500" };
-  if (score === 4) return { label: "Good", percent: 75, color: "bg-blue-400" };
-  return { label: "Strong", percent: 100, color: "bg-green-500" };
-};
+import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 
 /* ─────────────────────────── main component ─────────────────────────────── */
 const Account = () => {
@@ -58,11 +42,6 @@ const Account = () => {
   // password regex aligned with server Mongoose validator
   const passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-  const strength = useMemo(
-    () => getPasswordStrength(formData.newPassword),
-    [formData.newPassword]
-  );
 
   useEffect(() => {
     const newErrors = {};
@@ -360,32 +339,7 @@ const Account = () => {
                 {showChangePassword && (
                   <div className="px-6 pb-6 border-t border-[#D4AF37]/10 pt-5 space-y-5">
                     {/* password strength meter */}
-                    {formData.newPassword && (
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[10px] uppercase tracking-widest">
-                          <span className="text-gray-500">Password Strength</span>
-                          <span
-                            className={`font-bold ${
-                              strength.label === "Strong"
-                                ? "text-green-400"
-                                : strength.label === "Good"
-                                ? "text-blue-400"
-                                : strength.label === "Fair"
-                                ? "text-yellow-400"
-                                : "text-red-400"
-                            }`}
-                          >
-                            {strength.label}
-                          </span>
-                        </div>
-                        <div className="h-1 w-full rounded-full bg-gray-800 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
-                            style={{ width: `${strength.percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    <PasswordStrengthMeter password={formData.newPassword} />
 
                     <CommonForm
                       formControls={changePasswordFormControls}
@@ -393,8 +347,8 @@ const Account = () => {
                       setFormData={setFormData}
                       formErrors={errors}
                       onSubmit={handleChangePassword}
-                      buttonText={isLoading ? "Updating\u2026" : "Update Password"}
-                      buttonDisabled={isLoading}
+                      buttonText="Update Password"
+                      isLoading={isLoading}
                       inputClass={inputClasses}
                       labelClass={labelClasses}
                       buttonClass={buttonClasses}
