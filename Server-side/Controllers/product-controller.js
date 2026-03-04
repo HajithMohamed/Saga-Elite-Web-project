@@ -66,6 +66,7 @@ const addProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "drop",
         "basePrice",
         "discountPercent",
     );

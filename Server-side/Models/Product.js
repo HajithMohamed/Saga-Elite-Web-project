@@ -159,7 +159,6 @@ productSchema.pre("save", function (next) {
       0
     );
   }
-  next();
 });
 
 /* ===============================
