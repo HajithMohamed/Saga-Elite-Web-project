@@ -4,7 +4,7 @@ const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5173";
 const configureCors = ()=>{
     return cors({
         origin : (origin,callBack)=>{
-            if(!origin || allowedOrigin.indexOf(origin)!==-1){
+            if(!origin || origin === allowedOrigin){
                 callBack(null, true)
             }else{
                 callBack(new Error("Not allowed cors"))

@@ -22,7 +22,7 @@ const productRoutes = require("./Routes/product-routes");
 app.use(cookieParser());
 
 
-app.use(configureCors);
+app.use(configureCors());
 
 app.use(express.json({ limit: "10kb" }));
  
