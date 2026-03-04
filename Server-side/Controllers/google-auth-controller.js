@@ -1,34 +1,7 @@
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
-const signToken = require("../Utils/signin-token");
 const User = require("../Models/User");
-
-// mirrors createSendToken in auth-controller — issues httpOnly JWT cookie + JSON response
-const createSendToken = (user, statusCode, res, message) => {
-    const token = signToken(user._id);
-
-    const cookieOption = {
-        expires: new Date(
-            Date.now() +
-                (process.env.JWT_COOKIE_EXPIRES_IN || 7) * 24 * 60 * 60 * 1000
-        ),
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    };
-
-    res.cookie("token", token, cookieOption);
-
-    user.password = undefined;
-    user.otp = undefined;
-
-    res.status(statusCode).json({
-        status: "success",
-        message,
-        token,
-        data: { user },
-    });
-};
+const createSendToken = require("../Utils/create-send-token");
 
 const googleAuth = catchAsync(async (req, res, next) => {
     const { accessToken } = req.body;

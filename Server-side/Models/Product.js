@@ -146,27 +146,19 @@ productSchema.index({ drop: 1, isActive: 1 });
 /* ===============================
    Slug Generation
 =================================*/
-productSchema.pre("validate", function (next) {
+productSchema.pre("save", function (next) {
   if (!this.slug) {
     this.slug = slugify(`${this.name}-${this.artNo}`, {
       lower: true,
       strict: true,
     });
   }
-  next();
-});
-
-/* ===============================
-   Auto Calculate Total Stock
-=================================*/
-productSchema.pre("save", function (next) {
   if (this.variants && this.variants.length > 0) {
     this.totalStock = this.variants.reduce(
       (sum, variant) => sum + variant.stock,
       0
     );
   }
-  next();
 });
 
 /* ===============================

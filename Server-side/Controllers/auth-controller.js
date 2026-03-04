@@ -1,10 +1,10 @@
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
-const sendMail = require("../Utils/send-mail");     // ← use your real util name
+const sendMail = require("../Utils/send-mail");
 const generateOtp = require("../Utils/generate-otp");
 const User = require("../Models/User");
 const filterObj = require("../Utils/filter-object");
-const signToken = require("../Utils/signin-token");
+const createSendToken = require("../Utils/create-send-token");
 
 // how long (in minutes) our one‑time codes stay valid. defaults to 10.
 const otpExpiryMinutes = () => Number(process.env.OTP_EXPIRES_IN || 10);
@@ -31,36 +31,7 @@ const buildEmailTemplate = (heading, bodyHtml) => {
     `;
 };
 
-const createSendToken = (user, statusCode, res, message) => {
-    const token = signToken(user._id);
-
-    const cookieOption = {
-        expires: new Date(
-            Date.now() +
-                (process.env.JWT_COOKIE_EXPIRES_IN || 7) *
-                    24 *
-                    60 *
-                    60 *
-                    1000
-        ),
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    };
-
-    res.cookie("token", token, cookieOption);
-
-    user.password = undefined;
-    user.passwordConfirm = undefined;     // ← added from remote (good)
-    user.otp = undefined;
-
-    res.status(statusCode).json({
-        status: "success",
-        message,
-        token,
-        data: { user },
-    });
-};
+// createSendToken is now imported from ../Utils/create-send-token
 
 const registerUser = catchAsync(async (req, res, next) => {
     const userData = filterObj(
@@ -152,7 +123,7 @@ const registerUser = catchAsync(async (req, res, next) => {
 const otpVerify = catchAsync(async(req, res, next)=>{
     const {otp, userId} = req.body
 
-    if(!otp && !userId){
+    if(!otp || !userId){
         return next(new AppError("All fields are required",400));
     }
 
@@ -224,7 +195,7 @@ const resendOTP = catchAsync(async (req, res, next) => {
                             ${newOTP}
                         </span>
                     </div>
-                    <p><strong>Note:</strong> This code is valid for the next 24 hours. Please do not share it with anyone.</p>
+                    <p><strong>Note:</strong> This code is valid for the next 10 minutes. Please do not share it with anyone.</p>
                     <p>If you didn’t request this, you can safely ignore this email.</p>
                 `;
 
@@ -268,6 +239,10 @@ const login = catchAsync(async (req, res, next) => {
 
     if (!user.isVerified) {
         return next(new AppError("User not verified. Please verify your email first.", 401));
+    }
+
+    if (!user.isActive) {
+        return next(new AppError("Your account has been deactivated. Please contact support.", 403));
     }
 
     createSendToken(user, 200, res, "Login successful");
@@ -442,7 +417,7 @@ const verifyResetOtp = catchAsync(async (req, res, next) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || user.resetPasswordOtp.toString() !== otp.toString()) {
+    if (!user || !user.resetPasswordOtp || user.resetPasswordOtp.toString() !== otp.toString()) {
         return next(new AppError("Invalid or expired OTP", 400));
     }
 
@@ -451,6 +426,7 @@ const verifyResetOtp = catchAsync(async (req, res, next) => {
     }
 
     res.status(200).json({
+        status: "success",
         success: true,
         message: "OTP verified successfully",
     });
@@ -460,11 +436,11 @@ const resetPassword = catchAsync(async(req, res, next)=>{
     const {email, otp, newPassword, confirmPassword} = req.body;
 
     if(!email || !otp || !newPassword || !confirmPassword){
-        return next(new AppError("All fields are required!",403));
+        return next(new AppError("All fields are required!",400));
     }
 
     if(newPassword!==confirmPassword){
-        return next(new AppError("Passwords are not matched!!",403));
+        return next(new AppError("Passwords are not matched!!",400));
     }
 
     const user = await User.findOne({email});
@@ -499,6 +475,7 @@ const resetPassword = catchAsync(async(req, res, next)=>{
     });
 
     res.status(200).json({
+        status: "success",
         success: true,
         message: "Password reset successful. Please login."
     });
@@ -511,6 +488,7 @@ const checkAuth = catchAsync(async (req, res, next) => {
         return next(new AppError("User not found", 404));
     }
     res.status(200).json({
+        status: "success",
         success: true,
         message: "Authenticated user",
         data: {

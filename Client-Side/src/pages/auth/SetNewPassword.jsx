@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { toast } from "@/hooks/use-toast";
 import CommonForm from "@/components/common-components/CommonForm";
+import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import { setPasswordFormControls } from "@/config";
 import { resetPasswordAction } from "@/store/auth-slice";
 
@@ -24,16 +25,17 @@ const SetNewPassword = () => {
     const newErrors = {};
     const pwd = formData.newPassword;
 
-    // complexity: min 8, uppercase, lowercase, symbol
+    // complexity: min 8, uppercase, lowercase, number, symbol — matches server Mongoose validator
     if (pwd) {
       if (
         pwd.length < 8 ||
         !/[A-Z]/.test(pwd) ||
         !/[a-z]/.test(pwd) ||
-        !/[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+        !/\d/.test(pwd) ||
+        !/[@$!%*?&]/.test(pwd)
       ) {
         newErrors.newPassword =
-          "Password must be at least 8 characters and include uppercase, lowercase, and a symbol.";
+          "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (@$!%*?&).";
       }
     }
 
@@ -122,12 +124,15 @@ const SetNewPassword = () => {
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
-        buttonText={isLoading ? "Updating..." : "Update Password"}
-        buttonDisabled={isLoading}
+        buttonText="Update Password"
+        isLoading={isLoading}
         inputClass={inputClasses}
         labelClass={labelClasses}
         buttonClass={buttonClasses}
       />
+
+      {/* password strength meter */}
+      <PasswordStrengthMeter password={formData.newPassword} />
 
       <div className="mt-6 text-center text-white text-sm">
         <Link to="/auth/login" className="text-gray-400 hover:text-[#D4AF37] transition-colors">

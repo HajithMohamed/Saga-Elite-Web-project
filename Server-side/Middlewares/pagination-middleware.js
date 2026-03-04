@@ -17,14 +17,12 @@ const paginatedResult = (Model) =>
       sort,
     } = req.query;
 
-    const matchStage = {
-      isActive: true,
-    };
+    const matchStage = { isActive: true };
 
     /* ========= Variant Size Filter ========= */
     if (size) {
-      matchStage["variants.size"] = {
-        $in: size.split(","),
+      matchStage.variants = {
+        $elemMatch: { size: { $in: size.split(",") } },
       };
     }
 
@@ -34,11 +32,20 @@ const paginatedResult = (Model) =>
 
     /* ========= Variant Color ========= */
     if (color) {
-      matchStage["variants.color"] = color;
+      matchStage.variants = {
+        ...matchStage.variants,
+        $elemMatch: { color },
+      };
     }
 
     /* ========= Price Filter ========= */
     if (minPrice || maxPrice) {
+      if (minPrice && isNaN(Number(minPrice))) {
+        return next(new AppError("minPrice must be a number", 400));
+      }
+      if (maxPrice && isNaN(Number(maxPrice))) {
+        return next(new AppError("maxPrice must be a number", 400));
+      }
       matchStage.basePrice = {};
       if (minPrice) matchStage.basePrice.$gte = Number(minPrice);
       if (maxPrice) matchStage.basePrice.$lte = Number(maxPrice);
@@ -46,10 +53,11 @@ const paginatedResult = (Model) =>
 
     /* ========= Search ========= */
     if (search) {
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       matchStage.$or = [
-        { artNo: { $regex: search, $options: "i" } },
-        { brand: { $regex: search, $options: "i" } },
-        { name: { $regex: search, $options: "i" } },
+        { artNo: { $regex: safeSearch, $options: "i" } },
+        { brand: { $regex: safeSearch, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -57,9 +65,7 @@ const paginatedResult = (Model) =>
     let sortStage = { createdAt: -1 };
 
     if (sort) {
-      const field = sort.startsWith("-")
-        ? sort.substring(1)
-        : sort;
+      const field = sort.startsWith("-") ? sort.slice(1) : sort;
       sortStage = {
         [field]: sort.startsWith("-") ? -1 : 1,
       };
@@ -72,8 +78,21 @@ const paginatedResult = (Model) =>
       {
         $lookup: {
           from: "images",
-          localField: "_id",
-          foreignField: "refId",
+          let: { productId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$refId", "$$productId"] },
+                    { $eq: ["$refModel", "Product"] },
+                    { $eq: ["$isDeleted", false] },
+                  ],
+                },
+              },
+            },
+            { $sort: { order: 1 } },
+          ],
           as: "images",
         },
       },

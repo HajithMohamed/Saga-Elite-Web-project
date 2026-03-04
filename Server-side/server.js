@@ -1,7 +1,7 @@
 const express = require("express");
-const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const {configureCors} = require("./Config/cors-config")
 
 // Load configuration from the workspace root, falling back to a
 // backend‑local file if present.  This lets you keep a single shared
@@ -16,25 +16,14 @@ const app = express();
 const authRoutes = require("./Routes/authRoutes");
 const googleAuthRoute = require("./Routes/google-routes")
 const productRoutes = require("./Routes/product-routes");
+const imageRoutes = require("./Routes/image-routes")
+const dropRoutes = require("./Routes/drop-routes")
 
 
 app.use(cookieParser());
 
-const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5173";
-app.use(
-  cors({
-    origin: [allowedOrigin],
-    methods: ["GET", "POST", "DELETE", "PUT"],
-    allowedHeaders: [
-      "Content-Type", 
-      "Authorization",
-      "Cach-Control",
-      "Expires",
-      "Pragma"
-    ],
-    credentials: true,
-  }),
-);
+
+app.use(configureCors());
 
 app.use(express.json({ limit: "10kb" }));
  
@@ -46,7 +35,9 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/google",googleAuthRoute)
+app.use("/api/google",googleAuthRoute);
+app.use("/api/image",imageRoutes);
+app.use("/api/drops", dropRoutes);
 app.use(globalErrorController);
 
 

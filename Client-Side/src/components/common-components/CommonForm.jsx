@@ -11,7 +11,7 @@ import {
 } from "@radix-ui/react-select";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const OtpInputComponent = ({ value, onChange, length = 4 }) => {
   const [otp, setOtp] = useState(() => {
@@ -100,6 +100,7 @@ const CommonForm = ({
   buttonClass = '',
   formErrors = {},
   buttonDisabled = false,
+  isLoading = false,
 }) => {
   const [showPassword, setShowPassword] = useState({});
 
@@ -287,10 +288,13 @@ const CommonForm = ({
       <motion.button
         variants={item}
         whileHover={{ scale: 1.02 }}
-        className={`w-full ${buttonClass}`}
+        className={`w-full flex items-center justify-center gap-2 ${buttonClass}`}
         type="submit"
-        disabled={buttonDisabled}
+        disabled={buttonDisabled || isLoading}
       >
+        {isLoading && (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        )}
         {buttonText || "Submit"}
       </motion.button>
     </motion.form>

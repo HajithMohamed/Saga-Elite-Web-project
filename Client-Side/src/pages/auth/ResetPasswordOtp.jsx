@@ -36,16 +36,17 @@ const ResetPasswordOtp = () => {
       newErrors.otp = "Please enter all 4 digits of your OTP.";
     }
 
-    // password complexity rules match SetNewPassword
+    // password complexity rules — matches server Mongoose validator
     if (newPassword) {
       if (
         newPassword.length < 8 ||
         !/[A-Z]/.test(newPassword) ||
         !/[a-z]/.test(newPassword) ||
-        !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
+        !/\d/.test(newPassword) ||
+        !/[@$!%*?&]/.test(newPassword)
       ) {
         newErrors.newPassword =
-          "Password must be at least 8 characters and include uppercase, lowercase, and a symbol.";
+          "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (@$!%*?&).";
       }
     }
 

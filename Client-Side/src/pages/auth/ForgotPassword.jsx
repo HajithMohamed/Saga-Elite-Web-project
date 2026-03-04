@@ -67,8 +67,8 @@ const ForgotPassword = () => {
         setFormData={setFormData}
         formErrors={errors}
         onSubmit={handleSubmit}
-        buttonText={isLoading ? "Sending…" : "Send Reset Code"}
-        buttonDisabled={isLoading}
+        buttonText="Send Reset Code"
+        isLoading={isLoading}
         inputClass={inputClasses}
         labelClass={labelClasses}
         buttonClass={buttonClasses}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, X } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, X, User } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAction } from '@/store/auth-slice'
@@ -73,7 +73,25 @@ const SideBar = () => {
       </nav>
 
       {/* Logout / Footer Section */}
-      <div className="p-6 border-t border-gray-800">
+      <div className="p-6 border-t border-gray-800 space-y-3">
+        <Link
+          to="/admin/account"
+          className={`flex w-full items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative border
+            ${location.pathname === '/admin/account'
+              ? 'bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/20 border-[#D4AF37]'
+              : 'text-gray-400 hover:bg-gray-900 border-transparent hover:border-gray-800'
+            }`}
+        >
+          <div className={`transition-transform duration-200 ${location.pathname === '/admin/account' ? 'scale-110' : 'group-hover:scale-110 group-hover:text-[#D4AF37]'}`}>
+            <User className="h-5 w-5" />
+          </div>
+          <span className="font-bold text-sm tracking-wide uppercase font-sans">
+            My Account
+          </span>
+          {location.pathname === '/admin/account' && (
+            <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-black/50" />
+          )}
+        </Link>
         <button
           onClick={handleLogout}
           disabled={isLoading}

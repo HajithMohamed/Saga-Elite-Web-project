@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CommonForm from "@/components/common-components/CommonForm";
+import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import { registerFormControl } from "@/config";
 import { Button } from "@/components/ui/button";
 import { registerUserAction, googleAuthAction } from "@/store/auth-slice";
 import { useDispatch } from "react-redux";
 import { toast } from "@/hooks/use-toast";
+import { PASSWORD_REGEX, PASSWORD_ERROR_MSG } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -26,15 +28,12 @@ const Register = () => {
   useEffect(() => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // password must be at least 8 chars and contain uppercase, lowercase, and a symbol
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address.";
     }
-    if (formData.password && !passwordRegex.test(formData.password)) {
-      newErrors.password =
-        "Password must be at least 8 characters and include uppercase, lowercase, and a symbol.";
+    if (formData.password && !PASSWORD_REGEX.test(formData.password)) {
+      newErrors.password = PASSWORD_ERROR_MSG;
     }
     if (
       formData.confirmPassword &&
@@ -129,12 +128,15 @@ const Register = () => {
         setFormData={setFormData}
         formErrors={errors}
         onSubmit={handleSubmit}
-        buttonText={isLoading ? "Registering…" : "Create Account"}
-        buttonDisabled={isLoading}
+        buttonText="Create Account"
+        isLoading={isLoading}
         inputClass={inputClasses}
         labelClass={labelClasses}
         buttonClass={buttonClasses}
       />
+
+      {/* password strength meter */}
+      <PasswordStrengthMeter password={formData.password} />
 
       <div className="flex items-center my-6">
         <hr className="flex-grow border-gray-600" />
