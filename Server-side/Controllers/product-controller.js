@@ -1,65 +1,102 @@
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
-const filterObj = require("../Utils/filter-object")
+const Image = require("../Models/Image"); // only for fetching images
+const filterObj = require("../Utils/filter-object");
 
 
-const getAllProducts = catchAsync(async (req,res,next)=>{
-        res.status(200).json({
+/*
+|--------------------------------------------------------------------------
+| Get All Products
+|--------------------------------------------------------------------------
+*/
+
+const getAllProducts = catchAsync(async (req, res, next) => {
+
+    res.status(200).json({
         status: "success",
-        ...res.paginatedResults,
-  });
-})
+        ...res.paginatedResults
+    });
 
-const getSingleProduct = catchAsync(async (req,res,next)=>{
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Single Product (with images)
+|--------------------------------------------------------------------------
+*/
+
+const getSingleProduct = catchAsync(async (req, res, next) => {
+
     const productSlug = req.params.slug;
 
-    if(!productSlug){
-        return next(new AppError("Product Slug is required",400));
+    if (!productSlug) {
+        return next(new AppError("Product slug is required", 400));
     }
-    const singleProduct = await Product.findOne({productSlug}).populate("images")
 
-    if(!singleProduct){
-        return next(new AppError("Product is not found",404));
+    const product = await Product.findOne({ slug: productSlug });
+
+    if (!product) {
+        return next(new AppError("Product not found", 404));
     }
+
+    // Fetch images separately (since you maintain separate Image model)
+    const images = await Image.find({
+        refId: product._id,
+        refModel: "Product",
+        isDeleted: false
+    }).sort({ order: 1 });
+
     res.status(200).json({
-        success : true,
-        message : "product fetched",
-        product : singleProduct
-    })
-})
+        success: true,
+        message: "Product fetched successfully",
+        product,
+        images
+    });
 
-const addProduct = catchAsync(async(req,res,next)=>{
-    const productData = filterObj(req.body,"name","artNo","description","brand","category","basePrice","discountPercent");
+});
 
-    if(Object.keys(productData).length==0){
-        return next(new AppError("All fields are required"));
+
+/*
+|--------------------------------------------------------------------------
+| Add Product (Only Product Data)
+|--------------------------------------------------------------------------
+*/
+
+const addProduct = catchAsync(async (req, res, next) => {
+
+    const productData = filterObj(
+        req.body,
+        "name",
+        "artNo",
+        "description",
+        "brand",
+        "category",
+        "basePrice",
+        "discountPercent",
+        "slug"
+    );
+
+    if (Object.keys(productData).length === 0) {
+        return next(new AppError("All fields are required", 400));
     }
 
-    const newlyCreatedProduct = new Product(productData)
-    await newlyCreatedProduct.save();
+    const existingProduct = await Product.findOne({ artNo: productData.artNo });
 
-    if(req.files && req.files.length>0){
-        const imagesData = req.files.map(file => ({
-            url : file.path,
-            altText : file.originalname,
-            refId: newlyCreatedProduct._id,
-            type : "product",
-            refModel : product
-        }))
-        await Image.insertMany(imagesData);
+    if (existingProduct) {
+        return next(new AppError("Product with this Art No already exists", 400));
     }
-    const newProduct = await Product.findById(product._id).populate("images");
-    if(!newProduct){
-        return next(new AppError("Product not found there is a problem in adding this product"));
 
-    }
+    const newlyCreatedProduct = await Product.create(productData);
+
     res.status(201).json({
-        success : true,
-        message : "New product added successfully",
-        product : newlyCreatedProduct
-    })
-})
+        success: true,
+        message: "New product added successfully",
+        product: newlyCreatedProduct
+    });
+
+});
 
 
 
@@ -67,4 +104,4 @@ module.exports = {
     getAllProducts,
     getSingleProduct,
     addProduct
-}
+};
