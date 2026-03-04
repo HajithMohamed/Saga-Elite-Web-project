@@ -40,6 +40,12 @@ const paginatedResult = (Model) =>
 
     /* ========= Price Filter ========= */
     if (minPrice || maxPrice) {
+      if (minPrice && isNaN(Number(minPrice))) {
+        return next(new AppError("minPrice must be a number", 400));
+      }
+      if (maxPrice && isNaN(Number(maxPrice))) {
+        return next(new AppError("maxPrice must be a number", 400));
+      }
       matchStage.basePrice = {};
       if (minPrice) matchStage.basePrice.$gte = Number(minPrice);
       if (maxPrice) matchStage.basePrice.$lte = Number(maxPrice);

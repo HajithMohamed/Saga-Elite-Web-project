@@ -17,6 +17,7 @@ const authRoutes = require("./Routes/authRoutes");
 const googleAuthRoute = require("./Routes/google-routes")
 const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes")
+const dropRoutes = require("./Routes/drop-routes")
 
 
 app.use(cookieParser());
@@ -36,6 +37,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/google",googleAuthRoute);
 app.use("/api/image",imageRoutes);
+app.use("/api/drops", dropRoutes);
 app.use(globalErrorController);
 
 

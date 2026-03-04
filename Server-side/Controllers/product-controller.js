@@ -3,6 +3,7 @@ const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Image = require("../Models/Image"); // only for fetching images
 const filterObj = require("../Utils/filter-object");
+const validator = require("validator");
 
 
 /*
@@ -35,24 +36,16 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product slug is required", 400));
     }
 
-    const product = await Product.findOne({ slug: productSlug });
+    const product = await Product.findOne({ slug: productSlug }).populate('images');
 
     if (!product) {
         return next(new AppError("Product not found", 404));
     }
 
-    // Fetch images separately (since you maintain separate Image model)
-    const images = await Image.find({
-        refId: product._id,
-        refModel: "Product",
-        isDeleted: false
-    }).sort({ order: 1 });
-
     res.status(200).json({
         success: true,
         message: "Product fetched successfully",
-        product,
-        images
+        product
     });
 
 });
@@ -75,12 +68,16 @@ const addProduct = catchAsync(async (req, res, next) => {
         "category",
         "basePrice",
         "discountPercent",
-        "slug"
     );
 
     if (Object.keys(productData).length === 0) {
         return next(new AppError("All fields are required", 400));
     }
+
+    // Sanitize strings
+    if (productData.name) productData.name = validator.escape(productData.name);
+    if (productData.description) productData.description = validator.escape(productData.description);
+    if (productData.brand) productData.brand = validator.escape(productData.brand);
 
     const existingProduct = await Product.findOne({ artNo: productData.artNo });
 
