@@ -4,7 +4,7 @@ const filterObj = require("../Utils/filter-object");
 const Image = require("../Models/Image");
 const cloudinary = require("../Config/cloudinary-config")
 const validator = require("validator");
-
+const uploadToCloudinary = require("../Utils/image-upload");
 
 const uploadImages = catchAsync(async (req, res, next) => {
 
@@ -42,21 +42,11 @@ const uploadImages = catchAsync(async (req, res, next) => {
         isDeleted: false
     });
 
-    // Prepare upload promises
-    const uploadPromises = req.files.map((file, i) => {
-        return new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-                {
-                    folder: `saga-elite/${imageData.refModel.toLowerCase()}`,
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve({ result, index: i });
-                }
-            );
-            stream.end(file.buffer);
-        });
-    });
+    // Prepare upload promises — use base64 upload to avoid stream ECONNRESET
+    const uploadPromises = req.files.map((file, i) =>
+        uploadToCloudinary(file.buffer, `saga-elite/${imageData.refModel.toLowerCase()}`, file.mimetype)
+            .then((result) => ({ result, index: i }))
+    );
 
     const uploadResults = await Promise.allSettled(uploadPromises);
 
