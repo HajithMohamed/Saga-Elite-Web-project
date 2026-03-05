@@ -55,15 +55,7 @@ const imageSchema = new mongoose.Schema(
     refModel: {
       type: String,
       required: true,
-      enum: [
-        "Product",
-        "Drop",
-        "Ad",
-        "Category",
-        "Review",
-        "User",
-        "System",
-      ],
+      enum: ["Product", "Drop", "Ad", "Category", "Review", "User", "System"],
       index: true,
     },
 
@@ -94,8 +86,12 @@ const imageSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Compound index for fast product image retrieval
