@@ -45,9 +45,12 @@ const imageSchema = new mongoose.Schema(
     },
 
     // Dynamic reference ID (Product, Review, Drop etc.)
+    // Not required for System images (hero, ads, logos)
     refId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      required: function () {
+        return this.refModel !== "System";
+      },
       index: true,
     },
 
