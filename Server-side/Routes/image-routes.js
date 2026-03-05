@@ -10,7 +10,7 @@ const router = express.Router()
 // (the controller will still enforce a max of 10 files)
 router.post("/upload-image", authMiddleware, adminMiddleware, upload.any(), uploadImages);
 router.get("get-product-images/:id",authMiddleware,adminMiddleware,getProductImages);
-router.get("get-drop-images",authMiddleware,adminMiddleware,getDropImages);
+router.get("get-drop-images/:id",authMiddleware,adminMiddleware,getDropImages);
 
 
 
