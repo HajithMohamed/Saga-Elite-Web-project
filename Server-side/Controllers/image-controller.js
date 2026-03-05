@@ -11,11 +11,8 @@ const uploadImages = catchAsync(async (req, res, next) => {
     console.log('req.body:', req.body);
     console.log('req.files:', req.files);
 
-    // multer.any() stores all files in req.files regardless of field name
-    // if you expect a specific key (e.g. 'images'), make sure the client uses it
     const imageData = filterObj(req.body, "refId", "refModel", "type");
 
-    // normalize refModel casing so 'drop' or 'Drop' both work
     if (imageData.refModel) {
       imageData.refModel =
         imageData.refModel.charAt(0).toUpperCase() +
