@@ -24,7 +24,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid refModel", 400));
   }
 
-  // System images (hero, ads, logos) don't need a refId
+  // System images don't require refId
   if (imageData.refModel !== "System" && !imageData.refId) {
     return next(new AppError("refId is required for non-System images", 400));
   }
@@ -36,9 +36,10 @@ const uploadImages = catchAsync(async (req, res, next) => {
   // Validate type for System images
   if (imageData.refModel === "System") {
     const validSystemTypes = ["hero", "ad", "logo"];
+
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
       return next(
-        new AppError("System images require type: hero, ad, or logo", 400),
+        new AppError("System images require type: hero, ad, or logo", 400)
       );
     }
   }
