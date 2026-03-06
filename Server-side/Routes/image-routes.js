@@ -1,15 +1,52 @@
 const express = require("express");
-const {uploadImages} = require("../Controllers/image-controller");
+const {
+  uploadImages,
+  getProductImages,
+  getDropImages,
+  getHeroImages,
+  getAdImages,
+  getLogoImages,
+  getReviewImages,
+  setPrimaryImage,
+  deleteImage,
+  reorderImages,
+} = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const adminMiddleware = require("../Middlewares/admin-middleware")
+const adminMiddleware = require("../Middlewares/admin-middleware");
 const upload = require("../Middlewares/multer-middleware");
 
-const router = express.Router()
+const router = express.Router();
 
-// use upload.any() so multer accepts files regardless of the field name in the multipart form
-// (the controller will still enforce a max of 10 files)
-router.post("/upload-image", authMiddleware, adminMiddleware, upload.any(), uploadImages);
+/* ==============================
+   Upload (admin only)
+============================== */
+router.post(
+  "/upload-image",
+  authMiddleware,
+  adminMiddleware,
+  upload.any(),
+  uploadImages,
+);
 
+/* ==============================
+   Fetch images — entity-specific
+============================== */
+router.get("/get-product-images/:id", getProductImages);
+router.get("/get-drop-images/:id", getDropImages);
+router.get("/get-review-images/:id", getReviewImages);
 
+/* ==============================
+   Fetch images — system (public)
+============================== */
+router.get("/get-hero-images", getHeroImages);
+router.get("/get-ad-images", getAdImages);
+router.get("/get-logo-images", getLogoImages);
 
-module.exports = router
+/* ==============================
+   Admin actions
+============================== */
+router.patch("/set-primary/:id", authMiddleware, adminMiddleware, setPrimaryImage);
+router.delete("/delete-image/:id", authMiddleware, adminMiddleware, deleteImage);
+router.patch("/reorder-images", authMiddleware, adminMiddleware, reorderImages);
+
+module.exports = router;
