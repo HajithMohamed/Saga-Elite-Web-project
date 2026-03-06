@@ -1,20 +1,50 @@
 
 
-const requestLogger = (req,res,next) =>{
-    const timestamp  = new Date().toISOString();
+const winston = require('winston');
+
+// Configure Winston logger
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'logs/combined.log' }),
+    ],
+});
+
+// If not in production, log to console as well
+if (process.env.NODE_ENV !== 'production') {
+    logger.add(new winston.transports.Console({
+        format: winston.format.simple(),
+    }));
+}
+
+const requestLogger = (req, res, next) => {
+    const start = Date.now();
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const method = req.method;
-    const url = req.url;
-    const userAgent = req.get("user-Agent");
+    const url = req.originalUrl;
+    const userAgent = req.get('User-Agent') || 'unknown';
 
-    console.log(`[${timestamp}] ${method} ${url} ${userAgent}`);
+    // Log after response is finished
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        const status = res.statusCode;
 
-    next()
-    
-}
+        logger.info({
+            ip,
+            method,
+            url,
+            userAgent,
+            status,
+            duration: `${duration}ms`,
+        });
+    });
 
-const addTimestamp = (req,res,next)=>{
-    req.timeStamp = new Date().toISOString()
-    next()
-}
+    next();
+};
 
-module.exports={requestLogger,addTimestamp}
+module.exports = { requestLogger };
