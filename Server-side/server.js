@@ -2,6 +2,9 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const {configureCors} = require("./Config/cors-config")
+const {createRateLimiting} = require("./Middlewares/rateLimitinMiddleware")
+const { urlversionning } = require("./Middlewares/versioningMiddleware")
+const {requestLogger,addTimestamp} = require("./Middleware/customMiddleware");
 
 // Load configuration from the workspace root, falling back to a
 // backend‑local file if present.  This lets you keep a single shared
@@ -27,11 +30,12 @@ app.use(configureCors());
 
 app.use(express.json({ limit: "10kb" }));
  
-app.get("/", (req, res) => {
-  res.status(200).json({
-    message: "this is the home page",
-  });
-});
+app.use(createRateLimiting(100, 15*60*1000))
+
+app.use("api/v1",urlversionning("v1"))
+
+app.use(requestLogger);
+app.use(addTimestamp)
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
