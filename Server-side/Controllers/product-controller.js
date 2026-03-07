@@ -96,8 +96,67 @@ const addProduct = catchAsync(async (req, res, next) => {
 
 });
 
+const updateProduct = catchAsync(async (req, res, next) => {
+  const productSlug = req.params.slug;
+
+  if (!productSlug) {
+    return next(new AppError("Product slug is required", 400));
+  }
+
+  const productData = filterObj(
+    req.body,
+    "name",
+    "artNo",
+    "description",
+    "brand",
+    "category",
+    "drop",
+    "basePrice",
+    "discountPercent",
+    "isFeatured",
+    "isActive",
+    "maxPerUser",
+    "isLimited"
+  );
+
+  if (Object.keys(productData).length === 0) {
+    return next(new AppError("At least one field is required to update", 400));
+  }
+
+  const updatedProduct = await Product.findOneAndUpdate(
+    { slug: productSlug },
+    productData,
+    {
+      new: true, // return updated document
+      runValidators: true, // run schema validators
+    }
+  );
+
+  if (!updatedProduct) {
+    return next(new AppError("Product not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Product updated successfully",
+    product: updatedProduct,
+  });
+});
+
+const deleteProduct = catchAsync(async(req,res,next)=>{
+    const productSlug = req.params.slug;
+
+    if (!productSlug) {
+        return next(new AppError("Product slug is required", 400));
+    }
+
+    
+
+})
+
 module.exports = {
     getAllProducts,
     getSingleProduct,
-    addProduct
+    addProduct,
+    updateProduct
 };
