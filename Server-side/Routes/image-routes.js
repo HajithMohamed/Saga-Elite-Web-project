@@ -10,6 +10,7 @@ const {
   setPrimaryImage,
   deleteImage,
   reorderImages,
+  deleteAllImages,
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const adminMiddleware = require("../Middlewares/admin-middleware");
@@ -24,7 +25,7 @@ router.post(
   "/upload-image",
   authMiddleware,
   adminMiddleware,
-  upload.any(),
+  upload.array("images", 10),
   uploadImages,
 );
 
@@ -47,6 +48,7 @@ router.get("/get-logo-images", getLogoImages);
 ============================== */
 router.patch("/set-primary/:id", authMiddleware, adminMiddleware, setPrimaryImage);
 router.delete("/delete-image/:id", authMiddleware, adminMiddleware, deleteImage);
+router.delete("/delete-all-images", authMiddleware, adminMiddleware, deleteAllImages);
 router.patch("/reorder-images", authMiddleware, adminMiddleware, reorderImages);
 
 module.exports = router;

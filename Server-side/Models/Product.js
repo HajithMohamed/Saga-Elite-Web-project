@@ -10,18 +10,21 @@ const variantSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 50,
     },
 
     size: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 20,
     },
 
     color: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 30,
     },
 
     stock: {
@@ -35,7 +38,7 @@ const variantSchema = new mongoose.Schema(
       default: 0,
     },
   },
-  { _id: true } // keep _id for atomic stock updates
+  { _id: true }
 );
 
 /* ===============================
@@ -47,6 +50,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      maxlength: 200,
     },
 
     slug: {
@@ -60,17 +64,20 @@ const productSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      maxlength: 50,
     },
 
     description: {
       type: String,
       trim: true,
+      maxlength: 2000,
     },
 
     brand: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     category: {
@@ -111,7 +118,6 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
-    /* Limited Edition Controls */
     isLimited: {
       type: Boolean,
       default: true,
@@ -119,7 +125,7 @@ const productSchema = new mongoose.Schema(
 
     maxPerUser: {
       type: Number,
-      default: 2, // Prevent bulk buying
+      default: 2,
       min: 1,
     },
 
@@ -140,14 +146,12 @@ const productSchema = new mongoose.Schema(
    Index Optimization
 =================================*/
 productSchema.index({ drop: 1, isActive: 1 });
-// productSchema.index({ slug: 1 }); // Removed duplicate index
-// productSchema.index({ artNo: 1 }); // Removed duplicate index
 
 /* ===============================
-   Slug Generation
+   Slug Generation & Stock Calc
 =================================*/
 productSchema.pre("save", function (next) {
-  if (!this.slug) {
+  if (this.isNew || this.isModified("name")) {
     this.slug = slugify(`${this.name}-${this.artNo}`, {
       lower: true,
       strict: true,
@@ -159,21 +163,20 @@ productSchema.pre("save", function (next) {
       0
     );
   }
+  next();
 });
 
 /* ===============================
-   Virtual: Images
+   Virtual: Images (excludes soft-deleted)
 =================================*/
 productSchema.virtual("images", {
   ref: "Image",
   localField: "_id",
   foreignField: "refId",
+  match: { isDeleted: false },
 });
 
 productSchema.set("toObject", { virtuals: true });
 productSchema.set("toJSON", { virtuals: true });
 
-/* ===============================
-   Export Model
-=================================*/
 module.exports = mongoose.model("Product", productSchema);

@@ -10,7 +10,7 @@ const configureCors = ()=>{
                 callBack(new Error("Not allowed cors"))
             }
         },
-        methods : ["POST","GET","PUT","DELETE"],
+        methods : ["POST","GET","PUT","DELETE","PATCH","OPTIONS"],
         allowedHeaders : [
             'Content-Type',
             'Authorization',

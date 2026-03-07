@@ -155,12 +155,12 @@ export const verifyResetOtpAction = createAsyncThunk('auth/verify-reset-otp',
   }
 )
 
-export const googleAuthAction = createAsyncThunk(
-  "auth/google",
+export const googleSignInAction = createAsyncThunk(
+  "auth/google-sign-in",
   async ({ accessToken }, thunkAPI) => {
     try {
       const apiResponse = await axios.post(
-        `${API_BASE}/google/google-auth`,
+        `${API_BASE}/google/sign-in`,
         { accessToken },
         { withCredentials: true }
       );
@@ -168,6 +168,24 @@ export const googleAuthAction = createAsyncThunk(
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
       const message = serverMsg || error.message || "Google sign-in failed";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const googleSignUpAction = createAsyncThunk(
+  "auth/google-sign-up",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(
+        `${API_BASE}/google/sign-up`,
+        { accessToken },
+        { withCredentials: true }
+      );
+      return apiResponse.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Google sign-up failed";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -323,15 +341,28 @@ const authSlice = createSlice({
       .addCase(logoutUserAction.rejected, (state) => {
         state.isLoading = false;
       })
-      .addCase(googleAuthAction.pending, (state) => {
+      .addCase(googleSignInAction.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(googleAuthAction.fulfilled, (state, action) => {
+      .addCase(googleSignInAction.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.data.user;
         state.isAuthenticated = true;
       })
-      .addCase(googleAuthAction.rejected, (state) => {
+      .addCase(googleSignInAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      .addCase(googleSignUpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(googleSignUpAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.data.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(googleSignUpAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;

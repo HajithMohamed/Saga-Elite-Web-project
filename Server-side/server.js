@@ -1,7 +1,12 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
-const {configureCors} = require("./Config/cors-config")
+const helmet = require("helmet");
+const compression = require("compression");
+const { configureCors } = require("./Config/cors-config");
+const { authLimiter, generalLimiter } = require("./Middlewares/rateLimitinMiddleware");
+const { urlversionning } = require("./Middlewares/versioningMiddleware");
+const { requestLogger } = require("./Middlewares/customMiddleware");
 
 // Load configuration from the workspace root, falling back to a
 // backend‑local file if present.  This lets you keep a single shared
@@ -20,18 +25,20 @@ const imageRoutes = require("./Routes/image-routes")
 const dropRoutes = require("./Routes/drop-routes")
 
 
+app.use(helmet()); // Security headers
 app.use(cookieParser());
-
-
 app.use(configureCors());
-
+app.use(compression()); // Response compression
 app.use(express.json({ limit: "10kb" }));
- 
-app.get("/", (req, res) => {
-  res.status(200).json({
-    message: "this is the home page",
-  });
-});
+
+// Rate limiting: stricter for auth, general for others
+app.use("/api/auth", authLimiter);
+app.use(generalLimiter);
+
+// API versioning
+app.use("/api/v1", urlversionning("v1"));
+
+app.use(requestLogger);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);

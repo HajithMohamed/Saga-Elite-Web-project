@@ -1,21 +1,50 @@
-module.exports = (err, req, res, next) => {
-    // always log server errors for debugging
-    console.error("[Global Error]", err);
+const winston = require('winston');
 
-    // handle Multer file-size or other upload errors explicitly
+// Configure a simple error logger (reuse or minimal)
+const errorLogger = winston.createLogger({
+    level: 'error',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+    ),
+    transports: [
+        new winston.transports.File({ filename: 'logs/errors.log' }),
+    ],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+    errorLogger.add(new winston.transports.Console());
+}
+
+module.exports = (err, req, res, next) => {
+    // Log the error with details
+    errorLogger.error({
+        message: err.message,
+        stack: err.stack,
+        url: req.originalUrl,
+        method: req.method,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+    });
+
+    // Handle rate limiting errors specifically
+    if (err.statusCode === 429) {
+        err.message = 'Too many requests. Please try again later.';
+        err.status = 'error';
+    }
+
+    // Handle Multer file-size or other upload errors explicitly
     if (err.name === "MulterError") {
-        // multer sets code like LIMIT_FILE_SIZE, LIMIT_FILE_COUNT, etc.
         if (err.code === "LIMIT_FILE_SIZE") {
             err.statusCode = 400;
             err.message = "Each image must be 5 MB or smaller";
         } else {
-            // generic multer error
             err.statusCode = 400;
             err.message = err.message || "File upload error";
         }
     }
 
-    // convert mongoose validation failures to 400 so client sees bad request
+    // Convert mongoose validation failures to 400 so client sees bad request
     if (err.name === 'ValidationError') {
         err.statusCode = 400;
         err.status = 'fail';
@@ -27,7 +56,7 @@ module.exports = (err, req, res, next) => {
 
     res.status(err.statusCode).json({
         status: err.status,
-        // expose only necessary details to client
+        // Expose only necessary details to client
         message: err.message || "An error occurred",
         ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
     });
