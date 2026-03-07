@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useDispatch } from "react-redux";
-import { loginUserAction, googleAuthAction } from "@/store/auth-slice";
+import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
 import CommonForm from '@/components/common-components/CommonForm'
 import PasswordStrengthMeter from '@/components/common-components/PasswordStrengthMeter'
 import { loginFormControl } from '@/config'
@@ -61,7 +61,7 @@ const Login = () => {
   const handleGoogleSuccess = async ({ access_token }) => {
     setIsLoading(true)
     try {
-      const response = await dispatch(googleAuthAction({ accessToken: access_token })).unwrap()
+      const response = await dispatch(googleSignInAction({ accessToken: access_token })).unwrap()
       toast({
         title: 'Signed in',
         description: response.message || 'Welcome!',

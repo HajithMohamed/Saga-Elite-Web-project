@@ -4,7 +4,7 @@ import CommonForm from "@/components/common-components/CommonForm";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import { registerFormControl } from "@/config";
 import { Button } from "@/components/ui/button";
-import { registerUserAction, googleAuthAction } from "@/store/auth-slice";
+import { registerUserAction, googleSignUpAction } from "@/store/auth-slice";
 import { useDispatch } from "react-redux";
 import { toast } from "@/hooks/use-toast";
 import { PASSWORD_REGEX, PASSWORD_ERROR_MSG } from "@/lib/password-strength";
@@ -82,15 +82,15 @@ const Register = () => {
   const handleGoogleSuccess = async ({ access_token }) => {
     setIsLoading(true);
     try {
-      const response = await dispatch(googleAuthAction({ accessToken: access_token })).unwrap();
+      const response = await dispatch(googleSignUpAction({ accessToken: access_token })).unwrap();
       toast({
-        title: "Signed in with Google",
+        title: "Signed up with Google",
         description: response.message || "Welcome!",
         variant: "success",
       });
     } catch (err) {
-      const msg = typeof err === "string" ? err : err?.message || "Google sign-in failed";
-      toast({ title: "Google sign-in failed", description: msg, variant: "destructive" });
+      const msg = typeof err === "string" ? err : err?.message || "Google sign-up failed";
+      toast({ title: "Google sign-up failed", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
