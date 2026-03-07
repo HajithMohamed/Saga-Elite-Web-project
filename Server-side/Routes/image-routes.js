@@ -25,7 +25,7 @@ router.post(
   "/upload-image",
   authMiddleware,
   adminMiddleware,
-  upload.any(),
+  upload.array("images", 10),
   uploadImages,
 );
 

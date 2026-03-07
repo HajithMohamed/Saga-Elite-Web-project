@@ -9,6 +9,8 @@ const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const winston = require("winston");
 
+const MAX_IMAGES_PER_ENTITY = 10;
+
 // Configure Winston logger for image actions
 const actionLogger = winston.createLogger({
   level: "info",
@@ -52,6 +54,11 @@ const uploadImages = catchAsync(async (req, res, next) => {
     return next(new AppError("refId is required for non-System images", 400));
   }
 
+  // Validate ObjectId for non-System
+  if (imageData.refModel !== "System" && !mongoose.Types.ObjectId.isValid(imageData.refId)) {
+    return next(new AppError("Invalid refId", 400));
+  }
+
   if (!req.files || req.files.length === 0) {
     return next(new AppError("No images uploaded", 400));
   }
@@ -81,10 +88,8 @@ const uploadImages = catchAsync(async (req, res, next) => {
     if (!dropExists) return next(new AppError("Drop not found", 404));
   }
 
-  // Review validation is skipped until a Review model is created
-
   /* ==============================
-     Count Existing Images
+     Count Existing Images & Enforce Limit
   ============================== */
 
   const countQuery = { refModel: imageData.refModel, isDeleted: false };
@@ -97,11 +102,19 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   const existingImagesCount = await Image.countDocuments(countQuery);
 
+  if (existingImagesCount + req.files.length > MAX_IMAGES_PER_ENTITY) {
+    return next(
+      new AppError(
+        `Image limit exceeded. Max ${MAX_IMAGES_PER_ENTITY} images allowed per entity. Currently ${existingImagesCount}, trying to add ${req.files.length}.`,
+        400
+      )
+    );
+  }
+
   /* ==============================
      Upload To Cloudinary (throttled)
   ============================== */
 
-  // Build Cloudinary folder path
   let cloudinaryFolder;
   if (imageData.refModel === "System") {
     cloudinaryFolder = `saga-elite/system/${imageData.type}`;
@@ -149,7 +162,6 @@ const uploadImages = catchAsync(async (req, res, next) => {
           },
         };
 
-        // Only set refId for non-System images
         if (imageData.refModel !== "System") {
           imageDoc.refId = imageData.refId;
         }
@@ -175,7 +187,6 @@ const uploadImages = catchAsync(async (req, res, next) => {
       await Image.findByIdAndDelete(image._id);
     }
 
-    // Log failed upload
     actionLogger.error({
       action: "upload_images",
       userId: req.user ? req.user._id : null,
@@ -192,7 +203,6 @@ const uploadImages = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Log successful upload
   actionLogger.info({
     action: "upload_images",
     userId: req.user ? req.user._id : null,
@@ -212,8 +222,8 @@ const uploadImages = catchAsync(async (req, res, next) => {
 const getProductImages = catchAsync(async (req, res, next) => {
   const productRefId = req.params.id;
 
-  if (!productRefId) {
-    return next(new AppError("Product reference ID is required", 400));
+  if (!productRefId || !mongoose.Types.ObjectId.isValid(productRefId)) {
+    return next(new AppError("Valid product reference ID is required", 400));
   }
 
   const product = await Product.findById(productRefId);
@@ -239,8 +249,8 @@ const getProductImages = catchAsync(async (req, res, next) => {
 const getDropImages = catchAsync(async (req, res, next) => {
   const dropRefId = req.params.id;
 
-  if (!dropRefId) {
-    return next(new AppError("Product reference ID is required", 400));
+  if (!dropRefId || !mongoose.Types.ObjectId.isValid(dropRefId)) {
+    return next(new AppError("Valid drop reference ID is required", 400));
   }
 
   const drop = await Drop.findById(dropRefId);
@@ -320,8 +330,8 @@ const getLogoImages = catchAsync(async (req, res, next) => {
 const getReviewImages = catchAsync(async (req, res, next) => {
   const reviewRefId = req.params.id;
 
-  if (!reviewRefId) {
-    return next(new AppError("Review reference ID is required", 400));
+  if (!reviewRefId || !mongoose.Types.ObjectId.isValid(reviewRefId)) {
+    return next(new AppError("Valid review reference ID is required", 400));
   }
 
   const reviewImages = await Image.find({
@@ -343,21 +353,22 @@ const getReviewImages = catchAsync(async (req, res, next) => {
 const setPrimaryImage = catchAsync(async (req, res, next) => {
   const imageId = req.params.id;
 
+  if (!mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Invalid image ID", 400));
+  }
+
   const image = await Image.findOne({ _id: imageId, isDeleted: false });
   if (!image) {
     return next(new AppError("Image not found", 404));
   }
 
-  // Build the sibling query based on refModel
   const siblingQuery = { refModel: image.refModel, isDeleted: false };
   if (image.refId) {
     siblingQuery.refId = image.refId;
   } else {
-    // System images — match siblings by type instead
     siblingQuery.type = image.type;
   }
 
-  // Unset isPrimary on all siblings, then set on target
   await Image.bulkWrite([
     {
       updateMany: {
@@ -375,7 +386,6 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 
   const updatedImage = await Image.findById(image._id);
 
-  // Log primary image change
   actionLogger.info({
     action: "set_primary_image",
     userId: req.user ? req.user._id : null,
@@ -398,23 +408,19 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 const deleteImage = catchAsync(async (req, res, next) => {
   const imageId = req.params.id;
 
-  // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(imageId)) {
     return next(new AppError("Invalid image ID", 400));
   }
 
-  // Check if image exists (including deleted ones)
   const image = await Image.findById(imageId);
   if (!image) {
     return next(new AppError("Image not found", 404));
   }
 
-  // Check if already deleted
   if (image.isDeleted) {
     return next(new AppError("Image already deleted", 404));
   }
 
-  // Log the deletion attempt
   actionLogger.info({
     action: "delete_image",
     userId: req.user ? req.user._id : null,
@@ -427,15 +433,12 @@ const deleteImage = catchAsync(async (req, res, next) => {
 
   const wasPrimary = image.isPrimary;
 
-  // Soft-delete in DB
   image.isDeleted = true;
   image.isPrimary = false;
   await image.save();
 
-  // Hard-delete from Cloudinary to free storage
   await cloudinary.uploader.destroy(image.publicId);
 
-  // Auto-promote next image to primary if the deleted one was primary
   if (wasPrimary) {
     const siblingQuery = { refModel: image.refModel, isDeleted: false };
     if (image.refId) {
@@ -472,16 +475,14 @@ const reorderImages = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Validate all entries have required fields
   for (const entry of imageOrders) {
-    if (!entry.imageId || typeof entry.order !== "number") {
+    if (!entry.imageId || !mongoose.Types.ObjectId.isValid(entry.imageId) || typeof entry.order !== "number") {
       return next(
-        new AppError("Each entry must have imageId and order (number)", 400),
+        new AppError("Each entry must have a valid imageId and order (number)", 400),
       );
     }
   }
 
-  // Verify all images exist and belong to the same group
   const imageIds = imageOrders.map((e) => e.imageId);
   const images = await Image.find({
     _id: { $in: imageIds },
@@ -494,7 +495,6 @@ const reorderImages = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Ensure all images belong to the same refModel (and refId if applicable)
   const refModels = [...new Set(images.map((img) => img.refModel))];
   if (refModels.length > 1) {
     return next(
@@ -502,14 +502,13 @@ const reorderImages = catchAsync(async (req, res, next) => {
     );
   }
 
-  const refIds = [...new Set(images.map((img) => String(img.refId || "")))]; 
+  const refIds = [...new Set(images.map((img) => String(img.refId || "")))];
   if (refIds.length > 1) {
     return next(
       new AppError("All images must belong to the same entity", 400),
     );
   }
 
-  // Bulk update order
   const bulkOps = imageOrders.map((entry) => ({
     updateOne: {
       filter: { _id: entry.imageId },
@@ -519,8 +518,7 @@ const reorderImages = catchAsync(async (req, res, next) => {
 
   await Image.bulkWrite(bulkOps);
 
-  // Log reorder action
-  const sampleImage = images[0]; // All images are from same group
+  const sampleImage = images[0];
   actionLogger.info({
     action: "reorder_images",
     userId: req.user ? req.user._id : null,
@@ -547,14 +545,12 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
     return next(new AppError("refModel is required in request body", 400));
   }
 
-  // Normalize refModel
   const normalizedRefModel = refModel.charAt(0).toUpperCase() + refModel.slice(1).toLowerCase();
   const validRefModels = ["Product", "Drop", "System"];
   if (!validRefModels.includes(normalizedRefModel)) {
     return next(new AppError("Invalid refModel", 400));
   }
 
-  // Build query - include all images, even soft-deleted ones for complete cleanup
   const query = { refModel: normalizedRefModel };
   if (normalizedRefModel === "System") {
     if (!type) {
@@ -562,26 +558,22 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
     }
     query.type = type;
   } else {
-    if (!refId) {
-      return next(new AppError("refId is required in request body for non-System images", 400));
+    if (!refId || !mongoose.Types.ObjectId.isValid(refId)) {
+      return next(new AppError("Valid refId is required for non-System images", 400));
     }
     query.refId = refId;
   }
 
-  // Find all images to delete (including soft-deleted)
   const imagesToDelete = await Image.find(query);
   if (imagesToDelete.length === 0) {
     return next(new AppError("No images found to delete", 404));
   }
 
-  // Hard delete from DB
   await Image.deleteMany(query);
 
-  // Hard delete from Cloudinary
   const cloudinaryDeletes = imagesToDelete.map(img => cloudinary.uploader.destroy(img.publicId));
   await Promise.allSettled(cloudinaryDeletes);
 
-  // Log bulk delete
   actionLogger.info({
     action: "delete_all_images",
     userId: req.user ? req.user._id : null,
