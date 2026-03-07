@@ -98,6 +98,8 @@ const addProduct = catchAsync(async (req, res, next) => {
 
 
 
+
+
 module.exports = {
     getAllProducts,
     getSingleProduct,

@@ -2,10 +2,33 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filter-object");
 const Image = require("../Models/Image");
+const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const uploadToCloudinary = require("../Utils/image-upload");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
+const winston = require("winston");
+
+// Configure Winston logger for image actions
+const actionLogger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: "logs/image-actions.log" }),
+  ],
+});
+
+// Add console logging in non-production
+if (process.env.NODE_ENV !== "production") {
+  actionLogger.add(
+    new winston.transports.Console({
+      format: winston.format.simple(),
+    })
+  );
+}
 
 const uploadImages = catchAsync(async (req, res, next) => {
   const imageData = filterObj(req.body, "refId", "refModel", "type");
@@ -152,10 +175,32 @@ const uploadImages = catchAsync(async (req, res, next) => {
       await Image.findByIdAndDelete(image._id);
     }
 
+    // Log failed upload
+    actionLogger.error({
+      action: "upload_images",
+      userId: req.user ? req.user._id : null,
+      refModel: imageData.refModel,
+      refId: imageData.refId || null,
+      type: imageData.type || null,
+      numImagesAttempted: req.files.length,
+      numFailed: failedUploads.length,
+      errors: failedUploads,
+    });
+
     return next(
       new AppError(`Upload failed: ${failedUploads.join(", ")}`, 500),
     );
   }
+
+  // Log successful upload
+  actionLogger.info({
+    action: "upload_images",
+    userId: req.user ? req.user._id : null,
+    refModel: imageData.refModel,
+    refId: imageData.refId || null,
+    type: imageData.type || null,
+    numImagesUploaded: uploadedImages.length,
+  });
 
   res.status(201).json({
     success: true,
@@ -330,6 +375,16 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 
   const updatedImage = await Image.findById(image._id);
 
+  // Log primary image change
+  actionLogger.info({
+    action: "set_primary_image",
+    userId: req.user ? req.user._id : null,
+    imageId: image._id,
+    refModel: image.refModel,
+    refId: image.refId || null,
+    type: image.type || null,
+  });
+
   res.status(200).json({
     success: true,
     message: "Primary image updated successfully",
@@ -343,10 +398,32 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 const deleteImage = catchAsync(async (req, res, next) => {
   const imageId = req.params.id;
 
-  const image = await Image.findOne({ _id: imageId, isDeleted: false });
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Invalid image ID", 400));
+  }
+
+  // Check if image exists (including deleted ones)
+  const image = await Image.findById(imageId);
   if (!image) {
     return next(new AppError("Image not found", 404));
   }
+
+  // Check if already deleted
+  if (image.isDeleted) {
+    return next(new AppError("Image already deleted", 404));
+  }
+
+  // Log the deletion attempt
+  actionLogger.info({
+    action: "delete_image",
+    userId: req.user ? req.user._id : null,
+    imageId: image._id,
+    refModel: image.refModel,
+    refId: image.refId || null,
+    type: image.type || null,
+    wasPrimary: image.isPrimary,
+  });
 
   const wasPrimary = image.isPrimary;
 
@@ -442,9 +519,83 @@ const reorderImages = catchAsync(async (req, res, next) => {
 
   await Image.bulkWrite(bulkOps);
 
+  // Log reorder action
+  const sampleImage = images[0]; // All images are from same group
+  actionLogger.info({
+    action: "reorder_images",
+    userId: req.user ? req.user._id : null,
+    refModel: sampleImage.refModel,
+    refId: sampleImage.refId || null,
+    type: sampleImage.type || null,
+    affectedImageIds: imageIds,
+    numImagesReordered: imageOrders.length,
+  });
+
   res.status(200).json({
     success: true,
     message: "Image order updated successfully",
+  });
+});
+
+/* ==============================
+   Bulk Delete Images
+============================== */
+const deleteAllImages = catchAsync(async (req, res, next) => {
+  const { refModel, refId, type } = req.body;
+
+  if (!refModel) {
+    return next(new AppError("refModel is required in request body", 400));
+  }
+
+  // Normalize refModel
+  const normalizedRefModel = refModel.charAt(0).toUpperCase() + refModel.slice(1).toLowerCase();
+  const validRefModels = ["Product", "Drop", "System"];
+  if (!validRefModels.includes(normalizedRefModel)) {
+    return next(new AppError("Invalid refModel", 400));
+  }
+
+  // Build query - include all images, even soft-deleted ones for complete cleanup
+  const query = { refModel: normalizedRefModel };
+  if (normalizedRefModel === "System") {
+    if (!type) {
+      return next(new AppError("type is required in request body for System images", 400));
+    }
+    query.type = type;
+  } else {
+    if (!refId) {
+      return next(new AppError("refId is required in request body for non-System images", 400));
+    }
+    query.refId = refId;
+  }
+
+  // Find all images to delete (including soft-deleted)
+  const imagesToDelete = await Image.find(query);
+  if (imagesToDelete.length === 0) {
+    return next(new AppError("No images found to delete", 404));
+  }
+
+  // Hard delete from DB
+  await Image.deleteMany(query);
+
+  // Hard delete from Cloudinary
+  const cloudinaryDeletes = imagesToDelete.map(img => cloudinary.uploader.destroy(img.publicId));
+  await Promise.allSettled(cloudinaryDeletes);
+
+  // Log bulk delete
+  actionLogger.info({
+    action: "delete_all_images",
+    userId: req.user ? req.user._id : null,
+    refModel: normalizedRefModel,
+    refId: refId || null,
+    type: type || null,
+    numImagesDeleted: imagesToDelete.length,
+    deletedImageIds: imagesToDelete.map(img => img._id),
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `${imagesToDelete.length} images deleted successfully`,
+    deletedCount: imagesToDelete.length,
   });
 });
 
@@ -459,4 +610,5 @@ module.exports = {
   setPrimaryImage,
   deleteImage,
   reorderImages,
+  deleteAllImages,
 };
