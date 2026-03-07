@@ -1,4 +1,5 @@
 const catchAsync = require("../Utils/catchAsync");
+const AppError = require("../Utils/appError");
 
 const paginatedResult = (Model) =>
   catchAsync(async (req, res, next) => {

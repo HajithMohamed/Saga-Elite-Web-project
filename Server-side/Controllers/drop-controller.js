@@ -60,7 +60,7 @@ const getAllDrops = catchAsync(async (req, res, next) => {
     const filter = {};
 
     // Admin can see all; public sees only published & non-archived
-    if (!req.user || req.user.role !== "admin") {
+    if (!req.userInfo || req.userInfo.role !== "admin") { 
         filter.isPublished = true;
         filter.isArchived = false;
     }
