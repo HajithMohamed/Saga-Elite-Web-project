@@ -1,7 +1,7 @@
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
-const Image = require("../Models/Image"); // only for fetching images
+const Image = require("../Models/Image"); 
 const filterObj = require("../Utils/filter-object");
 const validator = require("validator");
 
@@ -95,10 +95,6 @@ const addProduct = catchAsync(async (req, res, next) => {
     });
 
 });
-
-
-
-
 
 module.exports = {
     getAllProducts,
