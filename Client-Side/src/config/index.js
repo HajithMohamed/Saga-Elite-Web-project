@@ -137,3 +137,40 @@ export const changePasswordFormControls = [
   },
 ];
 
+
+export const dropFormControls = [
+  {
+    name: "name",
+    label: "Drop Name",
+    type: "text",
+    placeholder: "Enter drop name",
+    required: true,
+  },
+  {
+    name: "description",
+    label: "Description",
+    type: "textarea",
+    placeholder: "Enter drop description",
+  },
+  {
+    name: "releaseDate",
+    label: "Release Date",
+    type: "datetime-local",
+    required: true,
+  },
+  {
+    name: "endDate",
+    label: "End Date",
+    type: "datetime-local",
+  },
+  {
+    name: "isPublished",
+    label: "Published",
+    type: "checkbox",
+  },
+  {
+    name: "isArchived",
+    label: "Archived",
+    type: "checkbox",
+  },
+];
