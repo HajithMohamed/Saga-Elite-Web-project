@@ -1,4 +1,3 @@
-import { Component } from "lucide-react";
 
 export const loginFormControl = [
   {
