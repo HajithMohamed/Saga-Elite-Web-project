@@ -1,10 +1,13 @@
-import React from 'react'
+import { Button } from '@/components/ui/button'
+import React, { Fragment } from 'react'
 
 const Product = () => {
   return (
-    <div>
-      
-    </div>
+    <Fragment>
+      <div>
+        <Button>Add New Product</Button>
+      </div>
+    </Fragment>
   )
 }
 
