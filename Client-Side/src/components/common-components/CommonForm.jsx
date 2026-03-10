@@ -213,6 +213,25 @@ const CommonForm = ({
           />
         );
         break;
+      case "CHECKBOX":
+        element = (
+          <div className="flex items-center space-x-2">
+            <Input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              name={getControlItem.name}
+              id={getControlItem.id}
+              checked={value || false}
+              onChange={(event) => {
+                setFormData({
+                  ...formData,
+                  [getControlItem.name]: event.target.checked,
+                });
+              }}
+            />
+          </div>
+        );
+        break;
       default:
         element = (
           <div className="relative w-full">

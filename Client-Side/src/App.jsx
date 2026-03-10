@@ -19,6 +19,8 @@ import AdminDashboard from "./pages/admin-view/Dashboard";
 import AdminFeatures from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
+import AdminDrops from "./pages/admin-view/Drops";
+
 
 // shopping page imports
 import ShoppinLayout from "./components/shopping-components/Layout";
@@ -34,6 +36,7 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 // checking authentication page import
 import CheckAuth from "./components/common-components/CheckAuth";
 import VerifyOtp from "./pages/auth/VerifyOtp";
+
 
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
@@ -86,6 +89,7 @@ function App() {
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
           <Route path="account" element={<Account />} />
+          <Route path="drop" element={<AdminDrops/>}/>
         </Route>
 
         {/* SHOPPING ROUTES */}

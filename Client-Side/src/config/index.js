@@ -1,4 +1,3 @@
-import { Component } from "lucide-react";
 
 export const loginFormControl = [
   {
@@ -18,8 +17,8 @@ export const loginFormControl = [
     componentType : "INPUT"
   },
 ];
-
 export const registerFormControl = [
+  
   {
     name: "email",
     type: "email",
@@ -137,3 +136,46 @@ export const changePasswordFormControls = [
   },
 ];
 
+
+export const dropFormControls = [
+  {
+    name: "name",
+    label: "Drop Name",
+    type: "text",
+    placeholder: "Enter drop name",
+    required: true,
+    componentType: "INPUT"
+  },
+  {
+    name: "description",
+    label: "Description",
+    type: "text",
+    placeholder: "Enter drop description",
+    componentType: "TEXTAREA"
+  },
+  {
+    name: "releaseDate",
+    label: "Release Date",
+    type: "datetime-local",
+    required: true,
+    componentType: "INPUT"
+  },
+  {
+    name: "endDate",
+    label: "End Date",
+    type: "datetime-local",
+    componentType: "INPUT"
+  },
+  {
+    name: "isPublished",
+    label: "Published",
+    type: "checkbox",
+    componentType: "CHECKBOX"
+  },
+  {
+    name: "isArchived",
+    label: "Archived",
+    type: "checkbox",
+    componentType: "CHECKBOX"
+  },
+];
