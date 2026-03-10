@@ -1,9 +1,23 @@
+import CommonForm from '@/components/common-components/CommonForm';
 import { Button } from '@/components/ui/button'
+import { dropFormControls } from '@/config';
 import { Sheet } from 'lucide-react';
 import React, { Fragment, useState } from 'react'
 
 const Drops = () => {
     const [openCreateDropDialog, setOpenCreateDialog]=useState(false);
+    const [formData,setFormData] = useState({
+        name: "",
+        description: "",
+        releaseDate: "",
+        endDate: "",
+        isPublished: false,
+        isArchived: false,
+    })
+
+    function onSubmit(){
+
+    }
   return (
     <Fragment>
         <div>
@@ -22,7 +36,7 @@ const Drops = () => {
                         </SheetTitle>
                     </SheetHeader>
                     <div>
-                        
+                        <CommonForm formControls={dropFormControls} formData={formData} setFormData={setFormData} buttonText="Add Drop" />
                     </div>
                 </SheetContent>
             </Sheet>
