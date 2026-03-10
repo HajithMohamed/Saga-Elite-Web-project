@@ -119,7 +119,7 @@ const Drops = () => {
 
             <Sheet open={openCreateDropDialog}
                 onOpenChange={(isOpen) => {
-                    setOpenCreateDialog(isOpen)
+                    setOpenCreateDropDialog(isOpen)
                     if(!isOpen) {
                         setFormData(initialFormData);
                         setDropImages([]);
@@ -131,33 +131,42 @@ const Drops = () => {
                         <SheetTitle className="text-2xl font-serif font-bold text-[#D4AF37]">
                             Create New Drop
                         </SheetTitle>
-                        <p className="text-sm text-gray-400">Fill in the details below to schedule a new product drop.</p>
+                        <p className="text-sm text-gray-400 font-medium">Fill in the details below to schedule a new product drop.</p>
                     </SheetHeader>
                     
-                    <div className="space-y-6">
+                    <div className="space-y-8 mt-4">
                         {/* Image Upload Section */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-white">Drop Images</label>
-                            <ImageUpload 
-                                images={dropImages} 
-                                setImages={setDropImages} 
-                                isMultiple={true} 
-                            />
+                        <div className="space-y-3">
+                            <label className="text-sm font-semibold tracking-wide text-gray-200 uppercase">Drop Images</label>
+                            <div className="rounded-lg border border-dashed border-gray-800 p-1">
+                                <ImageUpload 
+                                    images={dropImages} 
+                                    setImages={setDropImages} 
+                                    isMultiple={true} 
+                                />
+                            </div>
                         </div>
 
                         {/* Form Section */}
-                        <CommonForm 
-                            formControls={dropFormControls} 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            buttonText="Create Drop"
-                            onSubmit={onSubmit}
-                            // Pass custom styles to CommonForm if needed through props, 
-                            // assuming CommonForm supports className props or you've styled it globally
-                            inputClass="bg-black/40 border-gray-800 focus:border-[#D4AF37] text-white placeholder:text-gray-600"
-                            labelClass="text-gray-300"
-                            buttonClass="bg-[#D4AF37] text-black hover:bg-[#b5952f] font-bold w-full mt-6"
-                        />
+                        <div className="relative pb-10">
+                            <CommonForm 
+                                formControls={dropFormControls} 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                buttonText="Create Drop"
+                                onSubmit={onSubmit}
+                                inputClass="bg-black/40 border-gray-800 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-white placeholder:text-gray-600 rounded-md transition-all duration-200"
+                                labelClass="text-gray-400 font-medium mb-1"
+                                buttonClass="bg-[#D4AF37] text-black hover:bg-[#b5952f] font-bold w-full py-6 text-lg tracking-wider transition-all duration-300 shadow-lg shadow-gold/20"
+                            />
+                            
+                            <button 
+                                onClick={() => setOpenCreateDropDialog(false)}
+                                className="w-full mt-4 text-gray-500 hover:text-white text-sm font-medium transition-colors py-2"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
                 </SheetContent>
             </Sheet>
