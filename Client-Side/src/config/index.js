@@ -127,32 +127,38 @@ export const dropFormControls = [
     type: "text",
     placeholder: "Enter drop name",
     required: true,
+    componentType: "INPUT"
   },
   {
     name: "description",
     label: "Description",
-    type: "textarea",
+    type: "text",
     placeholder: "Enter drop description",
+    componentType: "TEXTAREA"
   },
   {
     name: "releaseDate",
     label: "Release Date",
     type: "datetime-local",
     required: true,
+    componentType: "INPUT"
   },
   {
     name: "endDate",
     label: "End Date",
     type: "datetime-local",
+    componentType: "INPUT"
   },
   {
     name: "isPublished",
     label: "Published",
     type: "checkbox",
+    componentType: "CHECKBOX"
   },
   {
     name: "isArchived",
     label: "Archived",
     type: "checkbox",
+    componentType: "CHECKBOX"
   },
 ];
