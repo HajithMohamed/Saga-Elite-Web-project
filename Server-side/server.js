@@ -32,19 +32,20 @@ app.use(compression()); // Response compression
 app.use(express.json({ limit: "10kb" }));
 
 // Rate limiting: stricter for auth, general for others
-app.use("/api/auth", authLimiter);
+app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 
-// API versioning
-app.use("/api/v1", urlversionning("v1"));
+// API versioning middleware is removed to ensure consistent routing
 
 app.use(requestLogger);
 
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/google",googleAuthRoute);
-app.use("/api/image",imageRoutes);
-app.use("/api/drops", dropRoutes);
+// All routes are now consistently prefixed with /api/v1
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/google", googleAuthRoute);
+app.use("/api/v1/image", imageRoutes);
+app.use("/api/v1/drops", dropRoutes);
+
 app.use(globalErrorController);
 
 
