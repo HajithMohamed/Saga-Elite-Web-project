@@ -44,11 +44,10 @@ const dropSchema = new mongoose.Schema(
 );
 
 /* Auto slug generation (regenerates on name change) */
-dropSchema.pre("save", function (next) {
+dropSchema.pre("save", async function () {
   if (this.isNew || this.isModified("name")) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
-  next();
 });
 
 /* Virtual populate for images (excludes soft-deleted) */

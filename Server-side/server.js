@@ -25,7 +25,7 @@ const imageRoutes = require("./Routes/image-routes")
 const dropRoutes = require("./Routes/drop-routes")
 
 
-app.use(helmet()); // Security headers
+app.use(helmet({ crossOriginOpenerPolicy: false })); // Security headers
 app.use(cookieParser());
 app.use(configureCors());
 app.use(compression()); // Response compression

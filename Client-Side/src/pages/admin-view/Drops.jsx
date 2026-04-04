@@ -180,8 +180,8 @@ const Drops = () => {
               </label>
               <div className="rounded-lg border border-dashed border-gray-800 p-1">
                 <ImageUpload
-                  images={images}
-                  setImages={setImages}
+                  images={dropImages}
+                  setImages={setDropImages}
                   refModel="Product"
                   refId="some-product-id"
                   // type="hero" // Only for System
