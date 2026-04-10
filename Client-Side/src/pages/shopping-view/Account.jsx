@@ -13,6 +13,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
+import { fetchWishlistAction, removeFromWishlistAction } from "@/store/cart-slice";
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import { toast } from "@/hooks/use-toast";
@@ -21,6 +22,7 @@ import PasswordStrengthMeter from "@/components/common-components/PasswordStreng
 /* ─────────────────────────── main component ─────────────────────────────── */
 const Account = () => {
   const { user } = useSelector((state) => state.auth);
+  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -39,11 +41,12 @@ const Account = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // password regex aligned with server Mongoose validator
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  useEffect(() => {
+    dispatch(fetchWishlistAction());
+  }, [dispatch]);
 
   useEffect(() => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     const newErrors = {};
     if (formData.newPassword && !passwordRegex.test(formData.newPassword)) {
       newErrors.newPassword =
@@ -306,6 +309,60 @@ const Account = () => {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* ── wishlist summary ── */}
+            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-[#D4AF37]/10">
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  My Wishlist
+                </h3>
+                <p className="text-sm text-gray-400 mt-2">
+                  Saved items you want to revisit later.
+                </p>
+              </div>
+              <div className="px-6 py-6">
+                {wishlistItems.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    No saved products yet. Add items to your wishlist from the shop.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {wishlistItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 rounded-2xl border border-neutral-800 bg-[#111] p-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={item.image || "/LOGO.png"}
+                            alt={item.name}
+                            className="h-16 w-16 rounded-2xl object-cover"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-white uppercase tracking-[0.05em]">
+                              {item.name}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{item.brand}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className="text-sm text-[#D4AF37] font-bold">
+                            LKR {Math.round(item.basePrice * (1 - (item.discountPercent || 0) / 100)).toLocaleString()}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => dispatch(removeFromWishlistAction(item.id))}
+                            className="text-xs uppercase tracking-[0.2em] text-gray-300 hover:text-[#D4AF37]"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

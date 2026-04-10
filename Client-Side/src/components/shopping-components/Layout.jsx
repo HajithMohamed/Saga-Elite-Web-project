@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import Header from './Header';
+import { fetchCartAction, fetchWishlistAction } from '@/store/cart-slice';
 
 const Layout = () => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchCartAction());
+    dispatch(fetchWishlistAction());
+  }, [dispatch]);
+
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
       <Header />

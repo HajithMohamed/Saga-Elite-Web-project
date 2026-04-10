@@ -12,6 +12,8 @@ const Header = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { items: cartItems } = useSelector((state) => state.cart.cart || {});
+  const cartCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -109,7 +111,7 @@ const Header = () => {
           >
             <ShoppingCart className="w-6 h-6" />
             <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-              0
+              {cartCount}
             </span>
           </Link>
 
