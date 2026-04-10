@@ -30,12 +30,14 @@ const Product = () => {
   const [formData, setFormData] = useState(initialProductForm);
   const [selectedProductSlug, setSelectedProductSlug] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const dispatch = useDispatch();
-  const { productList, isLoading, isSubmitting, error } = useSelector(
-    (state) => state.product,
-  );
-  const { dropList } = useSelector((state) => state.drop);
+  const productList = useSelector((state) => state.product?.productList ?? []);
+  const isLoading = useSelector((state) => state.product?.isLoading ?? false);
+  const isSubmitting = useSelector((state) => state.product?.isSubmitting ?? false);
+  const error = useSelector((state) => state.product?.error ?? null);
+  const dropList = useSelector((state) => state.drop?.dropList ?? []);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +49,25 @@ const Product = () => {
   }, [dispatch, statusFilter]);
 
   const variants = useMemo(() => formData.variants || [], [formData.variants]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return productList;
+    }
+    const normalized = searchQuery.trim().toLowerCase();
+    return productList.filter((product) => {
+      const name = product.name?.toLowerCase() || "";
+      const artNo = product.artNo?.toLowerCase() || "";
+      const brand = product.brand?.toLowerCase() || "";
+      const dropName = product.drop?.name?.toLowerCase() || "";
+      return (
+        name.includes(normalized) ||
+        artNo.includes(normalized) ||
+        brand.includes(normalized) ||
+        dropName.includes(normalized)
+      );
+    });
+  }, [productList, searchQuery]);
 
   const resetForm = () => {
     setFormData(initialProductForm);
@@ -220,12 +241,21 @@ const Product = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.8fr_1.2fr]">
+      <div className={showForm ? "grid gap-6 xl:grid-cols-[1.8fr_1.2fr]" : "grid gap-6"}>
         <section className="rounded-3xl border border-[#2a2a2a] bg-[#131313]/90 p-6 shadow-[0_0_40px_rgba(0,0,0,0.30)]">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-white">Product catalog</h2>
-              <p className="text-sm text-gray-400">Showing {productList?.length ?? 0} products</p>
+              <p className="text-sm text-gray-400">Showing {filteredProducts?.length ?? 0} products</p>
+            </div>
+            <div className="min-w-[240px] flex-1 sm:min-w-[320px]">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search products by name, art no, brand or drop"
+                className="w-full rounded-md border border-gray-700 bg-[#111111] px-3 py-2 text-sm text-white outline-none focus:border-[#d4af37]"
+              />
             </div>
           </div>
 
@@ -250,8 +280,8 @@ const Product = () => {
                       Loading products...
                     </td>
                   </tr>
-                ) : productList?.length > 0 ? (
-                  productList.map((product) => (
+                ) : filteredProducts?.length > 0 ? (
+                  filteredProducts.map((product) => (
                     <tr key={product.slug} className="rounded-xl bg-[#121212] border border-[#1e1e1e] hover:border-[#d4af37]/50 transition-all">
                       <td className="px-4 py-4 font-semibold text-white">{product.name}</td>
                       <td className="px-4 py-4 text-[#d4af37]">{product.artNo}</td>
@@ -283,7 +313,7 @@ const Product = () => {
                 ) : (
                   <tr>
                     <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
-                      No products found for the selected filter.
+                      No products found for the selected filter or search.
                     </td>
                   </tr>
                 )}
@@ -292,20 +322,19 @@ const Product = () => {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[#2a2a2a] bg-[#131313]/90 p-6 shadow-[0_0_40px_rgba(0,0,0,0.30)]">
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-[#d4af37]">{selectedProductSlug ? "Edit product" : "New product"}</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">{selectedProductSlug ? "Update details" : "Create product"}</h2>
-            </div>
-            {showForm && (
+        {showForm && (
+          <section className="rounded-3xl border border-[#2a2a2a] bg-[#131313]/90 p-6 shadow-[0_0_40px_rgba(0,0,0,0.30)]">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[#d4af37]">{selectedProductSlug ? "Edit product" : "New product"}</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">{selectedProductSlug ? "Update details" : "Create product"}</h2>
+              </div>
               <Button variant="ghost" size="sm" onClick={resetForm}>
                 <ChevronLeft className="h-4 w-4" /> Cancel
               </Button>
-            )}
-          </div>
+            </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-3 rounded-2xl bg-[#0f0f0f] p-4">
               <label className="text-xs uppercase tracking-[0.3em] text-gray-400">Name</label>
               <input
@@ -523,6 +552,7 @@ const Product = () => {
             {error && <p className="text-sm text-red-400">{error}</p>}
           </form>
         </section>
+      )}
       </div>
     </div>
   );
