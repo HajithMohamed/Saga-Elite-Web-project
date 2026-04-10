@@ -358,7 +358,7 @@ const Drops = () => {
         <Button
           onClick={() => {
             setShowForm(true);
-            setCurrentEditedId(null);
+            setCurrentEditedSlug(null);
             setFormData(initialFormData);
           }}
           className="bg-[#D4AF37] text-black hover:bg-[#b5952f] font-bold tracking-wide"
@@ -496,7 +496,7 @@ const Drops = () => {
             <Button
               onClick={() => {
                 setShowForm(true);
-                setCurrentEditedId(null);
+                setCurrentEditedSlug(null);
                 setFormData(initialFormData);
               }}
               variant="outline"

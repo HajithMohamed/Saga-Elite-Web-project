@@ -1,7 +1,9 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : "http://localhost:5001/api/v1";
 
 const initialState = {
   drops: [],
@@ -16,9 +18,9 @@ export const getAllDrops = createAsyncThunk(
       const response = await axios.get(`${API_BASE}/drops/get-all-drops`, {
         withCredentials: true,
       });
-      return response.data.data.drops;
+      return response.data.drops;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -30,9 +32,9 @@ export const createDrop = createAsyncThunk(
       const response = await axios.post(`${API_BASE}/drops/create-drop`, dropData, {
         withCredentials: true,
       });
-      return response.data.data.drop;
+      return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -48,9 +50,9 @@ export const updateDrop = createAsyncThunk(
           withCredentials: true,
         }
       );
-      return response.data.data.drop;
+      return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -66,9 +68,9 @@ export const archiveDrop = createAsyncThunk(
           withCredentials: true,
         }
       );
-      return response.data.data.drop;
+      return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -77,12 +79,12 @@ export const deleteDrop = createAsyncThunk(
   "drop/deleteDrop",
   async (slug, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_BASE}/drops/delete-drop/${slug}`, {
+      const response = await axios.delete(`${API_BASE}/drops/delete-drop/${slug}`, {
         withCredentials: true,
       });
-      return slug;
+      return response.data.deletedDropSlug || slug;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -101,11 +103,17 @@ const dropSlice = createSlice({
         state.isLoading = false;
         state.drops = action.payload;
       })
+      .addCase(getAllDrops.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(createDrop.pending, (state) => {
+        state.error = null;
+      })
       .addCase(createDrop.fulfilled, (state, action) => {
         state.drops.push(action.payload);
       })
-      .addCase(getAllDrops.rejected, (state, action) => {
-        state.isLoading = false;
+      .addCase(createDrop.rejected, (state, action) => {
         state.error = action.payload;
       })
       .addCase(updateDrop.fulfilled, (state, action) => {
@@ -116,6 +124,9 @@ const dropSlice = createSlice({
           state.drops[index] = action.payload;
         }
       })
+      .addCase(updateDrop.rejected, (state, action) => {
+        state.error = action.payload;
+      })
       .addCase(archiveDrop.fulfilled, (state, action) => {
         const index = state.drops.findIndex(
           (drop) => drop._id === action.payload._id
@@ -124,8 +135,14 @@ const dropSlice = createSlice({
           state.drops[index] = action.payload;
         }
       })
+      .addCase(archiveDrop.rejected, (state, action) => {
+        state.error = action.payload;
+      })
       .addCase(deleteDrop.fulfilled, (state, action) => {
         state.drops = state.drops.filter((drop) => drop.slug !== action.payload);
+      })
+      .addCase(deleteDrop.rejected, (state, action) => {
+        state.error = action.payload;
       });
   },
 });

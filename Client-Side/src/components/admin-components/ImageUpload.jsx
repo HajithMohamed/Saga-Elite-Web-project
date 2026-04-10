@@ -3,7 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import axios from 'axios'; // Added import for axios
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : 'http://localhost:5001/api/v1';
 
 // Added props for backend integration: refId, refModel, type (optional for system images)
 const ImageUpload = ({ 
@@ -101,9 +105,9 @@ const ImageUpload = ({
 
     try {
       // Fixed URL (adjust port/host as needed, e.g., http://localhost:3000/api/upload-image)
-      const apiResponse = await axios.post('http://localhost:3000/api/upload-image', formData, {
+      const apiResponse = await axios.post(`${API_BASE}/image/upload-image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true, // If auth is needed
+        withCredentials: true,
       });
 
       if (apiResponse.data.success) {
