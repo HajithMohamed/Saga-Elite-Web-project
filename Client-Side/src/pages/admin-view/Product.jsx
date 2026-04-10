@@ -32,10 +32,10 @@ const Product = () => {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const dispatch = useDispatch();
-  const { productList, isLoading, isSubmitting, error } = useSelector(
-    (state) => state.product,
-  );
-  const { dropList } = useSelector((state) => state.drop);
+  const productState = useSelector((state) => state.product || {});
+  const { productList = [], isLoading = false, isSubmitting = false, error = null } = productState;
+  const dropState = useSelector((state) => state.drop || {});
+  const { dropList = [] } = dropState;
   const { toast } = useToast();
 
   useEffect(() => {
