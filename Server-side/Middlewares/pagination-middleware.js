@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 
@@ -16,9 +17,27 @@ const paginatedResult = (Model) =>
       maxPrice,
       search,
       sort,
+      isActive,
+      drop,
     } = req.query;
 
-    const matchStage = { isActive: true };
+    const matchStage = {};
+
+    if (isActive === "false") {
+      matchStage.isActive = false;
+    } else if (isActive === "all") {
+      // no filter for active state
+    } else {
+      matchStage.isActive = true;
+    }
+
+    if (drop) {
+      try {
+        matchStage.drop = mongoose.Types.ObjectId(drop);
+      } catch (error) {
+        return next(new AppError("Invalid drop id", 400));
+      }
+    }
 
     /* ========= Variant Size Filter ========= */
     if (size) {
@@ -95,6 +114,20 @@ const paginatedResult = (Model) =>
             { $sort: { order: 1 } },
           ],
           as: "images",
+        },
+      },
+      {
+        $lookup: {
+          from: "drops",
+          localField: "drop",
+          foreignField: "_id",
+          as: "drop",
+        },
+      },
+      {
+        $unwind: {
+          path: "$drop",
+          preserveNullAndEmptyArrays: true,
         },
       },
 
