@@ -2,6 +2,7 @@ const SERVER_URL = "http://localhost:5001";
 
 export { SERVER_URL };
 
+
 export const loginFormControl = [
   {
     name: "email",
@@ -20,6 +21,7 @@ export const loginFormControl = [
     componentType : "INPUT"
   },
 ];
+ 
 export const registerFormControl = [
   
   {
