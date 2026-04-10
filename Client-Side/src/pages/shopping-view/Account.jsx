@@ -13,7 +13,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
+<<<<<<< HEAD
 import { fetchWishlistAction, removeFromWishlistAction } from "@/store/cart-slice";
+=======
+import { fetchUserOrders } from "@/store/order-slice";
+>>>>>>> 8fdbd2946fdad1c686ebf23637121492c0fefd87
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +32,7 @@ const Account = () => {
 
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const homeLink = isAdmin ? "/admin/dashboard" : "/shopping/home";
+  const { userOrders, isLoading: orderLoading } = useSelector((state) => state.order);
 
   /* ── change-password form state ── */
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -60,6 +65,10 @@ const Account = () => {
     }
     setErrors(newErrors);
   }, [formData]);
+
+  useEffect(() => {
+    dispatch(fetchUserOrders());
+  }, [dispatch]);
 
   /* ── handlers ── */
   const handleChangePassword = async (e) => {
@@ -414,6 +423,78 @@ const Account = () => {
                 )}
               </div>
             )}
+
+            {/* ── order history ── */}
+            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-[#D4AF37]/10">
+                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  Order History
+                </h3>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                {orderLoading ? (
+                  <p className="text-sm text-gray-400">Loading your orders...</p>
+                ) : userOrders?.length > 0 ? (
+                  <div className="space-y-4">
+                    {userOrders.map((order) => (
+                      <div
+                        key={order._id}
+                        className="rounded-2xl border border-[#D4AF37]/10 bg-[#090909] p-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37]">
+                              Order ID
+                            </p>
+                            <p className="text-sm text-white mt-1 break-all">
+                              {order._id}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                              Status
+                            </p>
+                            <p className="text-sm text-white mt-1 capitalize">
+                              {order.status}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                              Total
+                            </p>
+                            <p className="text-sm text-white mt-1">
+                              ₹{order.totalAmount.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                              Payment
+                            </p>
+                            <p className="text-sm text-white mt-1 capitalize">
+                              {order.paymentMethod}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                              Ordered
+                            </p>
+                            <p className="text-sm text-white mt-1">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    No orders yet. Browse the store and place your first order.
+                  </p>
+                )}
+              </div>
+            </div>
 
             {/* ── danger zone: sign out ── */}
             <div className="bg-[#0a0a0a] border border-red-500/10 rounded-2xl overflow-hidden">

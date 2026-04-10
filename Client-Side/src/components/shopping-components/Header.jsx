@@ -12,8 +12,13 @@ const Header = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+<<<<<<< HEAD
   const { items: cartItems } = useSelector((state) => state.cart.cart || {});
   const cartCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+=======
+  const { cart } = useSelector((state) => state.order);
+  const cartCount = cart?.reduce((total, item) => total + item.quantity, 0) || 0;
+>>>>>>> 8fdbd2946fdad1c686ebf23637121492c0fefd87
 
   useEffect(() => {
     const handleClickOutside = (e) => {
