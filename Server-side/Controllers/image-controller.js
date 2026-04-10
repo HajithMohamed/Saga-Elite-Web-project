@@ -35,6 +35,16 @@ if (process.env.NODE_ENV !== "production") {
 const uploadImages = catchAsync(async (req, res, next) => {
   const imageData = filterObj(req.body, "refId", "refModel", "type");
 
+  // Log upload attempt
+  actionLogger.info({
+    action: "upload_images_attempt",
+    userId: req.user ? req.user._id : null,
+    refModel: imageData.refModel,
+    refId: imageData.refId || null,
+    type: imageData.type || null,
+    numFiles: req.files ? req.files.length : 0,
+  });
+
   if (!imageData.refModel) {
     return next(new AppError("refModel is required", 400));
   }

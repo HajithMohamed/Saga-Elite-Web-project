@@ -30,6 +30,7 @@ const imageSchema = new mongoose.Schema(
       type: String,
       enum: [
         "product",
+        "drop",
         "hero",
         "dropBanner",
         "ad",

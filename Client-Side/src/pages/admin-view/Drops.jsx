@@ -259,6 +259,7 @@ const Drops = () => {
                       setImages={setDropImages}
                       refModel="Drop"
                       refId={currentEditedId}
+                      type="drop"
                     />
                   </div>
                 )}
