@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 
 const initialState = {
   isLoading: false,
@@ -96,7 +96,7 @@ const adminDropSlice = createSlice({
         state.isLoading = false;
         state.dropList = action.payload.data;
       })
-      .addCase(getAllDrops.rejected, (state, action) => {
+      .addCase(getAllDrops.rejected, (state) => {
         state.isLoading = false;
         state.dropList = [];
       })
@@ -107,7 +107,7 @@ const adminDropSlice = createSlice({
         state.isLoading = false;
         state.dropDetails = action.payload.data;
       })
-      .addCase(getSingleDrop.rejected, (state, action) => {
+      .addCase(getSingleDrop.rejected, (state) => {
         state.isLoading = false;
         state.dropDetails = null;
       });
