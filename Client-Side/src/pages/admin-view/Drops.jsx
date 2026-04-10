@@ -35,6 +35,7 @@ const Drops = () => {
   const [formData, setFormData] = useState(initialFormData);
   const [dropImages, setDropImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
+  const [currentEditedId, setCurrentEditedId] = useState(null);
 
   const dispatch = useDispatch();
   const { drops, isLoading, error } = useSelector((state) => state.drop);
@@ -59,6 +60,7 @@ const Drops = () => {
             setShowForm(false);
             setFormData(initialFormData);
             setCurrentEditedSlug(null);
+            setCurrentEditedId(null);
           } else {
             toast({
               title: "Failed to update Drop",
@@ -75,6 +77,7 @@ const Drops = () => {
             title: "Drop created successfully",
             className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
           });
+          setCurrentEditedId(data.payload._id);
           setCurrentEditedSlug(data.payload.slug);
           setFormData({
             name: data.payload.name,
@@ -142,6 +145,7 @@ const Drops = () => {
                 setShowForm(false);
                 setFormData(initialFormData);
                 setCurrentEditedSlug(null);
+                setCurrentEditedId(null);
                 setDropImages([]);
               }}
               className="flex items-center text-[#d0c5af] hover:text-[#f2ca50] transition-colors mb-6 text-sm uppercase tracking-wider font-bold"
@@ -252,7 +256,7 @@ const Drops = () => {
                       images={dropImages}
                       setImages={setDropImages}
                       refModel="Drop"
-                      refId={currentEditedSlug}
+                      refId={currentEditedId}
                     />
                   </div>
                 )}
@@ -330,6 +334,7 @@ const Drops = () => {
                   setShowForm(false);
                   setFormData(initialFormData);
                   setCurrentEditedSlug(null);
+                  setCurrentEditedId(null);
                   setDropImages([]);
                 }}
                 className="font-['Manrope'] font-bold text-[10px] text-[#f2ca50] uppercase tracking-[0.2em] hover:text-white transition-colors underline decoration-[#f2ca50]/30 underline-offset-8"
@@ -359,6 +364,7 @@ const Drops = () => {
           onClick={() => {
             setShowForm(true);
             setCurrentEditedSlug(null);
+            setCurrentEditedId(null);
             setFormData(initialFormData);
           }}
           className="bg-[#D4AF37] text-black hover:bg-[#b5952f] font-bold tracking-wide"
@@ -448,6 +454,7 @@ const Drops = () => {
                     title="Edit"
                     onClick={() => {
                       setShowForm(true);
+                      setCurrentEditedId(drop._id);
                       setCurrentEditedSlug(drop.slug);
                       setFormData({
                         name: drop.name,
@@ -497,6 +504,7 @@ const Drops = () => {
               onClick={() => {
                 setShowForm(true);
                 setCurrentEditedSlug(null);
+                setCurrentEditedId(null);
                 setFormData(initialFormData);
               }}
               variant="outline"
