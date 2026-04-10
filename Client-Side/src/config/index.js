@@ -1,4 +1,5 @@
 
+
 export const loginFormControl = [
   {
     name: "email",
@@ -17,6 +18,7 @@ export const loginFormControl = [
     componentType : "INPUT"
   },
 ];
+ 
 export const registerFormControl = [
   
   {
