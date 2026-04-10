@@ -9,6 +9,8 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/v1`
   : 'http://localhost:5001/api/v1';
 
+const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+
 // Added props for backend integration: refId, refModel, type (optional for system images)
 const ImageUpload = ({ 
   images = [], 
@@ -190,7 +192,8 @@ const ImageUpload = ({
               <img 
                 src={img.url} 
                 alt={`Preview ${index}`} 
-                className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                onError={(e) => e.target.src = placeholder}
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <Button 

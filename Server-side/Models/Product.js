@@ -173,7 +173,7 @@ productSchema.virtual("images", {
   ref: "Image",
   localField: "_id",
   foreignField: "refId",
-  match: { isDeleted: false },
+  match: { refModel: "Product", isDeleted: false },
 });
 
 productSchema.set("toObject", { virtuals: true });

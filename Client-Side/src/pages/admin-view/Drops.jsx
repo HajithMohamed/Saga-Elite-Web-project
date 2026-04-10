@@ -21,6 +21,8 @@ import {
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 
+const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+
 const initialFormData = {
   name: "",
   description: "",
@@ -257,6 +259,7 @@ const Drops = () => {
                       setImages={setDropImages}
                       refModel="Drop"
                       refId={currentEditedId}
+                      type="drop"
                     />
                   </div>
                 )}
@@ -390,6 +393,7 @@ const Drops = () => {
                     src={drop.images[0].url}
                     alt={drop.name}
                     className="w-full h-full object-cover mix-blend-overlay"
+                    onError={(e) => e.target.src = placeholder}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#131313]/90" />
                 </div>
