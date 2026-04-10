@@ -33,10 +33,11 @@ const Product = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const dispatch = useDispatch();
-  const productState = useSelector((state) => state.product || {});
-  const { productList = [], isLoading = false, isSubmitting = false, error = null } = productState;
-  const dropState = useSelector((state) => state.drop || {});
-  const { dropList = [] } = dropState;
+  const productList = useSelector((state) => state.product?.productList ?? []);
+  const isLoading = useSelector((state) => state.product?.isLoading ?? false);
+  const isSubmitting = useSelector((state) => state.product?.isSubmitting ?? false);
+  const error = useSelector((state) => state.product?.error ?? null);
+  const dropList = useSelector((state) => state.drop?.dropList ?? []);
   const { toast } = useToast();
 
   useEffect(() => {
