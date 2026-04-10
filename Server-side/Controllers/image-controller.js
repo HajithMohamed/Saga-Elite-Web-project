@@ -35,6 +35,16 @@ if (process.env.NODE_ENV !== "production") {
 const uploadImages = catchAsync(async (req, res, next) => {
   const imageData = filterObj(req.body, "refId", "refModel", "type");
 
+  // Log upload attempt
+  actionLogger.info({
+    action: "upload_images_attempt",
+    userId: req.user ? req.user._id : null,
+    refModel: imageData.refModel,
+    refId: imageData.refId || null,
+    type: imageData.type || null,
+    numFiles: req.files ? req.files.length : 0,
+  });
+
   if (!imageData.refModel) {
     return next(new AppError("refModel is required", 400));
   }
@@ -168,6 +178,17 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
         const image = await Image.create(imageDoc);
         uploadedImages.push(image);
+
+        // Log successful upload with URL for debugging
+        actionLogger.info({
+          action: "image_upload_success",
+          userId: req.user ? req.user._id : null,
+          refModel: imageData.refModel,
+          refId: imageData.refId || null,
+          publicId: result.public_id,
+          url: result.secure_url,
+          order: imageDoc.order,
+        });
       } catch (dbError) {
         await cloudinary.uploader.destroy(result.public_id);
         failedUploads.push(`DB save failed for upload ${index}`);

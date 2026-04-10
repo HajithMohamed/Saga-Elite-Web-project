@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock } from 'lucide-react'
 
 const AdminDashboard = () => {
@@ -94,9 +95,12 @@ const AdminDashboard = () => {
         <div className="bg-black/40 border border-gray-800 rounded-xl p-6 h-fit">
           <h2 className="text-xl font-serif font-semibold mb-6">Quick Actions</h2>
           <div className="space-y-4">
-            <button className="w-full py-3 px-4 bg-[#D4AF37] text-black font-bold uppercase text-xs tracking-widest rounded hover:bg-[#b8962d] transition-colors">
+            <Link
+              to="/admin/product"
+              className="inline-flex w-full items-center justify-center py-3 px-4 bg-[#D4AF37] text-black font-bold uppercase text-xs tracking-widest rounded hover:bg-[#b8962d] transition-colors"
+            >
               Add New Product
-            </button>
+            </Link>
             <button className="w-full py-3 px-4 bg-transparent border border-gray-700 text-white font-bold uppercase text-xs tracking-widest rounded hover:border-[#D4AF37] transition-colors">
               Create Collection
             </button>
