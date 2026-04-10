@@ -168,6 +168,17 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
         const image = await Image.create(imageDoc);
         uploadedImages.push(image);
+
+        // Log successful upload with URL for debugging
+        actionLogger.info({
+          action: "image_upload_success",
+          userId: req.user ? req.user._id : null,
+          refModel: imageData.refModel,
+          refId: imageData.refId || null,
+          publicId: result.public_id,
+          url: result.secure_url,
+          order: imageDoc.order,
+        });
       } catch (dbError) {
         await cloudinary.uploader.destroy(result.public_id);
         failedUploads.push(`DB save failed for upload ${index}`);

@@ -21,6 +21,8 @@ import {
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 
+const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+
 const initialFormData = {
   name: "",
   description: "",
@@ -36,7 +38,6 @@ const Drops = () => {
   const [dropImages, setDropImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
   const [currentEditedId, setCurrentEditedId] = useState(null);
-  const [failedImages, setFailedImages] = useState(new Set());
 
   const dispatch = useDispatch();
   const { drops, isLoading, error } = useSelector((state) => state.drop);
@@ -385,13 +386,13 @@ const Drops = () => {
               key={drop._id}
               className="group relative overflow-hidden bg-[#1b1b1b]/80 border border-[#353535] rounded-none p-6 hover:border-[#D4AF37]/50 transition-all duration-500"
             >
-              {drop.images && drop.images.length > 0 && !failedImages.has(drop._id) && (
+              {drop.images && drop.images.length > 0 && (
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 group-hover:opacity-20 transition-opacity duration-500">
                   <img
                     src={drop.images[0].url}
                     alt={drop.name}
                     className="w-full h-full object-cover mix-blend-overlay"
-                    onError={() => setFailedImages(prev => new Set(prev).add(drop._id))}
+                    onError={(e) => e.target.src = placeholder}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#131313]/90" />
                 </div>
@@ -467,11 +468,6 @@ const Drops = () => {
                         isArchived: drop.isArchived,
                       });
                       setDropImages(drop.images || []);
-                      setFailedImages(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(drop._id);
-                        return newSet;
-                      });
                     }}
                   >
                     <Edit2 className="h-4 w-4" />
