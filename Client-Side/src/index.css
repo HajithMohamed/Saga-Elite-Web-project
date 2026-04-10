@@ -57,3 +57,17 @@
     --chart-5: 340 75% 55%
   }
 }
+/* Custom Drop Layout Overrides */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(0.8) sepia(100%) saturate(1000%) hue-rotate(10deg);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #131313;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #353535;
+}
