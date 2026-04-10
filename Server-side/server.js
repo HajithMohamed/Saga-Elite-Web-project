@@ -23,6 +23,7 @@ const googleAuthRoute = require("./Routes/google-routes")
 const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes")
 const dropRoutes = require("./Routes/drop-routes")
+const orderRoutes = require("./Routes/order-routes")
 
 
 app.use(helmet({ crossOriginOpenerPolicy: false })); // Security headers
@@ -45,6 +46,7 @@ app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/google", googleAuthRoute);
 app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 app.use(globalErrorController);
 
