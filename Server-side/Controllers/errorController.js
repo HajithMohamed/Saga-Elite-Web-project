@@ -51,6 +51,21 @@ module.exports = (err, req, res, next) => {
         // message already constructed by Mongoose
     }
 
+    // Convert invalid ObjectId casting to a 400 bad request
+    if (err.name === 'CastError') {
+        err.statusCode = 400;
+        err.status = 'fail';
+        err.message = `Invalid ${err.path}: ${err.value}`;
+    }
+
+    // Convert duplicate key errors into a client-friendly response
+    if (err.code === 11000) {
+        err.statusCode = 400;
+        err.status = 'fail';
+        const fields = Object.keys(err.keyValue || {}).join(', ');
+        err.message = `Duplicate field value for ${fields}. Please use another value.`;
+    }
+
     err.statusCode = err.statusCode || 500;
     err.status = err.status || "error";
 

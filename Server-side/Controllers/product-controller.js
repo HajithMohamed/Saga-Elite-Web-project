@@ -74,8 +74,12 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
-    // Validate Drop exists
+    // Validate Drop ID format and existence
     if (productData.drop) {
+        if (!mongoose.isValidObjectId(productData.drop)) {
+            return next(new AppError("Invalid drop id", 400));
+        }
+
         const dropExists = await Drop.exists({ _id: productData.drop });
         if (!dropExists) {
             return next(new AppError("Drop not found", 404));
