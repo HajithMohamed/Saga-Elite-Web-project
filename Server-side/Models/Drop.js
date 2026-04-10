@@ -55,7 +55,7 @@ dropSchema.virtual("images", {
   ref: "Image",
   localField: "_id",
   foreignField: "refId",
-  match: { isDeleted: false },
+  match: { refModel: "Drop", isDeleted: false },
 });
 
 dropSchema.set("toObject", { virtuals: true });

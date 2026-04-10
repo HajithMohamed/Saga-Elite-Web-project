@@ -36,6 +36,7 @@ const Drops = () => {
   const [dropImages, setDropImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
   const [currentEditedId, setCurrentEditedId] = useState(null);
+  const [failedImages, setFailedImages] = useState(new Set());
 
   const dispatch = useDispatch();
   const { drops, isLoading, error } = useSelector((state) => state.drop);
@@ -384,12 +385,13 @@ const Drops = () => {
               key={drop._id}
               className="group relative overflow-hidden bg-[#1b1b1b]/80 border border-[#353535] rounded-none p-6 hover:border-[#D4AF37]/50 transition-all duration-500"
             >
-              {drop.images && drop.images.length > 0 && (
+              {drop.images && drop.images.length > 0 && !failedImages.has(drop._id) && (
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 group-hover:opacity-20 transition-opacity duration-500">
                   <img
                     src={drop.images[0].url}
                     alt={drop.name}
                     className="w-full h-full object-cover mix-blend-overlay"
+                    onError={() => setFailedImages(prev => new Set(prev).add(drop._id))}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#131313]/90" />
                 </div>
@@ -465,6 +467,11 @@ const Drops = () => {
                         isArchived: drop.isArchived,
                       });
                       setDropImages(drop.images || []);
+                      setFailedImages(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(drop._id);
+                        return newSet;
+                      });
                     }}
                   >
                     <Edit2 className="h-4 w-4" />
