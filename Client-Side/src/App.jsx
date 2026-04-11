@@ -20,6 +20,7 @@ import AdminFeatures from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
+import AdminHomeImages from "./pages/admin-view/HomeImages";
 
 
 // shopping page imports
@@ -85,6 +86,7 @@ function App() {
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="home-images" element={<AdminHomeImages />} />
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />

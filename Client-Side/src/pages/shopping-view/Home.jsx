@@ -1,8 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Gift, ShieldCheck, Zap } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : 'http://localhost:5001/api/v1';
 
 const Home = () => {
+  const [heroImage, setHeroImage] = useState(null);
+  const [logoImage, setLogoImage] = useState(null);
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        const [heroResponse, logoResponse] = await Promise.all([
+          axios.get(`${API_BASE}/image/get-hero-images`).catch((err) => err),
+          axios.get(`${API_BASE}/image/get-logo-images`).catch((err) => err),
+        ]);
+
+        if (heroResponse?.data?.images?.length) {
+          setHeroImage(heroResponse.data.images[0]);
+        }
+
+        if (logoResponse?.data?.images?.length) {
+          setLogoImage(logoResponse.data.images[0]);
+        }
+      } catch (error) {
+        console.error("Failed to load homepage images", error);
+      }
+    };
+
+    fetchImages();
+  }, []);
+
+  const heroSrc = heroImage?.url || "/LOGO.png";
+  const logoSrc = logoImage?.url || "/LOGO.png";
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -10,11 +44,15 @@ const Home = () => {
         {/* Abstract Background Elements (Dummy Visuals) */}
         <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black z-10 hidden md:block"></div>
         <div className="absolute inset-0 opacity-40 flex items-center justify-center">
-           {/* If we had a banner image, we'd use it here. We use the logo as a placeholder faded background */}
-           <img src="/LOGO.png" alt="Hero bg" className="object-cover w-full h-full blur-sm opacity-30 saturate-200" />
+          <img src={heroSrc} alt="Hero bg" className="object-cover w-full h-full blur-sm opacity-30 saturate-200" />
         </div>
         
         <div className="relative z-20 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
+          <img
+            src={logoSrc}
+            alt="Saga Elite Logo"
+            className="mb-6 h-16 w-auto object-contain opacity-90"
+          />
           <h2 className="text-[#D4AF37] font-bold tracking-[0.3em] uppercase text-sm md:text-base mb-4">
             Unisex | Youth-Driven | Statement Style
           </h2>

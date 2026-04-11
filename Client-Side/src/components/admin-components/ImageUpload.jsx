@@ -22,6 +22,7 @@ const ImageUpload = ({
   refModel,
   type,
   disabled = false,
+  onUploadSuccess,
 }) => {
   const inputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -106,7 +107,7 @@ const ImageUpload = ({
 
     try {
       const res = await axios.post(
-        `${API_BASE}/images/upload-image`,
+        `${API_BASE}/image/upload-image`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -125,6 +126,9 @@ const ImageUpload = ({
         });
 
         setImages(uploaded);
+        if (onUploadSuccess) {
+          onUploadSuccess(uploaded);
+        }
       } else {
         setUploadError(res.data.message || "Upload failed");
       }
@@ -159,7 +163,7 @@ const ImageUpload = ({
 
       try {
         const res = await axios.patch(
-          `${API_BASE}/images/update-image/${image._id}`,
+          `${API_BASE}/image/update-image/${image._id}`,
           formData,
           {
             headers: { "Content-Type": "multipart/form-data" },
