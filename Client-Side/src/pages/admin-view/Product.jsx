@@ -90,7 +90,14 @@ const Product = () => {
         withCredentials: true,
       });
       if (response.data.success) {
-        setProductImages(response.data.images);
+        setProductImages(
+          response.data.images.map((img) => ({
+            ...img,
+            url: img.url,
+            isUploaded: true,
+            file: null,
+          })),
+        );
       }
     } catch (error) {
       console.error('Failed to fetch product images:', error);
@@ -459,9 +466,9 @@ const Product = () => {
                 setImages={setProductImages}
                 isMultiple={true}
                 refModel="Product"
-                refId={selectedProductSlug ? undefined : undefined} // Will be handled in submit
+                refId={selectedProductId}
                 className="w-full"
-                disabled={!selectedProductSlug} // Only allow uploads for existing products
+                disabled={!selectedProductId} // Only allow uploads for existing products
               />
               {!selectedProductSlug && productImages.length > 0 && (
                 <p className="text-xs text-gray-500 mt-2">

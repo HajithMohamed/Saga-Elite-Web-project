@@ -108,7 +108,7 @@ const ImageUpload = ({
 
     try {
       // Fixed URL (adjust port/host as needed, e.g., http://localhost:3000/api/upload-image)
-      const apiResponse = await axios.post(`${API_BASE}/image/upload-image`, formData, {
+      const apiResponse = await axios.post(`${API_BASE}/images/upload-image`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         withCredentials: true,
       });
