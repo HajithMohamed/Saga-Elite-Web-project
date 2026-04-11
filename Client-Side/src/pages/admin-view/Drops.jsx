@@ -1,7 +1,6 @@
 import React, { Fragment, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
-import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import {
@@ -14,6 +13,8 @@ import {
   AlertTriangle,
   ChevronLeft,
   Eye,
+  Bell,
+  Settings,
 } from "lucide-react";
 import {
   getAllDrops,
@@ -28,7 +29,37 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/v1`
   : "http://localhost:5001/api/v1";
 
-const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+// ── Shared helper components (matches Product page) ──────────────────────────
+
+const PulseDot = ({ active }) => (
+  <span
+    className={`w-2 h-2 shrink-0 ${
+      active ? "bg-saga-primary animate-pulse" : "bg-outline-variant"
+    }`}
+  />
+);
+
+const ToggleSwitch = ({
+  checked,
+  onChange,
+  activeColor = "bg-primary-container",
+  activeThumb = "bg-on-primary-container",
+}) => (
+  <div
+    onClick={onChange}
+    className={`w-10 h-5 ${
+      checked ? activeColor : "bg-surface-variant"
+    } relative cursor-pointer transition-colors duration-300`}
+  >
+    <div
+      className={`absolute top-0 w-5 h-5 transition-transform duration-300 ${
+        checked ? `right-0 ${activeThumb}` : "left-0 bg-outline-variant"
+      }`}
+    />
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const initialFormData = {
   name: "",
@@ -50,55 +81,55 @@ const Drops = () => {
   const [isDropGalleryOpen, setIsDropGalleryOpen] = useState(false);
 
   const dispatch = useDispatch();
-
-  const { drops = [], isLoading = false } = useSelector((state) => state.drop) || {};
+  const { drops = [], isLoading = false } =
+    useSelector((state) => state.drop) || {};
   const { toast } = useToast();
-
 
   useEffect(() => {
     dispatch(getAllDrops());
   }, [dispatch]);
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const resetForm = () => {
+    setShowForm(false);
+    setFormData(initialFormData);
+    setCurrentEditedSlug(null);
+    setCurrentEditedId(null);
+    setDropImages([]);
+  };
+
   async function uploadPendingDropImages(refId) {
     const pendingImages = dropImages.filter((img) => !img.isUploaded && img.file);
     if (!pendingImages.length || !refId) return true;
 
-    const imageFormData = new FormData();
-    imageFormData.append("refModel", "Drop");
-    imageFormData.append("refId", refId);
-    imageFormData.append("type", "drop");
-    pendingImages.forEach((img) => imageFormData.append("images", img.file));
+    const fd = new FormData();
+    fd.append("refModel", "Drop");
+    fd.append("refId", refId);
+    fd.append("type", "drop");
+    pendingImages.forEach((img) => fd.append("images", img.file));
 
     try {
-      const response = await axios.post(
-        `${API_BASE}/image/upload-image`,
-        imageFormData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          withCredentials: true,
-        }
-      );
-
-      if (!response.data?.success) {
+      const response = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+      if (!response.data?.success)
         throw new Error(response.data?.message || "Image upload failed");
-      }
 
-      setDropImages((prevImages) => {
-        const existingImages = prevImages.filter((img) => !img.file);
-        const uploadedImages = (response.data.images || []).map((img) => ({
+      setDropImages((prev) => {
+        const existing = prev.filter((img) => !img.file);
+        const uploaded = (response.data.images || []).map((img) => ({
           ...img,
           isUploaded: true,
         }));
-        return [...existingImages, ...uploadedImages];
+        return [...existing, ...uploaded];
       });
-
       return true;
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || error.message || "Image upload failed";
       toast({
         title: "Drop saved but image upload failed",
-        description: errorMessage,
+        description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
       return false;
@@ -107,8 +138,8 @@ const Drops = () => {
 
   const fetchDropImages = async (id) => {
     try {
-      const response = await axios.get(`${API_BASE}/image/get-drop-images/${id}`);
-      const images = response.data.images || [];
+      const res = await axios.get(`${API_BASE}/image/get-drop-images/${id}`);
+      const images = res.data.images || [];
       setDropImages(images);
       return images;
     } catch {
@@ -120,13 +151,11 @@ const Drops = () => {
   const openDropGallery = async (drop) => {
     setDropGalleryTitle(drop.name || "Drop Images");
     let imagesToShow = [];
-
     if (drop.images && drop.images.length > 0) {
       imagesToShow = drop.images.filter((img) => img._id);
     } else {
       imagesToShow = await fetchDropImages(drop._id);
     }
-
     setDropGalleryImages(imagesToShow);
     setIsDropGalleryOpen(true);
   };
@@ -141,62 +170,39 @@ const Drops = () => {
     });
   };
 
-  async function onSubmit(event) {
-    event.preventDefault();
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
-    if (currentEditedSlug) {
-      const data = await dispatch(updateDrop({ slug: currentEditedSlug, formData }));
-
-      if (data.meta.requestStatus === "fulfilled") {
+  async function onSubmit() {
+    try {
+      let result;
+      if (currentEditedSlug) {
+        result = await dispatch(
+          updateDrop({ slug: currentEditedSlug, formData })
+        ).unwrap();
         await uploadPendingDropImages(currentEditedId);
-        dispatch(getAllDrops());
-        toast({
-          title: "Drop updated successfully",
-          className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
-        });
-        setShowForm(false);
-        setFormData(initialFormData);
-        setCurrentEditedSlug(null);
-        setCurrentEditedId(null);
       } else {
-        const errorMessage =
-          typeof data.payload === "string"
-            ? data.payload
-            : data.payload?.message || "Failed to update Drop";
-        toast({
-          title: errorMessage,
-          variant: "destructive",
-        });
+        result = await dispatch(createDrop(formData)).unwrap();
+        const newId = result.drop._id;
+        await uploadPendingDropImages(newId);
+        setCurrentEditedId(newId);
+        setCurrentEditedSlug(result.drop.slug);
       }
-    } else {
-      const data = await dispatch(createDrop(formData));
 
-      if (data.meta.requestStatus === "fulfilled") {
-        const newDropId = data.payload.drop._id;
-        await uploadPendingDropImages(newDropId);
-        dispatch(getAllDrops());
-        toast({
-          title: "Drop created successfully",
-          className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
-        });
-        setCurrentEditedId(newDropId);
-        setCurrentEditedSlug(data.payload.drop.slug);
-        setFormData({
-          name: data.payload.drop.name,
-          description: data.payload.drop.description,
-          releaseDate: data.payload.drop.releaseDate.split("T")[0],
-          endDate: data.payload.drop.endDate
-            ? data.payload.drop.endDate.split("T")[0]
-            : "",
-          isPublished: data.payload.drop.isPublished,
-          isArchived: data.payload.drop.isArchived,
-        });
-      } else {
-        toast({
-          title: data.payload?.message || "Failed to create Drop",
-          variant: "destructive",
-        });
-      }
+      dispatch(getAllDrops());
+      toast({
+        title: currentEditedSlug
+          ? "Drop updated successfully"
+          : "Drop created successfully",
+        className:
+          "bg-surface border border-primary-container text-saga-primary",
+      });
+      resetForm();
+    } catch (e) {
+      toast({
+        title: "Failed to save drop",
+        description: e?.message,
+        variant: "destructive",
+      });
     }
   }
 
@@ -207,7 +213,8 @@ const Drops = () => {
           dispatch(getAllDrops());
           toast({
             title: "Drop deleted successfully",
-            className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
+            className:
+              "bg-surface border border-primary-container text-saga-primary",
           });
         } else {
           toast({
@@ -226,7 +233,8 @@ const Drops = () => {
         dispatch(getAllDrops());
         toast({
           title: `Drop ${!isArchived ? "archived" : "unarchived"} successfully`,
-          className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
+          className:
+            "bg-surface border border-primary-container text-saga-primary",
         });
       } else {
         toast({
@@ -237,417 +245,454 @@ const Drops = () => {
     });
   }
 
+  // ── FORM VIEW ──────────────────────────────────────────────────────────────
+
   if (showForm) {
     return (
-      <div className="min-h-[calc(100vh-6rem)] bg-[#131313] text-[#e2e2e2] font-['Manrope'] p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header Section */}
-          <header className="mb-12">
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setFormData(initialFormData);
-                setCurrentEditedSlug(null);
-                setCurrentEditedId(null);
-                setDropImages([]);
-              }}
-              className="flex items-center text-[#d0c5af] hover:text-[#f2ca50] transition-colors mb-6 text-sm uppercase tracking-wider font-bold"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Back to Catalogue
-            </button>
-
-            <div className="inline-flex items-center gap-2 mb-4">
-              <span className="w-8 h-[2px] bg-[#f2ca50]"></span>
-              <span className="text-[#f2ca50] font-['Manrope'] text-[10px] tracking-[0.3em] uppercase font-bold">
-                Catalogue Expansion
-              </span>
+      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden !w-full fixed inset-0 z-50">
+        <main className="flex-1 w-full flex flex-col overflow-y-auto">
+          {/* Header */}
+          <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
+            <div className="flex flex-col">
+              <h1 className="font-serif text-3xl font-bold tracking-tighter text-saga-primary">
+                Saga Elite
+              </h1>
+              <p className="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant opacity-70 mt-1">
+                Drop Atelier / Release Studio
+              </p>
             </div>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold text-white tracking-tight mb-2">
-              {currentEditedSlug ? "Edit Drop" : "Create New Drop"}
-            </h1>
-            <p className="text-[#d0c5af] font-sans text-lg">
-              {currentEditedSlug
-                ? "Update details and curate the launch experience."
-                : "Schedule a new product release and curate the launch experience."}
-            </p>
-          </header>
-
-          {/* Form Grid */}
-          <form className="space-y-8" onSubmit={onSubmit}>
-            {/* Section: General Details */}
-            <div className="bg-[#1b1b1b] p-8 md:p-12 border-l-2 border-[#d4af37] shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#f2ca50]/5 blur-3xl pointer-events-none"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                    Drop Name
-                  </label>
-                  <input
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full bg-[#353535] border-0 py-4 px-6 text-[#e2e2e2] focus:ring-1 focus:ring-[#f2ca50] placeholder:text-[#d0c5af]/40 transition-all font-sans"
-                    placeholder="e.g. Winter Solstice 2024"
-                    type="text"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    className="w-full bg-[#353535] border-0 py-4 px-6 text-[#e2e2e2] focus:ring-1 focus:ring-[#f2ca50] placeholder:text-[#d0c5af]/40 transition-all font-sans custom-scrollbar resize-none"
-                    placeholder="Describe the concept and items included in this release..."
-                    rows="4"
-                  ></textarea>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                    Release Date
-                  </label>
-                  <input
-                    value={formData.releaseDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, releaseDate: e.target.value })
-                    }
-                    className="w-full bg-[#353535] border-0 py-4 px-6 text-[#e2e2e2] focus:ring-1 focus:ring-[#f2ca50] transition-all font-sans [color-scheme:dark]"
-                    type="date"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                    End Date
-                  </label>
-                  <input
-                    value={formData.endDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, endDate: e.target.value })
-                    }
-                    className="w-full bg-[#353535] border-0 py-4 px-6 text-[#e2e2e2] focus:ring-1 focus:ring-[#f2ca50] transition-all font-sans [color-scheme:dark]"
-                    type="date"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section: Visual Assets & Toggles */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Image Upload Area */}
-              <div className="lg:col-span-2 bg-[#1b1b1b] p-8 space-y-6">
-                <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                  Campaign Assets
-                </label>
-                {currentEditedSlug === null ? (
-                  <div className="p-8 text-center border-2 border-dashed border-[#4d4635] text-[#d0c5af] bg-[#131313]">
-                    <p className="text-sm font-bold uppercase tracking-wider mb-2 text-[#f2ca50]">
-                      Drop Creation Required
-                    </p>
-                    <p className="text-xs">
-                      Save this drop first before uploading campaign images.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-[#131313] p-4 border border-[#353535]">
-                    <ImageUpload
-                      images={dropImages}
-                      setImages={setDropImages}
-                      refModel="Drop"
-                      refId={currentEditedId}
-                      type="drop"
-                    />
-                    {dropImages.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => openDropGallery({ name: formData.name, _id: currentEditedId, images: dropImages })}
-                        className="mt-4 inline-flex items-center justify-center rounded-full border border-[#D4AF37] px-4 py-2 text-sm font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/10 transition"
-                      >
-                        View all images
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Status Configuration */}
-              <div className="bg-[#1b1b1b] p-8 space-y-10">
-                <label className="block text-[10px] font-bold tracking-[0.15em] text-[#d0c5af] uppercase">
-                  Configuration
-                </label>
-                {/* Published Toggle */}
-                <div className="flex items-center justify-between group">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-[#e2e2e2]">
-                      Published
-                    </span>
-                    <span className="text-[10px] text-[#d0c5af] uppercase tracking-tighter">
-                      Visible to clients
-                    </span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      checked={formData.isPublished}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          isPublished: e.target.checked,
-                        })
-                      }
-                      className="sr-only peer"
-                      type="checkbox"
-                    />
-                    <div className="w-11 h-6 bg-[#353535] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#d4af37]"></div>
-                  </label>
-                </div>
-                {/* Archived Toggle */}
-                <div className="flex items-center justify-between group">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-[#e2e2e2]">
-                      Archived
-                    </span>
-                    <span className="text-[10px] text-[#d0c5af] uppercase tracking-tighter">
-                      Internal records only
-                    </span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      checked={formData.isArchived}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          isArchived: e.target.checked,
-                        })
-                      }
-                      className="sr-only peer"
-                      type="checkbox"
-                    />
-                    <div className="w-11 h-6 bg-[#353535] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#d4af37]"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Form Actions */}
-            <footer className="flex flex-col md:flex-row items-center gap-8 pt-8 border-t border-[#4d4635]/20">
+            <div className="flex items-center gap-8">
               <button
-                className="w-full md:w-auto px-12 py-5 bg-gradient-to-br from-[#f2ca50] to-[#d4af37] text-[#241a00] font-['Manrope'] font-black text-xs uppercase tracking-[0.2em] shadow-[0px_0px_12px_rgba(242,202,80,0.2)] hover:shadow-[0px_0px_24px_rgba(242,202,80,0.3)] transition-all active:scale-[0.98]"
-                type="submit"
-              >
-                {currentEditedSlug ? "Update Drop" : "Create Drop"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setFormData(initialFormData);
-                  setCurrentEditedSlug(null);
-                  setCurrentEditedId(null);
-                  setDropImages([]);
-                }}
-                className="font-['Manrope'] font-bold text-[10px] text-[#f2ca50] uppercase tracking-[0.2em] hover:text-white transition-colors underline decoration-[#f2ca50]/30 underline-offset-8"
+                onClick={resetForm}
+                className="text-sm uppercase tracking-[0.1em] text-on-surface hover:text-saga-primary transition-colors duration-300"
               >
                 Cancel
               </button>
-            </footer>
-          </form>
-        </div>
+              <button
+                onClick={onSubmit}
+                className="bg-primary-container text-on-primary-container px-8 py-3 text-sm uppercase font-extrabold tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]"
+              >
+                {currentEditedSlug ? "Update Drop" : "Save Drop"}
+              </button>
+            </div>
+          </header>
+
+          <div className="max-w-7xl mx-auto w-full px-8 md:px-16 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
+            {/* Left Column: Media & Visibility */}
+            <div className="col-span-1 md:col-span-4 space-y-12">
+              {/* Campaign Assets */}
+              <section>
+                <h2 className="font-serif text-xl mb-6 text-on-surface">
+                  Campaign Assets
+                </h2>
+                <div className="bg-surface-container-low p-4">
+                  {currentEditedSlug === null ? (
+                    <div className="p-8 text-center border-2 border-dashed border-outline-variant/30 text-on-surface-variant bg-surface">
+                      <p className="text-xs uppercase font-bold tracking-widest mb-2 text-saga-primary">
+                        Drop Creation Required
+                      </p>
+                      <p className="text-xs opacity-60">
+                        Save this drop first before uploading campaign images.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageUpload
+                        images={dropImages}
+                        setImages={setDropImages}
+                        isMultiple
+                        refModel="Drop"
+                        refId={currentEditedId}
+                        type="drop"
+                      />
+                      {dropImages.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openDropGallery({
+                              name: formData.name,
+                              _id: currentEditedId,
+                              images: dropImages,
+                            })
+                          }
+                          className="mt-3 inline-flex items-center justify-center rounded-full border border-saga-primary px-4 py-2 text-sm font-semibold text-saga-primary hover:bg-saga-primary/10 transition"
+                        >
+                          View all images
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </section>
+
+              {/* Status & Visibility */}
+              <section className="bg-surface-container-low p-8 space-y-6 border border-outline-variant/10">
+                <h2 className="font-serif text-xl text-on-surface">
+                  Status &amp; Visibility
+                </h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-surface-container-high border-l-2 border-saga-primary">
+                    <div>
+                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">
+                        Published
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Visible to clients
+                      </p>
+                    </div>
+                    <ToggleSwitch
+                      checked={formData.isPublished}
+                      onChange={() =>
+                        setFormData({
+                          ...formData,
+                          isPublished: !formData.isPublished,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
+                    <div>
+                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">
+                        Archived
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Internal records only
+                      </p>
+                    </div>
+                    <ToggleSwitch
+                      checked={formData.isArchived}
+                      onChange={() =>
+                        setFormData({
+                          ...formData,
+                          isArchived: !formData.isArchived,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            {/* Right Column: Form Fields */}
+            <div className="col-span-1 md:col-span-8 space-y-12">
+              {/* General Details */}
+              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
+                <div className="flex items-baseline gap-4 mb-10">
+                  <span className="font-serif text-4xl text-saga-primary opacity-20">
+                    01
+                  </span>
+                  <h2 className="font-serif text-2xl text-on-surface">
+                    General Details
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
+                      Drop Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30"
+                      placeholder="e.g. Winter Solstice 2025"
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
+                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30 min-h-[100px] resize-y"
+                      placeholder="Describe the concept and items in this release..."
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Schedule */}
+              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
+                <div className="flex items-baseline gap-4 mb-10">
+                  <span className="font-serif text-4xl text-saga-primary opacity-20">
+                    02
+                  </span>
+                  <h2 className="font-serif text-2xl text-on-surface">
+                    Release Schedule
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
+                      Release Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.releaseDate}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          releaseDate: e.target.value,
+                        })
+                      }
+                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary [color-scheme:dark]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endDate: e.target.value })
+                      }
+                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
-  // --- CATALOGUE LIST VIEW ---
-  return (
-    <Fragment>
-      <div className="mb-8 flex w-full justify-between items-center px-4 sm:px-0">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-serif font-bold text-[#D4AF37]">
-            Drop Management
-          </h1>
-          <p className="text-gray-400 text-sm tracking-wide uppercase font-sans">
-            Manage your limited release drops
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setShowForm(true);
-            setCurrentEditedSlug(null);
-            setCurrentEditedId(null);
-            setFormData(initialFormData);
-          }}
-          className="bg-[#D4AF37] text-black hover:bg-[#b5952f] font-bold tracking-wide"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add New Drop
-        </Button>
-      </div>
+  // ── LIST VIEW ──────────────────────────────────────────────────────────────
 
-      <div className="grid gap-6">
-        {isLoading ? (
-          <p className="text-[#d0c5af]">Loading...</p>
-        ) : drops && drops.length > 0 ? (
-          <div className="col-span-full overflow-x-auto bg-[#1b1b1b]/80 border border-[#353535] rounded-none">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#353535] text-[10px] uppercase tracking-widest text-[#d0c5af] bg-[#131313]">
-                  <th className="p-4 font-bold w-20">Image</th>
-                  <th className="p-4 font-bold">Name</th>
-                  <th className="p-4 font-bold hidden md:table-cell">Description</th>
-                  <th className="p-4 font-bold">Dates</th>
-                  <th className="p-4 font-bold">Status</th>
-                  <th className="p-4 font-bold text-right w-32">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drops.map((drop) => (
-                  <tr key={drop._id} className="border-b border-[#353535]/50 hover:bg-[#252525] transition-colors group">
-                    <td className="p-4">
-                      <div className="w-12 h-12 rounded bg-[#131313] border border-[#353535] overflow-hidden flex items-center justify-center">
-                        {drop.images && drop.images.length > 0 ? (
-                          <img
-                            src={drop.images[0].url}
-                            alt={drop.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = placeholder)}
-                          />
-                        ) : (
-                          <Package className="h-5 w-5 text-gray-600" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-serif font-bold text-[#e2e2e2] text-sm group-hover:text-[#D4AF37] transition-colors">
-                        {drop.name}
-                      </div>
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      <div className="text-sm text-[#d0c5af] line-clamp-1 font-sans max-w-xs">
-                        {drop.description || "No description provided."}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1 text-xs text-[#d0c5af] font-sans">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3 text-[#f2ca50]" />
-                          <span>{new Date(drop.releaseDate).toLocaleDateString()}</span>
-                        </div>
-                        {drop.endDate && (
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-3 w-3 text-[#f2ca50]" />
-                            <span>{new Date(drop.endDate).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2 items-center flex-wrap">
-                        <span
-                          className={`px-2 py-1 text-[9px] uppercase font-bold tracking-widest flex items-center gap-1 ${
-                            drop.isPublished
-                              ? "border border-green-500/30 bg-green-500/10 text-green-500 shadow-[0_0_10px_rgba(34,197,94,0.1)]"
-                              : "border border-yellow-500/30 bg-yellow-500/10 text-yellow-500"
-                          }`}
-                        >
-                          {drop.isPublished && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                          )}
-                          {drop.isPublished ? "Live" : "Draft"}
-                        </span>
-                        {drop.isArchived && (
-                          <span className="px-2 py-1 text-[9px] uppercase font-bold tracking-widest border border-gray-500/30 bg-gray-500/10 text-[#d0c5af]">
-                            Archived
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
-                          title="View images"
-                          onClick={() => openDropGallery(drop)}
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
-                          title="Edit"
-                          onClick={() => {
-                            setShowForm(true);
-                            setCurrentEditedId(drop._id);
-                            setCurrentEditedSlug(drop.slug);
-                            setFormData({
-                              name: drop.name,
-                              description: drop.description,
-                              releaseDate: drop.releaseDate.split("T")[0],
-                              endDate: drop.endDate
-                                ? drop.endDate.split("T")[0]
-                                : "",
-                              isPublished: drop.isPublished,
-                              isArchived: drop.isArchived,
-                            });
-                            setDropImages(drop.images || []);
-                          }}
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-gray-400 hover:bg-gray-400/10 hover:text-gray-300 text-white rounded-none"
-                          title="Toggle Archive"
-                          onClick={() => handleArchive(drop.slug, drop.isArchived)}
-                        >
-                          <Archive className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 text-white rounded-none"
-                          title="Delete"
-                          onClick={() => handleDelete(drop.slug)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed border-[#4d4635] bg-[#1b1b1b]/50 group hover:border-[#D4AF37]/50 transition-colors">
-            <Package className="h-12 w-12 text-[#4d4635] mb-4 group-hover:text-[#D4AF37]/50 transition-colors" />
-            <h3 className="text-lg font-serif font-bold text-[#e2e2e2] group-hover:text-white">
-              No Drops Found
-            </h3>
-            <p className="text-sm text-[#d0c5af] mb-6 font-sans">
-              Create your first drop to get started.
-            </p>
-            <Button
-              onClick={() => {
-                setShowForm(true);
-                setCurrentEditedSlug(null);
-                setCurrentEditedId(null);
-                setFormData(initialFormData);
-              }}
-              variant="outline"
-              className="border-[#D4AF37] text-[#D4AF37] bg-transparent hover:bg-[#D4AF37] hover:text-[#131313] font-bold tracking-widest uppercase text-xs rounded-none"
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface">
+      {/* List Header */}
+      <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
+        <div className="flex items-center gap-8 w-full md:w-auto">
+          {/* intentionally left empty to mirror Product page spacing */}
+        </div>
+        <div className="flex items-center gap-6 self-end md:self-auto">
+          <button className="hover:text-saga-primary transition-colors text-on-surface-variant relative">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-saga-primary rounded-full" />
+          </button>
+          <button className="hover:text-saga-primary transition-colors text-on-surface-variant">
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+        {/* Title + Actions */}
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+          <div className="max-w-2xl">
+            <span
+              className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold"
+              style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}
             >
-              Construct Drop
-            </Button>
+              Release Registry
+            </span>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif tracking-tighter text-white leading-none mb-4">
+              Drop Ledger
+            </h2>
+            <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed font-sans">
+              Orchestrate your limited releases. Schedule launches, manage
+              availability, and archive past collections.
+            </p>
           </div>
-        )}
-      </div>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => {
+                resetForm();
+                setShowForm(true);
+              }}
+              className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
+            >
+              <Plus className="w-3 h-3" />
+              New Drop
+            </button>
+          </div>
+        </div>
+
+        {/* Table Header */}
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
+          <div className="col-span-4">Drop Details</div>
+          <div className="col-span-3">Description</div>
+          <div className="col-span-2">Schedule</div>
+          <div className="col-span-1">Products</div>
+          <div className="col-span-1">Status</div>
+          <div className="col-span-1 text-right">Actions</div>
+        </div>
+
+        {/* Drop Rows */}
+        <div className="space-y-3">
+          {isLoading && (
+            <div className="py-20 text-center text-on-surface-variant font-sans text-sm tracking-widest uppercase">
+              Loading drops…
+            </div>
+          )}
+
+          {!isLoading &&
+            drops.map((drop) => (
+              <div
+                key={drop._id}
+                className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-surface-container/30 hover:bg-surface-bright transition-all duration-300 group p-6 relative border border-outline-variant/5"
+              >
+                {/* Left accent bar */}
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-saga-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top" />
+
+                {/* Drop image + name */}
+                <div className="col-span-1 md:col-span-4 flex items-center gap-6">
+                  <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
+                    {drop.images && drop.images.length > 0 ? (
+                      <img
+                        className="w-full h-full object-cover"
+                        src={drop.images[0].url}
+                        alt={drop.name}
+                      />
+                    ) : (
+                      <Package className="w-6 h-6 text-outline-variant/50" />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="text-white font-serif font-bold text-lg leading-tight group-hover:text-saga-primary transition-colors">
+                      {drop.name}
+                    </h4>
+                    <p className="text-xs text-on-surface-variant opacity-60 mt-1 uppercase font-mono">
+                      {drop.isArchived ? "Archived" : "Active Drop"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="col-span-1 md:col-span-3">
+                  <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
+                    {drop.description || "No description provided."}
+                  </p>
+                </div>
+
+                {/* Schedule */}
+                <div className="col-span-1 md:col-span-2">
+                  <div className="flex flex-col gap-1 text-xs text-on-surface-variant font-mono">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3 h-3 text-saga-primary shrink-0" />
+                      <span>
+                        {new Date(drop.releaseDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {drop.endDate && (
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-3 h-3 text-saga-primary shrink-0" />
+                        <span>
+                          {new Date(drop.endDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Product count */}
+                <div className="col-span-1 md:col-span-1">
+                  <span className="text-sm text-on-surface">
+                    {drop.products?.length ?? 0} Items
+                  </span>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-1 md:col-span-1">
+                  <div className="flex items-center gap-2">
+                    <PulseDot active={drop.isPublished} />
+                    <span
+                      className={`text-[10px] uppercase tracking-widest font-bold ${
+                        drop.isPublished
+                          ? "text-saga-primary"
+                          : "text-outline-variant"
+                      }`}
+                    >
+                      {drop.isPublished ? "Live" : "Draft"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="col-span-1 md:col-span-1 flex justify-end gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+                  <button
+                    onClick={() => openDropGallery(drop)}
+                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
+                    title="View images"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentEditedId(drop._id);
+                      setCurrentEditedSlug(drop.slug);
+                      setFormData({
+                        name: drop.name,
+                        description: drop.description,
+                        releaseDate: drop.releaseDate.split("T")[0],
+                        endDate: drop.endDate
+                          ? drop.endDate.split("T")[0]
+                          : "",
+                        isPublished: drop.isPublished,
+                        isArchived: drop.isArchived,
+                      });
+                      setDropImages(drop.images || []);
+                      setShowForm(true);
+                    }}
+                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleArchive(drop.slug, drop.isArchived)}
+                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
+                    title="Toggle Archive"
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(drop.slug)}
+                    className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+          {!isLoading && drops.length === 0 && (
+            <div className="py-20 text-center border border-dashed border-outline-variant/30 text-on-surface-variant font-sans">
+              <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p>No drops found in the ledger.</p>
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowForm(true);
+                }}
+                className="mt-6 border border-saga-primary/40 px-8 py-3 text-[10px] uppercase tracking-widest font-bold text-saga-primary hover:bg-saga-primary hover:text-surface transition-all duration-300"
+              >
+                Construct First Drop
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Gallery Modal */}
       {isDropGalleryOpen && (
         <ImageGalleryModal
           title={dropGalleryTitle}
@@ -656,7 +701,7 @@ const Drops = () => {
           onImagesUpdate={handleDropGalleryImagesUpdate}
         />
       )}
-    </Fragment>
+    </div>
   );
 };
 
