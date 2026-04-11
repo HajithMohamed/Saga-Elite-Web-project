@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
+import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import {
   Package,
   Calendar,
@@ -118,18 +119,27 @@ const Drops = () => {
 
   const openDropGallery = async (drop) => {
     setDropGalleryTitle(drop.name || "Drop Images");
+    let imagesToShow = [];
+
     if (drop.images && drop.images.length > 0) {
-      setDropGalleryImages(drop.images);
-      setIsDropGalleryOpen(true);
-      return;
+      imagesToShow = drop.images.filter((img) => img._id);
+    } else {
+      imagesToShow = await fetchDropImages(drop._id);
     }
 
-    const images = await fetchDropImages(drop._id);
-    setDropGalleryImages(images);
+    setDropGalleryImages(imagesToShow);
     setIsDropGalleryOpen(true);
   };
 
   const closeDropGallery = () => setIsDropGalleryOpen(false);
+
+  const handleDropGalleryImagesUpdate = (updatedImages) => {
+    setDropGalleryImages(updatedImages);
+    setDropImages((prev) => {
+      const pending = prev.filter((img) => !img._id);
+      return [...updatedImages, ...pending];
+    });
+  };
 
   async function onSubmit(event) {
     event.preventDefault();
@@ -639,34 +649,12 @@ const Drops = () => {
         )}
       </div>
       {isDropGalleryOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-w-5xl w-full overflow-hidden rounded-3xl bg-[#111] text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 p-6">
-              <div>
-                <h2 className="text-2xl font-bold">{dropGalleryTitle}</h2>
-                <p className="text-sm text-[#d0c5af]">{dropGalleryImages.length} image(s) available</p>
-              </div>
-              <button
-                type="button"
-                onClick={closeDropGallery}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Close
-              </button>
-            </div>
-            <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
-              {dropGalleryImages.map((image, index) => (
-                <div key={index} className="overflow-hidden rounded-3xl bg-[#131313]">
-                  <img
-                    src={image.url}
-                    alt={`${dropGalleryTitle} ${index + 1}`}
-                    className="h-48 w-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ImageGalleryModal
+          title={dropGalleryTitle}
+          images={dropGalleryImages}
+          onClose={closeDropGallery}
+          onImagesUpdate={handleDropGalleryImagesUpdate}
+        />
       )}
     </Fragment>
   );

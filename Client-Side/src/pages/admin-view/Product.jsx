@@ -9,6 +9,7 @@ import {
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/admin-components/ImageUpload";
+import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
 import {
   Search,
@@ -123,18 +124,27 @@ const Product = () => {
 
   const openProductGallery = async (product) => {
     setGalleryTitle(product.name || "Product Images");
+    let imagesToShow = [];
+
     if (product.images && product.images.length > 0) {
-      setGalleryImages(product.images);
-      setIsGalleryOpen(true);
-      return;
+      imagesToShow = product.images.filter((img) => img._id);
+    } else {
+      imagesToShow = await fetchProductImages(product._id);
     }
 
-    const loadedImages = await fetchProductImages(product._id);
-    setGalleryImages(loadedImages);
+    setGalleryImages(imagesToShow);
     setIsGalleryOpen(true);
   };
 
   const closeGallery = () => setIsGalleryOpen(false);
+
+  const handleGalleryImagesUpdate = (updatedImages) => {
+    setGalleryImages(updatedImages);
+    setProductImages((prev) => {
+      const pending = prev.filter((img) => !img._id);
+      return [...updatedImages, ...pending];
+    });
+  };
 
   const beginEdit = (product) => {
     setSelectedProductSlug(product.slug);
@@ -721,6 +731,14 @@ const Product = () => {
             </div>
           </div>
         </div>
+      )}
+      {isGalleryOpen && (
+        <ImageGalleryModal
+          title={galleryTitle}
+          images={galleryImages}
+          onClose={closeGallery}
+          onImagesUpdate={handleGalleryImagesUpdate}
+        />
       )}
     </div>
   );
