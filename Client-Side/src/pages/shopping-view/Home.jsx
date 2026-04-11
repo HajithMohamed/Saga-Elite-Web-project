@@ -56,8 +56,10 @@ const Home = () => {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   
   const [logoImage, setLogoImage] = useState(null);
+  const [categoryLogos, setCategoryLogos] = useState([]);
   const [adImage, setAdImage] = useState(null);
-  const [products, setProducts] = useState([]);
+  const [activeProducts, setActiveProducts] = useState([]);
+  const [archiveProducts, setArchiveProducts] = useState([]);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState({
     days: "02", hours: "14", minutes: "56", seconds: "00",
@@ -78,11 +80,13 @@ const Home = () => {
   useEffect(() => {
     const fetchHomepageData = async () => {
       try {
-        const [heroRes, logoRes, adRes, productsRes, dropsRes] = await Promise.all([
+        const [heroRes, logoRes, catLogoRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
           axios.get(`${API_BASE}/image/get-hero-images`).catch(() => null),
           axios.get(`${API_BASE}/image/get-logo-images`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images`).catch(() => null),
           axios.get(`${API_BASE}/image/get-ad-images`).catch(() => null),
-          axios.get(`${API_BASE}/products/get-all-products?limit=3`).catch(() => null),
+          axios.get(`${API_BASE}/products/get-all-products?status=active&limit=4`).catch(() => null),
+          axios.get(`${API_BASE}/products/get-all-products?status=archive&limit=4`).catch(() => null),
           axios.get(`${API_BASE}/drops/get-all-drops`).catch(() => null),
         ]);
 
@@ -92,11 +96,17 @@ const Home = () => {
         if (logoRes?.data?.images?.length) {
           setLogoImage(logoRes.data.images[0]);
         }
+        if (catLogoRes?.data?.images?.length) {
+          setCategoryLogos(catLogoRes.data.images);
+        }
         if (adRes?.data?.images?.length) {
           setAdImage(adRes.data.images[0]);
         }
-        if (productsRes?.data?.data) {
-          setProducts(productsRes.data.data);
+        if (activeProductsRes?.data?.data) {
+          setActiveProducts(activeProductsRes.data.data);
+        }
+        if (archiveProductsRes?.data?.data) {
+          setArchiveProducts(archiveProductsRes.data.data);
         }
         if (dropsRes?.data?.drops) {
           const drops = dropsRes.data.drops;
@@ -317,6 +327,39 @@ const Home = () => {
           </button>
         </motion.section>
 
+        {/* Category Logos Section */}
+        <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
+            {["Boys", "Girls", "Unisex"].map((cat) => {
+              const catLogo = categoryLogos.find((l) => l.label === cat);
+              return (
+                <Link
+                  key={cat}
+                  to={`/shopping/product-list?category=${cat.toLowerCase()}`}
+                  className="group relative flex flex-col items-center justify-center p-12 border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-700 overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  <div className="relative z-10 h-32 w-32 mb-8 flex items-center justify-center">
+                    {catLogo ? (
+                      <img
+                        src={catLogo.url}
+                        alt={`${cat} Collection`}
+                        className="h-full w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700 scale-90 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="text-4xl font-serif text-[#D4AF37] opacity-50">{cat[0]}</div>
+                    )}
+                  </div>
+                  <h3 className="relative z-10 font-sans text-xs uppercase tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-500">
+                    {cat}
+                  </h3>
+                  <div className="mt-4 w-0 group-hover:w-12 h-px bg-[#D4AF37] transition-all duration-500" />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
         <motion.section
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -326,7 +369,7 @@ const Home = () => {
         >
           <div className="flex justify-between items-end mb-20 gap-6 flex-col md:flex-row">
             <div>
-              <h3 className="font-serif text-4xl text-on-surface mb-2">Recent Arrivals</h3>
+              <h3 className="font-serif text-4xl text-on-surface mb-2">The Current Drop</h3>
               <p className="font-sans text-outline tracking-wider text-sm">Strictly limited archival releases.</p>
             </div>
             <Link className="font-sans text-xs uppercase tracking-widest text-primary border-b border-primary/30 pb-1 hover:border-primary transition-all" to="/shopping/product-list">
@@ -334,9 +377,9 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {products.length > 0 ? (
-              products.map((product) => (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {activeProducts.length > 0 ? (
+              activeProducts.map((product) => (
                 <div key={product._id} className="group">
                   <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
                     <img
@@ -348,23 +391,17 @@ const Home = () => {
                       <span className="font-sans text-[10px] tracking-widest text-primary uppercase">{getProductLabel(product)}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-serif text-xl text-on-surface mb-1">{product.name}</h4>
-                      <p className="font-sans text-xs text-outline uppercase tracking-widest">{product.category || "Apparel"}</p>
-                    </div>
-                    <span className="font-sans text-lg text-primary">₹{(product.basePrice || 0).toFixed(0)}</span>
-                  </div>
+                  <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-1">{product.name}</h4>
+                  <p className="font-serif text-outline text-sm">${product.basePrice}</p>
                 </div>
               ))
             ) : (
-              <div className="col-span-full rounded-3xl border border-[#333] bg-[#111] p-10 text-center text-[#999]">
-                No products available yet.
-              </div>
+              <p className="text-outline border border-outline/10 p-12 text-center col-span-full">No active drop products currently available.</p>
             )}
           </div>
         </motion.section>
 
+        {/* Traditional Ethos Section */}
         <motion.section
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}

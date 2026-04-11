@@ -6,6 +6,7 @@ const {
   getHeroImages,
   getAdImages,
   getLogoImages,
+  getCategoryLogoImages,
   getReviewImages,
   setPrimaryImage,
   deleteImage,
@@ -54,6 +55,7 @@ router.get("/get-review-images/:id", getReviewImages);
 router.get("/get-hero-images", getHeroImages);
 router.get("/get-ad-images", getAdImages);
 router.get("/get-logo-images", getLogoImages);
+router.get("/get-category-logo-images", getCategoryLogoImages);
 
 /* ==============================
    Admin actions
