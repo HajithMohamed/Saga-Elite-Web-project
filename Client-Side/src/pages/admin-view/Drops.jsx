@@ -436,128 +436,135 @@ const Drops = () => {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6">
         {isLoading ? (
-          <p>Loading...</p>
+          <p className="text-[#d0c5af]">Loading...</p>
         ) : drops && drops.length > 0 ? (
-          
-          drops.map((drop) => (
-            <div
-              key={drop._id}
-              className="group relative overflow-hidden bg-[#1b1b1b]/80 border border-[#353535] rounded-none p-6 hover:border-[#D4AF37]/50 transition-all duration-500"
-            >
-              {drop.images && drop.images.length > 0 && (
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 group-hover:opacity-20 transition-opacity duration-500">
-                  <img
-                    src={drop.images[0].url}
-                    alt={drop.name}
-                    className="w-full h-full object-cover mix-blend-overlay"
-                    onError={(e) => (e.target.src = placeholder)}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#131313]/90" />
-                </div>
-                
-              )}
-              
-
-              <div className="relative z-10 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-[#131313] rounded-sm border border-[#353535] group-hover:bg-[#D4AF37]/10 group-hover:border-[#D4AF37]/30 transition-colors">
-                    <Package className="h-6 w-6 text-gray-400 group-hover:text-[#D4AF37] transition-colors" />
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <span
-                      className={`px-2 py-1 text-[10px] uppercase font-bold tracking-widest flex items-center gap-1 ${
-                        drop.isPublished
-                          ? "border border-green-500/30 bg-green-500/10 text-green-500 shadow-[0_0_10px_rgba(34,197,94,0.1)]"
-                          : "border border-yellow-500/30 bg-yellow-500/10 text-yellow-500"
-                      }`}
-                    >
-                      {drop.isPublished && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                      )}
-                      {drop.isPublished ? "Live" : "Draft"}
-                    </span>
-                    {drop.isArchived && (
-                      <span className="px-2 py-1 text-[10px] uppercase font-bold tracking-widest border border-gray-500/30 bg-gray-500/10 text-[#d0c5af]">
-                        Archived
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <h3 className="text-xl font-serif font-bold text-[#e2e2e2] mb-2 group-hover:text-[#D4AF37] transition-colors">
-                  {drop.name}
-                </h3>
-                <p className="text-sm text-[#d0c5af] mb-6 line-clamp-2 flex-grow font-sans">
-                  {drop.description || "No description provided."}
-                </p>
-
-                <div className="space-y-2 mt-auto text-xs text-[#d0c5af]/70 font-medium uppercase tracking-widest border-t border-[#353535] pt-4 mb-4 font-sans">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-[#f2ca50]" />
-                    <span>
-                      Starts: {new Date(drop.releaseDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {drop.endDate && (
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-3 w-3 text-[#f2ca50]" />
-                      <span>
-                        Ends: {new Date(drop.endDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Hover Actions */}
-                <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 bg-gradient-to-t from-[#131313] via-[#131313]/90 to-transparent flex justify-end gap-2 z-20">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-8 w-8 bg-[#1b1b1b] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
-                    title="Edit"
-                    onClick={() => {
-                      setShowForm(true);
-                      setCurrentEditedId(drop._id);
-                      setCurrentEditedSlug(drop.slug);
-                      setFormData({
-                        name: drop.name,
-                        description: drop.description,
-                        releaseDate: drop.releaseDate.split("T")[0],
-                        endDate: drop.endDate
-                          ? drop.endDate.split("T")[0]
-                          : "",
-                        isPublished: drop.isPublished,
-                        isArchived: drop.isArchived,
-                      });
-                      setDropImages(drop.images || []);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-8 w-8 bg-[#1b1b1b] border-[#353535] hover:border-gray-400 hover:bg-gray-400/10 hover:text-gray-300 text-white rounded-none"
-                    title="Toggle Archive"
-                    onClick={() => handleArchive(drop.slug, drop.isArchived)}
-                  >
-                    <Archive className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-8 w-8 bg-[#1b1b1b] border-[#353535] hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 text-white rounded-none"
-                    title="Delete"
-                    onClick={() => handleDelete(drop.slug)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))
+          <div className="col-span-full overflow-x-auto bg-[#1b1b1b]/80 border border-[#353535] rounded-none">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#353535] text-[10px] uppercase tracking-widest text-[#d0c5af] bg-[#131313]">
+                  <th className="p-4 font-bold w-20">Image</th>
+                  <th className="p-4 font-bold">Name</th>
+                  <th className="p-4 font-bold hidden md:table-cell">Description</th>
+                  <th className="p-4 font-bold">Dates</th>
+                  <th className="p-4 font-bold">Status</th>
+                  <th className="p-4 font-bold text-right w-32">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drops.map((drop) => (
+                  <tr key={drop._id} className="border-b border-[#353535]/50 hover:bg-[#252525] transition-colors group">
+                    <td className="p-4">
+                      <div className="w-12 h-12 rounded bg-[#131313] border border-[#353535] overflow-hidden flex items-center justify-center">
+                        {drop.images && drop.images.length > 0 ? (
+                          <img
+                            src={drop.images[0].url}
+                            alt={drop.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = placeholder)}
+                          />
+                        ) : (
+                          <Package className="h-5 w-5 text-gray-600" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-serif font-bold text-[#e2e2e2] text-sm group-hover:text-[#D4AF37] transition-colors">
+                        {drop.name}
+                      </div>
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      <div className="text-sm text-[#d0c5af] line-clamp-1 font-sans max-w-xs">
+                        {drop.description || "No description provided."}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-col gap-1 text-xs text-[#d0c5af] font-sans">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-[#f2ca50]" />
+                          <span>{new Date(drop.releaseDate).toLocaleDateString()}</span>
+                        </div>
+                        {drop.endDate && (
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-3 w-3 text-[#f2ca50]" />
+                            <span>{new Date(drop.endDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <span
+                          className={`px-2 py-1 text-[9px] uppercase font-bold tracking-widest flex items-center gap-1 ${
+                            drop.isPublished
+                              ? "border border-green-500/30 bg-green-500/10 text-green-500 shadow-[0_0_10px_rgba(34,197,94,0.1)]"
+                              : "border border-yellow-500/30 bg-yellow-500/10 text-yellow-500"
+                          }`}
+                        >
+                          {drop.isPublished && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                          )}
+                          {drop.isPublished ? "Live" : "Draft"}
+                        </span>
+                        {drop.isArchived && (
+                          <span className="px-2 py-1 text-[9px] uppercase font-bold tracking-widest border border-gray-500/30 bg-gray-500/10 text-[#d0c5af]">
+                            Archived
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
+                          title="Edit"
+                          onClick={() => {
+                            setShowForm(true);
+                            setCurrentEditedId(drop._id);
+                            setCurrentEditedSlug(drop.slug);
+                            setFormData({
+                              name: drop.name,
+                              description: drop.description,
+                              releaseDate: drop.releaseDate.split("T")[0],
+                              endDate: drop.endDate
+                                ? drop.endDate.split("T")[0]
+                                : "",
+                              isPublished: drop.isPublished,
+                              isArchived: drop.isArchived,
+                            });
+                            setDropImages(drop.images || []);
+                          }}
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-gray-400 hover:bg-gray-400/10 hover:text-gray-300 text-white rounded-none"
+                          title="Toggle Archive"
+                          onClick={() => handleArchive(drop.slug, drop.isArchived)}
+                        >
+                          <Archive className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-red-500 hover:bg-red-500/10 hover:text-red-500 text-white rounded-none"
+                          title="Delete"
+                          onClick={() => handleDelete(drop.slug)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed border-[#4d4635] bg-[#1b1b1b]/50 group hover:border-[#D4AF37]/50 transition-colors">
             <Package className="h-12 w-12 text-[#4d4635] mb-4 group-hover:text-[#D4AF37]/50 transition-colors" />
