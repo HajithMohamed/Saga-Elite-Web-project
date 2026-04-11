@@ -21,6 +21,7 @@ const ImageUpload = ({
   refId,
   refModel,
   type,
+  label, // Added label prop
   disabled = false,
   onUploadSuccess,
 }) => {
@@ -100,6 +101,7 @@ const ImageUpload = ({
     formData.append("refModel", refModel);
     if (refId) formData.append("refId", refId);
     if (type) formData.append("type", type);
+    if (label) formData.append("label", label); // Append label if exists
 
     filesToUpload.forEach((img) =>
       formData.append("images", img.file)

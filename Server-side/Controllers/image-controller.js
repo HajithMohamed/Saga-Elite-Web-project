@@ -75,11 +75,14 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   // Validate type for System images
   if (imageData.refModel === "System") {
-    const validSystemTypes = ["hero", "ad", "logo"];
+    const validSystemTypes = ["hero", "ad", "logo", "category-logo"];
 
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
       return next(
-        new AppError("System images require type: hero, ad, or logo", 400)
+        new AppError(
+          "System images require type: hero, ad, logo, or category-logo",
+          400
+        )
       );
     }
   }
@@ -170,6 +173,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
           publicId: result.public_id,
           type: imageData.type || refModelToType[imageData.refModel] || "other",
           refModel: imageData.refModel,
+          label: imageData.label,
           order: existingImagesCount + index,
           isPrimary: existingImagesCount === 0 && index === 0,
           metadata: {
@@ -429,6 +433,24 @@ const getLogoImages = catchAsync(async (req, res, next) => {
     success: true,
     results: logoImages.length,
     images: logoImages,
+  });
+});
+
+const getCategoryLogoImages = catchAsync(async (req, res, next) => {
+  const categoryLogoImages = await Image.find({
+    refModel: "System",
+    type: "category-logo",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!categoryLogoImages.length) {
+    return next(new AppError("No category logo images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: categoryLogoImages.length,
+    images: categoryLogoImages,
   });
 });
 

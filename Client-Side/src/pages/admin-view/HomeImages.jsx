@@ -25,6 +25,12 @@ const sectionConfig = [
     label: "Logo Images",
     description: "Brand logos used throughout the site.",
   },
+  {
+    key: "category-logo",
+    label: "Category Logos",
+    description: "Logos for specific categories (Boys, Girls, Unisex).",
+    isCategorized: true,
+  },
 ];
 
 const useSectionState = () => {
@@ -38,6 +44,7 @@ const AdminHomeImages = () => {
   const hero = useSectionState();
   const banner = useSectionState();
   const logo = useSectionState();
+  const categoryLogo = useSectionState();
   const [globalLoading, setGlobalLoading] = useState(false);
   const { toast } = useToast();
 
@@ -45,6 +52,7 @@ const AdminHomeImages = () => {
     hero,
     ad: banner,
     logo,
+    "category-logo": categoryLogo,
   };
 
   const fetchImages = async (type, setter) => {
@@ -74,6 +82,7 @@ const AdminHomeImages = () => {
       fetchImages("hero", hero),
       fetchImages("ad", banner),
       fetchImages("logo", logo),
+      fetchImages("category-logo", categoryLogo),
     ]);
 
     setGlobalLoading(false);
@@ -234,13 +243,39 @@ const AdminHomeImages = () => {
 
                 <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
                   <div className="space-y-4">
-                    <ImageUpload
-                      images={state.uploadQueue}
-                      setImages={state.setUploadQueue}
-                      refModel="System"
-                      type={section.key}
-                      onUploadSuccess={(images) => handleUploadSuccess(section.key, images)}
-                    />
+                    {section.isCategorized ? (
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        {["Boys", "Girls", "Unisex"].map((catLabel) => (
+                          <div key={catLabel} className="space-y-2">
+                            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                              {catLabel} Logo
+                            </h3>
+                            <ImageUpload
+                              images={state.uploadQueue.filter((q) => q.label === catLabel)}
+                              setImages={(updater) => {
+                                const newQueue = typeof updater === "function" ? updater(state.uploadQueue) : updater;
+                                state.setUploadQueue(
+                                  newQueue.map((q) => (q.label ? q : { ...q, label: catLabel }))
+                                );
+                              }}
+                              refModel="System"
+                              type={section.key}
+                              label={catLabel}
+                              isMultiple={false}
+                              onUploadSuccess={(images) => handleUploadSuccess(section.key, images)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <ImageUpload
+                        images={state.uploadQueue}
+                        setImages={state.setUploadQueue}
+                        refModel="System"
+                        type={section.key}
+                        onUploadSuccess={(images) => handleUploadSuccess(section.key, images)}
+                      />
+                    )}
                     <p className="text-sm text-gray-400">
                       Upload new {section.key === "logo" ? "logo" : "hero/banner"} assets and set the primary image from the gallery.
                     </p>
@@ -268,6 +303,11 @@ const AdminHomeImages = () => {
                                 {image.isPrimary && (
                                   <span className="absolute left-3 top-3 rounded-full bg-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black">
                                     Primary
+                                  </span>
+                                )}
+                                {image.label && (
+                                  <span className="absolute right-3 top-3 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                                    {image.label}
                                   </span>
                                 )}
                               </div>

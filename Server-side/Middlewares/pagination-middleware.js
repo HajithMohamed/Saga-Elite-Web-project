@@ -19,6 +19,7 @@ const paginatedResult = (Model) =>
       sort,
       isActive,
       drop,
+      status, // drop status: active or archive
     } = req.query;
 
     const matchStage = {};
@@ -33,7 +34,7 @@ const paginatedResult = (Model) =>
 
     if (drop) {
       try {
-        matchStage.drop = mongoose.Types.ObjectId(drop);
+        matchStage.drop = new mongoose.Types.ObjectId(drop); // FIX 1: added `new` keyword
       } catch (error) {
         return next(new AppError("Invalid drop id", 400));
       }
@@ -50,12 +51,18 @@ const paginatedResult = (Model) =>
     if (brand) matchStage.brand = brand;
     if (category) matchStage.category = category;
 
-    /* ========= Variant Color ========= */
+    /* ========= Variant Color Filter ========= */
+    // FIX 2: Merged size and color into a single $elemMatch to avoid overwriting
     if (color) {
-      matchStage.variants = {
-        ...matchStage.variants,
-        $elemMatch: { color },
-      };
+      if (size) {
+        matchStage.variants = {
+          $elemMatch: { size: { $in: size.split(",") }, color },
+        };
+      } else {
+        matchStage.variants = {
+          $elemMatch: { color },
+        };
+      }
     }
 
     /* ========= Price Filter ========= */
@@ -91,8 +98,9 @@ const paginatedResult = (Model) =>
       };
     }
 
-    /* ========= Aggregation ========= */
-    const data = await Model.aggregate([
+    /* ========= Aggregation Pipeline ========= */
+    // FIX 3: Changed `const data = await Model.aggregate([...];` to a proper `pipeline` array
+    const pipeline = [
       { $match: matchStage },
 
       {
@@ -130,13 +138,50 @@ const paginatedResult = (Model) =>
           preserveNullAndEmptyArrays: true,
         },
       },
+    ]; // FIX 4: Closed the array with `]` and `;` instead of `];` inside an incomplete expression
 
+    /* ========= Status Filter (post-lookup) ========= */
+    if (status === "active") {
+      const now = new Date();
+      pipeline.push({
+        $match: {
+          "drop.endDate": { $gt: now },
+          "drop.releaseDate": { $lte: now },
+        },
+      });
+    } else if (status === "archive") {
+      const now = new Date();
+      pipeline.push({
+        $match: {
+          $or: [
+            { "drop.endDate": { $lte: now } },
+            { drop: { $exists: false } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
       { $sort: sortStage },
       { $skip: skip },
-      { $limit: limit },
-    ]);
+      { $limit: limit }
+    );
 
-    const totalDocuments = await Model.countDocuments(matchStage);
+    const data = await Model.aggregate(pipeline); // FIX 5: Removed duplicate `const data` declaration
+
+    /* ========= Total Count ========= */
+    // FIX 6: For status-filtered results, run a separate count pipeline instead of using data.length
+    let totalDocuments;
+    if (status) {
+      const countPipeline = [...pipeline];
+      // Remove sort/skip/limit to get the true total
+      countPipeline.splice(-3, 3);
+      countPipeline.push({ $count: "total" });
+      const countResult = await Model.aggregate(countPipeline);
+      totalDocuments = countResult.length > 0 ? countResult[0].total : 0;
+    } else {
+      totalDocuments = await Model.countDocuments(matchStage);
+    }
 
     const results = {
       total: totalDocuments,

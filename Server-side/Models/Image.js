@@ -35,6 +35,7 @@ const imageSchema = new mongoose.Schema(
         "dropBanner",
         "ad",
         "category",
+        "category-logo",
         "review",
         "logo",
         "system",
@@ -42,6 +43,12 @@ const imageSchema = new mongoose.Schema(
       ],
       default: "product",
       index: true,
+    },
+
+    label: {
+      type: String,
+      trim: true,
+      default: "",
     },
 
     refId: {
