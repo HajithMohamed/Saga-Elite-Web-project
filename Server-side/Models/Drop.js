@@ -44,7 +44,7 @@ const dropSchema = new mongoose.Schema(
 );
 
 /* Auto slug generation (regenerates on name change) */
-dropSchema.pre("save", async function () {
+dropSchema.pre("save", function () {
   if (this.isNew || this.isModified("name")) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }

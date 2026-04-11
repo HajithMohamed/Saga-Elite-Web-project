@@ -1,174 +1,229 @@
 /* Client-Side/src/components/admin-components/ImageUpload.jsx */
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import axios from 'axios';
+
+import React, { useState, useRef } from "react";
+import { Upload, X, Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/v1`
-  : 'http://localhost:5001/api/v1';
+  : "http://localhost:5001/api/v1";
 
-const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
+const placeholder =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=";
 
-// Added props for backend integration: refId, refModel, type (optional for system images)
-const ImageUpload = ({ 
-  images = [], 
-  setImages, 
-  isMultiple = true, 
+const ImageUpload = ({
+  images = [],
+  setImages,
+  isMultiple = true,
   className,
-  refId, // Required for non-system images (e.g., product/drop ID)
-  refModel, // e.g., "Product", "Drop", "System"
-  type, // Optional, required for "System" refModel (e.g., "hero", "ad", "logo")
-  disabled = false // Optional, disables upload functionality
+  refId,
+  refModel,
+  type,
+  label, // Added label prop
+  disabled = false,
+  onUploadSuccess,
 }) => {
   const inputRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false); // Added for loading state
-  const [uploadError, setUploadError] = useState(null); // Added for error handling
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [updatingIndex, setUpdatingIndex] = useState(null);
+
+  /* ---------------- FILE SELECT ---------------- */
 
   const handleImageFileChange = (event) => {
-    const selectedFiles = event.target.files;
-    if (selectedFiles && selectedFiles.length > 0) {
-      const newImages = Array.from(selectedFiles).map(file => ({
-        file,
-        url: URL.createObjectURL(file), // Local preview
-        isUploaded: false // Track if uploaded to server
-      }));
-      
-      if (isMultiple) {
-        setImages(prev => [...prev, ...newImages]);
-      } else {
-        setImages(newImages);
-      }
-    }
-  };
+    const files = event.target.files;
+    if (!files?.length) return;
 
-  const handleDragOver = (event) => {
-    event.preventDefault();
+    const newImages = Array.from(files).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+      isUploaded: false,
+    }));
+
+    if (isMultiple) {
+      setImages((prev) => [...prev, ...newImages]);
+    } else {
+      setImages(newImages);
+    }
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
-    const droppedFiles = event.dataTransfer.files;
-    if (droppedFiles && droppedFiles.length > 0) {
-      const newImages = Array.from(droppedFiles).map(file => ({
-        file,
-        url: URL.createObjectURL(file),
-        isUploaded: false
-      }));
+    const files = event.dataTransfer.files;
+    if (!files?.length) return;
 
-      if (isMultiple) {
-        setImages(prev => [...prev, ...newImages]);
-      } else {
-        setImages(newImages);
-      }
+    const newImages = Array.from(files).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+      isUploaded: false,
+    }));
+
+    if (isMultiple) {
+      setImages((prev) => [...prev, ...newImages]);
+    } else {
+      setImages(newImages);
     }
   };
 
-  const removeImage = (indexToRemove) => {
-    const imageToRemove = images[indexToRemove];
-    if (imageToRemove && !imageToRemove.isUploaded) {
-      URL.revokeObjectURL(imageToRemove.url); // Clean up local URL
+  const handleDragOver = (e) => e.preventDefault();
+
+  /* ---------------- REMOVE IMAGE ---------------- */
+
+  const removeImage = (index) => {
+    const img = images[index];
+    if (img && !img.isUploaded) {
+      URL.revokeObjectURL(img.url);
     }
-    setImages(images.filter((_, index) => index !== indexToRemove));
+    setImages(images.filter((_, i) => i !== index));
   };
 
-  // Updated your uploadToCloudinary function (renamed for clarity)
-  async function uploadImages() {
-    if (!refModel) {
-      setUploadError('refModel is required');
-      return;
-    }
-    if (refModel !== 'System' && !refId) {
-      setUploadError('refId is required for non-System images');
-      return;
-    }
-    if (refModel === 'System' && !type) {
-      setUploadError('type is required for System images');
-      return;
+  /* ---------------- UPLOAD IMAGES ---------------- */
+
+  const uploadImages = async () => {
+    if (!refModel) return setUploadError("refModel is required");
+    if (refModel !== "System" && !refId)
+      return setUploadError("refId is required");
+    if (refModel === "System" && !type)
+      return setUploadError("type is required");
+
+    const filesToUpload = images.filter((img) => !img.isUploaded && img.file);
+
+    if (filesToUpload.length === 0) {
+      return setUploadError("No new images to upload");
     }
 
     setIsUploading(true);
     setUploadError(null);
 
     const formData = new FormData();
-    formData.append('refModel', refModel);
-    if (refId) formData.append('refId', refId);
-    if (type) formData.append('type', type);
+    formData.append("refModel", refModel);
+    if (refId) formData.append("refId", refId);
+    if (type) formData.append("type", type);
+    if (label) formData.append("label", label); // Append label if exists
 
-    // Add only non-uploaded images
-    const filesToUpload = images.filter(img => !img.isUploaded && img.file);
-    filesToUpload.forEach(img => formData.append('images', img.file));
-
-    if (filesToUpload.length === 0) {
-      setUploadError('No new images to upload');
-      setIsUploading(false);
-      return;
-    }
+    filesToUpload.forEach((img) =>
+      formData.append("images", img.file)
+    );
 
     try {
-      // Fixed URL (adjust port/host as needed, e.g., http://localhost:3000/api/upload-image)
-      const apiResponse = await axios.post(`${API_BASE}/images/upload-image`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true,
-      });
+      const res = await axios.post(
+        `${API_BASE}/image/upload-image`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
 
-      if (apiResponse.data.success) {
-        // Replace local images with server-returned ones
-        const uploadedImages = apiResponse.data.images.map(serverImg => ({
-          ...serverImg,
-          isUploaded: true
+      if (res.data.success) {
+        const uploaded = res.data.images.map((img) => ({
+          ...img,
+          isUploaded: true,
         }));
 
-        // Clean up local URLs and merge
-        images.forEach(img => {
+        images.forEach((img) => {
           if (!img.isUploaded) URL.revokeObjectURL(img.url);
         });
-        setImages(uploadedImages);
+
+        setImages(uploaded);
+        if (onUploadSuccess) {
+          onUploadSuccess(uploaded);
+        }
       } else {
-        setUploadError('Upload failed: ' + (apiResponse.data.message || 'Unknown error'));
+        setUploadError(res.data.message || "Upload failed");
       }
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || error.message || 'Upload failed';
-      setUploadError(errorMsg);
+    } catch (err) {
+      setUploadError(
+        err.response?.data?.message || err.message || "Upload failed"
+      );
     } finally {
       setIsUploading(false);
     }
-  }
+  };
 
-  // Removed auto-upload useEffect to avoid loops; call manually via button
+  /* ---------------- UPDATE IMAGE ---------------- */
+
+  const updateImage = (index) => {
+    const image = images[index];
+    if (!image?._id) return;
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      setUpdatingIndex(index);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      try {
+        const res = await axios.patch(
+          `${API_BASE}/image/update-image/${image._id}`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+            withCredentials: true,
+          }
+        );
+
+        if (res.data.success) {
+          setImages((prev) =>
+            prev.map((img, i) =>
+              i === index ? { ...res.data.image, isUploaded: true } : img
+            )
+          );
+        }
+      } catch (err) {
+        setUploadError("Update failed");
+      } finally {
+        setIsUploading(false);
+        setUpdatingIndex(null);
+      }
+    };
+
+    input.click();
+  };
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
-      <div 
+      <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className="border-2 border-dashed border-gray-800 hover:border-[#D4AF37] rounded-lg p-6 bg-black/40 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 group"
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !disabled && inputRef.current?.click()}
+        className={`border-2 border-dashed border-gray-800 rounded-lg p-6 flex flex-col items-center gap-2 ${
+          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-[#D4AF37]"
+        }`}
       >
-        <Input 
-          id="image-upload" 
-          type="file" 
-          className="hidden" 
-          ref={inputRef} 
-          onChange={handleImageFileChange}
+        <Input
+          type="file"
+          ref={inputRef}
+          className="hidden"
           multiple={isMultiple}
           accept="image/*"
+          onChange={handleImageFileChange}
+          disabled={disabled}
         />
-        <div className="bg-gray-900 group-hover:bg-[#D4AF37]/10 p-4 rounded-full transition-colors">
-          <Upload className="h-6 w-6 text-gray-400 group-hover:text-[#D4AF37] transition-colors" />
-        </div>
-        <p className="text-sm font-medium text-gray-400 group-hover:text-[#D4AF37] transition-colors">
+
+        <Upload className="h-6 w-6 text-gray-400" />
+        <p className="text-sm text-gray-400">
           Click or Drag to upload images
         </p>
       </div>
 
-      {/* Added upload button and error display */}
-      {images && images.length > 0 && (
+      {images.length > 0 && (
         <>
-          <Button 
-            onClick={uploadImages} 
-            disabled={disabled || isUploading || images.every(img => img.isUploaded)}
+          <Button
+            onClick={uploadImages}
+            disabled={disabled || isUploading || images.every((i) => i.isUploaded)}
             className="w-full"
           >
             {isUploading ? (
@@ -177,42 +232,37 @@ const ImageUpload = ({
                 Uploading...
               </>
             ) : (
-              'Upload Images'
+              "Upload Images"
             )}
           </Button>
+
           {uploadError && (
             <p className="text-red-500 text-sm">{uploadError}</p>
           )}
-        </>
-      )}
 
-      {images && images.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          {images.map((img, index) => (
-            <div key={index} className="relative group aspect-square bg-black/40 rounded-lg overflow-hidden border border-gray-800 hover:border-[#D4AF37]/50 transition-all">
-              <img 
-                src={img.url} 
-                alt={`Preview ${index}`} 
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                onError={(e) => e.target.src = placeholder}
-              />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Button 
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeImage(index);
-                  }}
-                  className="h-8 w-8 rounded-full"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+          <div className="grid grid-cols-3 gap-4">
+            {images.map((img, i) => (
+              <div key={i} className="relative group">
+                <img
+                  src={img.url}
+                  onError={(e) => (e.target.src = placeholder)}
+                  className="w-full h-32 object-cover rounded"
+                />
+
+                <div className="absolute inset-0 hidden group-hover:flex items-center justify-center gap-2 bg-black/50">
+                  {img.isUploaded && (
+                    <Button size="icon" onClick={() => updateImage(i)}>
+                      <Upload size={14} />
+                    </Button>
+                  )}
+                  <Button size="icon" onClick={() => removeImage(i)}>
+                    <X size={14} />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

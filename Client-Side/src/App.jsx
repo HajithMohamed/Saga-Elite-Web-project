@@ -20,6 +20,7 @@ import AdminFeatures from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
+import AdminHomeImages from "./pages/admin-view/HomeImages";
 
 
 // shopping page imports
@@ -57,6 +58,8 @@ function App() {
   return (
     <div>
       <Routes>
+        <Route path="/" element={<Home />} />
+        
         {/* AUTH ROUTES */}
         <Route
           path="/auth"
@@ -85,6 +88,7 @@ function App() {
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="home-images" element={<AdminHomeImages />} />
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
@@ -101,7 +105,6 @@ function App() {
             </CheckAuth>
           }
         >
-          <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />

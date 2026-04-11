@@ -6,11 +6,13 @@ const {
   getHeroImages,
   getAdImages,
   getLogoImages,
+  getCategoryLogoImages,
   getReviewImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,
   deleteAllImages,
+  updateImage,
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const adminMiddleware = require("../Middlewares/admin-middleware");
@@ -30,6 +32,17 @@ router.post(
 );
 
 /* ==============================
+   Update Image (admin only)
+============================== */
+router.patch(
+  "/update-image/:id",
+  authMiddleware,
+  adminMiddleware,
+  upload.single("image"),
+  updateImage,
+);
+
+/* ==============================
    Fetch images — entity-specific
 ============================== */
 router.get("/get-product-images/:id", getProductImages);
@@ -42,6 +55,7 @@ router.get("/get-review-images/:id", getReviewImages);
 router.get("/get-hero-images", getHeroImages);
 router.get("/get-ad-images", getAdImages);
 router.get("/get-logo-images", getLogoImages);
+router.get("/get-category-logo-images", getCategoryLogoImages);
 
 /* ==============================
    Admin actions
