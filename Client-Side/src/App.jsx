@@ -57,6 +57,8 @@ function App() {
   return (
     <div>
       <Routes>
+        <Route path="/" element={<Home />} />
+        
         {/* AUTH ROUTES */}
         <Route
           path="/auth"
@@ -101,7 +103,6 @@ function App() {
             </CheckAuth>
           }
         >
-          <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
