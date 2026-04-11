@@ -21,7 +21,12 @@ import {
   Edit2,
   Trash,
   Package,
+  Eye,
 } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : "http://localhost:5001/api/v1";
 
 // Helper components for visual consistency
 const PulseDot = ({ active }) => (
@@ -68,6 +73,9 @@ const Product = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [productImages, setProductImages] = useState([]);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryTitle, setGalleryTitle] = useState("");
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -103,13 +111,30 @@ const Product = () => {
 
   const fetchProductImages = async (id) => {
     try {
-      const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : "http://localhost:5001/api/v1";
-      const res = await axios.get(`${API_BASE}/image/get-images/Product/${id}`);
-      setProductImages(res.data.images || []);
+      const res = await axios.get(`${API_BASE}/image/get-product-images/${id}`);
+      const loadedImages = res.data.images || [];
+      setProductImages(loadedImages);
+      return loadedImages;
     } catch {
       setProductImages([]);
+      return [];
     }
   };
+
+  const openProductGallery = async (product) => {
+    setGalleryTitle(product.name || "Product Images");
+    if (product.images && product.images.length > 0) {
+      setGalleryImages(product.images);
+      setIsGalleryOpen(true);
+      return;
+    }
+
+    const loadedImages = await fetchProductImages(product._id);
+    setGalleryImages(loadedImages);
+    setIsGalleryOpen(true);
+  };
+
+  const closeGallery = () => setIsGalleryOpen(false);
 
   const beginEdit = (product) => {
     setSelectedProductSlug(product.slug);
@@ -153,14 +178,13 @@ const Product = () => {
           fd.append("refId", productId);
           fd.append("type", "product");
           newImages.forEach((img) => fd.append("images", img.file));
-          const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/v1` : "http://localhost:5001/api/v1";
           await axios.post(`${API_BASE}/image/upload-image`, fd);
         }
       }
 
       toast({
         title: selectedProductSlug ? "Product updated successfully" : "Product created successfully",
-        className: "bg-surface border border-primary-container text-saga-primary"
+        className: "bg-surface border border-primary-container text-saga-primary",
       });
       resetForm();
       fetchProducts();
@@ -226,6 +250,15 @@ const Product = () => {
                     refId={selectedProductId}
                     type="product"
                   />
+                  {productImages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => openProductGallery({ name: formData.name, _id: selectedProductId, images: productImages })}
+                      className="mt-3 inline-flex items-center justify-center rounded-full border border-saga-primary px-4 py-2 text-sm font-semibold text-saga-primary hover:bg-saga-primary/10 transition"
+                    >
+                      View all images
+                    </button>
+                  )}
                 </div>
               </section>
 
@@ -599,6 +632,9 @@ const Product = () => {
                 </div>
 
                 <div className="col-span-1 md:col-span-1 flex justify-end gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+                  <button onClick={() => openProductGallery(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="View images">
+                    <Eye className="w-4 h-4" />
+                  </button>
                   <button onClick={() => beginEdit(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2">
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -656,8 +692,37 @@ const Product = () => {
           </div>
         )}
       </main>
+      {isGalleryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="max-w-5xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl">
+            <div className="flex items-center justify-between border-b border-outline-variant/20 p-6">
+              <div>
+                <h2 className="text-2xl font-bold">{galleryTitle}</h2>
+                <p className="text-sm text-on-surface-variant">{galleryImages.length} image(s) available</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeGallery}
+                className="rounded-full border border-on-surface/10 px-4 py-2 text-sm text-on-surface hover:bg-on-surface/5"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
+              {galleryImages.map((image, index) => (
+                <div key={index} className="overflow-hidden rounded-3xl bg-[#111]">
+                  <img
+                    src={image.url}
+                    alt={`${galleryTitle} ${index + 1}`}
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 export default Product;

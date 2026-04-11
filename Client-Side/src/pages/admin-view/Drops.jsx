@@ -12,6 +12,7 @@ import {
   Trash2,
   AlertTriangle,
   ChevronLeft,
+  Eye,
 } from "lucide-react";
 import {
   getAllDrops,
@@ -43,6 +44,9 @@ const Drops = () => {
   const [dropImages, setDropImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
   const [currentEditedId, setCurrentEditedId] = useState(null);
+  const [dropGalleryImages, setDropGalleryImages] = useState([]);
+  const [dropGalleryTitle, setDropGalleryTitle] = useState("");
+  const [isDropGalleryOpen, setIsDropGalleryOpen] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -99,6 +103,33 @@ const Drops = () => {
       return false;
     }
   }
+
+  const fetchDropImages = async (id) => {
+    try {
+      const response = await axios.get(`${API_BASE}/image/get-drop-images/${id}`);
+      const images = response.data.images || [];
+      setDropImages(images);
+      return images;
+    } catch {
+      setDropImages([]);
+      return [];
+    }
+  };
+
+  const openDropGallery = async (drop) => {
+    setDropGalleryTitle(drop.name || "Drop Images");
+    if (drop.images && drop.images.length > 0) {
+      setDropGalleryImages(drop.images);
+      setIsDropGalleryOpen(true);
+      return;
+    }
+
+    const images = await fetchDropImages(drop._id);
+    setDropGalleryImages(images);
+    setIsDropGalleryOpen(true);
+  };
+
+  const closeDropGallery = () => setIsDropGalleryOpen(false);
 
   async function onSubmit(event) {
     event.preventDefault();
@@ -321,6 +352,15 @@ const Drops = () => {
                       refId={currentEditedId}
                       type="drop"
                     />
+                    {dropImages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => openDropGallery({ name: formData.name, _id: currentEditedId, images: dropImages })}
+                        className="mt-4 inline-flex items-center justify-center rounded-full border border-[#D4AF37] px-4 py-2 text-sm font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/10 transition"
+                      >
+                        View all images
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -520,6 +560,15 @@ const Drops = () => {
                           size="icon"
                           variant="outline"
                           className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
+                          title="View images"
+                          onClick={() => openDropGallery(drop)}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 bg-[#131313] border-[#353535] hover:border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] text-white rounded-none"
                           title="Edit"
                           onClick={() => {
                             setShowForm(true);
@@ -589,6 +638,36 @@ const Drops = () => {
           </div>
         )}
       </div>
+      {isDropGalleryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="max-w-5xl w-full overflow-hidden rounded-3xl bg-[#111] text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 p-6">
+              <div>
+                <h2 className="text-2xl font-bold">{dropGalleryTitle}</h2>
+                <p className="text-sm text-[#d0c5af]">{dropGalleryImages.length} image(s) available</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeDropGallery}
+                className="rounded-full border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
+              {dropGalleryImages.map((image, index) => (
+                <div key={index} className="overflow-hidden rounded-3xl bg-[#131313]">
+                  <img
+                    src={image.url}
+                    alt={`${dropGalleryTitle} ${index + 1}`}
+                    className="h-48 w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </Fragment>
   );
 };
