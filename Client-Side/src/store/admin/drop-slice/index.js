@@ -34,7 +34,7 @@ export const getAllDrops = createAsyncThunk(
 
 export const updateDrop = createAsyncThunk(
   "/drop/updateDrop",
-  async ({ slug, formData }) => {
+  async ({ slug, formData }) => {  // ← must be `formData`, not `dropData`
     const response = await axios.patch(
       `${API_BASE}/drops/update-drop/${slug}`,
       formData,
@@ -94,9 +94,9 @@ const adminDropSlice = createSlice({
       })
       .addCase(getAllDrops.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.dropList = action.payload.data;
+        state.dropList = action.payload.drops; // ← was `action.payload.data`, API returns `drops`
       })
-      .addCase(getAllDrops.rejected, (state, action) => {
+      .addCase(getAllDrops.rejected, (state) => {
         state.isLoading = false;
         state.dropList = [];
       })
@@ -105,9 +105,9 @@ const adminDropSlice = createSlice({
       })
       .addCase(getSingleDrop.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.dropDetails = action.payload.data;
+        state.dropDetails = action.payload.drop; // ← was `action.payload.data`
       })
-      .addCase(getSingleDrop.rejected, (state, action) => {
+      .addCase(getSingleDrop.rejected, (state) => {
         state.isLoading = false;
         state.dropDetails = null;
       });

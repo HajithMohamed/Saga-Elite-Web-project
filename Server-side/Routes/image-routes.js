@@ -11,6 +11,7 @@ const {
   deleteImage,
   reorderImages,
   deleteAllImages,
+  updateImage,
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const adminMiddleware = require("../Middlewares/admin-middleware");
@@ -27,6 +28,17 @@ router.post(
   adminMiddleware,
   upload.array("images", 10),
   uploadImages,
+);
+
+/* ==============================
+   Update Image (admin only)
+============================== */
+router.patch(
+  "/update-image/:id",
+  authMiddleware,
+  adminMiddleware,
+  upload.single("image"),
+  updateImage,
 );
 
 /* ==============================

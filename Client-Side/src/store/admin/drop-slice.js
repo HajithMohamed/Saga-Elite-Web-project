@@ -28,6 +28,10 @@ export const getAllDrops = createAsyncThunk(
 export const createDrop = createAsyncThunk(
   "drop/createDrop",
   async (dropData, { rejectWithValue }) => {
+    dropData = dropData || {};
+    if (!dropData.name || !dropData.releaseDate) {
+      return rejectWithValue("Name and release date are required");
+    }
     try {
       const response = await axios.post(`${API_BASE}/drops/create-drop`, dropData, {
         withCredentials: true,
@@ -41,11 +45,15 @@ export const createDrop = createAsyncThunk(
 
 export const updateDrop = createAsyncThunk(
   "drop/updateDrop",
-  async ({ slug, dropData }, { rejectWithValue }) => {
+  async ({ slug, dropData, formData }, { rejectWithValue }) => {
+    const payload = dropData || formData || {};
+    if (Object.keys(payload).length === 0) {
+      return rejectWithValue("No data provided for update");
+    }
     try {
       const response = await axios.patch(
         `${API_BASE}/drops/update-drop/${slug}`,
-        dropData,
+        payload,
         {
           withCredentials: true,
         }

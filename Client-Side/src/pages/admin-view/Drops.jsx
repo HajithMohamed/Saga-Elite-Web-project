@@ -1,5 +1,6 @@
 import React, { Fragment, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
 import {
@@ -21,6 +22,10 @@ import {
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : "http://localhost:5001/api/v1";
+
 const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=';
 
 const initialFormData = {
@@ -40,62 +45,117 @@ const Drops = () => {
   const [currentEditedId, setCurrentEditedId] = useState(null);
 
   const dispatch = useDispatch();
-  const { drops, isLoading, error } = useSelector((state) => state.drop);
+
+  const { drops = [], isLoading = false } = useSelector((state) => state.drop) || {};
   const { toast } = useToast();
+
 
   useEffect(() => {
     dispatch(getAllDrops());
   }, [dispatch]);
 
-  function onSubmit(event) {
+  async function uploadPendingDropImages(refId) {
+    const pendingImages = dropImages.filter((img) => !img.isUploaded && img.file);
+    if (!pendingImages.length || !refId) return true;
+
+    const imageFormData = new FormData();
+    imageFormData.append("refModel", "Drop");
+    imageFormData.append("refId", refId);
+    imageFormData.append("type", "drop");
+    pendingImages.forEach((img) => imageFormData.append("images", img.file));
+
+    try {
+      const response = await axios.post(
+        `${API_BASE}/image/upload-image`,
+        imageFormData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Image upload failed");
+      }
+
+      setDropImages((prevImages) => {
+        const existingImages = prevImages.filter((img) => !img.file);
+        const uploadedImages = (response.data.images || []).map((img) => ({
+          ...img,
+          isUploaded: true,
+        }));
+        return [...existingImages, ...uploadedImages];
+      });
+
+      return true;
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "Image upload failed";
+      toast({
+        title: "Drop saved but image upload failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }
+
+  async function onSubmit(event) {
     event.preventDefault();
 
     if (currentEditedSlug) {
-      dispatch(updateDrop({ slug: currentEditedSlug, dropData: formData })).then(
-        (data) => {
-          if (data.meta.requestStatus === "fulfilled") {
-            dispatch(getAllDrops());
-            toast({
-              title: "Drop updated successfully",
-              className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
-            });
-            setShowForm(false);
-            setFormData(initialFormData);
-            setCurrentEditedSlug(null);
-            setCurrentEditedId(null);
-          } else {
-            toast({
-              title: "Failed to update Drop",
-              variant: "destructive",
-            });
-          }
-        }
-      );
+      const data = await dispatch(updateDrop({ slug: currentEditedSlug, dropData: formData }));
+
+      if (data.meta.requestStatus === "fulfilled") {
+        await uploadPendingDropImages(currentEditedId);
+        dispatch(getAllDrops());
+        toast({
+          title: "Drop updated successfully",
+          className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
+        });
+        setShowForm(false);
+        setFormData(initialFormData);
+        setCurrentEditedSlug(null);
+        setCurrentEditedId(null);
+      } else {
+        const errorMessage =
+          typeof data.payload === "string"
+            ? data.payload
+            : data.payload?.message || "Failed to update Drop";
+        toast({
+          title: errorMessage,
+          variant: "destructive",
+        });
+      }
     } else {
-      dispatch(createDrop(formData)).then((data) => {
-        if (data.meta.requestStatus === "fulfilled") {
-          dispatch(getAllDrops());
-          toast({
-            title: "Drop created successfully",
-            className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
-          });
-          setCurrentEditedId(data.payload._id);
-          setCurrentEditedSlug(data.payload.slug);
-          setFormData({
-            name: data.payload.name,
-            description: data.payload.description,
-            releaseDate: data.payload.releaseDate.split("T")[0],
-            endDate: data.payload.endDate ? data.payload.endDate.split("T")[0] : "",
-            isPublished: data.payload.isPublished,
-            isArchived: data.payload.isArchived,
-          });
-        } else {
-          toast({
-            title: "Failed to create Drop",
-            variant: "destructive",
-          });
-        }
-      });
+      const data = await dispatch(createDrop(formData));
+
+      if (data.meta.requestStatus === "fulfilled") {
+        const newDropId = data.payload.drop._id;
+        await uploadPendingDropImages(newDropId);
+        dispatch(getAllDrops());
+        toast({
+          title: "Drop created successfully",
+          className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
+        });
+        setCurrentEditedId(newDropId);
+        setCurrentEditedSlug(data.payload.drop.slug);
+        setFormData({
+          name: data.payload.drop.name,
+          description: data.payload.drop.description,
+          releaseDate: data.payload.drop.releaseDate.split("T")[0],
+          endDate: data.payload.drop.endDate
+            ? data.payload.drop.endDate.split("T")[0]
+            : "",
+          isPublished: data.payload.drop.isPublished,
+          isArchived: data.payload.drop.isArchived,
+        });
+      } else {
+        toast({
+          title: data.payload?.message || "Failed to create Drop",
+          variant: "destructive",
+        });
+      }
     }
   }
 
@@ -103,6 +163,7 @@ const Drops = () => {
     if (window.confirm("Are you sure you want to delete this Drop?")) {
       dispatch(deleteDrop(slug)).then((data) => {
         if (data.meta.requestStatus === "fulfilled") {
+          dispatch(getAllDrops());
           toast({
             title: "Drop deleted successfully",
             className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
@@ -110,7 +171,7 @@ const Drops = () => {
         } else {
           toast({
             title: "Failed to delete Drop",
-            description: data.payload.message,
+            description: data?.payload?.message,
             variant: "destructive",
           });
         }
@@ -119,12 +180,11 @@ const Drops = () => {
   }
 
   function handleArchive(slug, isArchived) {
-    dispatch(archiveDrop({ slug, isArchived: !isArchived })).then((data) => {
+    dispatch(archiveDrop(slug)).then((data) => {
       if (data.meta.requestStatus === "fulfilled") {
+        dispatch(getAllDrops());
         toast({
-          title: `Drop ${
-            !isArchived ? "archived" : "unarchived"
-          } successfully`,
+          title: `Drop ${!isArchived ? "archived" : "unarchived"} successfully`,
           className: "bg-black border border-[#D4AF37] text-[#D4AF37]",
         });
       } else {
@@ -379,9 +439,8 @@ const Drops = () => {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
           <p>Loading...</p>
-        ) : error ? (
-          <p>Error: {error.message}</p>
         ) : drops && drops.length > 0 ? (
+          
           drops.map((drop) => (
             <div
               key={drop._id}
@@ -393,11 +452,13 @@ const Drops = () => {
                     src={drop.images[0].url}
                     alt={drop.name}
                     className="w-full h-full object-cover mix-blend-overlay"
-                    onError={(e) => e.target.src = placeholder}
+                    onError={(e) => (e.target.src = placeholder)}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#131313]/90" />
                 </div>
+                
               )}
+              
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex justify-between items-start mb-4">
@@ -464,7 +525,9 @@ const Drops = () => {
                         name: drop.name,
                         description: drop.description,
                         releaseDate: drop.releaseDate.split("T")[0],
-                        endDate: drop.endDate ? drop.endDate.split("T")[0] : "",
+                        endDate: drop.endDate
+                          ? drop.endDate.split("T")[0]
+                          : "",
                         isPublished: drop.isPublished,
                         isArchived: drop.isArchived,
                       });

@@ -1,4 +1,7 @@
 const filterObj = (obj, ...allowedFields) => {
+  if (!obj || typeof obj !== 'object') {
+    return {};
+  }
   const newObj = {};
   Object.keys(obj).forEach((el) => {
     if (allowedFields.includes(el)) {

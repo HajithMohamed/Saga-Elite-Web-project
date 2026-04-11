@@ -149,6 +149,14 @@ const uploadImages = catchAsync(async (req, res, next) => {
     uploadResults.push(...batchResults);
   }
 
+  // Map refModel to the correct image type
+  const refModelToType = {
+    Product: "product",
+    Drop: "drop",
+    System: imageData.type, // already validated above (hero/ad/logo)
+    Review: "review",
+  };
+
   const uploadedImages = [];
   const failedUploads = [];
 
@@ -160,7 +168,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
         const imageDoc = {
           url: result.secure_url,
           publicId: result.public_id,
-          type: imageData.type || "product",
+          type: imageData.type || refModelToType[imageData.refModel] || "other",
           refModel: imageData.refModel,
           order: existingImagesCount + index,
           isPrimary: existingImagesCount === 0 && index === 0,
@@ -237,6 +245,82 @@ const uploadImages = catchAsync(async (req, res, next) => {
     success: true,
     results: uploadedImages.length,
     images: uploadedImages,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Update Image (replace file)
+|--------------------------------------------------------------------------
+*/
+
+const updateImage = catchAsync(async (req, res, next) => {
+  const imageId = req.params.id;
+
+  if (!imageId || !mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Valid image ID is required", 400));
+  }
+
+  const image = await Image.findById(imageId);
+
+  if (!image || image.isDeleted) {
+    return next(new AppError("Image not found", 404));
+  }
+
+  if (!req.file) {
+    return next(new AppError("New image file is required", 400));
+  }
+
+  // Log update attempt
+  actionLogger.info({
+    action: "update_image_attempt",
+    userId: req.user ? req.user._id : null,
+    imageId,
+    oldPublicId: image.publicId,
+  });
+
+  // Determine cloudinary folder
+  let cloudinaryFolder;
+  if (image.refModel === "System") {
+    cloudinaryFolder = `saga-elite/system/${image.type}`;
+  } else {
+    cloudinaryFolder = `saga-elite/${image.refModel.toLowerCase()}`;
+  }
+
+  // Upload new image
+  const uploadResult = await uploadToCloudinary(
+    req.file.buffer,
+    cloudinaryFolder,
+    req.file.mimetype
+  );
+
+  // Delete old image from cloudinary
+  await cloudinary.uploader.destroy(image.publicId);
+
+  // Update image document
+  image.url = uploadResult.secure_url;
+  image.publicId = uploadResult.public_id;
+  image.metadata = {
+    width: uploadResult.width,
+    height: uploadResult.height,
+    format: uploadResult.format,
+    sizeInBytes: uploadResult.bytes,
+  };
+  await image.save();
+
+  // Log successful update
+  actionLogger.info({
+    action: "update_image_success",
+    userId: req.user ? req.user._id : null,
+    imageId,
+    newPublicId: uploadResult.public_id,
+    url: uploadResult.secure_url,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Image updated successfully",
+    image,
   });
 });
 
@@ -624,4 +708,5 @@ module.exports = {
   deleteImage,
   reorderImages,
   deleteAllImages,
+  updateImage,
 };
