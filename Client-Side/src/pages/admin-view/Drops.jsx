@@ -104,7 +104,7 @@ const Drops = () => {
     event.preventDefault();
 
     if (currentEditedSlug) {
-      const data = await dispatch(updateDrop({ slug: currentEditedSlug, dropData: formData }));
+      const data = await dispatch(updateDrop({ slug: currentEditedSlug, formData }));
 
       if (data.meta.requestStatus === "fulfilled") {
         await uploadPendingDropImages(currentEditedId);
