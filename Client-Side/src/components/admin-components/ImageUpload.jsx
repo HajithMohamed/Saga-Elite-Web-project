@@ -19,7 +19,8 @@ const ImageUpload = ({
   className,
   refId, // Required for non-system images (e.g., product/drop ID)
   refModel, // e.g., "Product", "Drop", "System"
-  type // Optional, required for "System" refModel (e.g., "hero", "ad", "logo")
+  type, // Optional, required for "System" refModel (e.g., "hero", "ad", "logo")
+  disabled = false // Optional, disables upload functionality
 }) => {
   const inputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false); // Added for loading state
@@ -167,7 +168,7 @@ const ImageUpload = ({
         <>
           <Button 
             onClick={uploadImages} 
-            disabled={isUploading || images.every(img => img.isUploaded)}
+            disabled={disabled || isUploading || images.every(img => img.isUploaded)}
             className="w-full"
           >
             {isUploading ? (

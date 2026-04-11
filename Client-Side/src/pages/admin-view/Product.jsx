@@ -5,6 +5,8 @@ import { getAllProducts, createProduct, updateProduct, deleteProduct } from "@/s
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, ChevronLeft } from "lucide-react";
+import ImageUpload from "@/components/admin-components/ImageUpload";
+import axios from "axios";
 
 const categoryOptions = ["Unisex", "Boys", "Girls"];
 const defaultVariant = { sku: "", size: "", color: "", stock: "0", priceAdjustment: "0" };
@@ -29,8 +31,10 @@ const Product = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialProductForm);
   const [selectedProductSlug, setSelectedProductSlug] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [productImages, setProductImages] = useState([]);
 
   const dispatch = useDispatch();
   const productList = useSelector((state) => state.product?.productList ?? []);
@@ -72,11 +76,31 @@ const Product = () => {
   const resetForm = () => {
     setFormData(initialProductForm);
     setSelectedProductSlug(null);
+    setSelectedProductId(null);
     setShowForm(false);
+    setProductImages([]);
+  };
+
+  const fetchProductImages = async (productId) => {
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL
+        ? `${import.meta.env.VITE_API_URL}/v1`
+        : 'http://localhost:5001/api/v1';
+      const response = await axios.get(`${API_BASE}/images/get-product-images/${productId}`, {
+        withCredentials: true,
+      });
+      if (response.data.success) {
+        setProductImages(response.data.images);
+      }
+    } catch (error) {
+      console.error('Failed to fetch product images:', error);
+      setProductImages([]);
+    }
   };
 
   const beginEdit = (product) => {
     setSelectedProductSlug(product.slug);
+    setSelectedProductId(product._id);
     setShowForm(true);
     setFormData({
       name: product.name || "",
@@ -102,6 +126,8 @@ const Product = () => {
             }))
           : [defaultVariant],
     });
+    // Fetch existing images for the product
+    fetchProductImages(product._id);
   };
 
   const handleVariantChange = (index, field, value) => {
@@ -171,24 +197,69 @@ const Product = () => {
 
     const payload = buildPayload();
 
-    if (selectedProductSlug) {
-      const result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: payload })).unwrap();
-      if (result?.success) {
-        toast({ title: "Product updated", description: "Product details saved successfully." });
-        dispatch(getAllProducts({ isActive: statusFilter, limit: 100 }));
-        resetForm();
+    try {
+      let productResult;
+      if (selectedProductSlug) {
+        // Update existing product
+        productResult = await dispatch(updateProduct({ slug: selectedProductSlug, productData: payload })).unwrap();
+        if (productResult?.success) {
+          toast({ title: "Product updated", description: "Product details saved successfully." });
+        } else {
+          toast({ title: "Update failed", description: productResult?.message || "Unable to save product.", variant: "destructive" });
+          return;
+        }
       } else {
-        toast({ title: "Update failed", description: result?.message || "Unable to save product.", variant: "destructive" });
+        // Create new product
+        productResult = await dispatch(createProduct(payload)).unwrap();
+        if (productResult?.success) {
+          toast({ title: "Product created", description: "New product added successfully." });
+        } else {
+          toast({ title: "Create failed", description: productResult?.message || "Unable to add product.", variant: "destructive" });
+          return;
+        }
       }
-    } else {
-      const result = await dispatch(createProduct(payload)).unwrap();
-      if (result?.success) {
-        toast({ title: "Product created", description: "New product added successfully." });
-        dispatch(getAllProducts({ isActive: statusFilter, limit: 100 }));
-        resetForm();
-      } else {
-        toast({ title: "Create failed", description: result?.message || "Unable to add product.", variant: "destructive" });
+
+      // Handle image uploads if there are new images to upload
+      const newImagesToUpload = productImages.filter(img => !img.isUploaded);
+      if (newImagesToUpload.length > 0) {
+        const productId = productResult.product._id;
+        
+        // Create FormData for image upload
+        const formData = new FormData();
+        formData.append('refModel', 'Product');
+        formData.append('refId', productId);
+        
+        newImagesToUpload.forEach(img => {
+          formData.append('images', img.file);
+        });
+
+        const API_BASE = import.meta.env.VITE_API_URL
+          ? `${import.meta.env.VITE_API_URL}/v1`
+          : 'http://localhost:5001/api/v1';
+
+        try {
+          const imageResponse = await axios.post(`${API_BASE}/images/upload-image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true,
+          });
+
+          if (imageResponse.data.success) {
+            toast({ title: "Images uploaded", description: `${imageResponse.data.results} images uploaded successfully.` });
+          } else {
+            toast({ title: "Image upload failed", description: imageResponse.data.message || "Failed to upload images.", variant: "destructive" });
+          }
+        } catch (imageError) {
+          console.error('Image upload error:', imageError);
+          toast({ title: "Image upload failed", description: "Failed to upload images.", variant: "destructive" });
+        }
       }
+
+      // Refresh the product list and reset form
+      dispatch(getAllProducts({ isActive: statusFilter, limit: 100 }));
+      resetForm();
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast({ title: "Operation failed", description: "An unexpected error occurred.", variant: "destructive" });
     }
   };
 
@@ -233,6 +304,7 @@ const Product = () => {
               setShowForm(true);
               setSelectedProductSlug(null);
               setFormData(initialProductForm);
+              setProductImages([]);
             }}
             className="bg-[#d4af37] text-black hover:bg-[#b69a2d]"
           >
@@ -378,6 +450,24 @@ const Product = () => {
                 className="w-full rounded-lg border border-gray-800 bg-[#111111] px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] resize-none"
                 placeholder="Write a short summary for the product"
               />
+            </div>
+
+            <div className="space-y-3 rounded-2xl bg-[#0f0f0f] p-4">
+              <label className="text-xs uppercase tracking-[0.3em] text-gray-400">Product Images</label>
+              <ImageUpload
+                images={productImages}
+                setImages={setProductImages}
+                isMultiple={true}
+                refModel="Product"
+                refId={selectedProductSlug ? undefined : undefined} // Will be handled in submit
+                className="w-full"
+                disabled={!selectedProductSlug} // Only allow uploads for existing products
+              />
+              {!selectedProductSlug && productImages.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Images will be uploaded after saving the product.
+                </p>
+              )}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
