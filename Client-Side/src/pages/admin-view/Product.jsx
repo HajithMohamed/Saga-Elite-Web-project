@@ -99,6 +99,7 @@ const ProductFormModal = ({
           isMultiple
           refModel="Product"
           refId={selectedProductId}
+          disabled={!selectedProductId}
         />
 
         <Button onClick={onSubmit} disabled={isSubmitting}>
@@ -181,11 +182,15 @@ const Product = () => {
         result = await dispatch(createProduct(formData)).unwrap();
       }
 
-      const newImages = productImages.filter((img) => !img.isUploaded);
+      const productId = result.product._id;
+      setSelectedProductId(productId);
+
+      const newImages = productImages.filter((img) => !img.isUploaded && img.file);
 
       if (newImages.length > 0) {
         const fd = new FormData();
-        fd.append("refId", result.product._id);
+        fd.append("refModel", "Product");
+        fd.append("refId", productId);
 
         newImages.forEach((img) => fd.append("images", img.file));
 
@@ -208,6 +213,8 @@ const Product = () => {
           <Button
             onClick={() => {
               setFormData(initialProductForm);
+              setSelectedProductSlug(null);
+              setSelectedProductId(null);
               setProductImages([]);
               setShowForm(true);
             }}
