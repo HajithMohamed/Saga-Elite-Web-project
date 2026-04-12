@@ -24,6 +24,7 @@ const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes")
 const dropRoutes = require("./Routes/drop-routes")
 const orderRoutes = require("./Routes/order-routes")
+const userRoutes = require("./Routes/userRoutes")
 
 
 
@@ -49,6 +50,7 @@ app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
 
 app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/user", userRoutes);
 
 app.use(globalErrorController);
 
