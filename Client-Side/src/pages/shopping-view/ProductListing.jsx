@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { useSearchParams, Link } from "react-router-dom";
-import { addToCart } from "@/store/order-slice";
+import { addToCartAction } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
@@ -100,15 +100,10 @@ const ProductListing = () => {
       basePrice * (1 - (product.discountPercent || 0) / 100);
 
     dispatch(
-      addToCart({
-        cartId: `${product._id}-${variant.sku}`,
+      addToCartAction({
         productId: product._id,
-        productName: product.name,
-        variantSku: variant.sku,
-        variantName: `${variant.size} / ${variant.color}`,
+        variantId: variant._id,
         quantity,
-        unitPrice: Number(discountedPrice.toFixed(2)),
-        imageUrl: product.images?.[0]?.url || "/placeholder.jpg",
       })
     );
 

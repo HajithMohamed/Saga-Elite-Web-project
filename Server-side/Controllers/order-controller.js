@@ -3,6 +3,7 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
+const User = require("../Models/User");
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -126,6 +127,12 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
+
+      const user = await User.findById(req.userInfo._id).session(session);
+      if (user) {
+        user.cart = [];
+        await user.save({ session, validateModifiedOnly: true });
+      }
     });
   } finally {
     session.endSession();

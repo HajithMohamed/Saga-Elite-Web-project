@@ -122,6 +122,7 @@ const Checkout = () => {
       };
 
       await dispatch(createOrder(payload)).unwrap();
+      dispatch(fetchCartAction());
 
       toast({
         title: "Order placed",
