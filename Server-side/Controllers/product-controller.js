@@ -166,9 +166,40 @@ const updateProduct = catchAsync(async (req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
+| Get Admin Analytics 
+|--------------------------------------------------------------------------
+*/
+
+const getAdminAnalytics = catchAsync(async (req, res, next) => {
+    // Fetch Best Sellers (Top 5 Checkout)
+    const bestSellers = await Product.find({ soldCount: { $gt: 0 } })
+        .sort({ soldCount: -1 })
+        .limit(5)
+        .select("name soldCount brand category artNo slug");
+
+    // Fetch Most Wished (Top 5 Wishlisted)
+    const mostWished = await Product.find({ wishCount: { $gt: 0 } })
+        .sort({ wishCount: -1 })
+        .limit(5)
+        .select("name wishCount soldCount brand category artNo slug");
+
+    res.status(200).json({
+        success: true,
+        message: "Analytics fetched successfully",
+        analytics: {
+            bestSellers,
+            mostWished
+        }
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
 | Delete Product (with image cleanup & transaction)
 |--------------------------------------------------------------------------
 */
+
 
 const deleteProduct = catchAsync(async (req, res, next) => {
     const productSlug = req.params.slug;
@@ -224,5 +255,6 @@ module.exports = {
     getSingleProduct,
     addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getAdminAnalytics
 };

@@ -30,6 +30,7 @@ import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
+import ProductDetails from "./pages/shopping-view/ProductDetails";
 
 // unauthorized page (access control)
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -110,6 +111,7 @@ function App() {
           <Route path="account" element={<Account />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
+          <Route path="product/:slug" element={<ProductDetails />} />
         </Route>
 
         {/* OTHER ROUTES */}

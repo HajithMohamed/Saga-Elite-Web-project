@@ -1,8 +1,40 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock } from 'lucide-react'
+import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock, Heart, Award } from 'lucide-react'
+import axios from 'axios'
+import { useToast } from "@/hooks/use-toast"
+
+const API_BASE = `${import.meta.env.VITE_API_URL}/v1`
 
 const AdminDashboard = () => {
+  const { toast } = useToast()
+  
+  const [bestSellers, setBestSellers] = useState([])
+  const [mostWished, setMostWished] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const { data } = await axios.get(`${API_BASE}/products/analytics`, {
+          withCredentials: true
+        });
+        setBestSellers(data.analytics.bestSellers || []);
+        setMostWished(data.analytics.mostWished || []);
+      } catch (error) {
+        toast({
+          title: "Error fetching analytics",
+          description: error.response?.data?.message || error.message,
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchAnalytics();
+  }, [toast])
+
   const stats = [
     { label: 'Total Sales', value: '$12,345', icon: <DollarSign className="h-6 w-6 text-[#D4AF37]" />, trend: '+12%' },
     { label: 'Active Orders', value: '45', icon: <ShoppingCart className="h-6 w-6 text-blue-400" />, trend: '5 pending' },
@@ -49,64 +81,76 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 bg-black/40 border border-gray-800 rounded-xl p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Most Checked Out / Best Sellers */}
+        <div className="bg-black/40 border border-gray-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-serif font-semibold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-[#D4AF37]" />
-              Recent Orders
+              <Award className="h-5 w-5 text-[#D4AF37]" />
+              Top Checkouts (Best Sellers)
             </h2>
-            <button className="text-sm text-[#D4AF37] hover:underline">View all</button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-gray-500 border-b border-gray-800 text-sm">
-                  <th className="pb-4 font-medium uppercase tracking-wider">Order ID</th>
-                  <th className="pb-4 font-medium uppercase tracking-wider">Customer</th>
-                  <th className="pb-4 font-medium uppercase tracking-wider">Status</th>
-                  <th className="pb-4 font-medium uppercase tracking-wider">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {recentOrders.map((order, idx) => (
-                  <tr key={idx} className="group hover:bg-white/5 transition-colors">
-                    <td className="py-4 font-mono text-sm text-[#D4AF37]">{order.id}</td>
-                    <td className="py-4 text-sm">{order.customer}</td>
-                    <td className="py-4">
-                      <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${
-                        order.status === 'Delivered' ? 'bg-green-500/10 text-green-500' :
-                        order.status === 'Processing' ? 'bg-yellow-500/10 text-yellow-500' :
-                        'bg-blue-500/10 text-blue-500'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm font-bold">{order.amount}</td>
+            {isLoading ? (
+              <p className="text-gray-500">Loading metrics...</p>
+            ) : bestSellers.length === 0 ? (
+              <p className="text-gray-500">No sales data recorded yet.</p>
+            ) : (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-800 text-sm">
+                    <th className="pb-4 font-medium uppercase tracking-wider">Product Name</th>
+                    <th className="pb-4 font-medium uppercase tracking-wider">Art No</th>
+                    <th className="pb-4 font-medium uppercase tracking-wider">Sold</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {bestSellers.map((item, idx) => (
+                    <tr key={item._id || idx} className="group hover:bg-white/5 transition-colors">
+                      <td className="py-4 text-sm font-medium">{item.name}</td>
+                      <td className="py-4 text-sm text-gray-400">{item.artNo}</td>
+                      <td className="py-4 text-sm font-bold text-[#D4AF37]">{item.soldCount} Units</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-black/40 border border-gray-800 rounded-xl p-6 h-fit">
-          <h2 className="text-xl font-serif font-semibold mb-6">Quick Actions</h2>
-          <div className="space-y-4">
-            <Link
-              to="/admin/product"
-              className="inline-flex w-full items-center justify-center py-3 px-4 bg-[#D4AF37] text-black font-bold uppercase text-xs tracking-widest rounded hover:bg-[#b8962d] transition-colors"
-            >
-              Add New Product
-            </Link>
-            <button className="w-full py-3 px-4 bg-transparent border border-gray-700 text-white font-bold uppercase text-xs tracking-widest rounded hover:border-[#D4AF37] transition-colors">
-              Create Collection
-            </button>
-            <button className="w-full py-3 px-4 bg-transparent border border-gray-700 text-white font-bold uppercase text-xs tracking-widest rounded hover:border-[#D4AF37] transition-colors font-sans">
-              Export Sales Report
-            </button>
+        {/* Most Wished */}
+        <div className="bg-black/40 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-serif font-semibold flex items-center gap-2">
+              <Heart className="h-5 w-5 text-[#e53e3e]" />
+              Most Wished Products
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            {isLoading ? (
+               <p className="text-gray-500">Loading metrics...</p>
+            ) : mostWished.length === 0 ? (
+              <p className="text-gray-500">No wishlist data recorded yet.</p>
+            ) : (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-500 border-b border-gray-800 text-sm">
+                    <th className="pb-4 font-medium uppercase tracking-wider">Product Name</th>
+                    <th className="pb-4 font-medium uppercase tracking-wider">Art No</th>
+                    <th className="pb-4 font-medium uppercase tracking-wider">Wishes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {mostWished.map((item, idx) => (
+                    <tr key={item._id || idx} className="group hover:bg-white/5 transition-colors">
+                      <td className="py-4 text-sm font-medium">{item.name}</td>
+                      <td className="py-4 text-sm text-gray-400">{item.artNo}</td>
+                      <td className="py-4 text-sm font-bold text-[#e53e3e]">{item.wishCount} Users</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
