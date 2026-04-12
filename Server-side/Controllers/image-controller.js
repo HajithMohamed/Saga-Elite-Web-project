@@ -725,6 +725,7 @@ module.exports = {
   getHeroImages,
   getAdImages,
   getLogoImages,
+  getCategoryLogoImages,
   getReviewImages,
   setPrimaryImage,
   deleteImage,

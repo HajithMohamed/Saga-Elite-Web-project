@@ -58,6 +58,14 @@ dropSchema.virtual("images", {
   match: { refModel: "Drop", isDeleted: false },
 });
 
+/* Virtual populate for products (only active ones) */
+dropSchema.virtual("products", {
+  ref: "Product",
+  localField: "_id",
+  foreignField: "drop",
+  match: { isActive: true },
+});
+
 dropSchema.set("toObject", { virtuals: true });
 dropSchema.set("toJSON", { virtuals: true });
 
