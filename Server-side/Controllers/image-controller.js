@@ -33,7 +33,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const uploadImages = catchAsync(async (req, res, next) => {
-  const imageData = filterObj(req.body, "refId", "refModel", "type");
+  const imageData = filterObj(req.body, "refId", "refModel", "type", "label");
 
   // Log upload attempt
   actionLogger.info({
