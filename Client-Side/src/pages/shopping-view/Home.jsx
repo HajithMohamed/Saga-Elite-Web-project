@@ -146,6 +146,8 @@ const Home = () => {
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
 
+  const normalizeCategoryLabel = (value = "") => value.toString().trim().toLowerCase();
+
   // Logout Handlers
   const handleLogout = () => {
     dispatch(logoutUserAction())
@@ -331,7 +333,9 @@ const Home = () => {
         <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
             {["Boys", "Girls", "Unisex"].map((cat, index) => {
-              const catLogo = categoryLogos.find((l) => l.label === cat);
+              const catLogo = categoryLogos.find(
+                (l) => normalizeCategoryLabel(l.label) === normalizeCategoryLabel(cat)
+              );
               return (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
