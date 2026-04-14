@@ -436,12 +436,25 @@ const getLogoImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const escapeRegex = (value) => {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 const getCategoryLogoImages = catchAsync(async (req, res, next) => {
-  const categoryLogoImages = await Image.find({
+  const filter = {
     refModel: "System",
     type: "category-logo",
     isDeleted: false,
-  }).sort({ order: 1 });
+  };
+
+  if (req.query.label) {
+    const normalizedLabel = String(req.query.label).trim();
+    if (normalizedLabel) {
+      filter.label = new RegExp(`^${escapeRegex(normalizedLabel)}$`, "i");
+    }
+  }
+
+  const categoryLogoImages = await Image.find(filter).sort({ order: 1 });
 
   if (!categoryLogoImages.length) {
     return next(new AppError("No category logo images found", 404));

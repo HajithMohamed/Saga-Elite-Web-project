@@ -40,6 +40,7 @@ const ImageUpload = ({
       file,
       url: URL.createObjectURL(file),
       isUploaded: false,
+      label,
     }));
 
     if (isMultiple) {
@@ -58,6 +59,7 @@ const ImageUpload = ({
       file,
       url: URL.createObjectURL(file),
       isUploaded: false,
+      label,
     }));
 
     if (isMultiple) {
@@ -195,6 +197,11 @@ const ImageUpload = ({
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
+      {label && (
+        <div className="inline-flex items-center rounded-full border border-[#D4AF37]/20 bg-[#111]/80 px-3 py-1 text-xs uppercase tracking-[0.2em] text-[#D4AF37]">
+          Upload category logo: {label}
+        </div>
+      )}
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
