@@ -8,7 +8,7 @@ import {
 } from "@/store/cart-slice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle } from "lucide-react";
 
 const Checkout = () => {
   const dispatch = useDispatch();
@@ -240,67 +240,116 @@ const Checkout = () => {
         {/* RIGHT: FORM */}
         <form
           onSubmit={handleSubmit}
-          className="bg-[#0d0d0d] p-6 rounded-3xl border border-[#222]"
+          className="bg-[#0a0a0a] p-6 lg:p-8 rounded-3xl border border-[#D4AF37]/20 shadow-2xl flex flex-col gap-6"
         >
-          <h2 className="text-xl font-bold mb-4">
-            Shipping Details
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-[#D4AF37] mb-6">Order Details</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Shipping Address</label>
+                <input
+                  name="shippingAddress"
+                  value={formData.shippingAddress}
+                  onChange={handleChange}
+                  placeholder="123 Example Street, City, Country"
+                  className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                />
+              </div>
 
-          <input
-            name="shippingAddress"
-            value={formData.shippingAddress}
-            onChange={handleChange}
-            placeholder="Shipping Address"
-            className="w-full p-3 mb-3 bg-black border border-gray-700 rounded-xl"
-          />
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Contact Number</label>
+                <input
+                  name="contactNumber"
+                  value={formData.contactNumber}
+                  onChange={handleChange}
+                  placeholder="+94 77 123 4567"
+                  className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                />
+              </div>
+            </div>
+          </div>
 
-          <input
-            name="contactNumber"
-            value={formData.contactNumber}
-            onChange={handleChange}
-            placeholder="Contact Number"
-            className="w-full p-3 mb-3 bg-black border border-gray-700 rounded-xl"
-          />
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-4">Payment Method</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Online Payment Card */}
+              <div 
+                onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'online' }))}
+                className={`cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
+                  formData.paymentMethod === 'online' 
+                    ? 'border-[#D4AF37] bg-[#D4AF37]/10' 
+                    : 'border-gray-800 bg-black/40 hover:bg-gray-900'
+                }`}
+              >
+                <CreditCard className={`w-8 h-8 ${formData.paymentMethod === 'online' ? 'text-[#D4AF37]' : 'text-gray-400'}`} />
+                <span className={`font-medium ${formData.paymentMethod === 'online' ? 'text-[#D4AF37]' : 'text-gray-300'}`}>Online Payment</span>
+                <span className="text-xs text-gray-500 text-center">PayHere / Google Pay<br/>Instantly confirmed</span>
+              </div>
 
-          <select
-            name="paymentMethod"
-            value={formData.paymentMethod}
-            onChange={handleChange}
-            className="w-full p-3 mb-3 bg-black border border-gray-700 rounded-xl"
-          >
-            <option value="online">Online Payment</option>
-            <option value="receipt">WhatsApp Receipt</option>
-          </select>
+              {/* Manual Payment Card */}
+              <div 
+                onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'receipt' }))}
+                className={`cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
+                  formData.paymentMethod === 'receipt' 
+                    ? 'border-[#D4AF37] bg-[#D4AF37]/10' 
+                    : 'border-gray-800 bg-black/40 hover:bg-gray-900'
+                }`}
+              >
+                <Building2 className={`w-8 h-8 ${formData.paymentMethod === 'receipt' ? 'text-[#D4AF37]' : 'text-gray-400'}`} />
+                <span className={`font-medium ${formData.paymentMethod === 'receipt' ? 'text-[#D4AF37]' : 'text-gray-300'}`}>Manual Transfer</span>
+                <span className="text-xs text-gray-500 text-center">Bank Transfer / Dep<br/>WhatsApp proof required</span>
+              </div>
+            </div>
 
-          {formData.paymentMethod === "receipt" && (
+            {formData.paymentMethod === "receipt" && (
+              <div className="mt-4 p-4 bg-black/40 border border-[#D4AF37]/30 rounded-2xl space-y-4">
+                <div className="text-sm text-gray-300">
+                  <p className="font-semibold text-[#D4AF37] mb-2">Bank Details:</p>
+                  <p>Bank: <span className="text-white">Commercial Bank</span></p>
+                  <p>Account Name: <span className="text-white">Saga Elite</span></p>
+                  <p>Account No: <span className="text-white font-mono">1234567890</span></p>
+                  <p>Branch: <span className="text-white">Colombo 01</span></p>
+                  <p className="mt-3 text-xs text-gray-400 p-2 bg-[#D4AF37]/10 rounded-lg">Please complete the transfer and provide the reference number or upload your payment proof to our WhatsApp.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">WhatsApp / Payment Reference</label>
+                  <input
+                    name="receiptInfo"
+                    value={formData.receiptInfo}
+                    onChange={handleChange}
+                    placeholder="Enter Reference No. / Details"
+                    className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+             <label className="block text-sm font-medium text-gray-400 mb-1">Additional Notes</label>
             <textarea
-              name="receiptInfo"
-              value={formData.receiptInfo}
+              name="notes"
+              value={formData.notes}
               onChange={handleChange}
-              placeholder="Receipt details"
-              className="w-full p-3 mb-3 bg-black border border-gray-700 rounded-xl"
+              placeholder="Special instructions for delivery (optional)"
+              rows={2}
+              className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
             />
-          )}
-
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Notes (optional)"
-            className="w-full p-3 mb-3 bg-black border border-gray-700 rounded-xl"
-          />
+          </div>
 
           {formError && (
-            <p className="text-red-400 text-sm mb-3">
-              {formError}
-            </p>
+            <div className="p-3 bg-red-950/30 border border-red-900 flex items-center gap-3 rounded-xl">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <p className="text-red-400 text-sm">{formError}</p>
+            </div>
           )}
 
           <button
             type="submit"
-            className="w-full bg-[#D4AF37] text-black font-bold py-3 rounded-full"
+            className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold text-lg py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] mt-2"
           >
-            Place Order
+            Complete Order (LKR {totalPrice || totalAmount})
           </button>
         </form>
       </div>
