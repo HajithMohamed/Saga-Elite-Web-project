@@ -1,9 +1,10 @@
 import React from 'react'
-import { Bell, Search, LogOut, Menu, User } from 'lucide-react'
+import { Search, LogOut, Menu, User } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
+import NotificationsDropdown from '@/components/common-components/NotificationsDropdown'
 
 const Header = () => {
   const dispatch = useDispatch()
@@ -38,13 +39,7 @@ const Header = () => {
       </div>
       
       <div className="flex items-center gap-6">
-        <button className="relative group p-2 text-gray-400 hover:text-white transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-black" />
-          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-[10px] text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-gray-700">
-            3 notifications
-          </div>
-        </button>
+        <NotificationsDropdown />
 
         <div className="flex items-center gap-4 border-l border-gray-800 pl-6 ml-2">
           <Link to="/admin/account" className="flex items-center gap-4 hover:opacity-80 transition-opacity">

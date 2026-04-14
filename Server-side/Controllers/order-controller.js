@@ -3,7 +3,11 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
+<<<<<<< HEAD
 const User = require("../Models/User");
+=======
+const { createNotification } = require("../Utils/notification-service");
+>>>>>>> 154e3b2ff145fac3242e3414364f8a17f09574db
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -138,6 +142,16 @@ const createOrder = catchAsync(async (req, res, next) => {
     session.endSession();
   }
 
+  await createNotification({
+    userId: req.userInfo._id,
+    type: "order",
+    title: "Order placed successfully",
+    message: `Your order ${createdOrder._id} has been placed and is ${createdOrder.status}.`,
+    entityRef: createdOrder._id,
+    entityType: "Order",
+    meta: { orderId: createdOrder._id },
+  });
+
   res.status(201).json({
     success: true,
     message: "Order placed successfully",
@@ -210,6 +224,16 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   await order.save({ validateModifiedOnly: true });
+
+  await createNotification({
+    userId: order.user,
+    type: "order",
+    title: "Order status updated",
+    message: `Your order ${order._id} status changed to ${order.status}.`,
+    entityRef: order._id,
+    entityType: "Order",
+    meta: { orderId: order._id, status: order.status },
+  });
 
   res.status(200).json({
     success: true,

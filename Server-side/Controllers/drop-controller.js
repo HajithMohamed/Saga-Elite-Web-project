@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const validator = require("validator");
+const { broadcastNotification } = require("../Utils/notification-service");
 
 
 /*
@@ -40,6 +41,18 @@ const createDrop = catchAsync(async (req, res, next) => {
         ...dropData,
         isPublished: true,
         isArchived: false,
+    });
+
+    await broadcastNotification({
+        type: "drop",
+        title: `New drop added: ${newDrop.name}`,
+        message: `${newDrop.name} is scheduled for release on ${new Date(
+            newDrop.releaseDate,
+        ).toLocaleDateString()}.`,
+        entityRef: newDrop._id,
+        entityType: "Drop",
+        meta: { dropSlug: newDrop.slug },
+        filter: { isActive: true },
     });
 
     res.status(201).json({

@@ -21,6 +21,7 @@ import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
+import NotificationsManager from "./pages/admin-view/NotificationsManager";
 
 
 // shopping page imports
@@ -30,7 +31,11 @@ import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
+<<<<<<< HEAD
 import ProductDetails from "./pages/shopping-view/ProductDetails";
+=======
+import NotificationsPage from "./pages/common/NotificationsPage";
+>>>>>>> 154e3b2ff145fac3242e3414364f8a17f09574db
 
 // unauthorized page (access control)
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -93,6 +98,7 @@ function App() {
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
+          <Route path="notifications" element={<NotificationsManager />} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops/>}/>
         </Route>
@@ -111,7 +117,11 @@ function App() {
           <Route path="account" element={<Account />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
+<<<<<<< HEAD
           <Route path="product/:slug" element={<ProductDetails />} />
+=======
+          <Route path="notifications" element={<NotificationsPage />} />
+>>>>>>> 154e3b2ff145fac3242e3414364f8a17f09574db
         </Route>
 
         {/* OTHER ROUTES */}
