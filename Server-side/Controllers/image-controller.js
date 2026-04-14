@@ -731,8 +731,43 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
   });
 });
 
+/* ==============================
+   Upload Receipt Image (Users)
+============================== */
+const uploadReceiptImage = catchAsync(async (req, res, next) => {
+  actionLogger.info({
+    action: "upload_receipt_attempt",
+    userId: req.userInfo ? req.userInfo._id : null,
+  });
+
+  if (!req.file) {
+    return next(new AppError("No receipt payload found", 400));
+  }
+
+  const result = await uploadToCloudinary(
+    req.file.buffer,
+    "saga-elite/receipts",
+    req.file.mimetype
+  );
+
+  actionLogger.info({
+    action: "receipt_upload_success",
+    userId: req.userInfo ? req.userInfo._id : null,
+    publicId: result.public_id,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Receipt uploaded successfully",
+    data: {
+      url: result.secure_url,
+    },
+  });
+});
+
 module.exports = {
   uploadImages,
+  uploadReceiptImage,
   getProductImages,
   getDropImages,
   getHeroImages,

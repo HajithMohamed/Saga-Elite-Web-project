@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   uploadImages,
+  uploadReceiptImage,
   getProductImages,
   getDropImages,
   getHeroImages,
@@ -29,6 +30,16 @@ router.post(
   adminMiddleware,
   upload.array("images", 10),
   uploadImages,
+);
+
+/* ==============================
+   Upload Receipt Image (Users)
+============================== */
+router.post(
+  "/upload-receipt",
+  authMiddleware,
+  upload.single("receipt"),
+  uploadReceiptImage
 );
 
 /* ==============================
