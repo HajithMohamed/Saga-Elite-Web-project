@@ -10,9 +10,17 @@ const {
 } = require("../Utils/notification-service");
 
 const getNotifications = catchAsync(async (req, res, next) => {
-  const userId = req.userInfo._id;
+  const userId = req.userInfo?._id;
 
-  await generateUpcomingRemindersForUser(userId);
+  if (!userId) {
+    return next(new AppError("User not authenticated. Please login first", 401));
+  }
+
+  try {
+    await generateUpcomingRemindersForUser(userId);
+  } catch (error) {
+    console.error("Failed to generate upcoming reminders:", error);
+  }
 
   const notifications = await Notification.find({ user: userId })
     .sort({ isRead: 1, createdAt: -1 })
