@@ -47,7 +47,7 @@ app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/google", googleAuthRoute);
 app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
-
+app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/orders", orderRoutes);
 
 app.use(globalErrorController);

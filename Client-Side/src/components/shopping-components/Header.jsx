@@ -4,6 +4,7 @@ import { ShoppingCart, User, Menu, LogOut, Settings, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUserAction } from '@/store/auth-slice';
 import { toast } from '@/hooks/use-toast';
+import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,6 +106,7 @@ const Header = () => {
 
         {/* Right: Icons */}
         <div className="flex items-center gap-6">
+          <NotificationsDropdown />
           <Link
             to="/shopping/checkout"
             className="relative text-white hover:text-[#D4AF37] transition-colors"

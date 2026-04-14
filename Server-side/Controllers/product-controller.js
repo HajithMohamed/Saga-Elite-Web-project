@@ -6,6 +6,7 @@ const Drop = require("../Models/Drop");
 const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
+const { broadcastNotification } = require("../Utils/notification-service");
 
 
 /*
@@ -94,6 +95,18 @@ const addProduct = catchAsync(async (req, res, next) => {
 
     const newlyCreatedProduct = await Product.create(productData);
 
+    if (newlyCreatedProduct.discountPercent > 0 || newlyCreatedProduct.isFeatured) {
+        await broadcastNotification({
+            type: "offer",
+            title: `Special offer: ${newlyCreatedProduct.name}`,
+            message: `${newlyCreatedProduct.name} is now available with a special offer. Check it out before it ends!`,
+            entityRef: newlyCreatedProduct._id,
+            entityType: "Product",
+            meta: { productSlug: newlyCreatedProduct.slug, discountPercent: newlyCreatedProduct.discountPercent },
+            filter: { isActive: true },
+        });
+    }
+
     res.status(201).json({
         success: true,
         message: "New product added successfully",
@@ -150,11 +163,35 @@ const updateProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
+    const shouldNotifyOffer =
+        (typeof productData.discountPercent !== "undefined" && product.discountPercent === 0 && productData.discountPercent > 0) ||
+        (typeof productData.isFeatured !== "undefined" && !product.isFeatured && productData.isFeatured === true);
+
     // Apply updates to the document
     Object.assign(product, productData);
 
     // save() triggers pre-save hooks (slug regen, totalStock recalc)
     await product.save({ validateModifiedOnly: true });
+
+    if (shouldNotifyOffer) {
+        const headline = productData.discountPercent > 0
+            ? `Special offer: ${product.name}`
+            : `Featured now: ${product.name}`;
+
+        const details = product.discountPercent > 0
+            ? `${product.name} now has a ${product.discountPercent}% discount.`
+            : `${product.name} is now featured in the collection.`;
+
+        await broadcastNotification({
+            type: "offer",
+            title: headline,
+            message: details,
+            entityRef: product._id,
+            entityType: "Product",
+            meta: { productSlug: product.slug, discountPercent: product.discountPercent },
+            filter: { isActive: true },
+        });
+    }
 
     res.status(200).json({
         success: true,
