@@ -58,6 +58,13 @@ module.exports = (err, req, res, next) => {
         err.message = `Invalid ${err.path}: ${err.value}`;
     }
 
+    // Convert auth token errors into 401 unauthorized responses
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+        err.statusCode = 401;
+        err.status = 'fail';
+        err.message = 'Authentication failed. Please log in again.';
+    }
+
     // Convert duplicate key errors into a client-friendly response
     if (err.code === 11000) {
         err.statusCode = 400;
