@@ -27,7 +27,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Contact number is required", 400));
   }
 
-  if (!paymentMethod || !["online", "receipt"].includes(paymentMethod)) {
+if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
     return next(new AppError("Invalid payment method", 400));
   }
 
