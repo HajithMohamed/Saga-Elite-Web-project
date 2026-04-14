@@ -119,10 +119,11 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
         shippingAddress: shippingAddress.trim(),
         contactNumber: contactNumber.trim(),
         paymentMethod,
-        receiptInfo: paymentMethod === "receipt" ? receiptInfo.trim() : undefined,
+        paymentProofUrl: (paymentMethod === "manual" && receiptInfo) ? receiptInfo.trim() : undefined,
         notes: notes?.trim(),
-        status: paymentMethod === "receipt" ? "pending" : "confirmed",
-        paymentStatus: paymentMethod === "receipt" ? "pending" : "paid",
+        status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
+        paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
+        expiresAt: ["manual", "cash"].includes(paymentMethod) ? new Date(Date.now() + 15 * 60000) : undefined,
       };
 
       const [orderDocument] = await Order.create([orderPayload], { session });
