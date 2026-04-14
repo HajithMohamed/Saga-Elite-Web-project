@@ -23,11 +23,10 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     shippingAddress: "",
     contactNumber: "",
-    paymentMethod: "online",
+    paymentMethod: "payhere",
     notes: "",
   });
 
-  const [selectedGateway, setSelectedGateway] = useState("payhere");
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -130,7 +129,7 @@ const Checkout = () => {
     }
 
     if (
-      formData.paymentMethod === "receipt" &&
+      formData.paymentMethod === "manual" &&
       !receiptFile
     ) {
       setFormError("Please upload a receipt for manual payment.");
@@ -142,14 +141,14 @@ const Checkout = () => {
 
     try {
       let uploadedUrl = "";
-      if (formData.paymentMethod === "receipt") {
+      if (formData.paymentMethod === "manual") {
         uploadedUrl = await uploadReceipt();
       }
 
       // Simulate online gateway processing if needed
-      if (formData.paymentMethod === "online") {
+      if (["payhere", "gpay", "card", "lankapay"].includes(formData.paymentMethod)) {
         toast({
-          title: `Processing via ${selectedGateway.toUpperCase()}`,
+          title: `Processing via ${formData.paymentMethod.toUpperCase()}`,
           description: "Redirecting to gateway environment...",
         });
         await new Promise(resolve => setTimeout(resolve, 1500)); // simulated latency
@@ -164,8 +163,8 @@ const Checkout = () => {
         shippingAddress: formData.shippingAddress,
         contactNumber: formData.contactNumber,
         paymentMethod: formData.paymentMethod,
-        receiptInfo:
-          formData.paymentMethod === "receipt"
+        paymentProofUrl:
+          formData.paymentMethod === "manual"
             ? uploadedUrl
             : "",
         notes: formData.notes,
@@ -325,113 +324,118 @@ const Checkout = () => {
 
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Payment Method</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Online Payment Card */}
-              <div 
-                onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'online' }))}
-                className={`cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
-                  formData.paymentMethod === 'online' 
-                    ? 'border-[#D4AF37] bg-[#D4AF37]/10' 
-                    : 'border-gray-800 bg-black/40 hover:bg-gray-900'
-                }`}
-              >
-                <CreditCard className={`w-8 h-8 ${formData.paymentMethod === 'online' ? 'text-[#D4AF37]' : 'text-gray-400'}`} />
-                <span className={`font-medium ${formData.paymentMethod === 'online' ? 'text-[#D4AF37]' : 'text-gray-300'}`}>Online Payment</span>
-                <span className="text-xs text-gray-500 text-center">PayHere / Google Pay<br/>Instantly confirmed</span>
-              </div>
-
-              {/* Manual Payment Card */}
-              <div 
-                onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'receipt' }))}
-                className={`cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
-                  formData.paymentMethod === 'receipt' 
-                    ? 'border-[#D4AF37] bg-[#D4AF37]/10' 
-                    : 'border-gray-800 bg-black/40 hover:bg-gray-900'
-                }`}
-              >
-                <Building2 className={`w-8 h-8 ${formData.paymentMethod === 'receipt' ? 'text-[#D4AF37]' : 'text-gray-400'}`} />
-                <span className={`font-medium ${formData.paymentMethod === 'receipt' ? 'text-[#D4AF37]' : 'text-gray-300'}`}>Manual Transfer</span>
-                <span className="text-xs text-gray-500 text-center">Bank Transfer / Dep<br/>WhatsApp proof required</span>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { id: "payhere", label: "PayHere", desc: "Fast & Secure", icon: <CreditCard className="w-6 h-6" /> },
+                { id: "gpay", label: "Google Pay", desc: "Quick Checkout", icon: <span className="text-xl">💳</span> },
+                { id: "card", label: "Card Payment", desc: "Visa/Mastercard", icon: <CreditCard className="w-6 h-6" /> },
+                { id: "lankapay", label: "LankaPay", desc: "Government Pay", icon: <Building2 className="w-6 h-6" /> },
+                { id: "manual", label: "Bank Transfer", desc: "Manual Payment", icon: <Building2 className="w-6 h-6" /> },
+                { id: "cash", label: "Cash Deposit", desc: "Offline Method", icon: <CreditCard className="w-6 h-6" /> }
+              ].map(method => (
+                <div 
+                  key={method.id}
+                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: method.id }))}
+                  className={`cursor-pointer border rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
+                    formData.paymentMethod === method.id 
+                      ? 'border-[#D4AF37] bg-[#D4AF37]/10 ring-1 ring-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)]' 
+                      : 'border-gray-800 bg-black/40 hover:bg-gray-900 group'
+                  }`}
+                >
+                  <div className={`${formData.paymentMethod === method.id ? 'text-[#D4AF37]' : 'text-gray-400 group-hover:text-gray-300'}`}>
+                    {method.icon}
+                  </div>
+                  <span className={`font-medium text-center ${formData.paymentMethod === method.id ? 'text-[#D4AF37]' : 'text-gray-300 group-hover:text-white'}`}>
+                    {method.label}
+                  </span>
+                  <span className="text-xs text-gray-500 text-center">{method.desc}</span>
+                </div>
+              ))}
             </div>
 
-            {/* payment sub options here */}
-            {formData.paymentMethod === "online" && (
-              <div className="mt-4 p-4 bg-black/40 border border-[#D4AF37]/30 rounded-2xl space-y-3 animation-fade-in">
-                <p className="font-semibold text-[#D4AF37] mb-1">Select Gateway:</p>
-                <div className="flex flex-col gap-3">
-                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'payhere' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="gateway" checked={selectedGateway === 'payhere'} onChange={() => setSelectedGateway('payhere')} className="accent-[#D4AF37]" />
-                      <span className="font-medium text-white">PayHere</span>
+            {formData.paymentMethod === "manual" && (
+              <div className="mt-6 p-6 bg-black/40 border border-[#D4AF37]/30 rounded-3xl space-y-6">
+                <div className="bg-[#111] border border-gray-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="space-y-3 flex-1 w-full">
+                    <h4 className="font-bold text-[#D4AF37] text-lg mb-2">Bank Details</h4>
+                    <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
+                      <span className="text-gray-400">Bank:</span>
+                      <span className="text-white font-medium">Commercial Bank</span>
+                      
+                      <span className="text-gray-400">Account Name:</span>
+                      <span className="text-white font-medium">Saga Elite Pvt Ltd</span>
+                      
+                      <span className="text-gray-400">Account No:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-mono text-base tracking-wider bg-black/50 px-2 py-1 rounded">123456789</span>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText("123456789");
+                            toast({ title: "Copied!", description: "Account number copied to clipboard." });
+                          }}
+                          className="text-xs bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black px-3 py-1 rounded-md transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      
+                      <span className="text-gray-400">Branch:</span>
+                      <span className="text-white font-medium">Colombo</span>
                     </div>
-                    <img src="https://static.payhere.lk/images/payhere_short_logo_white.png" alt="PayHere" className="h-6" />
-                  </label>
-                  
-                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'gpay' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="gateway" checked={selectedGateway === 'gpay'} onChange={() => setSelectedGateway('gpay')} className="accent-[#D4AF37]" />
-                      <span className="font-medium text-white">Google Pay</span>
+                  </div>
+                  <div className="w-32 h-32 bg-white rounded-xl p-2 flex items-center justify-center flex-shrink-0">
+                    {/* Placeholder for actual QR code image */}
+                    <div className="w-full h-full border-4 border-dashed border-gray-300 flex items-center justify-center text-center text-xs text-gray-500 font-bold bg-gray-50">
+                      QR CODE
                     </div>
-                    {/* fallback to icon if no standard gpay logo is handy */}
-                    <span className="text-xl">💳</span>
-                  </label>
-
-                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'card' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="gateway" checked={selectedGateway === 'card'} onChange={() => setSelectedGateway('card')} className="accent-[#D4AF37]" />
-                      <span className="font-medium text-white">Credit / Debit Card</span>
-                    </div>
-                    <div className="flex gap-2">
-                       <span className="text-[#D4AF37]/80 text-xl font-bold italic">VISA</span>
-                       <span className="text-red-500/80 text-xl font-bold italic">MC</span>
-                    </div>
-                  </label>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {formData.paymentMethod === "receipt" && (
-              <div className="mt-4 p-4 bg-black/40 border border-[#D4AF37]/30 rounded-2xl space-y-4">
-                <div className="text-sm text-gray-300">
-                  <p className="font-semibold text-[#D4AF37] mb-2">Bank Details:</p>
-                  <p>Bank: <span className="text-white">Commercial Bank</span></p>
-                  <p>Account Name: <span className="text-white">Saga Elite</span></p>
-                  <p>Account No: <span className="text-white font-mono">1234567890</span></p>
-                  <p>Branch: <span className="text-white">Colombo 01</span></p>
-                  <p className="mt-3 text-xs text-gray-400 p-2 bg-[#D4AF37]/10 rounded-lg">Please complete the transfer and provide the reference number or upload your payment proof to our WhatsApp.</p>
-                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Upload Payment Receipt</label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Upload Payment Proof</label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex-col cursor-pointer border-2 border-dashed border-gray-700 hover:border-[#D4AF37] bg-black/40 p-4 rounded-xl flex items-center justify-center gap-3 transition-colors"
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#D4AF37]'); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-[#D4AF37]'); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-[#D4AF37]');
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handleFileChange({ target: { files: [file] } });
+                    }}
+                    className="w-full flex-col cursor-pointer border-2 border-dashed border-gray-700 hover:border-[#D4AF37] bg-black/40 p-8 rounded-2xl flex items-center justify-center gap-4 transition-all duration-300 relative group overflow-hidden"
                   >
                     <input
                       type="file"
                       ref={fileInputRef}
                       className="hidden"
-                      accept="image/*,application/pdf"
+                      accept="image/jpeg,image/png,application/pdf"
                       onChange={handleFileChange}
                     />
                     {receiptPreview ? (
-                      <div className="relative">
+                      <div className="w-full relative flex justify-center">
                        {receiptFile?.type?.includes("image") ? (
-                         <img src={receiptPreview} alt="Receipt preview" className="h-32 object-contain rounded-md" />
+                         <img src={receiptPreview} alt="Receipt preview" className="max-h-48 object-contain rounded-xl shadow-lg border border-gray-800" />
                        ) : (
-                         <div className="h-32 flex flex-col items-center justify-center p-4 bg-gray-800 rounded-md">
-                           <span className="text-white font-bold">{receiptFile?.name}</span>
+                         <div className="h-32 w-full max-w-sm flex flex-col items-center justify-center p-6 bg-[#111] rounded-xl border border-gray-800">
+                           <UploadCloud className="w-10 h-10 text-[#D4AF37] mb-2" />
+                           <span className="text-white font-medium text-center truncate w-full px-4">{receiptFile?.name}</span>
                          </div>
                        )}
-                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-md">
-                         <span className="text-white font-bold text-sm bg-black px-2 py-1 rounded">Change</span>
+                       <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                         <span className="text-white font-medium bg-black/80 px-4 py-2 rounded-full backdrop-blur-sm border border-gray-700 hover:border-[#D4AF37] transition-colors">Change File</span>
                        </div>
                       </div>
                     ) : (
                       <>
-                        <UploadCloud className="w-8 h-8 text-gray-500" />
-                        <span className="text-gray-400 font-medium">Click to upload deposit slip / screenshot</span>
-                        <span className="text-xs text-gray-500">Max 5MB (JPG, PNG, PDF)</span>
+                        <div className="bg-[#D4AF37]/10 p-4 rounded-full group-hover:scale-110 transition-transform duration-300">
+                          <UploadCloud className="w-10 h-10 text-[#D4AF37]" />
+                        </div>
+                        <div className="text-center space-y-1">
+                          <h5 className="text-white font-medium text-lg lg:text-xl">Drag & Drop or Click to Upload</h5>
+                          <p className="text-gray-400 text-sm">Accepts JPG, PNG, PDF (Max 5MB)</p>
+                        </div>
                       </>
                     )}
                   </div>
