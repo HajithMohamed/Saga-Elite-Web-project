@@ -56,7 +56,7 @@ const Home = () => {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   
   const [logoImage, setLogoImage] = useState(null);
-  const [categoryLogos, setCategoryLogos] = useState([]);
+  const [categoryLogos, setCategoryLogos] = useState({ Boys: null, Girls: null, Unisex: null });
   const [adImage, setAdImage] = useState(null);
   const [activeProducts, setActiveProducts] = useState([]);
   const [archiveProducts, setArchiveProducts] = useState([]);
@@ -80,10 +80,12 @@ const Home = () => {
   useEffect(() => {
     const fetchHomepageData = async () => {
       try {
-        const [heroRes, logoRes, catLogoRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
+        const [heroRes, logoRes, boysRes, girlsRes, unisexRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
           axios.get(`${API_BASE}/image/get-hero-images`).catch(() => null),
           axios.get(`${API_BASE}/image/get-logo-images`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-category-logo-images`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Unisex`).catch(() => null),
           axios.get(`${API_BASE}/image/get-ad-images`).catch(() => null),
           axios.get(`${API_BASE}/products/get-all-products?status=active&limit=4`).catch(() => null),
           axios.get(`${API_BASE}/products/get-all-products?status=archive&limit=4`).catch(() => null),
@@ -96,9 +98,12 @@ const Home = () => {
         if (logoRes?.data?.images?.length) {
           setLogoImage(logoRes.data.images[0]);
         }
-        if (catLogoRes?.data?.images?.length) {
-          setCategoryLogos(catLogoRes.data.images);
-        }
+
+        setCategoryLogos({
+          Boys: boysRes?.data?.images?.[0] || null,
+          Girls: girlsRes?.data?.images?.[0] || null,
+          Unisex: unisexRes?.data?.images?.[0] || null,
+        });
         if (adRes?.data?.images?.length) {
           setAdImage(adRes.data.images[0]);
         }
@@ -145,8 +150,6 @@ const Home = () => {
   const heroSrc = heroImages.length > 0 ? heroImages[currentHeroIndex]?.url : "/LOGO.png";
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
-
-  const normalizeCategoryLabel = (value = "") => value.toString().trim().toLowerCase();
 
   // Logout Handlers
   const handleLogout = () => {
@@ -333,9 +336,7 @@ const Home = () => {
         <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
             {["Boys", "Girls", "Unisex"].map((cat, index) => {
-              const catLogo = categoryLogos.find(
-                (l) => normalizeCategoryLabel(l.label) === normalizeCategoryLabel(cat)
-              );
+              const catLogo = categoryLogos[cat];
               return (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
