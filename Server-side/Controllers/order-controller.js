@@ -28,7 +28,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Contact number is required", 400));
   }
 
-  if (!paymentMethod || !["online", "receipt"].includes(paymentMethod)) {
+if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
     return next(new AppError("Invalid payment method", 400));
   }
 
@@ -120,10 +120,11 @@ const createOrder = catchAsync(async (req, res, next) => {
         shippingAddress: shippingAddress.trim(),
         contactNumber: contactNumber.trim(),
         paymentMethod,
-        receiptInfo: paymentMethod === "receipt" ? receiptInfo.trim() : undefined,
+        paymentProofUrl: (paymentMethod === "manual" && receiptInfo) ? receiptInfo.trim() : undefined,
         notes: notes?.trim(),
-        status: paymentMethod === "receipt" ? "pending" : "confirmed",
-        paymentStatus: paymentMethod === "receipt" ? "pending" : "paid",
+        status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
+        paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
+        expiresAt: ["manual", "cash"].includes(paymentMethod) ? new Date(Date.now() + 15 * 60000) : undefined,
       };
 
       const [orderDocument] = await Order.create([orderPayload], { session });
