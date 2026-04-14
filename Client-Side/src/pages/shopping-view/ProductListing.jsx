@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { addToCartAction, addToWishlistAction, removeFromWishlistAction } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
