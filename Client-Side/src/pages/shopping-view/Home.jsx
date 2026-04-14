@@ -253,7 +253,7 @@ const Home = () => {
                 animate={{ opacity: 0.6, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 2, ease: "easeInOut" }}
-                className="absolute inset-0 w-full h-full object-cover grayscale"
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </AnimatePresence>
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
@@ -357,7 +357,7 @@ const Home = () => {
                           transition={{ type: "spring", stiffness: 300, damping: 20 }}
                           src={catLogo.url}
                           alt={`${cat} Collection`}
-                          className="h-full w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
+                          className="h-full w-full object-contain transition-all duration-700"
                         />
                       ) : (
                         <div className="text-4xl font-serif text-[#D4AF37] opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">{cat[0]}</div>
@@ -441,7 +441,7 @@ const Home = () => {
               transition={{ duration: 1.5, ease: "easeOut" }}
               src={adSrc}
               alt="Atelier studio"
-              className="w-full h-full object-cover grayscale"
+              className="w-full h-full object-cover"
             />
           </div>
         </motion.section>
