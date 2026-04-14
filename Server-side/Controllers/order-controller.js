@@ -3,11 +3,8 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
-<<<<<<< HEAD
 const User = require("../Models/User");
-=======
 const { createNotification } = require("../Utils/notification-service");
->>>>>>> 154e3b2ff145fac3242e3414364f8a17f09574db
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
