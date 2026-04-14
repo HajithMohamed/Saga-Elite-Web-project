@@ -347,26 +347,33 @@ const Home = () => {
                 >
                   <Link
                     to={`/shopping/product-list?category=${cat.toLowerCase()}`}
-                    className="group relative flex flex-col items-center justify-center p-12 border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-700 overflow-hidden"
+                    className="group relative flex flex-col items-center justify-center min-h-[350px] border border-white/5 bg-black hover:bg-white/5 transition-all duration-700 overflow-hidden"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                    <div className="relative z-10 h-32 w-32 mb-8 flex items-center justify-center">
-                      {catLogo ? (
+                    {catLogo && (
+                      <div className="absolute inset-0 z-0">
                         <motion.img
-                          whileHover={{ scale: 1.1 }}
+                          whileHover={{ scale: 1.05 }}
                           transition={{ type: "spring", stiffness: 300, damping: 20 }}
                           src={catLogo.url}
                           alt={`${cat} Collection`}
-                          className="h-full w-full object-contain transition-all duration-700"
+                          className="h-full w-full object-cover transition-all duration-700"
                         />
-                      ) : (
-                        <div className="text-4xl font-serif text-[#D4AF37] opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500">{cat[0]}</div>
+                      </div>
+                    )}
+                    
+                    <div className={`absolute inset-0 z-0 bg-black/60 group-hover:bg-black/40 transition-colors duration-700 ${!catLogo ? 'hidden' : ''}`} />
+                    
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                      {!catLogo && (
+                        <div className="text-4xl font-serif text-[#D4AF37] opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 mb-8">
+                          {cat[0]}
+                        </div>
                       )}
+                      <h3 className="font-sans text-xs uppercase tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-500">
+                        {cat}
+                      </h3>
+                      <div className="mt-4 w-0 group-hover:w-12 h-px bg-[#D4AF37] transition-all duration-500" />
                     </div>
-                    <h3 className="relative z-10 font-sans text-xs uppercase tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-500">
-                      {cat}
-                    </h3>
-                    <div className="mt-4 w-0 group-hover:w-12 h-px bg-[#D4AF37] transition-all duration-500" />
                   </Link>
                 </motion.div>
               );
