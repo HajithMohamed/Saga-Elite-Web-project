@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -8,7 +9,9 @@ import {
 } from "@/store/cart-slice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
+
+const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 
 const Checkout = () => {
   const dispatch = useDispatch();
@@ -21,11 +24,15 @@ const Checkout = () => {
     shippingAddress: "",
     contactNumber: "",
     paymentMethod: "online",
-    receiptInfo: "",
     notes: "",
   });
 
+  const [selectedGateway, setSelectedGateway] = useState("payhere");
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [formError, setFormError] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchCartAction());
@@ -80,6 +87,34 @@ const Checkout = () => {
     0
   );
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setFormError("File size must be less than 5MB");
+        return;
+      }
+      setReceiptFile(file);
+      setReceiptPreview(URL.createObjectURL(file));
+      setFormError(null);
+    }
+  };
+
+  const uploadReceipt = async () => {
+    if (!receiptFile) return "";
+    const fd = new FormData();
+    fd.append("receipt", receiptFile);
+    try {
+      const res = await axios.post(`${API_BASE}/image/upload-receipt`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+      return res.data?.data?.url || "";
+    } catch (err) {
+      throw new Error(err.response?.data?.message || "Failed to upload receipt");
+    }
+  };
+
   // ---------------- ORDER SUBMIT ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,15 +131,30 @@ const Checkout = () => {
 
     if (
       formData.paymentMethod === "receipt" &&
-      !formData.receiptInfo
+      !receiptFile
     ) {
-      setFormError("Please provide receipt details.");
+      setFormError("Please upload a receipt for manual payment.");
       return;
     }
 
     setFormError(null);
+    setIsUploading(true);
 
     try {
+      let uploadedUrl = "";
+      if (formData.paymentMethod === "receipt") {
+        uploadedUrl = await uploadReceipt();
+      }
+
+      // Simulate online gateway processing if needed
+      if (formData.paymentMethod === "online") {
+        toast({
+          title: `Processing via ${selectedGateway.toUpperCase()}`,
+          description: "Redirecting to gateway environment...",
+        });
+        await new Promise(resolve => setTimeout(resolve, 1500)); // simulated latency
+      }
+
       const payload = {
         items: items.map((item) => ({
           productId: item.productId,
@@ -116,7 +166,7 @@ const Checkout = () => {
         paymentMethod: formData.paymentMethod,
         receiptInfo:
           formData.paymentMethod === "receipt"
-            ? formData.receiptInfo
+            ? uploadedUrl
             : "",
         notes: formData.notes,
       };
@@ -137,6 +187,9 @@ const Checkout = () => {
         description: err?.message || "Try again later.",
         variant: "destructive",
       });
+      setFormError(err?.message || "Checkout failed");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -302,6 +355,42 @@ const Checkout = () => {
               </div>
             </div>
 
+            {/* payment sub options here */}
+            {formData.paymentMethod === "online" && (
+              <div className="mt-4 p-4 bg-black/40 border border-[#D4AF37]/30 rounded-2xl space-y-3 animation-fade-in">
+                <p className="font-semibold text-[#D4AF37] mb-1">Select Gateway:</p>
+                <div className="flex flex-col gap-3">
+                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'payhere' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
+                    <div className="flex items-center gap-3">
+                      <input type="radio" name="gateway" checked={selectedGateway === 'payhere'} onChange={() => setSelectedGateway('payhere')} className="accent-[#D4AF37]" />
+                      <span className="font-medium text-white">PayHere</span>
+                    </div>
+                    <img src="https://static.payhere.lk/images/payhere_short_logo_white.png" alt="PayHere" className="h-6" />
+                  </label>
+                  
+                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'gpay' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
+                    <div className="flex items-center gap-3">
+                      <input type="radio" name="gateway" checked={selectedGateway === 'gpay'} onChange={() => setSelectedGateway('gpay')} className="accent-[#D4AF37]" />
+                      <span className="font-medium text-white">Google Pay</span>
+                    </div>
+                    {/* fallback to icon if no standard gpay logo is handy */}
+                    <span className="text-xl">💳</span>
+                  </label>
+
+                  <label className={`cursor-pointer flex items-center justify-between p-3 border rounded-xl transition-all ${selectedGateway === 'card' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-gray-800 bg-black'}`}>
+                    <div className="flex items-center gap-3">
+                      <input type="radio" name="gateway" checked={selectedGateway === 'card'} onChange={() => setSelectedGateway('card')} className="accent-[#D4AF37]" />
+                      <span className="font-medium text-white">Credit / Debit Card</span>
+                    </div>
+                    <div className="flex gap-2">
+                       <span className="text-[#D4AF37]/80 text-xl font-bold italic">VISA</span>
+                       <span className="text-red-500/80 text-xl font-bold italic">MC</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {formData.paymentMethod === "receipt" && (
               <div className="mt-4 p-4 bg-black/40 border border-[#D4AF37]/30 rounded-2xl space-y-4">
                 <div className="text-sm text-gray-300">
@@ -313,14 +402,39 @@ const Checkout = () => {
                   <p className="mt-3 text-xs text-gray-400 p-2 bg-[#D4AF37]/10 rounded-lg">Please complete the transfer and provide the reference number or upload your payment proof to our WhatsApp.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">WhatsApp / Payment Reference</label>
-                  <input
-                    name="receiptInfo"
-                    value={formData.receiptInfo}
-                    onChange={handleChange}
-                    placeholder="Enter Reference No. / Details"
-                    className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
-                  />
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Upload Payment Receipt</label>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex-col cursor-pointer border-2 border-dashed border-gray-700 hover:border-[#D4AF37] bg-black/40 p-4 rounded-xl flex items-center justify-center gap-3 transition-colors"
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*,application/pdf"
+                      onChange={handleFileChange}
+                    />
+                    {receiptPreview ? (
+                      <div className="relative">
+                       {receiptFile?.type?.includes("image") ? (
+                         <img src={receiptPreview} alt="Receipt preview" className="h-32 object-contain rounded-md" />
+                       ) : (
+                         <div className="h-32 flex flex-col items-center justify-center p-4 bg-gray-800 rounded-md">
+                           <span className="text-white font-bold">{receiptFile?.name}</span>
+                         </div>
+                       )}
+                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-md">
+                         <span className="text-white font-bold text-sm bg-black px-2 py-1 rounded">Change</span>
+                       </div>
+                      </div>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-8 h-8 text-gray-500" />
+                        <span className="text-gray-400 font-medium">Click to upload deposit slip / screenshot</span>
+                        <span className="text-xs text-gray-500">Max 5MB (JPG, PNG, PDF)</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -347,9 +461,11 @@ const Checkout = () => {
 
           <button
             type="submit"
-            className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold text-lg py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] mt-2"
+            disabled={isUploading}
+            className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold text-lg py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] mt-2 flex items-center justify-center gap-2"
           >
-            Complete Order (LKR {totalPrice || totalAmount})
+            {isUploading ? <Loader2 className="animate-spin w-5 h-5" /> : null}
+            {isUploading ? "Processing..." : `Complete Order (LKR ${totalPrice || totalAmount})`}
           </button>
         </form>
       </div>
