@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock, Heart, Award } from 'lucide-react'
+import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock, Heart, Award, MessageSquare } from 'lucide-react'
 import axios from 'axios'
 import { useToast } from "@/hooks/use-toast"
 
@@ -58,6 +58,39 @@ const AdminDashboard = () => {
         <div className="bg-[#D4AF37]/10 px-4 py-2 rounded border border-[#D4AF37]/20 flex items-center gap-2">
           <Clock className="h-4 w-4 text-[#D4AF37]" />
           <span className="text-sm font-medium text-[#D4AF37]">March 1, 2026</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-black/40 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-serif font-semibold text-white">Admin Shortcuts</h2>
+              <p className="text-sm text-gray-400">Quick access to management pages.</p>
+            </div>
+            <Link
+              to="/admin/notifications"
+              className="text-xs uppercase tracking-[0.22em] text-[#D4AF37] hover:text-white transition"
+            >
+              Manage notifications
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/admin/notifications"
+              className="group rounded-3xl border border-gray-800 bg-[#0b0b0b] p-5 transition hover:border-[#D4AF37] hover:bg-[#111111]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111111] text-[#D4AF37] transition group-hover:bg-[#D4AF37] group-hover:text-black">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-400">Notification Management</p>
+                <h3 className="mt-2 text-lg font-semibold text-white">Send announcements</h3>
+                <p className="mt-3 text-sm text-gray-500">Create admin messages and broadcast them to active users.</p>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
 
