@@ -1,22 +1,25 @@
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const OrderTracking = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-surface text-on-surface min-h-screen">
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-none shadow-sm shadow-slate-200/50">
         <div className="flex justify-between items-center w-full px-8 py-6 max-w-screen-2xl mx-auto">
-          <div className="font-manrope text-xl font-black tracking-[0.2em] text-slate-950 dark:text-white uppercase">ARCHITECT</div>
+          <Link to="/shopping/home" className="font-manrope text-xl font-black tracking-[0.2em] text-slate-950 dark:text-white uppercase">ARCHITECT</Link>
           <div className="hidden md:flex items-center space-x-12">
-            <a className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" href="#">Collections</a>
-            <a className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" href="#">Curated</a>
-            <a className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" href="#">Wishlist</a>
-            <a className="font-manrope font-light tracking-tight text-slate-950 dark:text-white border-b border-slate-950 dark:border-white pb-1 transition-opacity duration-300" href="#">Orders</a>
+            <Link className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" to="/shopping/home">Collections</Link>
+            <Link className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" to="/shopping/home">Curated</Link>
+            <Link className="font-manrope font-light tracking-tight text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-opacity duration-300" to="/shopping/wishlist">Wishlist</Link>
+            <Link className="font-manrope font-light tracking-tight text-slate-950 dark:text-white border-b border-slate-950 dark:border-white pb-1 transition-opacity duration-300" to="/shopping/account">Orders</Link>
           </div>
           <div className="flex items-center space-x-6">
-            <button className="hover:opacity-70 transition-opacity duration-300 scale-95 active:scale-100 transition-transform">
+            <button onClick={() => navigate('/shopping/cart')} className="hover:opacity-70 transition-opacity duration-300 scale-95 active:scale-100 transition-transform">
               <span className="material-symbols-outlined text-slate-950 dark:text-white" data-icon="shopping_bag">shopping_bag</span>
             </button>
-            <button className="hover:opacity-70 transition-opacity duration-300 scale-95 active:scale-100 transition-transform">
+            <button onClick={() => navigate('/shopping/account')} className="hover:opacity-70 transition-opacity duration-300 scale-95 active:scale-100 transition-transform">
               <span className="material-symbols-outlined text-slate-950 dark:text-white" data-icon="person">person</span>
             </button>
           </div>

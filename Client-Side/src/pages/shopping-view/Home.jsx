@@ -215,10 +215,16 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="flex items-center gap-6 text-[#D4AF37]"
           >
+            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/wishlist")}>
+              <span className="material-symbols-outlined">favorite</span>
+            </button>
+            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/notifications")}>
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
             <button className="hover:opacity-80 transition-opacity" onClick={handleProfileClick}>
               <span className="material-symbols-outlined">person</span>
             </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/checkout")}>
+            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/cart")}>
               <span className="material-symbols-outlined">shopping_bag</span>
             </button>
           </motion.div>
