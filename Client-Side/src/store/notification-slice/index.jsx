@@ -57,11 +57,77 @@ export const sendAdminNotification = createAsyncThunk(
   },
 );
 
+export const fetchAdminNotifications = createAsyncThunk(
+  "notifications/fetchAdminNotifications",
+  async (params = {}, thunkAPI) => {
+    try {
+      const query = new URLSearchParams();
+
+      if (params.page) query.append("page", params.page);
+      if (params.limit) query.append("limit", params.limit);
+      if (params.search) query.append("search", params.search);
+      if (params.type) query.append("type", params.type);
+      if (typeof params.isRead !== "undefined") query.append("isRead", params.isRead);
+      if (params.userEmail) query.append("userEmail", params.userEmail);
+
+      const response = await axios.get(
+        `${API_BASE}/notifications/admin?${query.toString()}`,
+        {
+          withCredentials: true,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  },
+);
+
+export const updateAdminNotification = createAsyncThunk(
+  "notifications/updateAdminNotification",
+  async ({ notificationId, payload }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/notifications/admin/${notificationId}`,
+        payload,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  },
+);
+
+export const deleteAdminNotification = createAsyncThunk(
+  "notifications/deleteAdminNotification",
+  async (notificationId, thunkAPI) => {
+    try {
+      const response = await axios.delete(
+        `${API_BASE}/notifications/admin/${notificationId}`,
+        {
+          withCredentials: true,
+        },
+      );
+      return { ...response.data, notificationId };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  },
+);
+
 const initialState = {
   items: [],
   unreadCount: 0,
+  adminItems: [],
+  adminPagination: {},
   isLoading: false,
+  adminIsLoading: false,
   error: null,
+  adminError: null,
 };
 
 const notificationSlice = createSlice({
@@ -107,6 +173,54 @@ const notificationSlice = createSlice({
       .addCase(sendAdminNotification.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchAdminNotifications.pending, (state) => {
+        state.adminIsLoading = true;
+        state.adminError = null;
+      })
+      .addCase(fetchAdminNotifications.fulfilled, (state, action) => {
+        state.adminIsLoading = false;
+        state.adminItems = action.payload.data.notifications || [];
+        state.adminPagination = action.payload.data.pagination || {};
+      })
+      .addCase(fetchAdminNotifications.rejected, (state, action) => {
+        state.adminIsLoading = false;
+        state.adminError = action.payload;
+      })
+      .addCase(updateAdminNotification.pending, (state) => {
+        state.adminIsLoading = true;
+        state.adminError = null;
+      })
+      .addCase(updateAdminNotification.fulfilled, (state, action) => {
+        state.adminIsLoading = false;
+        const updated = action.payload.data;
+        state.adminItems = state.adminItems.map((notification) =>
+          notification._id === updated._id ? updated : notification,
+        );
+      })
+      .addCase(updateAdminNotification.rejected, (state, action) => {
+        state.adminIsLoading = false;
+        state.adminError = action.payload;
+      })
+      .addCase(deleteAdminNotification.pending, (state) => {
+        state.adminIsLoading = true;
+        state.adminError = null;
+      })
+      .addCase(deleteAdminNotification.fulfilled, (state, action) => {
+        state.adminIsLoading = false;
+        state.adminItems = state.adminItems.filter(
+          (notification) => notification._id !== action.payload.notificationId,
+        );
+        if (typeof state.adminPagination.totalCount === "number") {
+          state.adminPagination.totalCount = Math.max(
+            0,
+            state.adminPagination.totalCount - 1,
+          );
+        }
+      })
+      .addCase(deleteAdminNotification.rejected, (state, action) => {
+        state.adminIsLoading = false;
+        state.adminError = action.payload;
       });
   },
 });
