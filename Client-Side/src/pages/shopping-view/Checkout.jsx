@@ -23,8 +23,15 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     shippingAddress: "",
     contactNumber: "",
-    paymentMethod: "payhere",
+    paymentMethod: "manual",
     notes: "",
+  });
+
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: "",
+    expiryDate: "",
+    cvv: "",
+    cardholderName: "",
   });
 
   const [receiptFile, setReceiptFile] = useState(null);
@@ -81,6 +88,30 @@ const Checkout = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCardChange = (e) => {
+    let { name, value } = e.target;
+    
+    // Auto-format card number with spaces every 4 digits
+    if (name === "cardNumber") {
+      value = value.replace(/\D/g, '').substring(0, 16);
+      value = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    }
+    
+    // Auto-format expiry date MM/YY
+    if (name === "expiryDate") {
+      value = value.replace(/\D/g, '').substring(0, 4);
+      if (value.length >= 3) {
+        value = `${value.substring(0, 2)}/${value.substring(2, 4)}`;
+      }
+    }
+    
+    if (name === "cvv") {
+      value = value.replace(/\D/g, '').substring(0, 4);
+    }
+
+    setCardDetails((prev) => ({ ...prev, [name]: value }));
+  };
+
   const totalAmount = items.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity,
     0
@@ -134,6 +165,37 @@ const Checkout = () => {
     ) {
       setFormError("Please upload a receipt for manual payment.");
       return;
+    }
+
+    if (formData.paymentMethod === "card") {
+      const { cardNumber, expiryDate, cvv, cardholderName } = cardDetails;
+      if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
+        setFormError("All card details are required.");
+        return;
+      }
+      const rawCardNum = cardNumber.replace(/\s+/g, "");
+      if (!/^\d{16}$/.test(rawCardNum)) {
+        setFormError("Invalid card number. It must be 16 digits.");
+        return;
+      }
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+        setFormError("Invalid expiry date format. Use MM/YY.");
+        return;
+      }
+      const [expMonth, expYear] = expiryDate.split("/");
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = parseInt(now.getFullYear().toString().slice(-2), 10);
+      const expM = parseInt(expMonth, 10);
+      const expY = parseInt(expYear, 10);
+      if (expY < currentYear || (expY === currentYear && expM < currentMonth)) {
+        setFormError("Card has expired.");
+        return;
+      }
+      if (!/^\d{3,4}$/.test(cvv)) {
+        setFormError("Invalid CVV format.");
+        return;
+      }
     }
 
     setFormError(null);
@@ -324,14 +386,10 @@ const Checkout = () => {
 
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Payment Method</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { id: "payhere", label: "PayHere", desc: "Fast & Secure", icon: <CreditCard className="w-6 h-6" /> },
-                { id: "gpay", label: "Google Pay", desc: "Quick Checkout", icon: <span className="text-xl">💳</span> },
-                { id: "card", label: "Card Payment", desc: "Visa/Mastercard", icon: <CreditCard className="w-6 h-6" /> },
-                { id: "lankapay", label: "LankaPay", desc: "Government Pay", icon: <Building2 className="w-6 h-6" /> },
                 { id: "manual", label: "Bank Transfer", desc: "Manual Payment", icon: <Building2 className="w-6 h-6" /> },
-                { id: "cash", label: "Cash Deposit", desc: "Offline Method", icon: <CreditCard className="w-6 h-6" /> }
+                { id: "card", label: "Card Payment", desc: "Visa/Mastercard", icon: <CreditCard className="w-6 h-6" /> }
               ].map(method => (
                 <div 
                   key={method.id}
@@ -438,6 +496,60 @@ const Checkout = () => {
                         </div>
                       </>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.paymentMethod === "card" && (
+              <div className="mt-6 p-6 bg-black/40 border border-[#D4AF37]/30 rounded-3xl space-y-4">
+                <h4 className="font-bold text-[#D4AF37] text-lg mb-2">Card Information</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Cardholder Name</label>
+                  <input
+                    name="cardholderName"
+                    value={cardDetails.cardholderName}
+                    onChange={(e) => setCardDetails(prev => ({ ...prev, cardholderName: e.target.value }))}
+                    placeholder="John Doe"
+                    className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Card Number</label>
+                  <input
+                    name="cardNumber"
+                    value={cardDetails.cardNumber}
+                    onChange={handleCardChange}
+                    placeholder="0000 0000 0000 0000"
+                    maxLength={19}
+                    className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Expiry Date</label>
+                    <input
+                      name="expiryDate"
+                      value={cardDetails.expiryDate}
+                      onChange={handleCardChange}
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">CVV</label>
+                    <input
+                      name="cvv"
+                      value={cardDetails.cvv}
+                      onChange={handleCardChange}
+                      placeholder="123"
+                      maxLength={4}
+                      className="w-full p-3 bg-black/40 border border-gray-800 rounded-xl focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                    />
                   </div>
                 </div>
               </div>
