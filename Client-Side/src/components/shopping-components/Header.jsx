@@ -110,7 +110,7 @@ const Header = () => {
         <div className="flex items-center gap-6">
           <NotificationsDropdown />
           <Link
-            to="/shopping/account"
+            to="/shopping/wishlist"
             className="relative text-white hover:text-[#D4AF37] transition-colors"
           >
             <Heart className="w-6 h-6" />
