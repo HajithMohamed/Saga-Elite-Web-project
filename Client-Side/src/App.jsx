@@ -33,6 +33,8 @@ import ProductDetails from "./pages/shopping-view/ProductDetails";
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
+import Wishlist from "./pages/shopping-view/Wishlist";
+import OrderTracking from "./pages/shopping-view/OrderTracking";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -117,6 +119,8 @@ function App() {
           <Route path="product/:slug" element={<ProductDetails />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="checkout-success" element={<OrderSuccess />} />
+          <Route path="wishlist" element={<Wishlist />} />
+          <Route path="order-tracking" element={<OrderTracking />} />
         </Route>
 
         {/* OTHER ROUTES */}
