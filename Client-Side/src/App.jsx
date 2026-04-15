@@ -31,6 +31,8 @@ import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
 import NotificationsPage from "./pages/common/NotificationsPage";
+import OrderSuccess from "./pages/shopping-view/OrderSuccess";
+import Cart from "./pages/shopping-view/Cart";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -109,10 +111,12 @@ function App() {
           <Route index element={<Navigate to="home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
           <Route path="product/:slug" element={<ProductDetails />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="checkout-success" element={<OrderSuccess />} />
         </Route>
 
         {/* OTHER ROUTES */}

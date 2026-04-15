@@ -121,7 +121,7 @@ const Header = () => {
             )}
           </Link>
           <Link
-            to="/shopping/checkout"
+            to="/shopping/cart"
             className="relative text-white hover:text-[#D4AF37] transition-colors"
           >
             <ShoppingCart className="w-6 h-6" />

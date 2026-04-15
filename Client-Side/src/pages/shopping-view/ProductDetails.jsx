@@ -14,6 +14,7 @@ const ProductDetails = () => {
   const dispatch = useDispatch();
 
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const cartItems = useSelector((state) => state.cart.cart.items);
 
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +22,7 @@ const ProductDetails = () => {
   const [selectedVariantSku, setSelectedVariantSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -73,11 +75,29 @@ const ProductDetails = () => {
   };
 
   const handleBuyNow = () => {
+    const selectedVariant = product.variants.find(v => v.sku === selectedVariantSku);
     if (!selectedVariant) return;
-    dispatch(addToCartAction({ productId: product._id, variantId: selectedVariant._id, quantity }))
-      .unwrap()
-      .then(() => navigate("/shopping/checkout"))
-      .catch(err => toast({ title: "Failed", description: err, variant: "destructive" }));
+
+    const isInCart = cartItems.some(item => 
+      item.product.id === product._id && item.variant.sku === selectedVariant.sku
+    );
+
+    if (isInCart) {
+      setShowBuyNowModal(true);
+    } else {
+      navigate("/shopping/checkout", { state: { buyNowItem: { product, variant: selectedVariant, quantity } } });
+    }
+  };
+
+  const handleViewCartSummary = () => {
+    setShowBuyNowModal(false);
+    navigate("/shopping/cart");
+  };
+
+  const handleProceedWithItem = () => {
+    setShowBuyNowModal(false);
+    const selectedVariant = product.variants.find(v => v.sku === selectedVariantSku);
+    navigate("/shopping/checkout", { state: { buyNowItem: { product, variant: selectedVariant, quantity } } });
   };
 
   const toggleWishlist = () => {
@@ -207,6 +227,33 @@ const ProductDetails = () => {
 
           </div>
         </div>
+
+        {/* Buy Now Modal */}
+        {showBuyNowModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#111] rounded-xl p-6 border border-gray-800 max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4">Product Already in Cart</h3>
+              <p className="text-gray-400 mb-6">
+                This product is already in your cart. Would you like to view your cart summary or proceed with purchasing this item only?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleViewCartSummary}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold transition-colors"
+                >
+                  View Cart Summary
+                </button>
+                <button
+                  onClick={handleProceedWithItem}
+                  className="flex-1 bg-[#D4AF37] hover:bg-[#F2CA50] text-black py-3 rounded-lg font-bold transition-colors"
+                >
+                  Buy This Item
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

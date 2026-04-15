@@ -12,9 +12,11 @@ const createOrder = catchAsync(async (req, res, next) => {
     shippingAddress,
     contactNumber,
     paymentMethod,
-    receiptInfo,
+    paymentProofUrl,
     notes,
   } = req.body;
+
+  console.log("Order creation request:", req.body);
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return next(new AppError("Order items are required", 400));
@@ -32,8 +34,8 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
     return next(new AppError("Invalid payment method", 400));
   }
 
-  if (paymentMethod === "receipt" && !receiptInfo?.trim()) {
-    return next(new AppError("Receipt information is required for WhatsApp payment", 400));
+  if (paymentMethod === "manual" && !paymentProofUrl?.trim()) {
+    return next(new AppError("Receipt information is required for manual payment", 400));
   }
 
   const session = await mongoose.startSession();
@@ -120,7 +122,7 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
         shippingAddress: shippingAddress.trim(),
         contactNumber: contactNumber.trim(),
         paymentMethod,
-        paymentProofUrl: (paymentMethod === "manual" && receiptInfo) ? receiptInfo.trim() : undefined,
+        paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
         notes: notes?.trim(),
         status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
         paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
