@@ -118,6 +118,11 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
+    wishCount: {
+      type: Number,
+      default: 0,
+    },
+
     isLimited: {
       type: Boolean,
       default: true,

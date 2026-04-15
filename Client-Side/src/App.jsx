@@ -1,4 +1,4 @@
-import { Route, Routes, Outlet } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
@@ -12,7 +12,6 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
 
-
 // admin page imports
 import AdminLayout from "./components/admin-components/Layout";
 import AdminDashboard from "./pages/admin-view/Dashboard";
@@ -21,7 +20,7 @@ import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
-
+import NotificationsManager from "./pages/admin-view/NotificationsManager";
 
 // shopping page imports
 import ShoppinLayout from "./components/shopping-components/Layout";
@@ -30,14 +29,17 @@ import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
+import ProductDetails from "./pages/shopping-view/ProductDetails";
+import NotificationsPage from "./pages/common/NotificationsPage";
+import OrderSuccess from "./pages/shopping-view/OrderSuccess";
+import Cart from "./pages/shopping-view/Cart";
 
-// unauthorized page (access control)
+// unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
 
-// checking authentication page import
+// checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
 import VerifyOtp from "./pages/auth/VerifyOtp";
-
 
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
@@ -59,7 +61,7 @@ function App() {
     <div>
       <Routes>
         <Route path="/" element={<Home />} />
-        
+
         {/* AUTH ROUTES */}
         <Route
           path="/auth"
@@ -75,7 +77,7 @@ function App() {
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="reset-password-otp" element={<VerifyResetOtp />} />
           <Route path="set-new-password" element={<SetNewPassword />} />
-          <Route path="verify-otp" element={<VerifyOtp/>}/>
+          <Route path="verify-otp" element={<VerifyOtp />} />
         </Route>
 
         {/* ADMIN ROUTES */}
@@ -92,8 +94,9 @@ function App() {
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
+          <Route path="notifications" element={<NotificationsManager />} />
           <Route path="account" element={<Account />} />
-          <Route path="drop" element={<AdminDrops/>}/>
+          <Route path="drop" element={<AdminDrops />} />
         </Route>
 
         {/* SHOPPING ROUTES */}
@@ -105,9 +108,15 @@ function App() {
             </CheckAuth>
           }
         >
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
+          <Route path="product/:slug" element={<ProductDetails />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="checkout-success" element={<OrderSuccess />} />
         </Route>
 
         {/* OTHER ROUTES */}

@@ -92,6 +92,20 @@ const userSchema = new mongoose.Schema(
         ref: "Product",
       },
     ],
+    addresses: [
+      {
+        label: { type: String, trim: true },
+        street: { type: String, required: true, trim: true },
+        city: { type: String, required: true, trim: true },
+        postalCode: { type: String, required: true, trim: true },
+        country: { type: String, required: true, trim: true, default: "Sri Lanka" },
+        isDefault: { type: Boolean, default: false }
+      }
+    ],
+    savedPaymentMethod: {
+      type: String,
+      enum: ["payhere", "gpay", "manual", "card", "lankapay", "cash"],
+    }
   },
   { timestamps: true }
 );

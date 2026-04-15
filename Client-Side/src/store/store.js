@@ -4,6 +4,7 @@ import dropReducer from "./admin/drop-slice";
 import productReducer from "./admin/product-slice";
 import orderReducer from "./order-slice";
 import cartReducer from "./cart-slice";
+import notificationReducer from "./notification-slice";
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     product: productReducer,
     order: orderReducer,
     cart: cartReducer,
+    notification: notificationReducer,
   },
 });
 

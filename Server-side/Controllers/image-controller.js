@@ -33,7 +33,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const uploadImages = catchAsync(async (req, res, next) => {
-  const imageData = filterObj(req.body, "refId", "refModel", "type");
+  const imageData = filterObj(req.body, "refId", "refModel", "type", "label");
 
   // Log upload attempt
   actionLogger.info({
@@ -436,12 +436,25 @@ const getLogoImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const escapeRegex = (value) => {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 const getCategoryLogoImages = catchAsync(async (req, res, next) => {
-  const categoryLogoImages = await Image.find({
+  const filter = {
     refModel: "System",
     type: "category-logo",
     isDeleted: false,
-  }).sort({ order: 1 });
+  };
+
+  if (req.query.label) {
+    const normalizedLabel = String(req.query.label).trim();
+    if (normalizedLabel) {
+      filter.label = new RegExp(`^${escapeRegex(normalizedLabel)}$`, "i");
+    }
+  }
+
+  const categoryLogoImages = await Image.find(filter).sort({ order: 1 });
 
   if (!categoryLogoImages.length) {
     return next(new AppError("No category logo images found", 404));
@@ -718,13 +731,49 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
   });
 });
 
+/* ==============================
+   Upload Receipt Image (Users)
+============================== */
+const uploadReceiptImage = catchAsync(async (req, res, next) => {
+  actionLogger.info({
+    action: "upload_receipt_attempt",
+    userId: req.userInfo ? req.userInfo._id : null,
+  });
+
+  if (!req.file) {
+    return next(new AppError("No receipt payload found", 400));
+  }
+
+  const result = await uploadToCloudinary(
+    req.file.buffer,
+    "saga-elite/receipts",
+    req.file.mimetype
+  );
+
+  actionLogger.info({
+    action: "receipt_upload_success",
+    userId: req.userInfo ? req.userInfo._id : null,
+    publicId: result.public_id,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Receipt uploaded successfully",
+    data: {
+      url: result.secure_url,
+    },
+  });
+});
+
 module.exports = {
   uploadImages,
+  uploadReceiptImage,
   getProductImages,
   getDropImages,
   getHeroImages,
   getAdImages,
   getLogoImages,
+  getCategoryLogoImages,
   getReviewImages,
   setPrimaryImage,
   deleteImage,

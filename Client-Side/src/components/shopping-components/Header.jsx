@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, LogOut, Settings, X } from 'lucide-react';
+import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUserAction } from '@/store/auth-slice';
 import { toast } from '@/hooks/use-toast';
+import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -13,7 +14,9 @@ const Header = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
+  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
   const cartCount = totalQuantity || 0;
+  const wishlistCount = wishlistItems?.length || 0;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -105,8 +108,20 @@ const Header = () => {
 
         {/* Right: Icons */}
         <div className="flex items-center gap-6">
+          <NotificationsDropdown />
           <Link
-            to="/shopping/checkout"
+            to="/shopping/account"
+            className="relative text-white hover:text-[#D4AF37] transition-colors"
+          >
+            <Heart className="w-6 h-6" />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/shopping/cart"
             className="relative text-white hover:text-[#D4AF37] transition-colors"
           >
             <ShoppingCart className="w-6 h-6" />

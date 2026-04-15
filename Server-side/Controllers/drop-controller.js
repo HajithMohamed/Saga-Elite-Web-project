@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const validator = require("validator");
+const { broadcastNotification } = require("../Utils/notification-service");
 
 
 /*
@@ -42,6 +43,18 @@ const createDrop = catchAsync(async (req, res, next) => {
         isArchived: false,
     });
 
+    await broadcastNotification({
+        type: "drop",
+        title: `New drop added: ${newDrop.name}`,
+        message: `${newDrop.name} is scheduled for release on ${new Date(
+            newDrop.releaseDate,
+        ).toLocaleDateString()}.`,
+        entityRef: newDrop._id,
+        entityType: "Drop",
+        meta: { dropSlug: newDrop.slug },
+        filter: { isActive: true },
+    });
+
     res.status(201).json({
         success: true,
         message: "New Drop created successfully",
@@ -67,7 +80,8 @@ const getAllDrops = catchAsync(async (req, res, next) => {
 
     const drops = await Drop.find(filter)
         .sort({ releaseDate: -1 })
-        .populate("images");
+        .populate("images")
+        .populate("products");
 
     res.status(200).json({
         success: true,

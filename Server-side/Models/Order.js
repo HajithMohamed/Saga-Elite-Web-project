@@ -89,17 +89,26 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["online", "receipt"],
+      enum: ["payhere", "gpay", "manual", "card", "lankapay", "cash"],
       required: true,
     },
-    receiptInfo: {
+    paymentProofUrl: {
       type: String,
       trim: true,
       maxlength: 1000,
     },
+    transactionId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    paymentProofHash: {
+      type: String,
+      trim: true,
+    },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"],
       default: "pending",
       index: true,
     },
@@ -113,9 +122,15 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    expiresAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
+
+// TTL Index for auto-expiring pending orders
+orderSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 

@@ -5,7 +5,7 @@ const User = require("../Models/User");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
-  const variant = product?.variants?.id(item.variant);
+  const variant = product?.variants?.find(v => v._id?.toString() === item.variant?.toString());
 
   if (!product || !variant) {
     return null;
@@ -338,6 +338,9 @@ const addToWishlist = catchAsync(async (req, res, next) => {
   user.wishlist.push(product._id);
   await user.save({ validateBeforeSave: false });
 
+  product.wishCount = (product.wishCount || 0) + 1;
+  await product.save({ validateBeforeSave: false });
+
   const updatedUser = await User.findById(req.userInfo.id)
     .populate({
       path: "wishlist",
@@ -374,8 +377,18 @@ const removeFromWishlist = catchAsync(async (req, res, next) => {
     (entry) => entry.toString() !== productId.toString()
   );
 
+  const wasRemoved = nextWishlist.length !== user.wishlist.length;
+
   user.wishlist = nextWishlist;
   await user.save({ validateBeforeSave: false });
+
+  if (wasRemoved) {
+    const product = await Product.findById(productId);
+    if (product) {
+      product.wishCount = Math.max((product.wishCount || 0) - 1, 0);
+      await product.save({ validateBeforeSave: false });
+    }
+  }
 
   const updatedUser = await User.findById(req.userInfo.id)
     .populate({

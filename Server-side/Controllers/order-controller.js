@@ -3,6 +3,8 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
+const User = require("../Models/User");
+const { createNotification } = require("../Utils/notification-service");
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -10,9 +12,11 @@ const createOrder = catchAsync(async (req, res, next) => {
     shippingAddress,
     contactNumber,
     paymentMethod,
-    receiptInfo,
+    paymentProofUrl,
     notes,
   } = req.body;
+
+  console.log("Order creation request:", req.body);
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return next(new AppError("Order items are required", 400));
@@ -26,12 +30,12 @@ const createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Contact number is required", 400));
   }
 
-  if (!paymentMethod || !["online", "receipt"].includes(paymentMethod)) {
+if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
     return next(new AppError("Invalid payment method", 400));
   }
 
-  if (paymentMethod === "receipt" && !receiptInfo?.trim()) {
-    return next(new AppError("Receipt information is required for WhatsApp payment", 400));
+  if (paymentMethod === "manual" && !paymentProofUrl?.trim()) {
+    return next(new AppError("Receipt information is required for manual payment", 400));
   }
 
   const session = await mongoose.startSession();
@@ -118,18 +122,35 @@ const createOrder = catchAsync(async (req, res, next) => {
         shippingAddress: shippingAddress.trim(),
         contactNumber: contactNumber.trim(),
         paymentMethod,
-        receiptInfo: paymentMethod === "receipt" ? receiptInfo.trim() : undefined,
+        paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
         notes: notes?.trim(),
-        status: paymentMethod === "receipt" ? "pending" : "confirmed",
-        paymentStatus: paymentMethod === "receipt" ? "pending" : "paid",
+        status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
+        paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
+        expiresAt: ["manual", "cash"].includes(paymentMethod) ? new Date(Date.now() + 15 * 60000) : undefined,
       };
 
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
+
+      const user = await User.findById(req.userInfo._id).session(session);
+      if (user) {
+        user.cart = [];
+        await user.save({ session, validateModifiedOnly: true });
+      }
     });
   } finally {
     session.endSession();
   }
+
+  await createNotification({
+    userId: req.userInfo._id,
+    type: "order",
+    title: "Order placed successfully",
+    message: `Your order ${createdOrder._id} has been placed and is ${createdOrder.status}.`,
+    entityRef: createdOrder._id,
+    entityType: "Order",
+    meta: { orderId: createdOrder._id },
+  });
 
   res.status(201).json({
     success: true,
@@ -203,6 +224,16 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   await order.save({ validateModifiedOnly: true });
+
+  await createNotification({
+    userId: order.user,
+    type: "order",
+    title: "Order status updated",
+    message: `Your order ${order._id} status changed to ${order.status}.`,
+    entityRef: order._id,
+    entityType: "Order",
+    meta: { orderId: order._id, status: order.status },
+  });
 
   res.status(200).json({
     success: true,

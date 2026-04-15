@@ -56,7 +56,7 @@ const Home = () => {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   
   const [logoImage, setLogoImage] = useState(null);
-  const [categoryLogos, setCategoryLogos] = useState([]);
+  const [categoryLogos, setCategoryLogos] = useState({ Boys: null, Girls: null, Unisex: null });
   const [adImage, setAdImage] = useState(null);
   const [activeProducts, setActiveProducts] = useState([]);
   const [archiveProducts, setArchiveProducts] = useState([]);
@@ -80,10 +80,12 @@ const Home = () => {
   useEffect(() => {
     const fetchHomepageData = async () => {
       try {
-        const [heroRes, logoRes, catLogoRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
+        const [heroRes, logoRes, boysRes, girlsRes, unisexRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
           axios.get(`${API_BASE}/image/get-hero-images`).catch(() => null),
           axios.get(`${API_BASE}/image/get-logo-images`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-category-logo-images`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Unisex`).catch(() => null),
           axios.get(`${API_BASE}/image/get-ad-images`).catch(() => null),
           axios.get(`${API_BASE}/products/get-all-products?status=active&limit=4`).catch(() => null),
           axios.get(`${API_BASE}/products/get-all-products?status=archive&limit=4`).catch(() => null),
@@ -96,9 +98,12 @@ const Home = () => {
         if (logoRes?.data?.images?.length) {
           setLogoImage(logoRes.data.images[0]);
         }
-        if (catLogoRes?.data?.images?.length) {
-          setCategoryLogos(catLogoRes.data.images);
-        }
+
+        setCategoryLogos({
+          Boys: boysRes?.data?.images?.[0] || null,
+          Girls: girlsRes?.data?.images?.[0] || null,
+          Unisex: unisexRes?.data?.images?.[0] || null,
+        });
         if (adRes?.data?.images?.length) {
           setAdImage(adRes.data.images[0]);
         }
@@ -244,11 +249,11 @@ const Home = () => {
                 key={currentHeroIndex} // Ensures re-triggering of animation when image changes
                 src={heroSrc}
                 alt="Hero background"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5 }}
-                className="absolute inset-0 w-full h-full object-cover grayscale"
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 0.6, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </AnimatePresence>
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
@@ -330,31 +335,47 @@ const Home = () => {
         {/* Category Logos Section */}
         <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto">
-            {["Boys", "Girls", "Unisex"].map((cat) => {
-              const catLogo = categoryLogos.find((l) => l.label === cat);
+            {["Boys", "Girls", "Unisex"].map((cat, index) => {
+              const catLogo = categoryLogos[cat];
               return (
-                <Link
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: index * 0.1 }}
                   key={cat}
-                  to={`/shopping/product-list?category=${cat.toLowerCase()}`}
-                  className="group relative flex flex-col items-center justify-center p-12 border border-white/5 bg-white/5 hover:bg-white/10 transition-all duration-700 overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                  <div className="relative z-10 h-32 w-32 mb-8 flex items-center justify-center">
-                    {catLogo ? (
-                      <img
-                        src={catLogo.url}
-                        alt={`${cat} Collection`}
-                        className="h-full w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700 scale-90 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="text-4xl font-serif text-[#D4AF37] opacity-50">{cat[0]}</div>
+                  <Link
+                    to={`/shopping/product-list?category=${cat.toLowerCase()}`}
+                    className="group relative flex flex-col items-center justify-center min-h-[350px] border border-white/5 bg-black hover:bg-white/5 transition-all duration-700 overflow-hidden"
+                  >
+                    {catLogo && (
+                      <div className="absolute inset-0 z-0">
+                        <motion.img
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          src={catLogo.url}
+                          alt={`${cat} Collection`}
+                          className="h-full w-full object-cover transition-all duration-700"
+                        />
+                      </div>
                     )}
-                  </div>
-                  <h3 className="relative z-10 font-sans text-xs uppercase tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-500">
-                    {cat}
-                  </h3>
-                  <div className="mt-4 w-0 group-hover:w-12 h-px bg-[#D4AF37] transition-all duration-500" />
-                </Link>
+                    
+                    <div className={`absolute inset-0 z-0 bg-black/60 group-hover:bg-black/40 transition-colors duration-700 ${!catLogo ? 'hidden' : ''}`} />
+                    
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                      {!catLogo && (
+                        <div className="text-4xl font-serif text-[#D4AF37] opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500 mb-8">
+                          {cat[0]}
+                        </div>
+                      )}
+                      <h3 className="font-sans text-xs uppercase tracking-[0.5em] text-white group-hover:text-[#D4AF37] transition-colors duration-500">
+                        {cat}
+                      </h3>
+                      <div className="mt-4 w-0 group-hover:w-12 h-px bg-[#D4AF37] transition-all duration-500" />
+                    </div>
+                  </Link>
+                </motion.div>
               );
             })}
           </div>
@@ -419,8 +440,16 @@ const Home = () => {
               Explore Our Atelier
             </button>
           </div>
-          <div className="relative min-h-[500px]">
-            <img src={adSrc} alt="Atelier studio" className="w-full h-full object-cover grayscale" />
+          <div className="relative min-h-[500px] overflow-hidden">
+            <motion.img
+              initial={{ opacity: 0, scale: 1.15 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              src={adSrc}
+              alt="Atelier studio"
+              className="w-full h-full object-cover"
+            />
           </div>
         </motion.section>
 
