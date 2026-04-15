@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   fetchCartAction,
   updateCartItemAction,
@@ -16,6 +16,7 @@ const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { items = [], totalPrice = 0, isLoading } =
     useSelector((state) => state.cart.cart);
@@ -40,12 +41,53 @@ const Checkout = () => {
   const [formError, setFormError] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [checkoutItems, setCheckoutItems] = useState([]);
+  const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [isBuyNow, setIsBuyNow] = useState(false);
+
   useEffect(() => {
-    dispatch(fetchCartAction());
-  }, [dispatch]);
+    if (location.state?.cartItems) {
+      // From cart page
+      setCheckoutItems(location.state.cartItems);
+      setCheckoutTotal(location.state.cartTotal);
+      setIsBuyNow(false);
+    } else if (location.state?.buyNowItem) {
+      // From buy now
+      setIsBuyNow(true);
+      const item = location.state.buyNowItem;
+      const unitPrice = item.product.basePrice + (item.variant.priceAdjustment || 0);
+      const normalizedItem = {
+        id: 'buynow',
+        product: item.product,
+        variant: item.variant,
+        quantity: item.quantity,
+        unitPrice,
+        subTotal: unitPrice * item.quantity
+      };
+      setCheckoutItems([normalizedItem]);
+      setCheckoutTotal(normalizedItem.subTotal);
+    } else {
+      // Direct access - redirect to cart
+      navigate('/shopping/cart');
+    }
+  }, [location.state, navigate]);
+
+  useEffect(() => {
+    if (!isBuyNow) {
+      dispatch(fetchCartAction());
+    }
+  }, [isBuyNow, dispatch]);
+
+  useEffect(() => {
+    if (!isBuyNow) {
+      setCheckoutItems(items);
+      setCheckoutTotal(totalPrice);
+    }
+  }, [isBuyNow, items, totalPrice]);
 
   // ---------------- CART ACTIONS ----------------
   const handleQuantityChange = async (item, quantity) => {
+    if (isBuyNow) return;
     try {
       if (quantity < 1) return;
 
@@ -65,6 +107,7 @@ const Checkout = () => {
   };
 
   const handleRemove = async (itemId) => {
+    if (isBuyNow) return;
     try {
       await dispatch(removeFromCartAction(itemId)).unwrap();
 
@@ -199,12 +242,35 @@ const Checkout = () => {
     }
 
     setFormError(null);
+
+    // Client-side validation
+    if (!items || items.length === 0) {
+      setFormError("Your cart is empty. Please add items before checkout.");
+      return;
+    }
+    if (!formData.shippingAddress.trim()) {
+      setFormError("Shipping address is required.");
+      return;
+    }
+    if (!formData.contactNumber.trim()) {
+      setFormError("Contact number is required.");
+      return;
+    }
+    if (!["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
+      setFormError("Please select a valid payment method.");
+      return;
+    }
+
     setIsUploading(true);
 
     try {
       let uploadedUrl = "";
       if (formData.paymentMethod === "manual") {
         uploadedUrl = await uploadReceipt();
+        if (!uploadedUrl) {
+          setFormError("Receipt upload failed. Please try again.");
+          return;
+        }
       }
 
       // Simulate online gateway processing if needed
@@ -217,9 +283,9 @@ const Checkout = () => {
       }
 
       const payload = {
-        items: items.map((item) => ({
-          productId: item.productId,
-          variantSku: item.variantSku,
+        items: checkoutItems.map((item) => ({
+          productId: item.product.id,
+          variantSku: item.variant.sku,
           quantity: item.quantity,
         })),
         shippingAddress: formData.shippingAddress,
@@ -233,7 +299,9 @@ const Checkout = () => {
       };
 
       const resultAction = await dispatch(createOrder(payload)).unwrap();
-      dispatch(fetchCartAction());
+      if (!isBuyNow) {
+        dispatch(fetchCartAction());
+      }
 
       toast({
         title: "Order placed",
@@ -244,7 +312,7 @@ const Checkout = () => {
       navigate("/shopping/checkout-success", { 
         state: { 
           orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
-          totalAmount: totalPrice || totalAmount
+          totalAmount: checkoutTotal || totalAmount
         } 
       });
     } catch (err) {
@@ -551,7 +619,7 @@ const Checkout = () => {
             
             {/* Cart Items */}
             <div className="space-y-6 mb-10 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {items.map((item) => (
+              {checkoutItems.map((item) => (
                 <div key={item.id} className="flex gap-4 items-center">
                   <div className="w-20 h-24 bg-[#111] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
                     <img
@@ -575,7 +643,7 @@ const Checkout = () => {
             <div className="space-y-4 pt-8 border-t border-gray-800">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-400">Subtotal</span>
-                <span className="font-bold">LKR {totalPrice || totalAmount}</span>
+                <span className="font-bold">LKR {checkoutTotal || totalAmount}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-400">Shipping</span>
@@ -584,7 +652,7 @@ const Checkout = () => {
               
               <div className="flex justify-between items-center pt-6 border-t border-gray-800">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {totalPrice || totalAmount}</span>
+                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {checkoutTotal || totalAmount}</span>
               </div>
             </div>
 
