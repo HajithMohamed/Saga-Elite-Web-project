@@ -155,7 +155,7 @@ productSchema.index({ drop: 1, isActive: 1 });
 /* ===============================
    Slug Generation & Stock Calc
 =================================*/
-productSchema.pre("save", function () {
+productSchema.pre("save", function (next) {
   if (this.isNew || this.isModified("name")) {
     this.slug = slugify(`${this.name}-${this.artNo}`, {
       lower: true,
@@ -168,6 +168,7 @@ productSchema.pre("save", function () {
       0
     );
   }
+  next();
 });
 
 /* ===============================

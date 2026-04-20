@@ -1,5 +1,5 @@
 const filterObj = (obj, ...allowedFields) => {
-  if (!obj || typeof obj !== 'object') {
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
     return {};
   }
   const newObj = {};
