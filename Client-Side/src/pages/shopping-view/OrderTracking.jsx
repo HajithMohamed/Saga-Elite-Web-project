@@ -70,17 +70,17 @@ const OrderTracking = () => {
               <div className="absolute top-1/2 left-0 w-full h-[1px] bg-neutral-800 -translate-y-1/2"></div>
               <div 
                 className="absolute top-1/2 left-0 h-[2px] bg-[#D4AF37] -translate-y-1/2 transition-all duration-1000"
-                style={{ width: \`\${Math.max(0, currentStatusIndex) * 33.33}%\` }}
+                style={{ width: `${Math.max(0, currentStatusIndex) * 33.33}%` }}
               ></div>
               <div className="relative flex justify-between">
                 {statusList.map((s, index) => {
                   const isCompleted = currentStatusIndex >= index;
                   return (
                     <div key={s.key} className="flex flex-col items-center gap-4">
-                      <div className={\`w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-xl transition-colors duration-500 \${isCompleted ? 'bg-[#D4AF37] text-black shadow-[#D4AF37]/20' : 'bg-neutral-800 text-gray-500'}\`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-xl transition-colors duration-500 ${isCompleted ? 'bg-[#D4AF37] text-black shadow-[#D4AF37]/20' : 'bg-neutral-800 text-gray-500'}`}>
                         <span className="material-symbols-outlined text-lg" data-icon={s.icon} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
                       </div>
-                      <span className={\`font-label text-[10px] uppercase tracking-widest font-semibold \${isCompleted ? 'text-white' : 'text-gray-500'}\`}>{s.label}</span>
+                      <span className={`font-label text-[10px] uppercase tracking-widest font-semibold ${isCompleted ? 'text-white' : 'text-gray-500'}`}>{s.label}</span>
                     </div>
                   );
                 })}
