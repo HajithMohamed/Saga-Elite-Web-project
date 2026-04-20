@@ -13,7 +13,7 @@ const ProductDetails = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const cartItems = useSelector((state) => state.cart.cart.items);
 
   const [product, setProduct] = useState(null);

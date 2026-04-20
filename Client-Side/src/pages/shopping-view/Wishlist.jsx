@@ -8,7 +8,7 @@ import { Trash2, ShoppingBag, ArrowRight, Heart } from "lucide-react";
 const Wishlist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
 
   const handleRemove = (id) => {
     dispatch(removeFromWishlistAction(id))

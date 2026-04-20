@@ -20,7 +20,7 @@ const ProductListing = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const category = searchParams.get("category") || "";
 
   useEffect(() => {
