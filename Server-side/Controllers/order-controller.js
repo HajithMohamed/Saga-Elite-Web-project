@@ -4,7 +4,7 @@ const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
 const User = require("../Models/User");
-const { createNotification } = require("../Utils/notification-service");
+const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -142,7 +142,7 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
     session.endSession();
   }
 
-  await createNotification({
+  const orderNotification = {
     userId: req.userInfo._id,
     type: "order",
     title: "Order placed successfully",
@@ -150,6 +150,18 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
     entityRef: createdOrder._id,
     entityType: "Order",
     meta: { orderId: createdOrder._id },
+  };
+
+  await createNotification(orderNotification);
+
+  await broadcastNotification({
+    type: "admin",
+    title: `New order received: ${createdOrder._id}`,
+    message: `Order ${createdOrder._id} was placed by ${req.userInfo.email || "a customer"} for ${createdOrder.totalAmount}.`,
+    entityRef: createdOrder._id,
+    entityType: "Order",
+    meta: { orderId: createdOrder._id, customer: req.userInfo.email },
+    filter: { role: "admin" },
   });
 
   res.status(201).json({
@@ -233,6 +245,16 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     entityRef: order._id,
     entityType: "Order",
     meta: { orderId: order._id, status: order.status },
+  });
+
+  await broadcastNotification({
+    type: "admin",
+    title: `Order ${order._id} status changed`,
+    message: `Order ${order._id} is now ${order.status}.`,
+    entityRef: order._id,
+    entityType: "Order",
+    meta: { orderId: order._id, status: order.status },
+    filter: { role: "admin" },
   });
 
   res.status(200).json({

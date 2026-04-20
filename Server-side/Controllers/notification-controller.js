@@ -310,7 +310,7 @@ const sendAdminMessage = catchAsync(async (req, res, next) => {
     return next(new AppError("Title and message are required", 400));
   }
 
-  const users = await User.find({});
+  const users = await User.find({ isActive: true }).select("_id").lean();
 
   for (const user of users) {
     await createNotification({
@@ -323,7 +323,7 @@ const sendAdminMessage = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: "Admin message sent to all users",
+    message: "Admin message sent to active users",
   });
 });
 

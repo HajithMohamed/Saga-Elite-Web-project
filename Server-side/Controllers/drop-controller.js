@@ -55,6 +55,16 @@ const createDrop = catchAsync(async (req, res, next) => {
         filter: { isActive: true },
     });
 
+    await broadcastNotification({
+        type: "admin",
+        title: `Drop published: ${newDrop.name}`,
+        message: `Drop ${newDrop.name} was created and published for review.`,
+        entityRef: newDrop._id,
+        entityType: "Drop",
+        meta: { dropId: newDrop._id, dropSlug: newDrop.slug },
+        filter: { role: "admin" },
+    });
+
     res.status(201).json({
         success: true,
         message: "New Drop created successfully",
