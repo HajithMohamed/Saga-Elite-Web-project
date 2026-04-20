@@ -11,6 +11,7 @@ import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
+import VerifyOtp from "./pages/auth/VerifyOtp";
 
 // admin page imports
 import AdminLayout from "./components/admin-components/Layout";
@@ -34,13 +35,14 @@ import ProductDetails from "./pages/shopping-view/ProductDetails";
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
+import Wishlist from "./pages/shopping-view/Wishlist";
+import OrderTracking from "./pages/shopping-view/OrderTracking"; // ✅ kept
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
 
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
-import VerifyOtp from "./pages/auth/VerifyOtp";
 
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
@@ -118,6 +120,8 @@ function App() {
           <Route path="product/:slug" element={<ProductDetails />} />
           <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="checkout-success" element={<OrderSuccess />} />
+          <Route path="wishlist" element={<Wishlist />} />
+          <Route path="order-tracking" element={<OrderTracking />} /> {/* ✅ kept */}
         </Route>
 
         {/* OTHER ROUTES */}

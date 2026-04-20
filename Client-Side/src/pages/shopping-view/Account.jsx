@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
-import { fetchWishlistAction, removeFromWishlistAction } from "@/store/cart-slice";
+import { fetchWishlistAction } from "@/store/cart-slice";
 import { fetchUserOrders } from "@/store/order-slice";
 
 import { changePasswordFormControls } from "@/config";
@@ -24,7 +24,7 @@ import PasswordStrengthMeter from "@/components/common-components/PasswordStreng
 
 const Account = () => {
   const { user } = useSelector((state) => state.auth);
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const { userOrders, isLoading: orderLoading } = useSelector((state) => state.order);
 
   const dispatch = useDispatch();
@@ -174,32 +174,22 @@ const Account = () => {
               <p>Status: {user?.isVerified ? "Verified" : "Not Verified"}</p>
             </div>
 
-            {/* WISHLIST */}
-            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6">
-              <h3 className="text-[#D4AF37] uppercase text-xs mb-4">
-                Wishlist
-              </h3>
-
-              {wishlistItems.length === 0 ? (
-                <p className="text-gray-400">No items in wishlist</p>
-              ) : (
-                wishlistItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between border-b border-gray-800 py-2"
-                  >
-                    <span>{item.name}</span>
-                    <button
-                      onClick={() =>
-                        dispatch(removeFromWishlistAction(item.id))
-                      }
-                      className="text-red-400 text-xs"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))
-              )}
+            {/* WISHLIST LINK */}
+            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6 flex items-center justify-between">
+              <div>
+                <h3 className="text-[#D4AF37] uppercase text-sm mb-1 font-bold tracking-wider">
+                  My Wishlist
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved
+                </p>
+              </div>
+              <Link
+                to="/shopping/wishlist"
+                className="flex items-center gap-2 rounded-full bg-white/5 py-2 px-6 text-sm font-semibold text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
+              >
+                View Wishlist <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
 
             {/* ORDERS */}
@@ -214,9 +204,20 @@ const Account = () => {
                 <p className="text-gray-400">No orders yet</p>
               ) : (
                 userOrders.map((order) => (
-                  <div key={order._id} className="border-b border-gray-800 py-2">
-                    <p>Order: {order._id}</p>
-                    <p>Status: {order.status}</p>
+                  <div key={order._id} className="border-b border-gray-800 py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <p className="font-medium">Order: <span className="text-[#D4AF37]">{order._id}</span></p>
+                        <p className="text-sm text-gray-400">Status: {order.status}</p>
+                      </div>
+                      <Link
+                        to="/shopping/order-tracking"
+                        state={{ orderId: order._id }}
+                        className="text-[#D4AF37] text-xs uppercase tracking-widest font-bold hover:text-white"
+                      >
+                        Track Order
+                      </Link>
+                    </div>
                   </div>
                 ))
               )}
