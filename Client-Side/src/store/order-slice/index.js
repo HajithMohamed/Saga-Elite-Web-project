@@ -23,6 +23,7 @@ const initialState = {
   cart: loadCartFromStorage(),
   userOrders: [],
   adminOrders: [],
+  currentOrder: null,
   orderError: null,
 };
 
@@ -72,6 +73,22 @@ export const fetchAdminOrders = createAsyncThunk(
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
       const message = serverMsg || error.message || "Failed to fetch admin orders";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const fetchOrderById = createAsyncThunk(
+  "/order/fetchOrderById",
+  async (orderId, thunkAPI) => {
+    try {
+      const response = await axios.get(`${API_BASE}/orders/get-order/${orderId}`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to fetch order details";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -191,6 +208,19 @@ const orderSlice = createSlice({
         );
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.orderError = action.payload || action.error.message;
+      })
+      .addCase(fetchOrderById.pending, (state) => {
+        state.isLoading = true;
+        state.orderError = null;
+        state.currentOrder = null;
+      })
+      .addCase(fetchOrderById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.currentOrder = action.payload.data;
+      })
+      .addCase(fetchOrderById.rejected, (state, action) => {
         state.isLoading = false;
         state.orderError = action.payload || action.error.message;
       });
