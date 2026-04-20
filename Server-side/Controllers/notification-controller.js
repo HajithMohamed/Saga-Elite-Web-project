@@ -273,6 +273,60 @@ const generateUpcomingRemindersForUser = async (userId) => {
   }
 };
 
+const markNotificationRead = catchAsync(async (req, res, next) => {
+  const notificationId = req.params.id;
+  const userId = req.userInfo?._id;
+
+  if (!userId) {
+    return next(new AppError("User not authenticated", 401));
+  }
+
+  const notification = await Notification.findOne({ _id: notificationId, user: userId });
+
+  if (!notification) {
+    return next(new AppError("Notification not found", 404));
+  }
+
+  if (notification.isRead) {
+    return res.status(200).json({
+      success: true,
+      message: "Notification already read",
+    });
+  }
+
+  notification.isRead = true;
+  await notification.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Notification marked as read",
+  });
+});
+
+const sendAdminMessage = catchAsync(async (req, res, next) => {
+  const { title, message } = req.body;
+
+  if (!title || !message) {
+    return next(new AppError("Title and message are required", 400));
+  }
+
+  const users = await User.find({});
+
+  for (const user of users) {
+    await createNotification({
+      userId: user._id,
+      type: "admin",
+      title,
+      message,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Admin message sent to all users",
+  });
+});
+
 module.exports = {
   getNotifications,
   markNotificationRead,

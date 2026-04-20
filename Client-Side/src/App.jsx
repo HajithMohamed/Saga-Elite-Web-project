@@ -21,6 +21,7 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
+import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
 import ShoppinLayout from "./components/shopping-components/Layout";
@@ -96,7 +97,7 @@ function App() {
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
-          <Route path="notifications" element={<NotificationsManager />} />
+          <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops />} />
         </Route>
@@ -117,7 +118,7 @@ function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
           <Route path="product/:slug" element={<ProductDetails />} />
-          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="checkout-success" element={<OrderSuccess />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="order-tracking" element={<OrderTracking />} />
