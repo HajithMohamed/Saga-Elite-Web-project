@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { sendAdminNotification } from "@/store/notification-slice";
+import { sendAdminNotification, resetNotificationError } from "@/store/notification-slice";
 import { toast } from "@/hooks/use-toast";
 
 const NotificationsManager = () => {
@@ -30,9 +30,11 @@ const NotificationsManager = () => {
       setTitle("");
       setMessage("");
     } catch (err) {
+      const errorMessage =
+        err?.message || err?.payload || err || "Unable to send the notification.";
       toast({
         title: "Send failed",
-        description: err || "Unable to send the notification.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -52,7 +54,12 @@ const NotificationsManager = () => {
               <label className="mb-2 block text-sm font-semibold text-gray-300">Title</label>
               <input
                 value={title}
-                onChange={(event) => setTitle(event.target.value)}
+                onChange={(event) => {
+                  if (error) {
+                    dispatch(resetNotificationError());
+                  }
+                  setTitle(event.target.value);
+                }}
                 className="w-full rounded-2xl border border-gray-800 bg-black px-4 py-3 text-white outline-none focus:border-[#D4AF37]"
                 placeholder="Message title"
               />
@@ -62,7 +69,12 @@ const NotificationsManager = () => {
               <label className="mb-2 block text-sm font-semibold text-gray-300">Message</label>
               <textarea
                 value={message}
-                onChange={(event) => setMessage(event.target.value)}
+                onChange={(event) => {
+                  if (error) {
+                    dispatch(resetNotificationError());
+                  }
+                  setMessage(event.target.value);
+                }}
                 className="min-h-[180px] w-full rounded-2xl border border-gray-800 bg-black px-4 py-3 text-white outline-none focus:border-[#D4AF37]"
                 placeholder="Write the admin message here..."
               />
