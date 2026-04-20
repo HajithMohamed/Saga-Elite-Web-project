@@ -64,6 +64,8 @@ const Home = () => {
   const [countdown, setCountdown] = useState({
     days: "02", hours: "14", minutes: "56", seconds: "00",
   });
+  const [isHomepageLoading, setIsHomepageLoading] = useState(true);
+  const [homepageError, setHomepageError] = useState(null);
 
   // Close dropdown logic
   useEffect(() => {
@@ -79,17 +81,47 @@ const Home = () => {
   // Universal fetch
   useEffect(() => {
     const fetchHomepageData = async () => {
+      setIsHomepageLoading(true);
+      setHomepageError(null);
+
       try {
         const [heroRes, logoRes, boysRes, girlsRes, unisexRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
-          axios.get(`${API_BASE}/image/get-hero-images`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-logo-images`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-category-logo-images?label=Unisex`).catch(() => null),
-          axios.get(`${API_BASE}/image/get-ad-images`).catch(() => null),
-          axios.get(`${API_BASE}/products/get-all-products?status=active&limit=4`).catch(() => null),
-          axios.get(`${API_BASE}/products/get-all-products?status=archive&limit=4`).catch(() => null),
-          axios.get(`${API_BASE}/drops/get-all-drops`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-hero-images`).catch((err) => {
+            console.error("Hero images fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/image/get-logo-images`).catch((err) => {
+            console.error("Logo images fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch((err) => {
+            console.error("Boys category logo fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch((err) => {
+            console.error("Girls category logo fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Unisex`).catch((err) => {
+            console.error("Unisex category logo fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/image/get-ad-images`).catch((err) => {
+            console.error("Ad images fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/products/get-all-products?status=active&limit=4`).catch((err) => {
+            console.error("Active products fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/products/get-all-products?status=archive&limit=4`).catch((err) => {
+            console.error("Archive products fetch failed", err);
+            return null;
+          }),
+          axios.get(`${API_BASE}/drops/get-all-drops`).catch((err) => {
+            console.error("Drops fetch failed", err);
+            return null;
+          }),
         ]);
 
         if (heroRes?.data?.images?.length) {
@@ -107,12 +139,19 @@ const Home = () => {
         if (adRes?.data?.images?.length) {
           setAdImage(adRes.data.images[0]);
         }
+
         if (activeProductsRes?.data?.data) {
           setActiveProducts(activeProductsRes.data.data);
+        } else if (activeProductsRes?.data) {
+          console.warn("Active products endpoint returned data but no list", activeProductsRes.data);
         }
+
         if (archiveProductsRes?.data?.data) {
           setArchiveProducts(archiveProductsRes.data.data);
+        } else if (archiveProductsRes?.data) {
+          console.warn("Archive products endpoint returned data but no list", archiveProductsRes.data);
         }
+
         if (dropsRes?.data?.drops) {
           const drops = dropsRes.data.drops;
           const upcomingDrops = drops
@@ -121,7 +160,10 @@ const Home = () => {
           setNextDrop(upcomingDrops[0] || drops[0] || null);
         }
       } catch (error) {
-        console.error(error);
+        console.error("Failed to load homepage data", error);
+        setHomepageError("Unable to load homepage products. Please refresh the page.");
+      } finally {
+        setIsHomepageLoading(false);
       }
     };
 
@@ -399,7 +441,15 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {activeProducts.length > 0 ? (
+            {isHomepageLoading ? (
+              <div className="col-span-full rounded-3xl border border-white/10 bg-[#111] p-12 text-center text-gray-400">
+                Loading current drop products...
+              </div>
+            ) : homepageError ? (
+              <div className="col-span-full rounded-3xl border border-red-500/20 bg-[#1a0a0a] p-12 text-center text-red-300">
+                {homepageError}
+              </div>
+            ) : activeProducts.length > 0 ? (
               activeProducts.map((product) => (
                 <div key={product._id} className="group">
                   <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
