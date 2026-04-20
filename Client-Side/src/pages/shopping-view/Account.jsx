@@ -24,7 +24,7 @@ import PasswordStrengthMeter from "@/components/common-components/PasswordStreng
 
 const Account = () => {
   const { user } = useSelector((state) => state.auth);
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist);
+  const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const { userOrders, isLoading: orderLoading } = useSelector((state) => state.order);
 
   const dispatch = useDispatch();
