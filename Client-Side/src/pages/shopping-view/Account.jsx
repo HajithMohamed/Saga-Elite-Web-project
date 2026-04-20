@@ -214,9 +214,20 @@ const Account = () => {
                 <p className="text-gray-400">No orders yet</p>
               ) : (
                 userOrders.map((order) => (
-                  <div key={order._id} className="border-b border-gray-800 py-2">
-                    <p>Order: {order._id}</p>
-                    <p>Status: {order.status}</p>
+                  <div key={order._id} className="border-b border-gray-800 py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <p className="font-medium">Order: <span className="text-[#D4AF37]">{order._id}</span></p>
+                        <p className="text-sm text-gray-400">Status: {order.status}</p>
+                      </div>
+                      <Link
+                        to="/shopping/order-tracking"
+                        state={{ orderId: order._id }}
+                        className="text-[#D4AF37] text-xs uppercase tracking-widest font-bold hover:text-white"
+                      >
+                        Track Order
+                      </Link>
+                    </div>
                   </div>
                 ))
               )}
