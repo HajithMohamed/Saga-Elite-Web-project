@@ -199,6 +199,10 @@ const getAllOrders = catchAsync(async (req, res, next) => {
 const getOrderById = catchAsync(async (req, res, next) => {
   const order = await Order.findById(req.params.id)
     .populate("user", "email role")
+    .populate({
+      path: "items.product",
+      select: "images imagesUrl name", // Adjust if needed
+    })
     .lean();
 
   if (!order) {
