@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import { Loader2 } from "lucide-react";
 
+// public layout import
+import PublicLayout from "./components/common-components/PublicLayout";
+
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
@@ -63,7 +66,9 @@ function App() {
   return (
     <div>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
+        </Route>
 
         {/* AUTH ROUTES */}
         <Route
