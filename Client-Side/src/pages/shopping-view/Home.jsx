@@ -136,10 +136,14 @@ const Home = () => {
 
         if (dropsRes?.data?.drops) {
           const drops = dropsRes.data.drops;
-          const upcomingDrops = drops
-            .filter((drop) => new Date(drop.releaseDate) > new Date())
-            .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
-          setNextDrop(upcomingDrops[0] || drops[0] || null);
+          // Filter drops that haven't expired (endDate is null or in the future)
+          const validDrops = drops.filter(
+            (drop) => !drop.endDate || new Date(drop.endDate) > new Date()
+          );
+          // Sort by release date to show the next upcoming or most recent active
+          validDrops.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+          
+          setNextDrop(validDrops[0] || null);
         }
       } catch (error) {
         console.error("Failed to load homepage data", error);
@@ -171,7 +175,16 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [nextDrop]);
 
-  const heroSrc = heroImages.length > 0 ? heroImages[currentHeroIndex]?.url : "/LOGO.png";
+  const hasActiveDrop = nextDrop !== null;
+  const isDropUpcoming = hasActiveDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date();
+
+  // If there's an active/upcoming drop with an image, feature it. Otherwise fallback to generic carousel.
+  const heroSrc = hasActiveDrop && nextDrop.images?.[0]?.url 
+    ? nextDrop.images[0].url 
+    : heroImages.length > 0 
+      ? heroImages[currentHeroIndex]?.url 
+      : "/LOGO.png";
+      
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
 
@@ -180,7 +193,11 @@ const Home = () => {
     return "Limited Release";
   };
 
-  const timerLabel = nextDrop?.name || "Collection 004";
+  const timerLabel = hasActiveDrop ? nextDrop.name : "Collection 004";
+  const heroTitle = hasActiveDrop ? nextDrop.name : "Rare Fit Forever";
+  const heroSubtitle = hasActiveDrop && nextDrop.description ? nextDrop.description : "The Sovereign Ledger";
+  const shopLink = hasActiveDrop ? `/shopping/drop/${nextDrop.slug}` : "/shopping/product-list";
+  const gridTitle = hasActiveDrop ? "The Current Drop" : "Featured Products";
 
   return (
     <div className="bg-background text-on-surface min-h-screen relative w-full overflow-hidden">
@@ -222,7 +239,7 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="font-sans tracking-[0.4em] uppercase text-primary mb-4 text-sm"
             >
-              The Sovereign Ledger
+              {heroSubtitle}
             </motion.p>
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
@@ -230,7 +247,7 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="font-serif text-6xl md:text-9xl text-primary font-bold mb-8 tracking-tighter"
             >
-              Rare Fit Forever
+              {heroTitle}
             </motion.h1>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -238,7 +255,7 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               className="flex justify-center"
             >
-              <Link to="/shopping/product-list" className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10">
+              <Link to={shopLink} className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10">
                 Shop the Drop
               </Link>
             </motion.div>
@@ -246,37 +263,39 @@ const Home = () => {
         </section>
 
         {/* Scroll entry Animations below */}
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
-          className="bg-surface-container-lowest py-16 px-8 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8 border-y border-outline-variant/10"
-        >
-          <div className="flex flex-col">
-            <span className="font-sans text-xs tracking-widest text-outline uppercase mb-2">Next Ledger Entry</span>
-            <h2 className="font-serif text-3xl text-on-surface">{timerLabel}</h2>
-          </div>
-          <div className="flex gap-8 items-baseline">
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.days}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Days</span>
+        {isDropUpcoming && (
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="bg-surface-container-lowest py-16 px-8 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8 border-y border-outline-variant/10"
+          >
+            <div className="flex flex-col">
+              <span className="font-sans text-xs tracking-widest text-outline uppercase mb-2">Next Ledger Entry</span>
+              <h2 className="font-serif text-3xl text-on-surface">{timerLabel}</h2>
             </div>
-            <span className="font-serif text-4xl text-outline-variant">:</span>
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.hours}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Hours</span>
+            <div className="flex gap-8 items-baseline">
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.days}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Days</span>
+              </div>
+              <span className="font-serif text-4xl text-outline-variant">:</span>
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.hours}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Hours</span>
+              </div>
+              <span className="font-serif text-4xl text-outline-variant">:</span>
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.minutes}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Mins</span>
+              </div>
             </div>
-            <span className="font-serif text-4xl text-outline-variant">:</span>
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.minutes}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Mins</span>
-            </div>
-          </div>
-          <button className="border border-outline/30 px-10 py-4 font-sans uppercase tracking-widest text-xs text-primary hover:bg-primary hover:text-on-primary transition-all duration-500">
-            Remind Me
-          </button>
-        </motion.section>
+            <button className="border border-outline/30 px-10 py-4 font-sans uppercase tracking-widest text-xs text-primary hover:bg-primary hover:text-on-primary transition-all duration-500">
+              Remind Me
+            </button>
+          </motion.section>
+        )}
 
         {/* Category Logos Section */}
         <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
@@ -336,10 +355,10 @@ const Home = () => {
         >
           <div className="flex justify-between items-end mb-20 gap-6 flex-col md:flex-row">
             <div>
-              <h3 className="font-serif text-4xl text-on-surface mb-2">The Current Drop</h3>
+              <h3 className="font-serif text-4xl text-on-surface mb-2">{gridTitle}</h3>
               <p className="font-sans text-outline tracking-wider text-sm">Strictly limited archival releases.</p>
             </div>
-            <Link className="font-sans text-xs uppercase tracking-widest text-primary border-b border-primary/30 pb-1 hover:border-primary transition-all" to="/shopping/product-list">
+            <Link className="font-sans text-xs uppercase tracking-widest text-primary border-b border-primary/30 pb-1 hover:border-primary transition-all" to={shopLink}>
               View All
             </Link>
           </div>

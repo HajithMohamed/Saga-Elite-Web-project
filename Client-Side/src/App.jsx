@@ -35,6 +35,7 @@ import Account from "./pages/shopping-view/Account";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
+import DropDetails from "./pages/shopping-view/DropDetails"; // ✅ added
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
@@ -123,6 +124,7 @@ function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />
           <Route path="product/:slug" element={<ProductDetails />} />
+          <Route path="drop/:slug" element={<DropDetails />} /> {/* ✅ added */}
           <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="checkout-success" element={<OrderSuccess />} />
           <Route path="wishlist" element={<Wishlist />} />
