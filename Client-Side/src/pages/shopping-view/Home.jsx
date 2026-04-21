@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { LogOut, User as UserIcon, ArrowRight, Gift, ShieldCheck, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { logoutUserAction } from "../../store/auth-slice";
-import { useToast } from "../../hooks/use-toast";
 import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_URL
@@ -42,14 +39,10 @@ const computeCountdown = (targetDate) => {
 const Home = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { toast } = useToast();
 
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const cartInfo = useSelector((state) => state.cart?.cart);
   const totalQuantity = cartInfo?.totalQuantity || 0;
-
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
 
   // States handling DB images
   const [heroImages, setHeroImages] = useState([]);
@@ -66,17 +59,6 @@ const Home = () => {
   });
   const [isHomepageLoading, setIsHomepageLoading] = useState(true);
   const [homepageError, setHomepageError] = useState(null);
-
-  // Close dropdown logic
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Universal fetch
   useEffect(() => {
@@ -193,30 +175,6 @@ const Home = () => {
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
 
-  // Logout Handlers
-  const handleLogout = () => {
-    dispatch(logoutUserAction())
-      .then((res) => {
-        if (res?.payload?.success) {
-          toast({ title: "Logged out successfully" });
-          navigate("/auth/login");
-        } else {
-          toast({ title: "Logout failed", variant: "destructive" });
-        }
-      })
-      .catch(() => {
-        toast({ title: "Error occurred", variant: "destructive" });
-      });
-  };
-
-  const handleProfileClick = () => {
-    if (!isAuthenticated) {
-      navigate("/auth/login");
-    } else {
-      setDropdownOpen(!dropdownOpen);
-    }
-  };
-
   const getProductLabel = (product) => {
     if (product.isLimited) return "Limited 1 of 50";
     return "Limited Release";
@@ -225,72 +183,12 @@ const Home = () => {
   const timerLabel = nextDrop?.name || "Collection 004";
 
   return (
-    <div className="bg-background text-on-surface min-h-screen relative">
+    <div className="bg-background text-on-surface min-h-screen relative w-full overflow-hidden">
       <div className="grain"></div>
-
-      <nav className="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-xl border-b border-[#99907c]/10 px-8 md:px-12 py-6">
-        <div className="flex items-center justify-between gap-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-2xl font-serif font-bold tracking-tighter text-[#D4AF37] cursor-pointer"
-            onClick={() => navigate("/")}
-          >
-            SAGA ELITE
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="hidden md:flex items-center gap-10 text-[#e5e2e1]/80"
-          >
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#F2CA50] transition-colors duration-500" to="#">Current Drop</Link>
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#e5e2e1]/70 hover:text-[#F2CA50] transition-colors duration-500" to="#">Archive</Link>
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#e5e2e1]/70 hover:text-[#F2CA50] transition-colors duration-500" to="#">The Story</Link>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-6 text-[#D4AF37]"
-          >
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/wishlist")}>
-              <span className="material-symbols-outlined">favorite</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/notifications")}>
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={handleProfileClick}>
-              <span className="material-symbols-outlined">person</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/cart")}>
-              <span className="material-symbols-outlined">shopping_bag</span>
-            </button>
-          </motion.div>
-        </div>
-
-        {dropdownOpen && isAuthenticated && (
-          <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-8 top-20 w-56 rounded-xl border border-[#D4AF37]/20 bg-[#141414] shadow-2xl"
-          >
-            <div className="px-4 py-3 text-xs text-[#d0c5af]">{user?.email}</div>
-            <button onClick={() => navigate("/shopping/account")} className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f]">My Account</button>
-            <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-red-400 hover:bg-[#1f1f1f]">Logout</button>
-          </motion.div>
-        )}
-      </nav>
 
       <main>
         {/* Animated Hero Carousel Section */}
-        <section className="relative h-screen w-full flex items-center justify-center overflow-hidden pt-24">
+        <section className="relative h-[calc(100vh-80px)] w-full flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <AnimatePresence mode="popLayout">
               <motion.img
@@ -570,19 +468,6 @@ const Home = () => {
             </button>
           </form>
         </motion.section>
-
-        <footer className="w-full py-20 px-8 md:px-12 bg-[#0E0E0E] flex flex-col items-center gap-12 text-center">
-          <div className="text-[#D4AF37] font-serif text-xl tracking-widest uppercase">SAGA ELITE</div>
-          <div className="flex flex-wrap justify-center gap-12">
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Membership</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Privacy</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Terms</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Contact</Link>
-          </div>
-          <div className="font-sans tracking-widest text-[10px] uppercase text-[#99907C]/50 mt-8">
-            © 2024 SAGA ELITE. ARCHITECTURAL BRUTALISM IN TEXTILE.
-          </div>
-        </footer>
       </main>
     </div>
   );
