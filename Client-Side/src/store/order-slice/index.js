@@ -100,22 +100,6 @@ export const fetchDashboardStats = createAsyncThunk(
   "order/fetchDashboardStats",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/order/dashboard-stats");
-      return response.data.data;
-    } catch (error) {
-      if (error.response && error.response.data.message) {
-        return rejectWithValue(error.response.data.message);
-      } else {
-        return rejectWithValue(error.message);
-      }
-    }
-  }
-);
-
-export const fetchDashboardStats = createAsyncThunk(
-  "order/fetchDashboardStats",
-  async (_, { rejectWithValue }) => {
-    try {
       const response = await axios.get(`${API_BASE}/orders/dashboard-stats`, { withCredentials: true });
       return response.data.data;
     } catch (error) {
@@ -229,21 +213,6 @@ const orderSlice = createSlice({
       .addCase(fetchAdminOrders.rejected, (state, action) => {
         state.isLoading = false;
         state.orderError = action.payload || action.error.message;
-      })
-      
-      // Dashboard stats
-      .addCase(fetchDashboardStats.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchDashboardStats.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.dashboardStats = action.payload;
-        state.error = null;
-      })
-      .addCase(fetchDashboardStats.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
       })
       .addCase(updateOrderStatus.pending, (state) => {
         state.isLoading = true;
