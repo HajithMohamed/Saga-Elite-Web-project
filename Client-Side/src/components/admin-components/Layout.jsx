@@ -1,7 +1,7 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import SideBar from './SideBar'
-import Header from './Header'
+import MainHeader from '@/components/common-components/MainHeader'
 
 const Layout = () => {
   return (
@@ -10,7 +10,7 @@ const Layout = () => {
       <SideBar />
       <div className="flex flex-1 flex-col pl-64">
         {/* admin header */}
-        <Header />
+        <MainHeader />
         <main className="flex-1 flex-col flex overflow-y-auto">
           <Outlet />
         </main>

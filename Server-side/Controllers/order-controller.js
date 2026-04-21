@@ -268,10 +268,33 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   });
 });
 
+const getDashboardStats = catchAsync(async (req, res, next) => {
+  const totalSalesQuery = await Order.aggregate([
+    { $match: { status: { $nin: ["Cancelled", "Failed"] } } },
+    { $group: { _id: null, total: { $sum: "$totalPrice" } } }
+  ]);
+  const totalSales = totalSalesQuery.length > 0 ? totalSalesQuery[0].total : 0;
+
+  const activeOrders = await Order.countDocuments({ status: { $in: ["Pending", "Processing"] } });
+  const totalProducts = await Product.countDocuments();
+  const totalCustomers = await User.countDocuments({ role: "user" });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      totalSales,
+      activeOrders,
+      totalProducts,
+      totalCustomers
+    }
+  });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  getDashboardStats,
 };
