@@ -8,8 +8,15 @@ const uploadToCloudinary = require("../Utils/image-upload");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const winston = require("winston");
+const fs = require("fs");
+const path = require("path");
 
 const MAX_IMAGES_PER_ENTITY = 10;
+
+const logsDir = path.resolve(process.cwd(), "logs");
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 // Configure Winston logger for image actions
 const actionLogger = winston.createLogger({

@@ -1,10 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { LogOut, User as UserIcon, ArrowRight, Gift, ShieldCheck, Zap } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { logoutUserAction } from "../../store/auth-slice";
-import { useToast } from "../../hooks/use-toast";
 import axios from "axios";
 
 const API_BASE = import.meta.env.VITE_API_URL
@@ -40,17 +36,6 @@ const computeCountdown = (targetDate) => {
 };
 
 const Home = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { toast } = useToast();
-
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const cartInfo = useSelector((state) => state.cart?.cart);
-  const totalQuantity = cartInfo?.totalQuantity || 0;
-
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
   // States handling DB images
   const [heroImages, setHeroImages] = useState([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -60,23 +45,13 @@ const Home = () => {
   const [adImage, setAdImage] = useState(null);
   const [activeProducts, setActiveProducts] = useState([]);
   const [archiveProducts, setArchiveProducts] = useState([]);
+  const [validDrops, setValidDrops] = useState([]);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState({
     days: "02", hours: "14", minutes: "56", seconds: "00",
   });
   const [isHomepageLoading, setIsHomepageLoading] = useState(true);
   const [homepageError, setHomepageError] = useState(null);
-
-  // Close dropdown logic
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Universal fetch
   useEffect(() => {
@@ -154,10 +129,12 @@ const Home = () => {
 
         if (dropsRes?.data?.drops) {
           const drops = dropsRes.data.drops;
-          const upcomingDrops = drops
-            .filter((drop) => new Date(drop.releaseDate) > new Date())
+          const validDrops = drops
+            .filter((drop) => !drop.endDate || new Date(drop.endDate) > new Date())
             .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
-          setNextDrop(upcomingDrops[0] || drops[0] || null);
+
+          setValidDrops(validDrops);
+          setNextDrop(validDrops[0] || null);
         }
       } catch (error) {
         console.error("Failed to load homepage data", error);
@@ -181,120 +158,54 @@ const Home = () => {
 
   // Next drop timer handling
   useEffect(() => {
+    if (!nextDrop?.releaseDate) {
+      setCountdown({ days: "00", hours: "00", minutes: "00", seconds: "00" });
+      return;
+    }
+
+    setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
+
     const timer = setInterval(() => {
-      if (nextDrop?.releaseDate) {
-        setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
-      }
+      setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
     }, 1000);
     return () => clearInterval(timer);
   }, [nextDrop]);
+
+  const hasActiveDrop = Boolean(nextDrop);
+  const isDropUpcoming =
+    hasActiveDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date();
 
   const heroSrc = heroImages.length > 0 ? heroImages[currentHeroIndex]?.url : "/LOGO.png";
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
 
-  // Logout Handlers
-  const handleLogout = () => {
-    dispatch(logoutUserAction())
-      .then((res) => {
-        if (res?.payload?.success) {
-          toast({ title: "Logged out successfully" });
-          navigate("/auth/login");
-        } else {
-          toast({ title: "Logout failed", variant: "destructive" });
-        }
-      })
-      .catch(() => {
-        toast({ title: "Error occurred", variant: "destructive" });
-      });
-  };
-
-  const handleProfileClick = () => {
-    if (!isAuthenticated) {
-      navigate("/auth/login");
-    } else {
-      setDropdownOpen(!dropdownOpen);
-    }
-  };
+  const dropProducts = nextDrop?.products?.filter((product) => product.isActive !== false) || [];
+  const displayedProducts = hasActiveDrop ? dropProducts : activeProducts;
+  const hasValidDrops = validDrops.length > 0;
 
   const getProductLabel = (product) => {
     if (product.isLimited) return "Limited 1 of 50";
     return "Limited Release";
   };
 
-  const timerLabel = nextDrop?.name || "Collection 004";
+  const timerLabel = hasActiveDrop ? nextDrop.name : "Next Ledger Entry";
+  const heroTitle = "Rare Fit Forever";
+  const heroSubtitle = "The Sovereign Ledger";
+  const heroButtonLabel = "Shop Now";
+  const shopLink = "/shopping/product-list";
+  const gridTitle = hasValidDrops ? "Current Drops" : "Latest Arrivals";
 
   return (
-    <div className="bg-background text-on-surface min-h-screen relative">
+    <div className="bg-background text-on-surface min-h-screen relative w-full overflow-hidden">
       <div className="grain"></div>
-
-      <nav className="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-xl border-b border-[#99907c]/10 px-8 md:px-12 py-6">
-        <div className="flex items-center justify-between gap-6">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-2xl font-serif font-bold tracking-tighter text-[#D4AF37] cursor-pointer"
-            onClick={() => navigate("/")}
-          >
-            SAGA ELITE
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="hidden md:flex items-center gap-10 text-[#e5e2e1]/80"
-          >
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#F2CA50] transition-colors duration-500" to="#">Current Drop</Link>
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#e5e2e1]/70 hover:text-[#F2CA50] transition-colors duration-500" to="#">Archive</Link>
-            <Link className="font-sans tracking-[0.1em] uppercase text-xs text-[#e5e2e1]/70 hover:text-[#F2CA50] transition-colors duration-500" to="#">The Story</Link>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-6 text-[#D4AF37]"
-          >
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/wishlist")}>
-              <span className="material-symbols-outlined">favorite</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/notifications")}>
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={handleProfileClick}>
-              <span className="material-symbols-outlined">person</span>
-            </button>
-            <button className="hover:opacity-80 transition-opacity" onClick={() => navigate("/shopping/cart")}>
-              <span className="material-symbols-outlined">shopping_bag</span>
-            </button>
-          </motion.div>
-        </div>
-
-        {dropdownOpen && isAuthenticated && (
-          <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-8 top-20 w-56 rounded-xl border border-[#D4AF37]/20 bg-[#141414] shadow-2xl"
-          >
-            <div className="px-4 py-3 text-xs text-[#d0c5af]">{user?.email}</div>
-            <button onClick={() => navigate("/shopping/account")} className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f]">My Account</button>
-            <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-red-400 hover:bg-[#1f1f1f]">Logout</button>
-          </motion.div>
-        )}
-      </nav>
 
       <main>
         {/* Animated Hero Carousel Section */}
-        <section className="relative h-screen w-full flex items-center justify-center overflow-hidden pt-24">
+        <section className="relative h-[calc(100vh-80px)] w-full flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <AnimatePresence mode="popLayout">
               <motion.img
-                key={currentHeroIndex} // Ensures re-triggering of animation when image changes
+                key={heroSrc} // Ensures re-triggering of animation when image changes
                 src={heroSrc}
                 alt="Hero background"
                 initial={{ opacity: 0, scale: 1.1 }}
@@ -324,7 +235,7 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="font-sans tracking-[0.4em] uppercase text-primary mb-4 text-sm"
             >
-              The Sovereign Ledger
+              {heroSubtitle}
             </motion.p>
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
@@ -332,7 +243,7 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="font-serif text-6xl md:text-9xl text-primary font-bold mb-8 tracking-tighter"
             >
-              Rare Fit Forever
+              {heroTitle}
             </motion.h1>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -340,45 +251,50 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               className="flex justify-center"
             >
-              <Link to="/shopping/product-list" className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10">
-                Shop the Drop
+              <Link
+                to={shopLink}
+                className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10"
+              >
+                {heroButtonLabel}
               </Link>
             </motion.div>
           </div>
         </section>
 
         {/* Scroll entry Animations below */}
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
-          className="bg-surface-container-lowest py-16 px-8 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8 border-y border-outline-variant/10"
-        >
-          <div className="flex flex-col">
-            <span className="font-sans text-xs tracking-widest text-outline uppercase mb-2">Next Ledger Entry</span>
-            <h2 className="font-serif text-3xl text-on-surface">{timerLabel}</h2>
-          </div>
-          <div className="flex gap-8 items-baseline">
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.days}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Days</span>
+        {isDropUpcoming && (
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="bg-surface-container-lowest py-16 px-8 md:px-12 flex flex-col md:flex-row items-center justify-between gap-8 border-y border-outline-variant/10"
+          >
+            <div className="flex flex-col">
+              <span className="font-sans text-xs tracking-widest text-outline uppercase mb-2">Next Ledger Entry</span>
+              <h2 className="font-serif text-3xl text-on-surface">{timerLabel}</h2>
             </div>
-            <span className="font-serif text-4xl text-outline-variant">:</span>
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.hours}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Hours</span>
+            <div className="flex gap-8 items-baseline">
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.days}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Days</span>
+              </div>
+              <span className="font-serif text-4xl text-outline-variant">:</span>
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.hours}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Hours</span>
+              </div>
+              <span className="font-serif text-4xl text-outline-variant">:</span>
+              <div className="flex flex-col items-center">
+                <span className="font-serif text-5xl text-primary">{countdown.minutes}</span>
+                <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Mins</span>
+              </div>
             </div>
-            <span className="font-serif text-4xl text-outline-variant">:</span>
-            <div className="flex flex-col items-center">
-              <span className="font-serif text-5xl text-primary">{countdown.minutes}</span>
-              <span className="font-sans text-[10px] tracking-widest text-outline uppercase">Mins</span>
-            </div>
-          </div>
-          <button className="border border-outline/30 px-10 py-4 font-sans uppercase tracking-widest text-xs text-primary hover:bg-primary hover:text-on-primary transition-all duration-500">
-            Remind Me
-          </button>
-        </motion.section>
+            <button className="border border-outline/30 px-10 py-4 font-sans uppercase tracking-widest text-xs text-primary hover:bg-primary hover:text-on-primary transition-all duration-500">
+              Remind Me
+            </button>
+          </motion.section>
+        )}
 
         {/* Category Logos Section */}
         <section className="py-24 px-8 md:px-12 bg-[#0b0b0b]">
@@ -438,10 +354,10 @@ const Home = () => {
         >
           <div className="flex justify-between items-end mb-20 gap-6 flex-col md:flex-row">
             <div>
-              <h3 className="font-serif text-4xl text-on-surface mb-2">The Current Drop</h3>
+              <h3 className="font-serif text-4xl text-on-surface mb-2">{gridTitle}</h3>
               <p className="font-sans text-outline tracking-wider text-sm">Strictly limited archival releases.</p>
             </div>
-            <Link className="font-sans text-xs uppercase tracking-widest text-primary border-b border-primary/30 pb-1 hover:border-primary transition-all" to="/shopping/product-list">
+            <Link className="font-sans text-xs uppercase tracking-widest text-primary border-b border-primary/30 pb-1 hover:border-primary transition-all" to={shopLink}>
               View All
             </Link>
           </div>
@@ -455,8 +371,27 @@ const Home = () => {
               <div className="col-span-full rounded-3xl border border-red-500/20 bg-[#1a0a0a] p-12 text-center text-red-300">
                 {homepageError}
               </div>
-            ) : activeProducts.length > 0 ? (
-              activeProducts.map((product) => (
+            ) : hasValidDrops ? (
+              validDrops.map((drop) => (
+                <Link key={drop._id || drop.slug} to={`/shopping/drop/${drop.slug}`} className="group">
+                  <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
+                    <img
+                      src={drop.images?.[0]?.url || "/LOGO.png"}
+                      alt={drop.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 bg-black/20 transition-all duration-500" />
+                  </div>
+                  <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-1">{drop.name}</h4>
+                  <p className="font-serif text-outline text-sm">
+                    {drop.releaseDate
+                      ? `Releases ${new Date(drop.releaseDate).toLocaleDateString()}`
+                      : "Drop available"}
+                  </p>
+                </Link>
+              ))
+            ) : displayedProducts.length > 0 ? (
+              displayedProducts.map((product) => (
                 <div key={product._id} className="group">
                   <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
                     <img
@@ -473,7 +408,11 @@ const Home = () => {
                 </div>
               ))
             ) : (
-              <p className="text-outline border border-outline/10 p-12 text-center col-span-full">No active drop products currently available.</p>
+              <p className="text-outline border border-outline/10 p-12 text-center col-span-full">
+                {hasActiveDrop
+                  ? "No products available for this drop yet."
+                  : "No products currently available."}
+              </p>
             )}
           </div>
         </motion.section>
@@ -570,19 +509,6 @@ const Home = () => {
             </button>
           </form>
         </motion.section>
-
-        <footer className="w-full py-20 px-8 md:px-12 bg-[#0E0E0E] flex flex-col items-center gap-12 text-center">
-          <div className="text-[#D4AF37] font-serif text-xl tracking-widest uppercase">SAGA ELITE</div>
-          <div className="flex flex-wrap justify-center gap-12">
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Membership</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Privacy</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Terms</Link>
-            <Link className="font-sans tracking-widest text-xs uppercase text-[#99907C] hover:text-[#D4AF37] transition-all" to="#">Contact</Link>
-          </div>
-          <div className="font-sans tracking-widest text-[10px] uppercase text-[#99907C]/50 mt-8">
-            © 2024 SAGA ELITE. ARCHITECTURAL BRUTALISM IN TEXTILE.
-          </div>
-        </footer>
       </main>
     </div>
   );

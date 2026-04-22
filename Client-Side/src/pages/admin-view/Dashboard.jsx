@@ -3,17 +3,23 @@ import { Link } from 'react-router-dom'
 import { ShoppingCart, Package, Users, DollarSign, TrendingUp, Clock, Heart, Award, MessageSquare } from 'lucide-react'
 import axios from 'axios'
 import { useToast } from "@/hooks/use-toast"
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchDashboardStats } from '@/store/order-slice'
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`
 
 const AdminDashboard = () => {
   const { toast } = useToast()
+  const dispatch = useDispatch()
   
   const [bestSellers, setBestSellers] = useState([])
   const [mostWished, setMostWished] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true)
+
+  const { dashboardStats, isLoading: isStatsLoading } = useSelector((state) => state.order)
 
   useEffect(() => {
+    dispatch(fetchDashboardStats());
     const fetchAnalytics = async () => {
       try {
         const { data } = await axios.get(`${API_BASE}/products/analytics`, {
@@ -28,18 +34,18 @@ const AdminDashboard = () => {
           variant: "destructive"
         });
       } finally {
-        setIsLoading(false)
+        setIsAnalyticsLoading(false)
       }
     }
     
     fetchAnalytics();
-  }, [toast])
+  }, [toast, dispatch])
 
   const stats = [
-    { label: 'Total Sales', value: '$12,345', icon: <DollarSign className="h-6 w-6 text-[#D4AF37]" />, trend: '+12%' },
-    { label: 'Active Orders', value: '45', icon: <ShoppingCart className="h-6 w-6 text-blue-400" />, trend: '5 pending' },
-    { label: 'Total Products', value: '1,234', icon: <Package className="h-6 w-6 text-green-400" />, trend: '24 new' },
-    { label: 'Total Customers', value: '890', icon: <Users className="h-6 w-6 text-purple-400" />, trend: '+3% this week' },
+    { label: 'Total Sales', value: dashboardStats ? `$${dashboardStats.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0.00', icon: <DollarSign className="h-6 w-6 text-[#D4AF37]" />, trend: isStatsLoading ? 'Loading...' : 'Current' },
+    { label: 'Active Orders', value: dashboardStats ? dashboardStats.activeOrders : '0', icon: <ShoppingCart className="h-6 w-6 text-blue-400" />, trend: isStatsLoading ? 'Loading...' : 'Pending' },
+    { label: 'Total Products', value: dashboardStats ? dashboardStats.totalProducts : '0', icon: <Package className="h-6 w-6 text-green-400" />, trend: isStatsLoading ? 'Loading...' : 'Listed' },
+    { label: 'Total Customers', value: dashboardStats ? dashboardStats.totalCustomers : '0', icon: <Users className="h-6 w-6 text-purple-400" />, trend: isStatsLoading ? 'Loading...' : 'Registered' },
   ]
 
   const recentOrders = [
@@ -124,7 +130,7 @@ const AdminDashboard = () => {
             </h2>
           </div>
           <div className="overflow-x-auto">
-            {isLoading ? (
+            {isAnalyticsLoading ? (
               <p className="text-gray-500">Loading metrics...</p>
             ) : bestSellers.length === 0 ? (
               <p className="text-gray-500">No sales data recorded yet.</p>
@@ -160,7 +166,7 @@ const AdminDashboard = () => {
             </h2>
           </div>
           <div className="overflow-x-auto">
-            {isLoading ? (
+            {isAnalyticsLoading ? (
                <p className="text-gray-500">Loading metrics...</p>
             ) : mostWished.length === 0 ? (
               <p className="text-gray-500">No wishlist data recorded yet.</p>

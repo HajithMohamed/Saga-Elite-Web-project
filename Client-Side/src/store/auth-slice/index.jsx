@@ -88,6 +88,9 @@ export const checkAuthAction = createAsyncThunk(
   
         return response.data;
       } catch (error) {
+        if (error?.response?.status === 401) {
+          return { success: false };
+        }
         const serverMsg = error?.response?.data?.message;
         const message = serverMsg || error.message || "Check Auth Failed";
         return thunkAPI.rejectWithValue(message);

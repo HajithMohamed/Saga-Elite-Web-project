@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, Check, Clock3, AlertCircle } from "lucide-react";
+import { Bell, Check, Clock3, AlertCircle, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchNotifications,
@@ -23,6 +23,7 @@ const NotificationsDropdown = () => {
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const { items, unreadCount, isLoading } = useSelector(
     (state) => state.notification,
   );
@@ -46,14 +47,17 @@ const NotificationsDropdown = () => {
     setIsOpen((prev) => !prev);
   };
 
-  const handleItemClick = async (notificationId, isRead) => {
-    if (!isRead) {
-      await dispatch(markNotificationRead(notificationId));
+  const handleItemClick = async (notification) => {
+    if (!notification.isRead) {
+      await dispatch(markNotificationRead(notification._id));
     }
+    setSelectedNotification(notification);
+    setIsOpen(false);
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
+      <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         className="relative p-2 text-gray-400 hover:text-white transition-colors"
@@ -93,7 +97,7 @@ const NotificationsDropdown = () => {
                   key={notification._id}
                   type="button"
                   className={`w-full text-left px-4 py-4 transition-colors ${notification.isRead ? "bg-[#090909] hover:bg-[#111111]" : "bg-[#111111] hover:bg-[#1f1f1f]"}`}
-                  onClick={() => handleItemClick(notification._id, notification.isRead)}
+                  onClick={() => handleItemClick(notification)}
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-1">{typeIcon(notification.type)}</span>
@@ -122,7 +126,43 @@ const NotificationsDropdown = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {selectedNotification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-[#0b0b0b] shadow-2xl relative">
+            <button
+              onClick={() => setSelectedNotification(null)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="p-2 bg-[#111111] rounded-full border border-gray-800">
+                  {typeIcon(selectedNotification.type)}
+                </span>
+                <h3 className="text-lg font-semibold text-white pr-6">
+                  {selectedNotification.title}
+                </h3>
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed mb-6 whitespace-pre-wrap">
+                {selectedNotification.message}
+              </p>
+              <div className="flex justify-between items-center text-xs text-gray-500 uppercase tracking-wider">
+                <span>{new Date(selectedNotification.createdAt).toLocaleString()}</span>
+                <button 
+                  onClick={() => setSelectedNotification(null)}
+                  className="px-4 py-2 bg-[#111111] hover:bg-[#1a1a1a] text-white rounded-lg transition-colors border border-gray-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -234,7 +234,7 @@ const ProductDetails = () => {
             <div className="bg-[#111] rounded-xl p-6 border border-gray-800 max-w-md w-full">
               <h3 className="text-xl font-bold mb-4">Product Already in Cart</h3>
               <p className="text-gray-400 mb-6">
-                This product is already in your cart. Would you like to view your cart summary or proceed with purchasing this item only?
+                This product is already in your cart. Do you want to continue with your cart items or buy this as a new direct checkout?
               </p>
               <div className="flex gap-3">
                 <button

@@ -188,7 +188,10 @@ const Product = () => {
           fd.append("refId", productId);
           fd.append("type", "product");
           newImages.forEach((img) => fd.append("images", img.file));
-          await axios.post(`${API_BASE}/image/upload-image`, fd);
+          await axios.post(`${API_BASE}/image/upload-image`, fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+            withCredentials: true,
+          });
         }
       }
 

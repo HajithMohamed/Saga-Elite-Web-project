@@ -2,7 +2,12 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { addToCartAction, addToWishlistAction, removeFromWishlistAction } from "@/store/cart-slice";
+import {
+  addToCartAction,
+  addToWishlistAction,
+  removeFromWishlistAction,
+  fetchCartAction,
+} from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import { Heart, ShoppingBag, ArrowRight } from "lucide-react";
 
@@ -15,13 +20,19 @@ const ProductListing = () => {
 
   const [selectedVariants, setSelectedVariants] = useState({});
   const [quantities, setQuantities] = useState({});
+  const [pendingBuyNow, setPendingBuyNow] = useState(null);
 
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
+  const cartItems = useSelector((state) => state.cart.cart?.items ?? []);
   const category = searchParams.get("category") || "";
+
+  useEffect(() => {
+    dispatch(fetchCartAction());
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -96,12 +107,6 @@ const ProductListing = () => {
       return;
     }
 
-    const basePrice =
-      product.basePrice + (variant.priceAdjustment || 0);
-
-    const discountedPrice =
-      basePrice * (1 - (product.discountPercent || 0) / 100);
-
     dispatch(
       addToCartAction({
         productId: product._id,
@@ -140,24 +145,33 @@ const ProductListing = () => {
 
     const quantity = quantities[product._id] || 1;
 
-    dispatch(
-      addToCartAction({
-        productId: product._id,
-        variantId: variant._id,
-        quantity,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        navigate("/shopping/checkout");
-      })
-      .catch((err) => {
-        toast({
-          title: "Failed to process",
-          description: err?.message || err || "Could not proceed to checkout.",
-          variant: "destructive",
-        });
-      });
+    const alreadyInCart = cartItems.some(
+      (item) =>
+        (item.product?.id || item.product?._id) === product._id &&
+        item.variant?.sku === variant.sku
+    );
+
+    if (alreadyInCart) {
+      setPendingBuyNow({ product, variant, quantity });
+      return;
+    }
+
+    navigate("/shopping/checkout", {
+      state: { buyNowItem: { product, variant, quantity } },
+    });
+  };
+
+  const handleViewCartSummary = () => {
+    setPendingBuyNow(null);
+    navigate("/shopping/cart");
+  };
+
+  const handleProceedWithItem = () => {
+    if (!pendingBuyNow) return;
+    navigate("/shopping/checkout", {
+      state: { buyNowItem: pendingBuyNow },
+    });
+    setPendingBuyNow(null);
   };
 
   const toggleWishlist = (product) => {
@@ -360,6 +374,31 @@ const ProductListing = () => {
           </div>
         )}
       </div>
+
+      {pendingBuyNow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-gray-800 bg-[#111] p-6">
+            <h3 className="mb-4 text-xl font-bold">Product Already in Cart</h3>
+            <p className="mb-6 text-gray-400">
+              This product is already in your cart. Do you want to continue with your cart items or buy this as a new direct checkout?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleViewCartSummary}
+                className="flex-1 rounded-lg bg-gray-700 py-3 font-bold text-white transition-colors hover:bg-gray-600"
+              >
+                View Cart Summary
+              </button>
+              <button
+                onClick={handleProceedWithItem}
+                className="flex-1 rounded-lg bg-[#D4AF37] py-3 font-bold text-black transition-colors hover:bg-[#F2CA50]"
+              >
+                Buy This Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

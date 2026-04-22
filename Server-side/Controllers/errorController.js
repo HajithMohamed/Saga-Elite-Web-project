@@ -1,4 +1,11 @@
 const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
+
+const logsDir = path.resolve(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+}
 
 // Configure a simple error logger (reuse or minimal)
 const errorLogger = winston.createLogger({
