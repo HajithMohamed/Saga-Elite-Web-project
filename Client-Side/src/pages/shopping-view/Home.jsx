@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
@@ -37,13 +36,6 @@ const computeCountdown = (targetDate) => {
 };
 
 const Home = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const cartInfo = useSelector((state) => state.cart?.cart);
-  const totalQuantity = cartInfo?.totalQuantity || 0;
-
   // States handling DB images
   const [heroImages, setHeroImages] = useState([]);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -53,6 +45,7 @@ const Home = () => {
   const [adImage, setAdImage] = useState(null);
   const [activeProducts, setActiveProducts] = useState([]);
   const [archiveProducts, setArchiveProducts] = useState([]);
+  const [validDrops, setValidDrops] = useState([]);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState({
     days: "02", hours: "14", minutes: "56", seconds: "00",
@@ -136,13 +129,11 @@ const Home = () => {
 
         if (dropsRes?.data?.drops) {
           const drops = dropsRes.data.drops;
-          // Filter drops that haven't expired (endDate is null or in the future)
-          const validDrops = drops.filter(
-            (drop) => !drop.endDate || new Date(drop.endDate) > new Date()
-          );
-          // Sort by release date to show the next upcoming or most recent active
-          validDrops.sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
-          
+          const validDrops = drops
+            .filter((drop) => !drop.endDate || new Date(drop.endDate) > new Date())
+            .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+
+          setValidDrops(validDrops);
           setNextDrop(validDrops[0] || null);
         }
       } catch (error) {
@@ -167,37 +158,42 @@ const Home = () => {
 
   // Next drop timer handling
   useEffect(() => {
+    if (!nextDrop?.releaseDate) {
+      setCountdown({ days: "00", hours: "00", minutes: "00", seconds: "00" });
+      return;
+    }
+
+    setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
+
     const timer = setInterval(() => {
-      if (nextDrop?.releaseDate) {
-        setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
-      }
+      setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
     }, 1000);
     return () => clearInterval(timer);
   }, [nextDrop]);
 
-  const hasActiveDrop = nextDrop !== null;
-  const isDropUpcoming = hasActiveDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date();
+  const hasActiveDrop = Boolean(nextDrop);
+  const isDropUpcoming =
+    hasActiveDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date();
 
-  // If there's an active/upcoming drop with an image, feature it. Otherwise fallback to generic carousel.
-  const heroSrc = hasActiveDrop && nextDrop.images?.[0]?.url 
-    ? nextDrop.images[0].url 
-    : heroImages.length > 0 
-      ? heroImages[currentHeroIndex]?.url 
-      : "/LOGO.png";
-      
+  const heroSrc = heroImages.length > 0 ? heroImages[currentHeroIndex]?.url : "/LOGO.png";
   const logoSrc = logoImage?.url;
   const adSrc = adImage?.url || heroSrc;
+
+  const dropProducts = nextDrop?.products?.filter((product) => product.isActive !== false) || [];
+  const displayedProducts = hasActiveDrop ? dropProducts : activeProducts;
+  const hasValidDrops = validDrops.length > 0;
 
   const getProductLabel = (product) => {
     if (product.isLimited) return "Limited 1 of 50";
     return "Limited Release";
   };
 
-  const timerLabel = hasActiveDrop ? nextDrop.name : "Collection 004";
-  const heroTitle = hasActiveDrop ? nextDrop.name : "Rare Fit Forever";
-  const heroSubtitle = hasActiveDrop && nextDrop.description ? nextDrop.description : "The Sovereign Ledger";
-  const shopLink = hasActiveDrop ? `/shopping/drop/${nextDrop.slug}` : "/shopping/product-list";
-  const gridTitle = hasActiveDrop ? "The Current Drop" : "Featured Products";
+  const timerLabel = hasActiveDrop ? nextDrop.name : "Next Ledger Entry";
+  const heroTitle = "Rare Fit Forever";
+  const heroSubtitle = "The Sovereign Ledger";
+  const heroButtonLabel = "Shop Now";
+  const shopLink = "/shopping/product-list";
+  const gridTitle = hasValidDrops ? "Current Drops" : "Latest Arrivals";
 
   return (
     <div className="bg-background text-on-surface min-h-screen relative w-full overflow-hidden">
@@ -209,7 +205,7 @@ const Home = () => {
           <div className="absolute inset-0 z-0">
             <AnimatePresence mode="popLayout">
               <motion.img
-                key={currentHeroIndex} // Ensures re-triggering of animation when image changes
+                key={heroSrc} // Ensures re-triggering of animation when image changes
                 src={heroSrc}
                 alt="Hero background"
                 initial={{ opacity: 0, scale: 1.1 }}
@@ -255,8 +251,11 @@ const Home = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               className="flex justify-center"
             >
-              <Link to={shopLink} className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10">
-                Shop the Drop
+              <Link
+                to={shopLink}
+                className="bg-primary-container text-on-primary-container px-12 py-5 font-sans uppercase tracking-widest text-sm font-bold hover:bg-primary transition-all duration-500 shadow-xl shadow-primary/10"
+              >
+                {heroButtonLabel}
               </Link>
             </motion.div>
           </div>
@@ -372,8 +371,27 @@ const Home = () => {
               <div className="col-span-full rounded-3xl border border-red-500/20 bg-[#1a0a0a] p-12 text-center text-red-300">
                 {homepageError}
               </div>
-            ) : activeProducts.length > 0 ? (
-              activeProducts.map((product) => (
+            ) : hasValidDrops ? (
+              validDrops.map((drop) => (
+                <Link key={drop._id || drop.slug} to={`/shopping/drop/${drop.slug}`} className="group">
+                  <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
+                    <img
+                      src={drop.images?.[0]?.url || "/LOGO.png"}
+                      alt={drop.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 bg-black/20 transition-all duration-500" />
+                  </div>
+                  <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-1">{drop.name}</h4>
+                  <p className="font-serif text-outline text-sm">
+                    {drop.releaseDate
+                      ? `Releases ${new Date(drop.releaseDate).toLocaleDateString()}`
+                      : "Drop available"}
+                  </p>
+                </Link>
+              ))
+            ) : displayedProducts.length > 0 ? (
+              displayedProducts.map((product) => (
                 <div key={product._id} className="group">
                   <div className="relative bg-surface-container-low aspect-[3/4] mb-6 overflow-hidden">
                     <img
@@ -390,7 +408,11 @@ const Home = () => {
                 </div>
               ))
             ) : (
-              <p className="text-outline border border-outline/10 p-12 text-center col-span-full">No active drop products currently available.</p>
+              <p className="text-outline border border-outline/10 p-12 text-center col-span-full">
+                {hasActiveDrop
+                  ? "No products available for this drop yet."
+                  : "No products currently available."}
+              </p>
             )}
           </div>
         </motion.section>
