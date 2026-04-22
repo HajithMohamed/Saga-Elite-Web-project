@@ -182,10 +182,10 @@ const Drops = () => {
         await uploadPendingDropImages(currentEditedId);
       } else {
         result = await dispatch(createDrop(formData)).unwrap();
-        const newId = result.drop._id;
+        const newId = result._id;
         await uploadPendingDropImages(newId);
         setCurrentEditedId(newId);
-        setCurrentEditedSlug(result.drop.slug);
+        setCurrentEditedSlug(result.slug);
       }
 
       dispatch(getAllDrops());
