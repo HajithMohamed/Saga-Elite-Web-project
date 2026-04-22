@@ -189,10 +189,12 @@ const updateDrop = catchAsync(async (req, res, next) => {
     Object.assign(drop, dropData);
     await drop.save({ validateModifiedOnly: true });
 
+    const populatedDrop = await Drop.findById(drop._id).populate("images");
+
     res.status(200).json({
         success: true,
         message: "Drop updated successfully",
-        drop,
+        drop: populatedDrop,
     });
 });
 
