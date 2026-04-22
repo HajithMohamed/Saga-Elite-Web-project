@@ -1,11 +1,18 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : "http://localhost:5001/api/v1";
 
 const unwrapAxiosError = (error) => {
   const serverMsg = error?.response?.data?.message;
   return serverMsg || error.message || "Request failed";
+};
+
+const extractNotification = (payload) => {
+  if (!payload) return null;
+  return payload.data?.notification || payload.data || payload.notification || null;
 };
 
 export const fetchNotifications = createAsyncThunk(
@@ -154,10 +161,19 @@ const notificationSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(markNotificationRead.fulfilled, (state, action) => {
-        const updated = action.payload.data;
-        state.items = state.items.map((notification) =>
-          notification._id === updated._id ? updated : notification,
-        );
+        const updated = extractNotification(action.payload);
+        if (updated?._id) {
+          state.items = state.items.map((notification) =>
+            notification._id === updated._id ? updated : notification,
+          );
+        } else {
+          const notificationId = action.meta?.arg;
+          state.items = state.items.map((notification) =>
+            notification._id === notificationId
+              ? { ...notification, isRead: true }
+              : notification,
+          );
+        }
         state.unreadCount = state.items.filter((item) => !item.isRead).length;
       })
       .addCase(markNotificationRead.rejected, (state, action) => {
@@ -193,10 +209,12 @@ const notificationSlice = createSlice({
       })
       .addCase(updateAdminNotification.fulfilled, (state, action) => {
         state.adminIsLoading = false;
-        const updated = action.payload.data;
-        state.adminItems = state.adminItems.map((notification) =>
-          notification._id === updated._id ? updated : notification,
-        );
+        const updated = extractNotification(action.payload);
+        if (updated?._id) {
+          state.adminItems = state.adminItems.map((notification) =>
+            notification._id === updated._id ? updated : notification,
+          );
+        }
       })
       .addCase(updateAdminNotification.rejected, (state, action) => {
         state.adminIsLoading = false;
