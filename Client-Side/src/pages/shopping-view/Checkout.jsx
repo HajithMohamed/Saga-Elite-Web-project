@@ -49,7 +49,13 @@ const Checkout = () => {
     if (location.state?.cartItems) {
       // From cart page
       setCheckoutItems(location.state.cartItems);
-      setCheckoutTotal(location.state.cartTotal);
+      setCheckoutTotal(
+        location.state.cartTotal ||
+          location.state.cartItems.reduce(
+            (sum, item) => sum + item.unitPrice * item.quantity,
+            0
+          )
+      );
       setIsBuyNow(false);
     } else if (location.state?.buyNowItem) {
       // From buy now
@@ -160,6 +166,11 @@ const Checkout = () => {
     0
   );
 
+  const checkoutTotalAmount = checkoutItems.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0
+  );
+
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -192,7 +203,7 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!items.length) {
+    if (!checkoutItems.length) {
       setFormError("Your cart is empty.");
       return;
     }
@@ -244,7 +255,7 @@ const Checkout = () => {
     setFormError(null);
 
     // Client-side validation
-    if (!items || items.length === 0) {
+    if (!checkoutItems || checkoutItems.length === 0) {
       setFormError("Your cart is empty. Please add items before checkout.");
       return;
     }
@@ -284,7 +295,7 @@ const Checkout = () => {
 
       const payload = {
         items: checkoutItems.map((item) => ({
-          productId: item.product.id,
+          productId: item.product.id || item.product._id,
           variantSku: item.variant.sku,
           quantity: item.quantity,
         })),
@@ -312,7 +323,7 @@ const Checkout = () => {
       navigate("/shopping/checkout-success", { 
         state: { 
           orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
-          totalAmount: checkoutTotal || totalAmount
+          totalAmount: checkoutTotal || checkoutTotalAmount || totalAmount
         } 
       });
     } catch (err) {
@@ -337,7 +348,7 @@ const Checkout = () => {
   }
 
   // ---------------- EMPTY CART ----------------
-  if (!items.length) {
+  if (!checkoutItems.length) {
     return (
       <div className="min-h-screen bg-[#060606] text-white flex flex-col items-center justify-center">
         <h1 className="text-3xl font-bold">Your cart is empty</h1>
@@ -623,7 +634,7 @@ const Checkout = () => {
                 <div key={item.id} className="flex gap-4 items-center">
                   <div className="w-20 h-24 bg-[#111] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
                     <img
-                      src={item.product.image || "/LOGO.png"}
+                      src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
                       className="w-full h-full object-cover"
                       alt={item.product.name}
                     />
@@ -643,7 +654,7 @@ const Checkout = () => {
             <div className="space-y-4 pt-8 border-t border-gray-800">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-400">Subtotal</span>
-                <span className="font-bold">LKR {checkoutTotal || totalAmount}</span>
+                <span className="font-bold">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-400">Shipping</span>
@@ -652,7 +663,7 @@ const Checkout = () => {
               
               <div className="flex justify-between items-center pt-6 border-t border-gray-800">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {checkoutTotal || totalAmount}</span>
+                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
               </div>
             </div>
 
