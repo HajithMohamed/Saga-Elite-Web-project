@@ -1,42 +1,64 @@
 import { DEMO_PRODUCTS, getProductsByCategory } from './demo-data.js';
-import { addToCart, loadCart, cartTotals, formatCurrency } from './demo-state.js';
+import { addToCart, loadCart, cartTotals, formatCurrency, loadWishlist, toggleWishlist } from './demo-state.js';
+import { updateHeader } from './common.js';
 
 const grid = document.getElementById('product-grid');
 const categoryButtons = document.querySelectorAll('.category-btn');
-
-const queryCategory = new URLSearchParams(window.location.search).get('category') || 'all';
-let activeCategory = queryCategory;
 
 function renderProducts(category) {
   const products = getProductsByCategory(category);
   if (!grid) return;
   if (products.length === 0) {
-    grid.innerHTML = '<div class="rounded-[28px] bg-[#0d0d0d] p-12 text-center text-slate-300">No products available in this category.</div>';
+    grid.innerHTML = '<div class="rounded-[2rem] bg-surface-container-low p-12 text-center text-slate-300 border border-white/5">No products available in this category.</div>';
     return;
   }
 
-  grid.innerHTML = products.map((product) => `
-    <article class="group rounded-[32px] border border-white/10 bg-[#0b0b0b] p-6 transition hover:-translate-y-1 hover:border-saga/30 hover:bg-[#121212]">
-      <div class="relative overflow-hidden rounded-3xl">
-        <img class="h-72 w-full object-cover" src="${product.image}" alt="${product.name}" />
-        <div class="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs uppercase tracking-[0.35em] text-slate-300">${product.category}</div>
+  const wishlist = loadWishlist();
+
+  grid.innerHTML = products.map((product) => {
+    const isWishlisted = wishlist.some(item => item.id === product.id);
+    return `
+    <article class="group relative rounded-[2rem] border border-white/5 bg-surface-container-lowest p-5 transition-all duration-300 hover:border-saga/30 hover:shadow-2xl hover:shadow-saga/5">
+      <!-- Badge -->
+      <div class="absolute top-8 left-8 z-10">
+        <span class="bg-black/80 backdrop-blur-md text-saga text-[10px] font-bold px-3 py-1 rounded-full border border-saga/20 tracking-widest uppercase">
+          ${product.badges[0] || 'Limited Drop'}
+        </span>
       </div>
-      <div class="mt-6 space-y-3">
-        <h3 class="text-2xl font-semibold text-white">${product.name}</h3>
-        <p class="text-sm leading-6 text-slate-300">${product.description}</p>
-        <div class="flex flex-wrap gap-2">
-          ${product.badges.map((badge) => `<span class="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.35em] text-slate-300">${badge}</span>`).join('')}
+      
+      <!-- Image Wrapper -->
+      <div class="relative overflow-hidden rounded-[1.5rem] aspect-[4/5]">
+        <img class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0" src="${product.image}" alt="${product.name}" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
+           <button data-slug="${product.slug}" class="add-cart w-full bg-saga text-black text-xs font-bold py-3 rounded-xl uppercase tracking-widest transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+             Add to Bag
+           </button>
         </div>
-        <div class="mt-4 flex items-center justify-between gap-4">
-          <span class="text-lg font-semibold text-saga">${formatCurrency(product.price)}</span>
-          <div class="flex items-center gap-2">
-            <a href="product-details.html?slug=${product.slug}" class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-200 hover:border-saga">Details</a>
-            <button data-slug="${product.slug}" class="add-cart rounded-full bg-saga px-4 py-2 text-xs font-semibold uppercase text-black transition hover:bg-[#ffe088]">Add</button>
+      </div>
+
+      <!-- Content -->
+      <div class="mt-6 space-y-2">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">${product.category}</p>
+            <h3 class="text-lg font-serif font-medium text-white group-hover:text-saga transition-colors mt-1">${product.name}</h3>
           </div>
+          <button data-slug="${product.slug}" class="toggle-wishlist transition-colors ${isWishlisted ? 'text-saga' : 'text-gray-500 hover:text-saga'}">
+            <svg class="w-5 h-5" fill="${isWishlisted ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+          </button>
+        </div>
+        
+        <div class="flex items-center justify-between pt-2">
+          <span class="text-sm font-bold text-white tracking-widest">${formatCurrency(product.price)}</span>
+          <a href="product-details.html?slug=${product.slug}" class="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors flex items-center gap-2">
+            Details
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+          </a>
         </div>
       </div>
     </article>
-  `).join('');
+    `;
+  }).join('');
 
   document.querySelectorAll('.add-cart').forEach((button) => {
     button.addEventListener('click', () => {
@@ -44,19 +66,30 @@ function renderProducts(category) {
       const product = DEMO_PRODUCTS.find((item) => item.slug === slug);
       if (!product) return;
       addToCart(product, product.variants[0].value, 1);
-      renderCartCount();
+      updateHeader();
       button.textContent = 'Added';
-      setTimeout(() => { button.textContent = 'Add'; }, 900);
+      setTimeout(() => { button.textContent = 'Add to Bag'; }, 900);
+    });
+  });
+
+  document.querySelectorAll('.toggle-wishlist').forEach((button) => {
+    button.addEventListener('click', () => {
+      const slug = button.dataset.slug;
+      const product = DEMO_PRODUCTS.find((item) => item.slug === slug);
+      if (!product) return;
+      toggleWishlist(product);
+      updateHeader();
+      renderProducts(category); // Re-render to update heart icons
     });
   });
 }
 
-function renderCartCount() {
-  const cart = loadCart();
-  const totals = cartTotals(cart);
-  const count = document.getElementById('cart-count');
-  if (count) count.textContent = totals.count;
+function renderProducts(category) {
+  // ... existing code ...
 }
+
+const queryCategory = new URLSearchParams(window.location.search).get('category') || 'all';
+let activeCategory = queryCategory;
 
 categoryButtons.forEach((button) => {
   const category = button.dataset.category;
@@ -73,4 +106,4 @@ categoryButtons.forEach((button) => {
 });
 
 renderProducts(activeCategory);
-renderCartCount();
+updateHeader();

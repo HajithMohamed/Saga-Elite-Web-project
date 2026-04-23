@@ -58,6 +58,31 @@ export function cartTotals(cart) {
   return { subtotal, count: cart.reduce((sum, item) => sum + item.quantity, 0) };
 }
 
+export function loadWishlist() {
+  try {
+    const value = localStorage.getItem('saga-demo-wishlist');
+    return value ? JSON.parse(value) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+export function saveWishlist(wishlist) {
+  localStorage.setItem('saga-demo-wishlist', JSON.stringify(wishlist));
+}
+
+export function toggleWishlist(product) {
+  let wishlist = loadWishlist();
+  const exists = wishlist.find(item => item.id === product.id);
+  if (exists) {
+    wishlist = wishlist.filter(item => item.id !== product.id);
+  } else {
+    wishlist.push(product);
+  }
+  saveWishlist(wishlist);
+  return wishlist;
+}
+
 export function placeOrder(order) {
   const orders = loadOrders();
   const next = [...orders, order];

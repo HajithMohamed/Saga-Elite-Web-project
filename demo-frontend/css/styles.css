@@ -1,16 +1,123 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Noto+Serif:wght@400;700&family=Manrope:wght@400;500;600;700&display=swap');
 
 :root {
   color-scheme: dark;
+  --primary: #f2ca50;
+  --primary-container: #d4af37;
+  --surface: #131313;
+  --surface-dim: #131313;
+  --surface-bright: #3a3939;
+  --surface-container-lowest: #0e0e0e;
+  --surface-container-low: #1c1b1b;
+  --surface-container: #201f1f;
+  --surface-container-high: #2a2a2a;
+  --surface-container-highest: #353534;
+  --on-surface: #e5e2e1;
+  --on-surface-variant: #d0c5af;
+  --outline: #99907c;
+  --outline-variant: #4d4635;
+  --radius: 2rem;
+  
   font-family: 'Inter', sans-serif;
-  background: #090909;
-  color: #e5e2e1;
+  background: var(--surface);
+  color: var(--on-surface);
 }
 
 body {
   background: radial-gradient(circle at top, rgba(212, 175, 55, 0.08), transparent 28%),
     radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.03), transparent 20%),
-    #070707;
+    var(--surface-container-lowest);
+  min-height: 100vh;
+}
+
+/* Header & Banner Styles */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  background: black;
+  color: white;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.top-banner {
+  background: var(--primary-container);
+  color: black;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  position: relative;
+  z-index: 50;
+}
+
+.nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+}
+
+.icon-button {
+  position: relative;
+  color: white;
+  transition: color 0.2s;
+}
+
+.icon-button:hover {
+  color: var(--primary);
+}
+
+.badge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background: var(--primary);
+  color: black;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+/* User Menu Dropdown */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 13rem;
+  background: #0a0a0a;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 0.25rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+
+/* Page Layouts & Containers */
+.container-custom {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .container-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }
 
 html {

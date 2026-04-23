@@ -6,49 +6,137 @@
   <title>Saga Elite Demo</title>
   <script>
     tailwind = { config: { theme: { extend: {
-      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
-      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
+      fontFamily: { 
+        serif: ['Playfair Display', 'serif'], 
+        sans: ['Inter', 'sans-serif'],
+        headline: ["Noto Serif"],
+        body: ["Manrope"]
+      },
+      colors: { saga: '#f2ca50', surface: '#131313', accent: '#d4af37', on: '#e5e2e1' }
     } } } };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/styles.css" />
+  <script type="module" src="js/common.js"></script>
+  <script src="js/demo-state.js"></script>
 </head>
 <body class="min-h-screen bg-surface text-on overflow-x-hidden">
-  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-    <header class="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="text-sm uppercase tracking-[0.35em] text-saga">Saga Elite</p>
-        <h1 class="mt-4 text-4xl font-serif font-semibold tracking-tight text-white md:text-6xl">Rare Fit Forever</h1>
-        <p class="mt-4 max-w-2xl text-base leading-8 text-slate-300">A frontend-only prototype of the Saga Elite fashion platform, built for demo use with mock drops, shopping, checkout and admin flows.</p>
+  <!-- Top Banner -->
+  <div class="top-banner">
+    NEXT DROP: MIDNIGHT SCRIPT LIVES IN <span id="drop-banner-timer">0d 00h 00m 00s</span>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky-header">
+    <div class="container-custom h-20 flex items-center justify-between">
+      <!-- Left: Mobile Menu Button -->
+      <div class="md:hidden flex items-center">
+        <button id="mobile-menu-btn" class="text-saga hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+        </button>
       </div>
-      <nav class="flex flex-wrap gap-3">
-        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="product-listing.html">Shop Now</a>
-        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="cart.html">Cart</a>
-        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="admin-dashboard.html">Admin Demo</a>
+
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3">
+        <img src="LOGO.png" alt="Saga Elite Logo" class="h-12 w-12 object-cover rounded-md" onerror="this.src='https://placehold.co/48x48?text=SE'"/>
+        <div class="hidden md:flex flex-col">
+          <span class="font-bold text-xl tracking-widest text-saga uppercase">Saga Elite</span>
+          <span class="text-[10px] tracking-[0.2em] text-gray-400 uppercase">Rare Fit Forever</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden md:flex items-center gap-8">
+        <a href="index.html" class="nav-link text-saga">Home</a>
+        <a href="product-listing.html" class="nav-link">Products</a>
+        <a href="product-listing.html?category=drops" class="nav-link">Drops</a>
       </nav>
-    </header>
+
+      <!-- Right: Icons -->
+      <div class="flex items-center gap-6">
+        <!-- Wishlist -->
+        <a href="wishlist.html" class="icon-button">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+          <span class="badge wishlist-count" style="display: none;">0</span>
+        </a>
+        <!-- Cart -->
+        <a href="cart.html" class="icon-button">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          <span class="badge cart-count" style="display: none;">0</span>
+        </a>
+
+        <!-- User Profile -->
+        <div class="relative">
+          <button id="user-menu-btn" class="icon-button focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          </button>
+          <!-- User Menu Dropdown -->
+          <div id="user-menu" class="dropdown-menu hidden">
+            <div class="px-4 py-3 border-b border-white/10">
+              <p class="text-xs text-gray-500 uppercase tracking-widest">Signed in as</p>
+              <p class="text-sm text-white font-medium truncate mt-0.5">guest@saga-elite.com</p>
+            </div>
+            <div class="py-1">
+              <a href="admin-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-saga hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Admin Panel
+              </a>
+              <a href="account.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-saga hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                My Account
+              </a>
+              <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Sign Out
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Nav Drawer -->
+    <div id="mobile-menu" class="md:hidden hidden bg-[#0a0a0a] border-t border-white/10 px-6 py-4 flex flex-col gap-4 text-sm font-medium uppercase tracking-widest leading-loose">
+      <a href="index.html" class="hover:text-saga transition-colors text-saga">Home</a>
+      <a href="product-listing.html" class="hover:text-saga transition-colors">Products</a>
+      <a href="product-listing.html?category=drops" class="hover:text-saga transition-colors">Drops</a>
+      <a href="admin-dashboard.html" class="hover:text-saga transition-colors">Admin Panel</a>
+    </div>
+  </header>
+
+  <div class="mx-auto max-w-7xl px-4 py-10 lg:px-8">
+    <div class="mb-12">
+      <p class="text-sm uppercase tracking-[0.35em] text-saga">Saga Elite</p>
+      <h1 class="mt-4 text-5xl font-serif font-semibold tracking-tight text-white md:text-7xl">Rare Fit Forever</h1>
+      <p class="mt-4 max-w-2xl text-lg leading-8 text-slate-300">A frontend-only prototype of the Saga Elite fashion platform, refined to match the production UI. Explore mock drops, shopping, and admin flows.</p>
+    </div>
 
     <section class="mt-10 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-      <div class="rounded-[32px] bg-surface-muted p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
-        <div class="mb-8 flex flex-col gap-4 rounded-3xl border border-white/5 bg-[#090909] p-8">
-          <span class="inline-flex rounded-full bg-saga/10 px-4 py-2 text-xs uppercase tracking-[0.4em] text-saga">Drop-based release</span>
-          <h2 class="text-3xl font-serif font-semibold text-white md:text-4xl">Next Drop: Midnight Script</h2>
-          <p class="max-w-xl text-sm leading-7 text-slate-300">Statement silhouettes hand-crafted for limited release. Live countdown, premium stock and gift-tier assignment for every confirmed order.</p>
+      <div class="rounded-[32px] bg-surface-container-low p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)] border border-white/5">
+        <div class="mb-8 flex flex-col gap-4 rounded-3xl border border-white/10 bg-surface-container-lowest p-8 relative overflow-hidden">
+          <!-- The Sovereign Ledger Background Text -->
+          <div class="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
+            <span class="text-8xl font-serif font-bold italic text-white uppercase select-none">Sovereign</span>
+          </div>
+          
+          <span class="inline-flex rounded-full bg-saga/10 px-4 py-2 text-xs uppercase tracking-[0.4em] text-saga w-fit font-bold">Drop-based release</span>
+          <h2 class="text-3xl font-serif font-semibold text-white md:text-5xl">Midnight Script</h2>
+          <p class="max-w-xl text-base leading-7 text-slate-300">Statement silhouettes hand-crafted for limited release. Live countdown, premium stock and gift-tier assignment for every confirmed order.</p>
           <div class="flex flex-wrap gap-4 pt-4">
-            <a href="product-listing.html?category=unisex" class="rounded-full bg-saga px-5 py-3 text-sm font-semibold uppercase text-black transition hover:bg-[#ffe088]">Shop Unisex</a>
-            <a href="product-listing.html?category=boys" class="rounded-full border border-white/10 px-5 py-3 text-sm uppercase text-slate-100 transition hover:border-saga">Shop Boys</a>
-            <a href="product-listing.html?category=girls" class="rounded-full border border-white/10 px-5 py-3 text-sm uppercase text-slate-100 transition hover:border-saga">Shop Girls</a>
+            <a href="product-listing.html?category=unisex" class="rounded-full bg-saga px-8 py-4 text-sm font-bold uppercase text-black transition hover:bg-[#ffe088] shadow-lg shadow-saga/20">Shop Unisex</a>
+            <a href="product-listing.html?category=boys" class="rounded-full border border-white/20 px-8 py-4 text-sm font-bold uppercase text-slate-100 transition hover:border-saga hover:bg-white/5">Shop Boys</a>
+            <a href="product-listing.html?category=girls" class="rounded-full border border-white/20 px-8 py-4 text-sm font-bold uppercase text-slate-100 transition hover:border-saga hover:bg-white/5">Shop Girls</a>
           </div>
         </div>
 
         <div class="grid gap-6 sm:grid-cols-2">
-          <article class="rounded-3xl border border-white/10 bg-[#0f0f0f] p-6">
-            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Surprise Gift System</p>
+          <article class="rounded-3xl border border-white/10 bg-surface-container-lowest p-6 hover:border-saga/30 transition-colors group">
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400 group-hover:text-saga transition-colors">Surprise Gift System</p>
             <h3 class="mt-4 text-xl font-semibold text-white">Shop & Get a Gift</h3>
             <p class="mt-3 text-sm leading-6 text-slate-300">Every confirmed order earns a gift tier based on total value: Basic, Standard, Premium or Elite.</p>
           </article>
-          <article class="rounded-3xl border border-white/10 bg-[#0f0f0f] p-6">
-            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Manual Payment</p>
+          <article class="rounded-3xl border border-white/10 bg-surface-container-lowest p-6 hover:border-saga/30 transition-colors group">
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400 group-hover:text-saga transition-colors">Manual Payment</p>
             <h3 class="mt-4 text-xl font-semibold text-white">Bank Transfer Support</h3>
             <p class="mt-3 text-sm leading-6 text-slate-300">Checkout supports online and manual payment flows with proof upload for verification.</p>
           </article>
@@ -56,56 +144,136 @@
       </div>
 
       <aside class="space-y-6">
-        <div class="overflow-hidden rounded-[32px] bg-[#111111] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Live stock alert</p>
+        <div class="overflow-hidden rounded-[32px] bg-surface-container-high p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] border border-saga/10">
+          <p class="text-sm uppercase tracking-[0.35em] text-saga font-bold">Live stock alert</p>
           <h3 class="mt-3 text-2xl font-semibold text-white">Enduring drops, limited stock</h3>
           <p class="mt-3 text-sm leading-6 text-slate-300">This demo simulates live availability and gift tier messaging to replicate the purchase experience.</p>
         </div>
-        <div class="rounded-[32px] bg-[#0f0f0f] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <div class="rounded-[32px] bg-surface-container p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] border border-white/5 relative overflow-hidden">
+          <div class="absolute inset-0 bg-saga/5 -z-10"></div>
           <p class="text-sm uppercase tracking-[0.35em] text-slate-400">WhatsApp support</p>
           <div class="mt-4 flex items-center gap-3">
-            <div class="rounded-full bg-saga p-3 text-black">
-              <span class="text-xl">📲</span>
+            <div class="rounded-full bg-saga p-3 text-black shadow-lg shadow-saga/30">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             </div>
             <div>
               <p class="text-base font-semibold text-white">Chat on WhatsApp</p>
-              <p class="mt-1 text-sm text-slate-300">Instant customer support link for the demo experience.</p>
+              <p class="mt-1 text-sm text-slate-300">Instant customer support link.</p>
             </div>
           </div>
-          <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer" class="mt-6 inline-flex rounded-full bg-white/5 px-4 py-3 text-sm text-on hover:bg-white/10">Open WhatsApp</a>
+          <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer" class="mt-6 w-full flex justify-center rounded-full bg-white/5 px-4 py-3 text-sm font-bold text-on hover:bg-white/10 border border-white/10 transition-all">Open WhatsApp</a>
         </div>
       </aside>
     </section>
 
-    <section class="mt-12">
-      <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <!-- Featured Products -->
+    <section class="mt-20">
+      <div class="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Featured collection</p>
-          <h2 class="mt-2 text-3xl font-serif font-semibold text-white">Demo favourites</h2>
+          <h2 class="mt-2 text-4xl font-serif font-semibold text-white">Elite Standard</h2>
         </div>
-        <a href="product-listing.html" class="text-sm font-semibold uppercase text-saga hover:text-[#ffe088]">View all products →</a>
+        <a href="product-listing.html" class="flex items-center gap-2 text-sm font-bold uppercase text-saga hover:text-[#ffe088] transition-colors">
+          View all products 
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+        </a>
       </div>
-      <div id="featured-products" class="grid gap-6 md:grid-cols-2 xl:grid-cols-4"></div>
+      <div id="featured-products" class="grid gap-8 md:grid-cols-2 xl:grid-cols-4"></div>
     </section>
 
-    <section class="mt-14 rounded-[32px] bg-surface-muted p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
+    <!-- Drop Story -->
+    <section class="mt-20 rounded-[32px] bg-surface-container-low p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)] border border-white/5">
       <div class="grid gap-8 lg:grid-cols-2 lg:items-center">
         <div>
           <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Drop story</p>
-          <h2 class="mt-4 text-4xl font-serif font-semibold text-white">Midnight Script</h2>
-          <p class="mt-4 max-w-xl text-base leading-8 text-slate-300">This demo uses Story-style drops to show the product release narrative, stock urgency, and limited availability experience that the project is designed for.</p>
-          <div class="mt-6 flex flex-wrap gap-3">
-            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Release May 15</span>
-            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Limited quantity</span>
-            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Gift tier enabled</span>
+          <h2 class="mt-4 text-4xl font-serif font-semibold text-white md:text-5xl">Midnight Script</h2>
+          <p class="mt-4 max-w-xl text-base leading-8 text-slate-300">This demo uses Story-style drops to show the product release narrative, stock urgency, and limited availability experience that the project is designed for. Each drop is a unique event in the Saga Elite history.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <span class="rounded-full bg-surface px-6 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 border border-white/10">Release May 15</span>
+            <span class="rounded-full bg-surface px-6 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 border border-white/10">Limited quantity</span>
+            <span class="rounded-full bg-surface px-6 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-300 border border-white/10">Gift tier enabled</span>
           </div>
         </div>
-        <div class="overflow-hidden rounded-[28px] bg-[#0b0b0b]">
-          <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1503342452485-86b7b21c1b2d?auto=format&fit=crop&w=1200&q=80" alt="Drop preview" />
+        <div class="overflow-hidden rounded-[28px] bg-black/40 border border-white/10 aspect-video lg:aspect-square">
+          <img class="h-full w-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" src="https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=1200" alt="Drop preview" />
         </div>
       </div>
     </section>
   </div>
+
+  <!-- Footer -->
+  <footer class="mt-32 border-t border-white/10 bg-surface-container-lowest pt-20 pb-10">
+    <div class="container-custom">
+      <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <!-- Brand Section -->
+        <div>
+          <a href="index.html" class="flex items-center gap-3 mb-6">
+            <img src="LOGO.png" alt="Saga Elite Logo" class="h-10 w-10 object-cover rounded-md" onerror="this.src='https://placehold.co/40x40?text=SE'"/>
+            <span class="font-bold text-lg tracking-widest text-saga uppercase">Saga Elite</span>
+          </a>
+          <p class="text-gray-400 text-sm leading-relaxed mb-6">
+            Providing premium footwear and apparel since its inception. Every piece is a limited-run story, crafted for those who value exclusivity and high-end street performance.
+          </p>
+          <div class="flex gap-4">
+            <a href="#" class="text-gray-400 hover:text-saga transition-colors">
+              <span class="sr-only">Instagram</span>
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.26 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+            </a>
+            <a href="#" class="text-gray-400 hover:text-saga transition-colors">
+              <span class="sr-only">Facebook</span>
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.324-.593 1.324-1.324v-21.351c0-.732-.594-1.325-1.324-1.325z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Shop Section -->
+        <div>
+          <h4 class="text-white font-bold uppercase tracking-widest mb-6">Shop</h4>
+          <ul class="space-y-4">
+            <li><a href="product-listing.html?category=unisex" class="text-gray-400 hover:text-saga transition-colors">Unisex Collection</a></li>
+            <li><a href="product-listing.html?category=boys" class="text-gray-400 hover:text-saga transition-colors">Boys Store</a></li>
+            <li><a href="product-listing.html?category=girls" class="text-gray-400 hover:text-saga transition-colors">Girls Store</a></li>
+            <li><a href="product-listing.html?category=drops" class="text-gray-400 hover:text-saga transition-colors">Latest Drops</a></li>
+          </ul>
+        </div>
+
+        <!-- Account Section -->
+        <div>
+          <h4 class="text-white font-bold uppercase tracking-widest mb-6">Account</h4>
+          <ul class="space-y-4">
+            <li><a href="account.html" class="text-gray-400 hover:text-saga transition-colors">My Profile</a></li>
+            <li><a href="orders.html" class="text-gray-400 hover:text-saga transition-colors">Order Tracking</a></li>
+            <li><a href="wishlist.html" class="text-gray-400 hover:text-saga transition-colors">My Wishlist</a></li>
+            <li><a href="cart.html" class="text-gray-400 hover:text-saga transition-colors">Shopping Bag</a></li>
+          </ul>
+        </div>
+
+        <!-- Info Section -->
+        <div>
+          <h4 class="text-white font-bold uppercase tracking-widest mb-6">Legal & Help</h4>
+          <ul class="space-y-4">
+            <li><a href="#" class="text-gray-400 hover:text-saga transition-colors">Support Center</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-saga transition-colors">Shipping & Returns</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-saga transition-colors">Payment Methods</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-saga transition-colors">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-20 flex flex-col items-center gap-6 border-t border-white/5 pt-10">
+        <div class="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-opacity">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" class="h-4" />
+          <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" class="h-5" />
+        </div>
+        <p class="text-gray-500 text-[10px] tracking-[0.3em] uppercase">
+          &copy; 2026 Saga Elite. All rights reserved. Rare Fit Forever.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/demo-state.js"></script>
+  <script type="module" src="js/common.js"></script>
   <script type="module" src="js/home.js"></script>
 </body>
 </html>
