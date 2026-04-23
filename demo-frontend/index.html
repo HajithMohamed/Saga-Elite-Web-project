@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saga Elite Demo</title>
+  <script>
+    tailwind = { config: { theme: { extend: {
+      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
+      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
+    } } } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="min-h-screen bg-surface text-on overflow-x-hidden">
+  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <header class="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm uppercase tracking-[0.35em] text-saga">Saga Elite</p>
+        <h1 class="mt-4 text-4xl font-serif font-semibold tracking-tight text-white md:text-6xl">Rare Fit Forever</h1>
+        <p class="mt-4 max-w-2xl text-base leading-8 text-slate-300">A frontend-only prototype of the Saga Elite fashion platform, built for demo use with mock drops, shopping, checkout and admin flows.</p>
+      </div>
+      <nav class="flex flex-wrap gap-3">
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="product-listing.html">Shop Now</a>
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="cart.html">Cart</a>
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on transition hover:border-saga hover:bg-surface-muted" href="admin-dashboard.html">Admin Demo</a>
+      </nav>
+    </header>
+
+    <section class="mt-10 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+      <div class="rounded-[32px] bg-surface-muted p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
+        <div class="mb-8 flex flex-col gap-4 rounded-3xl border border-white/5 bg-[#090909] p-8">
+          <span class="inline-flex rounded-full bg-saga/10 px-4 py-2 text-xs uppercase tracking-[0.4em] text-saga">Drop-based release</span>
+          <h2 class="text-3xl font-serif font-semibold text-white md:text-4xl">Next Drop: Midnight Script</h2>
+          <p class="max-w-xl text-sm leading-7 text-slate-300">Statement silhouettes hand-crafted for limited release. Live countdown, premium stock and gift-tier assignment for every confirmed order.</p>
+          <div class="flex flex-wrap gap-4 pt-4">
+            <a href="product-listing.html?category=unisex" class="rounded-full bg-saga px-5 py-3 text-sm font-semibold uppercase text-black transition hover:bg-[#ffe088]">Shop Unisex</a>
+            <a href="product-listing.html?category=boys" class="rounded-full border border-white/10 px-5 py-3 text-sm uppercase text-slate-100 transition hover:border-saga">Shop Boys</a>
+            <a href="product-listing.html?category=girls" class="rounded-full border border-white/10 px-5 py-3 text-sm uppercase text-slate-100 transition hover:border-saga">Shop Girls</a>
+          </div>
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+          <article class="rounded-3xl border border-white/10 bg-[#0f0f0f] p-6">
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Surprise Gift System</p>
+            <h3 class="mt-4 text-xl font-semibold text-white">Shop & Get a Gift</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-300">Every confirmed order earns a gift tier based on total value: Basic, Standard, Premium or Elite.</p>
+          </article>
+          <article class="rounded-3xl border border-white/10 bg-[#0f0f0f] p-6">
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Manual Payment</p>
+            <h3 class="mt-4 text-xl font-semibold text-white">Bank Transfer Support</h3>
+            <p class="mt-3 text-sm leading-6 text-slate-300">Checkout supports online and manual payment flows with proof upload for verification.</p>
+          </article>
+        </div>
+      </div>
+
+      <aside class="space-y-6">
+        <div class="overflow-hidden rounded-[32px] bg-[#111111] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Live stock alert</p>
+          <h3 class="mt-3 text-2xl font-semibold text-white">Enduring drops, limited stock</h3>
+          <p class="mt-3 text-sm leading-6 text-slate-300">This demo simulates live availability and gift tier messaging to replicate the purchase experience.</p>
+        </div>
+        <div class="rounded-[32px] bg-[#0f0f0f] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">WhatsApp support</p>
+          <div class="mt-4 flex items-center gap-3">
+            <div class="rounded-full bg-saga p-3 text-black">
+              <span class="text-xl">📲</span>
+            </div>
+            <div>
+              <p class="text-base font-semibold text-white">Chat on WhatsApp</p>
+              <p class="mt-1 text-sm text-slate-300">Instant customer support link for the demo experience.</p>
+            </div>
+          </div>
+          <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer" class="mt-6 inline-flex rounded-full bg-white/5 px-4 py-3 text-sm text-on hover:bg-white/10">Open WhatsApp</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="mt-12">
+      <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Featured collection</p>
+          <h2 class="mt-2 text-3xl font-serif font-semibold text-white">Demo favourites</h2>
+        </div>
+        <a href="product-listing.html" class="text-sm font-semibold uppercase text-saga hover:text-[#ffe088]">View all products →</a>
+      </div>
+      <div id="featured-products" class="grid gap-6 md:grid-cols-2 xl:grid-cols-4"></div>
+    </section>
+
+    <section class="mt-14 rounded-[32px] bg-surface-muted p-8 shadow-[0_28px_80px_rgba(0,0,0,0.35)]">
+      <div class="grid gap-8 lg:grid-cols-2 lg:items-center">
+        <div>
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Drop story</p>
+          <h2 class="mt-4 text-4xl font-serif font-semibold text-white">Midnight Script</h2>
+          <p class="mt-4 max-w-xl text-base leading-8 text-slate-300">This demo uses Story-style drops to show the product release narrative, stock urgency, and limited availability experience that the project is designed for.</p>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Release May 15</span>
+            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Limited quantity</span>
+            <span class="rounded-full bg-surface px-4 py-2 text-xs uppercase tracking-[0.35em] text-slate-300">Gift tier enabled</span>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-[28px] bg-[#0b0b0b]">
+          <img class="h-full w-full object-cover" src="https://images.unsplash.com/photo-1503342452485-86b7b21c1b2d?auto=format&fit=crop&w=1200&q=80" alt="Drop preview" />
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>

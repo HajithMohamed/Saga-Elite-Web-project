@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saga Elite Shop</title>
+  <script>
+    tailwind = { config: { theme: { extend: {
+      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
+      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
+    } } } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="min-h-screen bg-surface text-on">
+  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <header class="mb-10 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Drop Collection</p>
+        <h1 class="mt-3 text-4xl font-serif font-semibold text-white md:text-5xl">Shop the latest Saga Elite</h1>
+      </div>
+      <div class="flex flex-wrap gap-3 items-center">
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="index.html">Home</a>
+        <a class="relative rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="cart.html">
+          Cart
+          <span id="cart-count" class="absolute -right-3 -top-3 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-saga px-2 text-xs font-semibold text-black">0</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="grid gap-8 lg:grid-cols-[0.8fr_0.4fr]">
+      <main>
+        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Filters</p>
+            <h2 class="mt-3 text-3xl font-semibold text-white">Refine your drop search</h2>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button data-category="all" class="category-btn rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm uppercase tracking-[0.35em] text-slate-200">All</button>
+            <button data-category="unisex" class="category-btn rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm uppercase tracking-[0.35em] text-slate-200">Unisex</button>
+            <button data-category="boys" class="category-btn rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm uppercase tracking-[0.35em] text-slate-200">Boys</button>
+            <button data-category="girls" class="category-btn rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm uppercase tracking-[0.35em] text-slate-200">Girls</button>
+          </div>
+        </div>
+
+        <div id="product-grid" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3"></div>
+      </main>
+
+      <aside class="space-y-6">
+        <div class="rounded-[32px] bg-surface-muted p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Your cart</p>
+          <p class="mt-3 text-lg text-white">Items currently saved to cart in demo mode.</p>
+          <a href="cart.html" class="mt-6 inline-flex rounded-full bg-saga px-5 py-3 text-sm font-semibold uppercase text-black transition hover:bg-[#ffe088]">View Cart</a>
+        </div>
+        <div class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Gift tier preview</p>
+          <p class="mt-4 text-sm leading-7 text-slate-300">Orders over 10,000 LKR receive the Elite Gift tier. Every product page shows estimated gift tier on checkout.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script type="module" src="js/product-listing.js"></script>
+</body>
+</html>

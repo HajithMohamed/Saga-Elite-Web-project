@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout | Saga Elite</title>
+  <script>
+    tailwind = { config: { theme: { extend: {
+      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
+      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
+    } } } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="min-h-screen bg-surface text-on">
+  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <header class="mb-10 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Checkout</p>
+        <h1 class="mt-3 text-4xl font-serif font-semibold text-white md:text-5xl">Complete your order</h1>
+      </div>
+      <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="cart.html">Back to Cart</a>
+    </header>
+
+    <div class="grid gap-8 lg:grid-cols-[0.7fr_0.45fr]">
+      <section class="rounded-[32px] bg-[#0d0d0d] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <div class="space-y-6">
+          <div>
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Shipping details</p>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+              <input id="customer-name" type="text" placeholder="Full name" class="rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-sm text-on outline-none focus:border-saga" />
+              <input id="customer-phone" type="tel" placeholder="Phone number" class="rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-sm text-on outline-none focus:border-saga" />
+            </div>
+            <input id="customer-address" type="text" placeholder="Delivery address" class="mt-4 w-full rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-sm text-on outline-none focus:border-saga" />
+          </div>
+          <div>
+            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Payment method</p>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <button type="button" data-method="online" class="payment-method rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-left text-sm text-on transition hover:border-saga">Online payment</button>
+              <button type="button" data-method="manual" class="payment-method rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-left text-sm text-on transition hover:border-saga">Manual payment</button>
+            </div>
+            <div id="payment-details" class="mt-6 rounded-[24px] bg-[#0b0b0b] p-6 text-slate-300"></div>
+          </div>
+          <div>
+            <label class="text-sm uppercase tracking-[0.35em] text-slate-400">Order note</label>
+            <textarea id="order-note" rows="4" placeholder="Add a note for the order (optional)" class="mt-4 w-full rounded-3xl border border-white/10 bg-[#111111] px-4 py-4 text-sm text-on outline-none focus:border-saga"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <aside class="space-y-6">
+        <div class="rounded-[32px] bg-surface-muted p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <h2 class="text-xl font-semibold text-white">Order summary</h2>
+          <div class="mt-6 space-y-3 text-sm text-slate-300">
+            <div class="flex items-center justify-between"><span>Subtotal</span><span id="subtotal">LKR 0.00</span></div>
+            <div class="flex items-center justify-between"><span>Delivery</span><span>LKR 0.00</span></div>
+            <div class="flex items-center justify-between text-saga"><strong>Total</strong><strong id="order-total">LKR 0.00</strong></div>
+          </div>
+          <button id="place-order" class="mt-8 w-full rounded-full bg-saga px-5 py-4 text-sm font-semibold uppercase text-black transition hover:bg-[#ffe088]">Place order</button>
+        </div>
+        <div class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Order support</p>
+          <p class="mt-4 text-sm leading-7 text-slate-300">This demo saves order details locally and then navigates to a confirmation page that simulates a confirmed order experience.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script type="module" src="js/checkout.js"></script>
+</body>
+</html>
