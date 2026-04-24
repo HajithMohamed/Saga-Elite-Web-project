@@ -1,46 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Success | Saga Elite</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Success - Saga Elite Shop</title>
   <script>
-    tailwind = { config: { theme: { extend: {
-      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
-      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
-    } } } };
+    tailwind = { 
+      config: { 
+        theme: { 
+          extend: {
+            fontFamily: {
+              serif: ['Playfair Display', 'serif'],
+              sans: ['Inter', 'sans-serif'],
+              headline: ["Noto Serif"],
+              body: ["Manrope"],
+              label: ["Manrope"]
+            },
+            colors: {
+              saga: '#f2ca50', 
+              surface: '#131313', 
+              accent: '#d4af37', 
+              on: '#e5e2e1',
+              "surface-container-low": "#1c1b1b"
+            }
+          } 
+        } 
+      } 
+    };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/styles.css" />
   <script type="module" src="js/common.js"></script>
-  <script src="js/demo-state.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
-<body class="min-h-screen bg-surface text-on">
-  <div class="mx-auto max-w-6xl px-4 py-8 lg:px-8">
-    <div class="rounded-[32px] bg-[#0d0d0d] p-10 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-      <div class="mx-auto inline-flex h-24 w-24 items-center justify-center rounded-full bg-saga text-4xl">✓</div>
-      <h1 class="mt-8 text-4xl font-serif font-semibold text-white">Order Confirmed</h1>
-      <p class="mt-4 max-w-2xl mx-auto text-base leading-8 text-slate-300">Your order has been placed in the demo system. The confirmation page simulates the final customer success flow including order reference and next steps.</p>
-      <div class="mt-10 rounded-[28px] bg-[#111111] p-8 text-left text-slate-300">
-        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Order reference</p>
-        <p class="mt-3 text-2xl font-semibold text-white" id="order-id">ORD-000000</p>
-        <div class="mt-6 grid gap-4 sm:grid-cols-2">
-          <div class="rounded-3xl bg-[#0b0b0b] p-5">
-            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Status</p>
-            <p class="mt-3 text-xl text-saga">Confirmed</p>
-          </div>
-          <div class="rounded-3xl bg-[#0b0b0b] p-5">
-            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Next step</p>
-            <p class="mt-3 text-xl text-white">Processing & packaging</p>
-          </div>
-        </div>
-      </div>
-      <div class="mt-10 grid gap-6 sm:grid-cols-2">
-        <a href="product-listing.html" class="rounded-full bg-saga px-6 py-4 text-sm font-semibold uppercase text-black transition hover:bg-[#ffe088]">Continue shopping</a>
-        <a href="admin-dashboard.html" class="rounded-full border border-white/10 bg-white/5 px-6 py-4 text-sm uppercase text-on hover:border-saga">View admin demo</a>
-      </div>
+<body class="min-h-screen bg-[#060606] text-white flex flex-col font-sans">
+  
+  <div id="root-header"></div>
+  
+  <div class="flex-1 flex flex-col items-center justify-center p-6 text-center mt-16 max-w-sm mx-auto">
+    <div class="w-24 h-24 rounded-full bg-[#D4AF37]/10 flex items-center justify-center mb-8 border border-[#D4AF37]/20">
+      <span class="material-symbols-outlined text-[48px] text-[#D4AF37]">task_alt</span>
+    </div>
+    
+    <h1 class="text-3xl font-bold tracking-tight mb-4">Architecture Acquired</h1>
+    <p class="text-gray-400 mb-8 text-sm leading-relaxed">
+      Your order <span id="order-id-display" class="text-white font-bold tracking-widest hidden"></span> has been received. 
+      Preparation of your garments will begin shortly.
+    </p>
+
+    <div class="w-full space-y-4">
+        <a href="product-listing.html" class="w-full block bg-[#D4AF37] text-black py-4 rounded-lg font-bold uppercase tracking-widest text-sm transition-colors hover:bg-yellow-500">
+            Continue Shopping
+        </a>
     </div>
   </div>
-  <script type="module" src="js/order-success.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const ord = localStorage.getItem('saga_demo_last_order');
+        if(ord) {
+            const display = document.getElementById('order-id-display');
+            display.textContent = ord;
+            display.classList.remove('hidden');
+        }
+    });
+  </script>
 </body>
 </html>

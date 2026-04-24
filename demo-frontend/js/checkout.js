@@ -1,79 +1,112 @@
-import { loadCart, cartTotals, placeOrder, formatCurrency } from './demo-state.js';
+import { renderNav } from './common.js';
 
-const subtotalEl = document.getElementById('subtotal');
-const orderTotalEl = document.getElementById('order-total');
-const paymentDetails = document.getElementById('payment-details');
-const placeOrderButton = document.getElementById('place-order');
-const paymentButtons = document.querySelectorAll('.payment-method');
+const CART_KEY = 'saga_demo_cart';
+const SHIPPING_COST = 100;
 
-let selectedMethod = 'online';
-const cart = loadCart();
-const totals = cartTotals(cart);
-if (cart.length === 0) {
-  alert('Your demo cart is empty. Please add items before checkout.');
-  window.location.href = 'cart.html';
-}
-subtotalEl.textContent = formatCurrency(totals.subtotal);
-orderTotalEl.textContent = formatCurrency(totals.subtotal);
+function initCheckout() {
+    renderNav();
+    
+    const cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    
+    if (cart.length === 0) {
+        window.location.href = 'cart.html';
+        return;
+    }
 
-if (paymentDetails) {
-  paymentDetails.innerHTML = renderPaymentInstructions(selectedMethod);
-}
-
-paymentButtons.forEach((button) => {
-  const method = button.dataset.method;
-  if (method === selectedMethod) button.classList.add('border-saga', 'bg-surface');
-  button.addEventListener('click', () => {
-    selectedMethod = method;
-    paymentButtons.forEach((btn) => btn.classList.toggle('border-saga', btn.dataset.method === method));
-    paymentButtons.forEach((btn) => btn.classList.toggle('bg-surface', btn.dataset.method === method));
-    if (paymentDetails) paymentDetails.innerHTML = renderPaymentInstructions(method);
-  });
-});
-
-function renderPaymentInstructions(method) {
-  if (method === 'online') {
-    return `
-      <h3 class="text-base font-semibold text-white">Online payment</h3>
-      <p class="mt-3 text-sm leading-7">Enter your card details to simulate the online payment flow. This page does not submit to a gateway.</p>
-      <div class="mt-4 space-y-3">
-        <input type="text" placeholder="Card number" class="w-full rounded-3xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-on outline-none focus:border-saga" />
-        <div class="grid gap-3 sm:grid-cols-2">
-          <input type="text" placeholder="Expiry" class="rounded-3xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-on outline-none focus:border-saga" />
-          <input type="text" placeholder="CVV" class="rounded-3xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-on outline-none focus:border-saga" />
+    const itemsContainer = document.getElementById('checkout-cart-items');
+    const subtotalEl = document.getElementById('checkout-subtotal');
+    const totalEl = document.getElementById('checkout-total');
+    
+    let subtotal = 0;
+    
+    itemsContainer.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        const fallbackImg = item.image || 'https://via.placeholder.com/150';
+        
+        return `
+        <div class="flex gap-4 items-center">
+            <div class="w-20 h-24 bg-[#111] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
+                <img src="${fallbackImg}" class="w-full h-full object-cover" alt="${item.title}" />
+            </div>
+            <div class="flex-1 space-y-1">
+                <p class="font-bold text-sm leading-tight line-clamp-1 text-white">${item.title}</p>
+                <p class="text-[10px] text-gray-400 uppercase tracking-wider">
+                    ${item.size} • ${item.color} • Qty: ${item.quantity}
+                </p>
+                <p class="font-bold text-base mt-2 text-[#D4AF37]">BDT ${item.price}</p>
+            </div>
         </div>
-      </div>
-    `;
-  }
-  return `
-    <h3 class="text-base font-semibold text-white">Manual payment</h3>
-    <p class="mt-3 text-sm leading-7">Upload proof of payment after transferring funds via bank or mobile banking. This demo does not submit files.</p>
-    <div class="mt-4 space-y-3">
-      <input type="text" placeholder="Bank reference" class="w-full rounded-3xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-on outline-none focus:border-saga" />
-      <input type="file" class="w-full rounded-3xl border border-white/10 bg-[#111111] px-4 py-3 text-sm text-on outline-none" />
-    </div>
-  `;
+        `;
+    }).join('');
+
+    subtotalEl.textContent = `BDT ${subtotal.toLocaleString()}`;
+    totalEl.textContent = `BDT ${(subtotal + SHIPPING_COST).toLocaleString()}`;
+
+    // Payment Method Toggle UI
+    const btnCod = document.getElementById('btn-cod');
+    const btnCard = document.getElementById('btn-card');
+    const cardForm = document.getElementById('card-form');
+    
+    let method = 'COD';
+
+    const setMethodUI = (selected) => {
+        method = selected;
+        // Reset
+        [btnCod, btnCard].forEach(b => {
+             b.classList.replace('border-[#D4AF37]', 'border-transparent');
+             b.classList.replace('bg-[#0a0a0a]', 'bg-[#111]');
+             b.classList.replace('opacity-100', 'opacity-60');
+             b.querySelector('.indicator').className = 'indicator w-4 h-4 rounded-full border-2 border-gray-600';
+             b.querySelector('span:nth-child(2)').classList.replace('text-white', 'text-gray-400');
+             b.querySelector('.material-symbols-outlined').classList.replace('text-[#D4AF37]', 'text-gray-400');
+        });
+        
+        // Active
+        const activeBtn = selected === 'COD' ? btnCod : btnCard;
+        activeBtn.classList.replace('border-transparent', 'border-[#D4AF37]');
+        activeBtn.classList.replace('bg-[#111]', 'bg-[#0a0a0a]');
+        activeBtn.classList.replace('opacity-60', 'opacity-100');
+        activeBtn.querySelector('.indicator').className = 'indicator w-4 h-4 rounded-full border-4 border-[#D4AF37]';
+        activeBtn.querySelector('span:nth-child(2)').classList.replace('text-gray-400', 'text-white');
+        activeBtn.querySelector('.material-symbols-outlined').classList.replace('text-gray-400', 'text-[#D4AF37]');
+        
+        if (selected === 'CARD') {
+            cardForm.classList.remove('hidden');
+        } else {
+            cardForm.classList.add('hidden');
+        }
+    };
+
+    btnCod.addEventListener('click', () => setMethodUI('COD'));
+    btnCard.addEventListener('click', () => setMethodUI('CARD'));
+
+    // Form Submission
+    const handleCheckout = (e) => {
+        e.preventDefault();
+        
+        const address = document.getElementById('address').value;
+        const phone = document.getElementById('phone').value;
+        
+        if(!address || !phone) {
+            alert('Please fill out Address and Contact Number');
+            return;
+        }
+
+        // Mock Order
+        const orderId = `ORD-${Math.floor(Math.random()*100000)}`;
+        localStorage.setItem('saga_demo_last_order', orderId);
+        
+        // Clear Cart
+        localStorage.removeItem(CART_KEY);
+        
+        window.location.href = 'order-success.html';
+    };
+
+    document.getElementById('checkout-form').addEventListener('submit', handleCheckout);
+    document.getElementById('btn-submit-sidebar').addEventListener('click', () => {
+        document.getElementById('checkout-form').requestSubmit();
+    });
 }
 
-placeOrderButton?.addEventListener('click', () => {
-  const name = document.getElementById('customer-name')?.value.trim();
-  const phone = document.getElementById('customer-phone')?.value.trim();
-  const address = document.getElementById('customer-address')?.value.trim();
-  if (!name || !phone || !address) {
-    alert('Please fill in your shipping details to proceed.');
-    return;
-  }
-  const orderId = `ORD-${Math.floor(Math.random() * 900000) + 100000}`;
-  placeOrder({
-    id: orderId,
-    name,
-    phone,
-    address,
-    paymentMethod: selectedMethod,
-    total: totals.subtotal,
-    items: cart,
-    date: new Date().toLocaleDateString('en-LK'),
-    status: 'Confirmed'
-  });
-  window.location.href = `order-success.html?orderId=${orderId}`;
-});
+document.addEventListener('DOMContentLoaded', initCheckout);

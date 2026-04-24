@@ -1,50 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product Details | Saga Elite</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details - Saga Elite Shop</title>
   <script>
-    tailwind = { config: { theme: { extend: {
-      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
-      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
-    } } } };
+    tailwind = { 
+      config: { 
+        theme: { 
+          extend: {
+            fontFamily: {
+              serif: ['Playfair Display', 'serif'],
+              sans: ['Inter', 'sans-serif'],
+              headline: ["Noto Serif"],
+              body: ["Manrope"],
+              label: ["Manrope"]
+            },
+            colors: {
+              saga: '#f2ca50', 
+              surface: '#131313', 
+              accent: '#d4af37', 
+              on: '#e5e2e1',
+              "surface-container-low": "#1c1b1b"
+            }
+          } 
+        } 
+      } 
+    };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/styles.css" />
   <script type="module" src="js/common.js"></script>
   <script src="js/demo-state.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
-<body class="min-h-screen bg-surface text-on">
-  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-    <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Product preview</p>
-        <h1 class="mt-3 text-4xl font-serif font-semibold text-white md:text-5xl">Product Details</h1>
+<body class="bg-[#060606] text-white min-h-screen">
+
+<!-- Navbar Container -->
+<div id="root-header"></div>
+
+<div class="min-h-screen bg-[#060606] text-white pt-24 pb-20">
+  <div class="container mx-auto px-4 md:px-8 max-w-7xl">
+    
+    <!-- Back Button -->
+    <a href="product-listing.html" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-[#D4AF37] transition-colors uppercase tracking-widest mb-8">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span> Back
+    </a>
+
+    <!-- Main Grid Layout -->
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-20">
+      
+      <!-- Left Column: Images Gallery -->
+      <div class="flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 lg:h-[70vh]">
+        <!-- Thumbnail Gallery -->
+        <div id="thumbnail-gallery" class="flex lg:flex-col gap-4 overflow-x-auto lg:overflow-y-auto custom-scrollbar pb-2 lg:pb-0 lg:w-24 shrink-0">
+          <!-- Thumbnails injected via JS -->
+        </div>
+        
+        <!-- Main Image Display -->
+        <div class="flex-1 relative rounded-[2rem] overflow-hidden bg-[#111] aspect-[4/5] lg:aspect-auto">
+          <img id="main-product-image" src="" class="w-full h-full object-cover transition-opacity duration-300" alt="Product Name">
+          
+          <button id="wishlist-btn" class="absolute top-6 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl transition hover:bg-black/80 group">
+            <span class="material-symbols-outlined text-white transition-colors group-hover:text-red-500">favorite</span>
+          </button>
+        </div>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="product-listing.html">Back to Shop</a>
-        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="cart.html">View Cart</a>
+
+      <!-- Right Column: Product Details -->
+      <div class="flex flex-col justify-center py-4">
+        
+        <!-- Category & Limited Badge -->
+        <p id="product-category" class="text-[#D4AF37] font-bold uppercase tracking-[0.2em] text-sm mb-3">
+          <!-- Category injected -->
+        </p>
+        
+        <h1 id="product-title" class="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+            <!-- Title injected -->
+        </h1>
+        
+        <p id="product-id" class="text-gray-500 uppercase tracking-widest text-xs mb-8">
+            <!-- ID injected -->
+        </p>
+
+        <!-- Price Section -->
+        <div id="price-container" class="flex items-baseline gap-4 mb-10">
+          <!-- Price injected -->
+        </div>
+
+        <!-- Size & Color Selection Section -->
+        <div class="space-y-6 mb-10">
+          <div>
+            <div class="flex justify-between mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
+              <span>Size & Color</span>
+              <span id="stock-status" class="text-gray-400">Loading stock...</span>
+            </div>
+            
+            <div id="variants-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <!-- Variants injected via JS -->
+            </div>
+          </div>
+
+          <!-- Quantity Selection -->
+          <div>
+            <label class="block mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">Quantity</label>
+            <div class="flex items-center gap-4">
+              <div class="flex items-center border border-gray-800 rounded-full bg-[#111] w-32 h-12">
+                <button id="qty-minus" class="flex-1 text-xl text-gray-400 hover:text-[#D4AF37] transition-colors">−</button>
+                <span id="qty-value" class="font-semibold text-white">1</span>
+                <button id="qty-plus" class="flex-1 text-xl text-gray-400 hover:text-[#D4AF37] transition-colors">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-10">
+          <button id="add-to-cart-btn" class="flex-1 h-14 rounded-full bg-white/10 hover:bg-white/20 transition-colors uppercase tracking-widest text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            Add To Cart
+          </button>
+          <button id="buy-now-btn" class="flex-1 h-14 rounded-full bg-[#D4AF37] hover:bg-[#F2CA50] text-black transition-colors uppercase tracking-widest text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            Buy Now
+          </button>
+        </div>
+
+        <!-- Product Description -->
+        <p id="product-description" class="text-gray-400 leading-relaxed mb-10 whitespace-pre-line">
+          <!-- Description injected -->
+        </p>
+
+        <!-- Trust Badges -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-gray-800/50">
+          <div class="flex flex-col items-center text-center gap-2 text-gray-400">
+            <span class="material-symbols-outlined text-[28px]">local_shipping</span>
+            <span class="text-[10px] sm:text-xs uppercase tracking-widest">Fast Delivery</span>
+          </div>
+          <div class="flex flex-col items-center text-center gap-2 text-gray-400">
+            <span class="material-symbols-outlined text-[28px]">enhanced_encryption</span>
+            <span class="text-[10px] sm:text-xs uppercase tracking-widest">Secure Checkout</span>
+          </div>
+          <div class="flex flex-col items-center text-center gap-2 text-gray-400">
+            <span class="material-symbols-outlined text-[28px]">currency_exchange</span>
+            <span class="text-[10px] sm:text-xs uppercase tracking-widest">Returns</span>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <main class="grid gap-8 lg:grid-cols-[0.9fr_0.6fr]">
-      <div class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-        <div id="product-details" class="grid gap-6 lg:grid-cols-[1fr_0.95fr]"></div>
-      </div>
-
-      <aside class="space-y-6">
-        <div class="rounded-[32px] bg-surface-muted p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Product highlight</p>
-          <p class="mt-4 text-sm leading-7 text-slate-300">This demo page shows variant selection, quantity controls, and cart add behavior with local persistence.</p>
-        </div>
-        <div class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-          <p class="text-sm uppercase tracking-[0.35em] text-slate-400">WhatsApp support</p>
-          <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer" class="mt-4 inline-flex rounded-full bg-saga px-4 py-3 text-sm font-semibold uppercase text-black">Open chat</a>
-        </div>
-      </aside>
-    </main>
   </div>
-  <script type="module" src="js/product-details.js"></script>
+</div>
+
+<!-- Modal -->
+<div id="buy-now-modal" class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50 p-4 backdrop-blur-sm">
+  <div class="bg-[#111] rounded-xl p-6 border border-gray-800 max-w-md w-full shadow-2xl">
+    <h3 class="text-xl font-bold mb-4 text-white">Product Already in Cart</h3>
+    <p class="text-gray-400 mb-6 text-sm leading-relaxed">
+      This exact variant is already in your cart. Do you want to continue to the standard checkout or override and buy only this item directly?
+    </p>
+    <div class="flex gap-3">
+      <a href="cart.html" class="flex-1 text-center bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+        View Cart
+      </a>
+      <a href="checkout.html" class="flex-1 text-center bg-[#D4AF37] hover:bg-[#F2CA50] text-black py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+        Checkout
+      </a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/product-details.js"></script>
 </body>
 </html>
