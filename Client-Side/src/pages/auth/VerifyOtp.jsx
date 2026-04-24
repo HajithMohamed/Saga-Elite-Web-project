@@ -30,10 +30,10 @@ const VerifyOtp = () => {
         variant: "success",
       });
       setTimeout(() => {
-        navigate("/shopping/home");
+        navigate(user.role === "admin" ? "/admin/dashboard" : "/shopping/home");
       }, 1000); 
     }
-  }, [user]);
+  }, [navigate, user]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

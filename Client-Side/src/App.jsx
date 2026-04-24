@@ -51,6 +51,8 @@ import CheckAuth from "./components/common-components/CheckAuth";
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const defaultAuthenticatedRoute =
+    user?.role === "admin" ? "/admin/dashboard" : "/shopping/home";
 
   useEffect(() => {
     dispatch(checkAuthAction());
@@ -68,7 +70,16 @@ function App() {
     <div>
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Navigate to={defaultAuthenticatedRoute} replace />
+              ) : (
+                <Home />
+              )
+            }
+          />
         </Route>
 
         {/* AUTH ROUTES */}
