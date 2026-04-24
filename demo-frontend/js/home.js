@@ -3,46 +3,46 @@ import { DEMO_PRODUCTS } from './demo-data.js';
 const featuredContainer = document.getElementById('featured-products');
 
 if (featuredContainer) {
-  const featured = DEMO_PRODUCTS.slice(0, 4);
-  featuredContainer.innerHTML = featured.map((product) => `
-    <article class="group relative rounded-[2rem] border border-white/5 bg-surface-container-lowest p-5 transition-all duration-300 hover:border-saga/30 hover:shadow-2xl hover:shadow-saga/5">
-      <!-- Badge -->
-      <div class="absolute top-8 left-8 z-10">
-        <span class="bg-black/80 backdrop-blur-md text-saga text-[10px] font-bold px-3 py-1 rounded-full border border-saga/20 tracking-widest uppercase">
-          Limited Drop
-        </span>
-      </div>
-      
-      <!-- Image Wrapper -->
-      <div class="relative overflow-hidden rounded-[1.5rem] aspect-[4/5]">
-        <img class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0" src="${product.image}" alt="${product.name}" />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-           <button class="w-full bg-saga text-black text-xs font-bold py-3 rounded-xl uppercase tracking-widest transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-             Quick Add
-           </button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="mt-6 space-y-2">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">${product.category}</p>
-            <h3 class="text-lg font-serif font-medium text-white group-hover:text-saga transition-colors mt-1">${product.name}</h3>
+  const activeProducts = DEMO_PRODUCTS;
+  featuredContainer.innerHTML = activeProducts.map((product) => {
+    return `
+      <div class="group relative bg-[#111] overflow-hidden border border-[#222]">
+        <div class="relative aspect-[3/4] overflow-hidden bg-[#0a0a0a]">
+          <div class="absolute inset-0 bg-[#D4AF37]/5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out" />
+          
+          <!-- Badges -->
+          <div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
+            ${product.badges?.includes('Limited Drop') ? '<span class="bg-black text-[#D4AF37] text-[9px] font-bold px-3 py-1 tracking-widest uppercase border border-[#D4AF37]/30 shadow-[0_0_10px_rgba(212,175,55,0.2)]">Limited Drop</span>' : ''}
+            <span class="bg-white text-black text-[9px] font-bold px-3 py-1 tracking-widest uppercase shadow-lg">New Arrival</span>
           </div>
-          <button class="text-gray-500 hover:text-saga transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+
+          <!-- Wishlist Toggle -->
+          <button class="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-black/50 backdrop-blur-sm border border-white/10 hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-black transition-all duration-300 text-white rounded-full">
+            <span class="material-symbols-outlined text-[18px]">favorite</span>
           </button>
+
+          <!-- Hover Action Overlay -->
+          <div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+            <button class="w-full bg-[#111] border border-[#333] hover:border-[#D4AF37] text-white hover:text-[#D4AF37] py-3 text-[10px] font-bold uppercase tracking-widest transition-colors shadow-2xl flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">shopping_bag</span>
+              Add to Cart
+            </button>
+          </div>
         </div>
-        
-        <div class="flex items-center justify-between pt-2">
-          <span class="text-sm font-bold text-white tracking-widest">LKR ${product.price.toLocaleString()}</span>
-          <a href="product-details.html?slug=${product.slug}" class="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors flex items-center gap-2">
-            Details
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-          </a>
+
+        <div class="p-5 flex flex-col gap-3 relative z-10 bg-[#111]">
+          <div class="flex justify-between items-start gap-4">
+            <div class="flex-1">
+              <p class="text-[#D4AF37] text-[9px] font-bold uppercase tracking-[0.2em] mb-1">${product.category}</p>
+              <h3 class="text-white font-serif text-lg leading-tight group-hover:text-[#D4AF37] transition-colors line-clamp-1">${product.name}</h3>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="text-white font-serif text-lg tracking-wide block">LKR ${product.price}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </article>
-  `).join('');
+    `;
+  }).join('');
 }

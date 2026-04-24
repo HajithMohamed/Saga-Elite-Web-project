@@ -1,75 +1,103 @@
-import { loadCart, removeFromCart, updateCartQuantity, cartTotals, formatCurrency } from './demo-state.js';
+import { getProductBySlug } from './demo-data.js';
 
-const cartItemsContainer = document.getElementById('cart-items');
-const subtotalElement = document.getElementById('subtotal');
-const checkoutButton = document.getElementById('checkout-button');
+export function loadCart() {
+  const container = document.getElementById('cart-items-container');
+  if (!container) return;
 
-function renderCart() {
-  const cart = loadCart();
-  const totals = cartTotals(cart);
-  subtotalElement.textContent = formatCurrency(totals.subtotal);
-
-  if (!cartItemsContainer) return;
-  if (cart.length === 0) {
-    cartItemsContainer.innerHTML = '<div class="rounded-[28px] bg-[#0d0d0d] p-12 text-center text-slate-300">Your cart is empty. Browse <a class="text-saga underline" href="product-listing.html">products</a> to add items.</div>';
-    checkoutButton.classList.add('pointer-events-none', 'opacity-50');
+  const storageItems = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
+  if (storageItems.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-1 md:col-span-8 bg-[#111] border border-[#222] p-12 text-center flex flex-col items-center justify-center gap-4">
+        <div class="h-16 w-16 mb-4 flex items-center justify-center border border-[#333] text-[#D4AF37]">
+          <span class="material-symbols-outlined text-[32px]">shopping_bag</span>
+        </div>
+        <h2 class="text-xl font-serif text-white tracking-widest">YOUR CART IS EMPTY</h2>
+        <p class="text-sm text-gray-500 max-w-md">Looks like you haven't added anything to your cart yet.</p>
+        <a href="index.html" class="mt-4 bg-[#D4AF37] hover:bg-[#c49a2a] text-black px-8 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors inline-block">
+          Continue Shopping
+        </a>
+      </div>
+    `;
+    const summary = document.getElementById('order-summary-content');
+    if (summary) summary.innerHTML = '<p class="text-gray-500">No items.</p>';
     return;
   }
 
-  checkoutButton.classList.remove('pointer-events-none', 'opacity-50');
-  cartItemsContainer.innerHTML = cart.map((item) => `
-    <div class="rounded-[32px] bg-[#0b0b0b] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex items-center gap-4">
-          <img class="h-28 w-28 rounded-3xl object-cover" src="${item.image}" alt="${item.name}" />
-          <div>
-            <p class="text-sm uppercase tracking-[0.35em] text-slate-400">${item.variant}</p>
-            <h3 class="text-xl font-semibold text-white">${item.name}</h3>
-            <p class="mt-2 text-sm text-slate-300">${formatCurrency(item.price)}</p>
-          </div>
+  // Generate React-like Cart UI
+  container.innerHTML = storageItems.map((item) => {
+    return `
+      <div class="group flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 bg-[#111] border border-[#222] hover:border-[#D4AF37]/50 transition-colors relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+        <div class="w-full sm:w-32 aspect-[3/4] sm:aspect-square bg-black overflow-hidden relative border border-[#333]">
+          <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700" />
         </div>
-        <div class="flex flex-col gap-4 text-right">
-          <div class="flex items-center justify-end gap-2 text-sm text-slate-300">
-            <button data-slug="${item.slug}" data-variant="${item.variant}" class="decrease rounded-full border border-white/10 px-3 py-2 transition hover:border-saga">-</button>
-            <span class="w-10 text-center text-white">${item.quantity}</span>
-            <button data-slug="${item.slug}" data-variant="${item.variant}" class="increase rounded-full border border-white/10 px-3 py-2 transition hover:border-saga">+</button>
+        <div class="flex-1 flex flex-col gap-3 w-full">
+          <div class="flex justify-between">
+            <h3 class="text-lg font-serif text-white group-hover:text-[#D4AF37] transition-colors">${item.name}</h3>
+            <button onclick="window.removeFromCart('${item.slug}')" class="text-gray-500 hover:text-red-500 transition-colors p-2 hover:bg-red-500/10 rounded-full">
+              <span class="material-symbols-outlined text-[20px]">delete</span>
+            </button>
           </div>
-          <button data-slug="${item.slug}" data-variant="${item.variant}" class="remove inline-flex rounded-full border border-red-500/20 px-4 py-2 text-sm uppercase tracking-[0.35em] text-red-200 transition hover:bg-red-500/10">Remove</button>
+          <div class="flex items-center gap-6 text-xs text-gray-400 font-mono">
+            <span>SIZE: <strong class="text-white">${item.variant.toUpperCase()}</strong></span>
+            <span>SKU: <strong class="text-white">${item.id}</strong></span>
+          </div>
+          <div class="flex items-center justify-between mt-2 pt-4 border-t border-[#222]">
+            <div class="flex items-center gap-4 bg-black border border-[#333] px-2 py-1">
+               <button onclick="window.updateQuantity('${item.slug}', -1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#D4AF37] transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+               <span class="w-4 text-center font-mono text-sm text-white">${item.quantity}</span>
+               <button onclick="window.updateQuantity('${item.slug}', 1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#D4AF37] transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
+            </div>
+            <span class="font-serif font-medium text-lg text-white">LKR ${(item.price * item.quantity).toLocaleString()}</span>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
-  document.querySelectorAll('.decrease').forEach((button) => {
-    button.addEventListener('click', () => {
-      const slug = button.dataset.slug;
-      const variant = button.dataset.variant;
-      const item = cart.find((entry) => entry.slug === slug && entry.variant === variant);
-      if (!item) return;
-      updateCartQuantity(slug, variant, Math.max(1, item.quantity - 1));
-      renderCart();
-    });
-  });
-
-  document.querySelectorAll('.increase').forEach((button) => {
-    button.addEventListener('click', () => {
-      const slug = button.dataset.slug;
-      const variant = button.dataset.variant;
-      const item = cart.find((entry) => entry.slug === slug && entry.variant === variant);
-      if (!item) return;
-      updateCartQuantity(slug, variant, item.quantity + 1);
-      renderCart();
-    });
-  });
-
-  document.querySelectorAll('.remove').forEach((button) => {
-    button.addEventListener('click', () => {
-      const slug = button.dataset.slug;
-      const variant = button.dataset.variant;
-      removeFromCart(slug, variant);
-      renderCart();
-    });
-  });
+  updateSummary(storageItems);
 }
 
-renderCart();
+function updateSummary(items) {
+  const sumContainer = document.getElementById('order-summary-content');
+  if(!sumContainer) return;
+  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  sumContainer.innerHTML = `
+    <div class="space-y-4 font-body border-b border-[#222] pb-6 mb-6">
+      <div class="flex justify-between text-sm text-gray-400">
+        <span>Subtotal</span>
+        <span class="font-mono text-white">LKR ${subtotal.toLocaleString()}</span>
+      </div>
+      <div class="flex justify-between text-sm text-gray-400">
+        <span>Shipping</span>
+        <span class="font-mono font-bold text-[#D4AF37] uppercase tracking-widest text-[10px]">Calculated at Checkout</span>
+      </div>
+    </div>
+    <div class="flex justify-between items-end mb-8">
+      <span class="text-white font-serif tracking-widest text-lg">TOTAL</span>
+      <span class="text-2xl font-serif text-white">LKR ${subtotal.toLocaleString()}</span>
+    </div>
+    <button class="w-full bg-[#D4AF37] hover:bg-[#c49a2a] text-black font-bold uppercase tracking-widest text-[10px] py-4 transition-colors flex items-center justify-center gap-2 group">
+      PROCEED TO CHECKOUT
+      <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+    </button>
+  `;
+}
+
+window.updateQuantity = (slug, delta) => {
+  let cart = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
+  const curr = cart.find(x => x.slug === slug);
+  if(curr) {
+    curr.quantity = Math.max(1, curr.quantity + delta);
+    localStorage.setItem('saga_demo_cart', JSON.stringify(cart));
+    loadCart();
+  }
+};
+window.removeFromCart = (slug) => {
+  let cart = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
+  cart = cart.filter(x => x.slug !== slug);
+  localStorage.setItem('saga_demo_cart', JSON.stringify(cart));
+  loadCart();
+};
+
+document.addEventListener('DOMContentLoaded', loadCart);

@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+const fs = require('fs');
+
+const generateHtml = () => {
+const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -67,4 +70,9 @@
   <script type="module" src="js/common.js"></script>
   <script type="module" src="js/home.js"></script>
 </body>
-</html>
+</html>`;
+fs.writeFileSync('index.html', html);
+console.log('index.html Generated');
+};
+
+generateHtml();
