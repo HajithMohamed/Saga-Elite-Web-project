@@ -1,78 +1,11 @@
-const fs = require('fs');
+const fs = require("fs");
+const path = require("path");
 
-const generateHtml = () => {
-const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Saga Elite Demo</title>
-  <script>
-    tailwind = { 
-      config: { 
-        theme: { 
-          extend: {
-            fontFamily: {
-              serif: ['Playfair Display', 'serif'],
-              sans: ['Inter', 'sans-serif'],
-              headline: ["Noto Serif"],
-              body: ["Manrope"],
-              label: ["Manrope"]
-            },
-            colors: {
-              saga: '#f2ca50', 
-              surface: '#131313', 
-              accent: '#d4af37', 
-              on: '#e5e2e1',
-              "surface-container-low": "#1c1b1b"
-            }
-          } 
-        } 
-      } 
-    };
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="css/styles.css" />
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,200,0,0" />
-</head>
-<body class="bg-black text-white relative min-h-screen">
-  <div class="grain"></div>
-  
-  <div id="root" class="flex flex-col min-h-screen bg-black text-white">
-    <!-- PLACEHOLDER_HEADER -->
-    
-    <main class="flex-1 flex flex-col w-full" id="main-content">
-       <!-- START HOME.JSX REPLICA -->
-       <div id="home-view" class="w-full relative pb-20">
-         <div class="relative min-h-[90vh] flex flex-col justify-center items-center overflow-hidden banner-section bg-[#111]">
-            <div id="hero-carousel" class="absolute inset-0">
-               <img src="LOGO.png" class="absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity duration-[2000ms] shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] object-center grayscale hover:grayscale-0" />
-            </div>
-            <div class="absolute inset-0 transition-opacity duration-1000 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-            <!-- Added Content here from React -->
-            <div class="z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center select-none pt-24 mt-20">
-               <div class="w-32 h-32 md:w-48 md:h-48 lg:w-64 lg:h-64 perspective-1000 transform-style-3d group cursor-pointer filter drop-shadow-[0_0_15px_rgba(255,215,0,0.6)] hover:drop-shadow-[0_0_25px_rgba(255,215,0,0.8)] transition-all duration-300">
-                 <img src="LOGO.png" class="w-full h-full object-contain invert drop-shadow-2xl opacity-100 invert brightness-0 pointer-events-none group-hover:scale-105 group-hover:rotate-y-[10deg] group-hover:rotate-x-[-10deg] transition-transform duration-700 ease-out" />
-               </div>
-               
-               <p class="text-[#D4AF37] tracking-[0.3em] lg:tracking-[0.5em] text-xs md:text-sm lg:text-base font-bold uppercase mt-6 md:mt-10 overflow-hidden relative drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] shadow-black">
-                 SOVEREIGN ELITE LUXURY EDITION 
-                 <span class="inline-block mt-2 h-0.5 bg-[#D4AF37]/50 w-full transform scale-x-100 origin-left shadow-[0_0_10px_#D4AF37]"></span>
-               </p>
-            </div>
-         </div>
-       </div>
-    </main>
-  </div>
-  
-  <script src="js/demo-state.js"></script>
-  <script type="module" src="js/common.js"></script>
-  <script type="module" src="js/home.js"></script>
-</body>
-</html>`;
-fs.writeFileSync('index.html', html);
-console.log('index.html Generated');
-};
+const homePath = path.join(__dirname, "index.html");
 
-generateHtml();
+if (!fs.existsSync(homePath)) {
+  throw new Error("index.html was not found in demo-frontend.");
+}
+
+console.log("index.html is now maintained directly as the home page source of truth.");
+console.log(`Verified file: ${homePath}`);

@@ -1,48 +1,212 @@
-import { DEMO_PRODUCTS } from './demo-data.js';
+import { DEMO_HOME_ASSETS, DEMO_PRODUCTS } from "./demo-data.js";
+import { computeCountdown, getUpcomingDrops } from "./common.js";
 
-const featuredContainer = document.getElementById('featured-products');
+const heroImages = DEMO_HOME_ASSETS.heroImages || [];
+let currentHeroIndex = 0;
 
-if (featuredContainer) {
-  const activeProducts = DEMO_PRODUCTS;
-  featuredContainer.innerHTML = activeProducts.map((product) => {
-    return `
-      <div class="group relative bg-[#111] overflow-hidden border border-[#222]">
-        <div class="relative aspect-[3/4] overflow-hidden bg-[#0a0a0a]">
-          <div class="absolute inset-0 bg-[#D4AF37]/5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out" />
-          
-          <!-- Badges -->
-          <div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
-            ${product.badges?.includes('Limited Drop') ? '<span class="bg-black text-[#D4AF37] text-[9px] font-bold px-3 py-1 tracking-widest uppercase border border-[#D4AF37]/30 shadow-[0_0_10px_rgba(212,175,55,0.2)]">Limited Drop</span>' : ''}
-            <span class="bg-white text-black text-[9px] font-bold px-3 py-1 tracking-widest uppercase shadow-lg">New Arrival</span>
-          </div>
+function setHeroImage(index, immediate = false) {
+  const heroImage = document.getElementById("hero-image");
+  if (!heroImage || heroImages.length === 0) {
+    return;
+  }
 
-          <!-- Wishlist Toggle -->
-          <button class="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-black/50 backdrop-blur-sm border border-white/10 hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-black transition-all duration-300 text-white rounded-full">
-            <span class="material-symbols-outlined text-[18px]">favorite</span>
-          </button>
+  const nextImage = heroImages[index];
+  if (immediate) {
+    heroImage.src = nextImage.url;
+    return;
+  }
 
-          <!-- Hover Action Overlay -->
-          <div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-            <button class="w-full bg-[#111] border border-[#333] hover:border-[#D4AF37] text-white hover:text-[#D4AF37] py-3 text-[10px] font-bold uppercase tracking-widest transition-colors shadow-2xl flex items-center justify-center gap-2">
-              <span class="material-symbols-outlined text-[16px]">shopping_bag</span>
-              Add to Cart
-            </button>
-          </div>
-        </div>
-
-        <div class="p-5 flex flex-col gap-3 relative z-10 bg-[#111]">
-          <div class="flex justify-between items-start gap-4">
-            <div class="flex-1">
-              <p class="text-[#D4AF37] text-[9px] font-bold uppercase tracking-[0.2em] mb-1">${product.category}</p>
-              <h3 class="text-white font-serif text-lg leading-tight group-hover:text-[#D4AF37] transition-colors line-clamp-1">${product.name}</h3>
-            </div>
-            <div class="text-right shrink-0">
-              <span class="text-white font-serif text-lg tracking-wide block">LKR ${product.price}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  heroImage.style.opacity = "0";
+  heroImage.style.transform = "scale(1.05)";
+  window.setTimeout(() => {
+    heroImage.src = nextImage.url;
+  }, 250);
+  window.setTimeout(() => {
+    heroImage.style.opacity = "0.6";
+    heroImage.style.transform = "scale(1)";
+  }, 300);
 }
+
+function startHeroRotation() {
+  if (heroImages.length === 0) {
+    return;
+  }
+
+  setHeroImage(0, true);
+  window.setInterval(() => {
+    currentHeroIndex = (currentHeroIndex + 1) % heroImages.length;
+    setHeroImage(currentHeroIndex);
+  }, 5000);
+}
+
+function setupBranding() {
+  const heroLogoImage = document.getElementById("hero-logo-image");
+  const heroLogoFallback = document.getElementById("hero-logo-fallback");
+  const logoSrc = DEMO_HOME_ASSETS.logoImage?.url;
+
+  if (heroLogoImage && heroLogoFallback) {
+    if (logoSrc) {
+      heroLogoImage.src = logoSrc;
+      heroLogoImage.classList.remove("hidden");
+      heroLogoFallback.classList.add("hidden");
+    } else {
+      heroLogoImage.classList.add("hidden");
+      heroLogoFallback.classList.remove("hidden");
+    }
+  }
+
+  const categoryImages = DEMO_HOME_ASSETS.categoryLogos || {};
+  const categoryMap = {
+    boys: categoryImages.Boys?.url,
+    girls: categoryImages.Girls?.url,
+    unisex: categoryImages.Unisex?.url
+  };
+
+  Object.entries(categoryMap).forEach(([key, src]) => {
+    const element = document.getElementById(`category-image-${key}`);
+    if (element && src) {
+      element.src = src;
+    }
+  });
+
+  const ethosImage = document.getElementById("ethos-image");
+  if (ethosImage && DEMO_HOME_ASSETS.adImage?.url) {
+    ethosImage.src = DEMO_HOME_ASSETS.adImage.url;
+  }
+}
+
+function renderGridCards() {
+  const cardsContainer = document.getElementById("home-grid-cards");
+  const status = document.getElementById("home-grid-status");
+  const title = document.getElementById("home-grid-title");
+
+  if (!cardsContainer || !status || !title) {
+    return;
+  }
+
+  cardsContainer.innerHTML = "";
+  status.classList.add("hidden");
+
+  const validDrops = getUpcomingDrops().filter((drop) => !drop.endDate || new Date(drop.endDate) > new Date());
+  const hasValidDrops = validDrops.length > 0;
+  const displayedProducts = DEMO_PRODUCTS.slice(0, 4);
+
+  title.textContent = hasValidDrops ? "Current Drops" : "Latest Arrivals";
+
+  if (hasValidDrops) {
+    const template = document.getElementById("drop-card-template");
+    validDrops.forEach((drop) => {
+      const fragment = template.content.cloneNode(true);
+      const link = fragment.querySelector("a");
+      const image = fragment.querySelector(".drop-card-image");
+      const cardTitle = fragment.querySelector(".drop-card-title");
+      const date = fragment.querySelector(".drop-card-date");
+
+      link.href = `product-listing.html?category=drops&drop=${encodeURIComponent(drop.slug)}`;
+      image.src = drop.images?.[0]?.url || "LOGO.png";
+      image.alt = drop.name;
+      cardTitle.textContent = drop.name;
+      date.textContent = drop.releaseDate
+        ? `Releases ${new Date(drop.releaseDate).toLocaleDateString()}`
+        : "Drop available";
+
+      cardsContainer.appendChild(fragment);
+    });
+    return;
+  }
+
+  if (displayedProducts.length > 0) {
+    const template = document.getElementById("product-card-template");
+    displayedProducts.forEach((product) => {
+      const fragment = template.content.cloneNode(true);
+      const link = fragment.querySelector("a");
+      const image = fragment.querySelector(".product-card-image");
+      const label = fragment.querySelector(".product-card-label");
+      const cardTitle = fragment.querySelector(".product-card-title");
+      const price = fragment.querySelector(".product-card-price");
+
+      link.href = `product-details.html?slug=${encodeURIComponent(product.slug)}`;
+      image.src = product.images?.[0]?.url || product.image || "LOGO.png";
+      image.alt = product.name;
+      label.textContent = product.isLimited ? "Limited 1 of 50" : "Limited Release";
+      cardTitle.textContent = product.name;
+      price.textContent = `$${product.basePrice}`;
+
+      cardsContainer.appendChild(fragment);
+    });
+    return;
+  }
+
+  status.textContent = "No products currently available.";
+  status.className = "rounded-3xl border border-[#4d4635]/30 p-12 text-center text-[#99907c]";
+}
+
+function setupDropStrip() {
+  const upcomingDrops = getUpcomingDrops();
+  const nextDrop = upcomingDrops[0] || null;
+  const strip = document.getElementById("home-drop-strip");
+  const title = document.getElementById("home-drop-title");
+  const days = document.getElementById("home-drop-days");
+  const hours = document.getElementById("home-drop-hours");
+  const minutes = document.getElementById("home-drop-minutes");
+
+  if (!strip || !title || !days || !hours || !minutes) {
+    return;
+  }
+
+  if (!nextDrop || new Date(nextDrop.releaseDate) <= new Date()) {
+    strip.classList.add("hidden");
+    return;
+  }
+
+  const update = () => {
+    const countdown = computeCountdown(new Date(nextDrop.releaseDate));
+    title.textContent = nextDrop.name;
+    days.textContent = countdown.days;
+    hours.textContent = countdown.hours;
+    minutes.textContent = countdown.minutes;
+  };
+
+  update();
+  strip.classList.remove("hidden");
+  window.setInterval(update, 1000);
+}
+
+function setupSignupForm() {
+  const form = document.getElementById("elite-signup-form");
+  const input = document.getElementById("elite-email-input");
+  const feedback = document.getElementById("elite-signup-feedback");
+  const button = document.getElementById("elite-submit-btn");
+
+  if (!form || !input || !feedback || !button) {
+    return;
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const email = input.value.trim();
+
+    if (!email) {
+      feedback.textContent = "Enter an email address to join the ledger.";
+      feedback.classList.remove("hidden");
+      return;
+    }
+
+    feedback.textContent = "Access request recorded for demo preview.";
+    feedback.classList.remove("hidden");
+    button.textContent = "Joined";
+    input.value = "";
+
+    window.setTimeout(() => {
+      button.textContent = "Join the Elite";
+    }, 1800);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupBranding();
+  startHeroRotation();
+  setupDropStrip();
+  renderGridCards();
+  setupSignupForm();
+});
