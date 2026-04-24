@@ -55,15 +55,6 @@
     </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const ord = localStorage.getItem('saga_demo_last_order');
-        if(ord) {
-            const display = document.getElementById('order-id-display');
-            display.textContent = ord;
-            display.classList.remove('hidden');
-        }
-    });
-  </script>
+  <script type="module" src="js/order-success.js"></script>
 </body>
 </html>

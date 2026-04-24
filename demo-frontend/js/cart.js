@@ -1,103 +1,120 @@
-import { getProductBySlug } from './demo-data.js';
+import { renderNav, updateHeader } from "./common.js";
+import { cartTotals, formatCurrency, loadCart, removeFromCart, updateCartQuantity } from "./demo-state.js";
 
-export function loadCart() {
-  const container = document.getElementById('cart-items-container');
-  if (!container) return;
+function parseVariant(value = "") {
+  const [size = "-", color = "-"] = value.split("/");
+  return { size, color };
+}
 
-  const storageItems = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
-  if (storageItems.length === 0) {
-    container.innerHTML = `
-      <div class="col-span-1 md:col-span-8 bg-[#111] border border-[#222] p-12 text-center flex flex-col items-center justify-center gap-4">
-        <div class="h-16 w-16 mb-4 flex items-center justify-center border border-[#333] text-[#D4AF37]">
-          <span class="material-symbols-outlined text-[32px]">shopping_bag</span>
-        </div>
-        <h2 class="text-xl font-serif text-white tracking-widest">YOUR CART IS EMPTY</h2>
-        <p class="text-sm text-gray-500 max-w-md">Looks like you haven't added anything to your cart yet.</p>
-        <a href="index.html" class="mt-4 bg-[#D4AF37] hover:bg-[#c49a2a] text-black px-8 py-3 text-[10px] font-bold uppercase tracking-widest transition-colors inline-block">
+function renderCart() {
+  const cartItemsRoot = document.getElementById("cart-items");
+  const subtotalEl = document.getElementById("subtotal");
+  const checkoutButton = document.getElementById("checkout-button");
+
+  if (!cartItemsRoot || !subtotalEl || !checkoutButton) {
+    return;
+  }
+
+  const items = loadCart();
+
+  if (items.length === 0) {
+    cartItemsRoot.innerHTML = `
+      <div class="rounded-[32px] border border-white/10 bg-[#0d0d0d] p-12 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <h2 class="text-2xl font-serif text-white">Your cart is empty</h2>
+        <p class="mt-3 text-sm text-gray-400">Looks like you have not added any drop items yet.</p>
+        <a href="product-listing.html" class="mt-6 inline-flex rounded-full bg-[#D4AF37] px-6 py-3 text-sm font-bold uppercase tracking-widest text-black transition hover:bg-[#F2CA50]">
           Continue Shopping
         </a>
       </div>
     `;
-    const summary = document.getElementById('order-summary-content');
-    if (summary) summary.innerHTML = '<p class="text-gray-500">No items.</p>';
+
+    subtotalEl.textContent = formatCurrency(0);
+    checkoutButton.classList.add("pointer-events-none", "opacity-40");
     return;
   }
 
-  // Generate React-like Cart UI
-  container.innerHTML = storageItems.map((item) => {
-    return `
-      <div class="group flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 bg-[#111] border border-[#222] hover:border-[#D4AF37]/50 transition-colors relative overflow-hidden">
-        <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#D4AF37] scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
-        <div class="w-full sm:w-32 aspect-[3/4] sm:aspect-square bg-black overflow-hidden relative border border-[#333]">
-          <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700" />
-        </div>
-        <div class="flex-1 flex flex-col gap-3 w-full">
-          <div class="flex justify-between">
-            <h3 class="text-lg font-serif text-white group-hover:text-[#D4AF37] transition-colors">${item.name}</h3>
-            <button onclick="window.removeFromCart('${item.slug}')" class="text-gray-500 hover:text-red-500 transition-colors p-2 hover:bg-red-500/10 rounded-full">
-              <span class="material-symbols-outlined text-[20px]">delete</span>
-            </button>
-          </div>
-          <div class="flex items-center gap-6 text-xs text-gray-400 font-mono">
-            <span>SIZE: <strong class="text-white">${item.variant.toUpperCase()}</strong></span>
-            <span>SKU: <strong class="text-white">${item.id}</strong></span>
-          </div>
-          <div class="flex items-center justify-between mt-2 pt-4 border-t border-[#222]">
-            <div class="flex items-center gap-4 bg-black border border-[#333] px-2 py-1">
-               <button onclick="window.updateQuantity('${item.slug}', -1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#D4AF37] transition-colors"><span class="material-symbols-outlined text-[16px]">remove</span></button>
-               <span class="w-4 text-center font-mono text-sm text-white">${item.quantity}</span>
-               <button onclick="window.updateQuantity('${item.slug}', 1)" class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#D4AF37] transition-colors"><span class="material-symbols-outlined text-[16px]">add</span></button>
+  checkoutButton.classList.remove("pointer-events-none", "opacity-40");
+
+  cartItemsRoot.innerHTML = items
+    .map((item) => {
+      const { size, color } = parseVariant(item.variant);
+      return `
+        <article class="group rounded-[32px] border border-white/10 bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] transition-all hover:border-[#D4AF37]/40">
+          <div class="flex flex-col gap-6 sm:flex-row">
+            <div class="h-28 w-24 overflow-hidden rounded-2xl border border-white/10 bg-black sm:h-32 sm:w-28">
+              <img src="${item.image || "LOGO.png"}" alt="${item.name}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             </div>
-            <span class="font-serif font-medium text-lg text-white">LKR ${(item.price * item.quantity).toLocaleString()}</span>
+
+            <div class="flex flex-1 flex-col">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.24em] text-[#D4AF37]">${color}</p>
+                  <h3 class="mt-1 text-lg font-semibold text-white">${item.name}</h3>
+                  <p class="mt-2 text-xs uppercase tracking-[0.18em] text-gray-400">Size ${size}</p>
+                </div>
+                <button type="button" data-remove-slug="${item.slug}" data-remove-variant="${item.variant}" class="rounded-full p-2 text-gray-500 transition hover:bg-white/5 hover:text-red-400" aria-label="Remove item">
+                  <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              </div>
+
+              <div class="mt-6 flex items-center justify-between">
+                <div class="flex h-11 items-center rounded-full border border-gray-700 bg-black px-2">
+                  <button type="button" data-qty-slug="${item.slug}" data-qty-variant="${item.variant}" data-qty-delta="-1" class="h-8 w-8 text-gray-400 transition hover:text-[#D4AF37]">-</button>
+                  <span class="w-8 text-center text-sm font-semibold text-white">${item.quantity}</span>
+                  <button type="button" data-qty-slug="${item.slug}" data-qty-variant="${item.variant}" data-qty-delta="1" class="h-8 w-8 text-gray-400 transition hover:text-[#D4AF37]">+</button>
+                </div>
+                <p class="text-lg font-semibold text-white">${formatCurrency(item.price * item.quantity)}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+        </article>
+      `;
+    })
+    .join("");
 
-  updateSummary(storageItems);
+  subtotalEl.textContent = formatCurrency(cartTotals(items).subtotal);
 }
 
-function updateSummary(items) {
-  const sumContainer = document.getElementById('order-summary-content');
-  if(!sumContainer) return;
-  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  sumContainer.innerHTML = `
-    <div class="space-y-4 font-body border-b border-[#222] pb-6 mb-6">
-      <div class="flex justify-between text-sm text-gray-400">
-        <span>Subtotal</span>
-        <span class="font-mono text-white">LKR ${subtotal.toLocaleString()}</span>
-      </div>
-      <div class="flex justify-between text-sm text-gray-400">
-        <span>Shipping</span>
-        <span class="font-mono font-bold text-[#D4AF37] uppercase tracking-widest text-[10px]">Calculated at Checkout</span>
-      </div>
-    </div>
-    <div class="flex justify-between items-end mb-8">
-      <span class="text-white font-serif tracking-widest text-lg">TOTAL</span>
-      <span class="text-2xl font-serif text-white">LKR ${subtotal.toLocaleString()}</span>
-    </div>
-    <button class="w-full bg-[#D4AF37] hover:bg-[#c49a2a] text-black font-bold uppercase tracking-widest text-[10px] py-4 transition-colors flex items-center justify-center gap-2 group">
-      PROCEED TO CHECKOUT
-      <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-    </button>
-  `;
-}
-
-window.updateQuantity = (slug, delta) => {
-  let cart = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
-  const curr = cart.find(x => x.slug === slug);
-  if(curr) {
-    curr.quantity = Math.max(1, curr.quantity + delta);
-    localStorage.setItem('saga_demo_cart', JSON.stringify(cart));
-    loadCart();
+function bindCartEvents() {
+  const cartItemsRoot = document.getElementById("cart-items");
+  if (!cartItemsRoot) {
+    return;
   }
-};
-window.removeFromCart = (slug) => {
-  let cart = JSON.parse(localStorage.getItem('saga_demo_cart')) || [];
-  cart = cart.filter(x => x.slug !== slug);
-  localStorage.setItem('saga_demo_cart', JSON.stringify(cart));
-  loadCart();
-};
 
-document.addEventListener('DOMContentLoaded', loadCart);
+  cartItemsRoot.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-slug]");
+    if (removeButton) {
+      removeFromCart(removeButton.dataset.removeSlug, removeButton.dataset.removeVariant);
+      renderCart();
+      updateHeader();
+      return;
+    }
+
+    const qtyButton = event.target.closest("[data-qty-slug]");
+    if (!qtyButton) {
+      return;
+    }
+
+    const slug = qtyButton.dataset.qtySlug;
+    const variant = qtyButton.dataset.qtyVariant;
+    const delta = Number(qtyButton.dataset.qtyDelta || 0);
+    const item = loadCart().find((entry) => entry.slug === slug && entry.variant === variant);
+
+    if (!item) {
+      return;
+    }
+
+    updateCartQuantity(slug, variant, item.quantity + delta);
+    renderCart();
+    updateHeader();
+  });
+}
+
+function initCart() {
+  renderNav({ activePath: "product-listing.html", mode: "shopping" });
+  bindCartEvents();
+  renderCart();
+  updateHeader();
+}
+
+document.addEventListener("DOMContentLoaded", initCart);

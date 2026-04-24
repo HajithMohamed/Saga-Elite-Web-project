@@ -1,246 +1,235 @@
-import { renderNav } from './common.js';
+import { renderNav, updateHeader } from "./common.js";
+import { DEMO_PRODUCTS, getProductBySlug } from "./demo-data.js";
+import { addToCart, loadCart, loadWishlist, toggleWishlist } from "./demo-state.js";
 
-const CACHE_KEY = 'saga_demo_products_cache';
-const CART_KEY = 'saga_demo_cart';
+function productByQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get("slug");
+  const id = params.get("id");
 
-// Fallback logic in case products don't exist yet
-const localProductsFallback = [
-    {
-      _id: "prod-1",
-      title: "Oversized Anime Tee",
-      description: "Premium heavy cotton t-shirt featuring exclusive anime prints. Made for durability and daily comfort.",
-      price: 1200,
-      salePrice: 999,
-      category: "unisex",
-      images: [{ url: "../demo-frontend/assets/P1FRONT.jpg", publicId: "img1" }],
-      colors: ["Black", "White"],
-      sizes: ["S", "M", "L", "XL"]
-    },
-    {
-      _id: "prod-2",
-      title: "Streetwear Hoodie",
-      description: "Comfortable fleece hoodie with modern fit.",
-      price: 2500,
-      salePrice: 2199,
-      category: "boys",
-      images: [{ url: "../demo-frontend/assets/HOODIE2.jpg", publicId: "img2" }],
-      colors: ["Black", "Grey", "Navy"],
-      sizes: ["M", "L", "XL"]
-    },
-    {
-      _id: "prod-3",
-      title: "Basic Drop Shoulder",
-      description: "Minimalist drop shoulder design for everyday wear.",
-      price: 800,
-      salePrice: null,
-      category: "unisex",
-      images: [{ url: "../demo-frontend/assets/T2B.jpg", publicId: "img3" }],
-      colors: ["White", "Beige", "Olive"],
-      sizes: ["S", "M", "L"]
+  if (slug) {
+    return getProductBySlug(slug);
+  }
+
+  if (id) {
+    const byId = DEMO_PRODUCTS.find((product) => product._id === id || product.id === id);
+    if (byId) {
+      return byId;
     }
-];
+  }
 
-function initProductDetails() {
-    renderNav();
-    
-    // Parse URL for ID
-    const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('id');
-
-    let products = JSON.parse(localStorage.getItem(CACHE_KEY));
-    if (!products || products.length === 0) {
-        products = localProductsFallback;
-    }
-
-    const product = products.find(p => p._id === productId) || products[0]; // fallback to first product
-
-    if (!product) {
-        document.querySelector('.container').innerHTML = '<div class="py-20 text-center"><h2 class="text-3xl text-[#D4AF37]">Product Not Found</h2></div>';
-        return;
-    }
-
-    // State
-    let selectedColor = product.colors && product.colors.length > 0 ? product.colors[0] : null;
-    let selectedSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
-    let quantity = 1;
-    const maxStock = 10; // Demo static stock
-
-    // DOM Elements
-    const titleEl = document.getElementById('product-title');
-    const categoryEl = document.getElementById('product-category');
-    const idEl = document.getElementById('product-id');
-    const priceEl = document.getElementById('price-container');
-    const descEl = document.getElementById('product-description');
-    
-    const mainImgEl = document.getElementById('main-product-image');
-    const thumbnailContainer = document.getElementById('thumbnail-gallery');
-    
-    const variantsGrid = document.getElementById('variants-grid');
-    const stockStatus = document.getElementById('stock-status');
-    const qtyValue = document.getElementById('qty-value');
-    const btnMinus = document.getElementById('qty-minus');
-    const btnPlus = document.getElementById('qty-plus');
-    
-    const btnAddToCart = document.getElementById('add-to-cart-btn');
-    const btnBuyNow = document.getElementById('buy-now-btn');
-    const modal = document.getElementById('buy-now-modal');
-
-    // Render static data
-    titleEl.textContent = product.title;
-    categoryEl.textContent = `${product.category || 'Collection'} • Limited Drop`;
-    idEl.textContent = `Art No. ART-${product._id.split('-')[1] || Math.floor(Math.random() * 1000)}`;
-    descEl.textContent = product.description;
-
-    const hasSale = product.salePrice && product.salePrice < product.price;
-    priceEl.innerHTML = hasSale 
-        ? `<span class="text-3xl font-semibold text-[#D4AF37]">BDT ${product.salePrice}</span>
-           <span class="text-xl text-gray-500 line-through">BDT ${product.price}</span>`
-        : `<span class="text-3xl font-semibold">BDT ${product.price}</span>`;
-
-    // Render Images
-    const mainSrc = product.images?.[0]?.url || 'https://via.placeholder.com/800x1000';
-    mainImgEl.src = mainSrc;
-    
-    const demoImages = [mainSrc, mainSrc, mainSrc]; // fake extra images
-    thumbnailContainer.innerHTML = demoImages.map((src, index) => `
-        <button 
-            data-index="${index}"
-            class="relative shrink-0 rounded-xl overflow-hidden border-2 w-20 lg:w-24 aspect-[4/5] transition-all hover:opacity-100 
-            ${index === 0 ? 'border-[#D4AF37] opacity-100' : 'border-transparent opacity-50'}"
-        >
-            <img src="${src}" alt="View ${index + 1}" class="w-full h-full object-cover">
-        </button>
-    `).join('');
-
-    thumbnailContainer.addEventListener('click', (e) => {
-        const btn = e.target.closest('button');
-        if (btn) {
-            // Update active state
-            thumbnailContainer.querySelectorAll('button').forEach(b => {
-                b.classList.remove('border-[#D4AF37]', 'opacity-100');
-                b.classList.add('border-transparent', 'opacity-50');
-            });
-            btn.classList.remove('border-transparent', 'opacity-50');
-            btn.classList.add('border-[#D4AF37]', 'opacity-100');
-            
-            mainImgEl.style.opacity = '0';
-            setTimeout(() => {
-                mainImgEl.style.opacity = '1';
-            }, 150);
-        }
-    });
-
-    // Render Variants (Cartesian product of Sizes and Colors)
-    const renderVariants = () => {
-        if (!product.colors || !product.sizes) return;
-        
-        let variantsHtml = '';
-        product.sizes.forEach(size => {
-            product.colors.forEach(color => {
-                const isSelected = selectedSize === size && selectedColor === color;
-                // Fake OOS state for testing
-                const isOos = size === 'XL' && color === 'White';
-                
-                if (isSelected) {
-                    variantsHtml += `
-                        <button class="py-3 px-4 rounded-xl border text-sm font-medium tracking-wide transition-all border-[#D4AF37] bg-[#D4AF37]/10 text-white">
-                            ${size} - ${color}
-                        </button>
-                    `;
-                } else if (isOos) {
-                    variantsHtml += `
-                        <button class="py-3 px-4 rounded-xl border text-sm font-medium tracking-wide transition-all opacity-30 cursor-not-allowed border-gray-800">
-                            ${size} - ${color} <br/><span class="text-[10px] text-red-400">OOS</span>
-                        </button>
-                    `;
-                } else {
-                    variantsHtml += `
-                        <button 
-                            onclick="window.selectVariant('${size}', '${color}')"
-                            class="py-3 px-4 rounded-xl border text-sm font-medium tracking-wide transition-all border-gray-800 hover:border-gray-500 text-gray-400"
-                        >
-                            ${size} - ${color}
-                        </button>
-                    `;
-                }
-            });
-        });
-        variantsGrid.innerHTML = variantsHtml;
-        stockStatus.textContent = `Stock: ${maxStock}`;
-    };
-
-    window.selectVariant = (size, color) => {
-        selectedSize = size;
-        selectedColor = color;
-        renderVariants();
-    };
-
-    renderVariants();
-
-    // Quantity Handlers
-    const updateQty = (newQty) => {
-        if (newQty < 1) newQty = 1;
-        if (newQty > maxStock) newQty = maxStock;
-        quantity = newQty;
-        qtyValue.textContent = quantity;
-    };
-
-    btnMinus.addEventListener('click', () => updateQty(quantity - 1));
-    btnPlus.addEventListener('click', () => updateQty(quantity + 1));
-
-    // Cart Handlers
-    const handleAddToCart = () => {
-        let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-        
-        const existingIndex = cart.findIndex(item => 
-            item.productId === product._id && 
-            item.color === selectedColor && 
-            item.size === selectedSize
-        );
-
-        if (existingIndex > -1) {
-            // Already in cart - Show modal like React 
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            return;
-        }
-
-        // Add
-        cart.push({
-            productId: product._id,
-            title: product.title,
-            image: mainSrc,
-            price: hasSale ? product.salePrice : product.price,
-            quantity: quantity,
-            color: selectedColor,
-            size: selectedSize
-        });
-
-        localStorage.setItem(CART_KEY, JSON.stringify(cart));
-        
-        // Show success and redirect locally
-        const initText = btnAddToCart.textContent;
-        btnAddToCart.textContent = 'ADDED!';
-        btnAddToCart.classList.add('bg-green-500/20', 'text-green-400', 'border-green-500');
-        
-        setTimeout(() => {
-            window.location.href = 'cart.html';
-        }, 800);
-    };
-
-    btnAddToCart.addEventListener('click', handleAddToCart);
-    btnBuyNow.addEventListener('click', () => {
-        // Simple direct to checkout for demo
-        window.location.href = 'checkout.html';
-    });
-
-    // Modal Close handlers
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('flex');
-            modal.classList.add('hidden');
-        }
-    });
+  return DEMO_PRODUCTS[0];
 }
 
-document.addEventListener('DOMContentLoaded', initProductDetails);
+function normalizeVariants(product) {
+  if (Array.isArray(product.variants) && product.variants.length > 0) {
+    return product.variants.map((variant) => ({
+      size: variant.size || variant.label || "One Size",
+      color: variant.color || "Black",
+      stock: variant.stock ?? 1
+    }));
+  }
+
+  const sizes = product.sizes || ["One Size"];
+  const colors = product.colors || ["Black"];
+  const variants = [];
+  sizes.forEach((size) => {
+    colors.forEach((color) => {
+      variants.push({ size, color, stock: 4 });
+    });
+  });
+  return variants;
+}
+
+function initProductDetails() {
+  renderNav({ activePath: "product-listing.html", mode: "shopping" });
+
+  const product = productByQuery();
+  if (!product) {
+    return;
+  }
+
+  const variants = normalizeVariants(product);
+  let selectedVariant = variants.find((variant) => variant.stock > 0) || variants[0];
+  let quantity = 1;
+
+  const titleEl = document.getElementById("product-title");
+  const categoryEl = document.getElementById("product-category");
+  const idEl = document.getElementById("product-id");
+  const priceEl = document.getElementById("price-container");
+  const descEl = document.getElementById("product-description");
+  const mainImgEl = document.getElementById("main-product-image");
+  const thumbnailContainer = document.getElementById("thumbnail-gallery");
+  const variantsGrid = document.getElementById("variants-grid");
+  const stockStatus = document.getElementById("stock-status");
+  const qtyValue = document.getElementById("qty-value");
+  const btnMinus = document.getElementById("qty-minus");
+  const btnPlus = document.getElementById("qty-plus");
+  const btnAddToCart = document.getElementById("add-to-cart-btn");
+  const btnBuyNow = document.getElementById("buy-now-btn");
+  const modal = document.getElementById("buy-now-modal");
+  const wishlistBtn = document.getElementById("wishlist-btn");
+
+  titleEl.textContent = product.name;
+  categoryEl.textContent = `${product.categoryLabel || product.category || "Collection"} • Limited Drop`;
+  idEl.textContent = `Art No. ART-${(product.id || product._id || "000").replace(/[^0-9]/g, "").padStart(3, "0")}`;
+  descEl.textContent = product.description;
+  priceEl.innerHTML = `<span class="text-3xl font-semibold text-[#D4AF37]">BDT ${product.price.toLocaleString()}</span>`;
+
+  const images = (product.images || []).map((entry) => entry.url).filter(Boolean);
+  if (images.length === 0) {
+    images.push(product.image || "LOGO.png");
+  }
+
+  mainImgEl.src = images[0];
+  mainImgEl.alt = product.name;
+
+  thumbnailContainer.innerHTML = images
+    .map(
+      (src, index) => `
+        <button data-index="${index}" class="relative shrink-0 rounded-xl overflow-hidden border-2 w-20 lg:w-24 aspect-[4/5] transition-all hover:opacity-100 ${
+          index === 0 ? "border-[#D4AF37] opacity-100" : "border-transparent opacity-60"
+        }">
+          <img src="${src}" alt="View ${index + 1}" class="h-full w-full object-cover">
+        </button>
+      `
+    )
+    .join("");
+
+  thumbnailContainer.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-index]");
+    if (!button) {
+      return;
+    }
+
+    const index = Number(button.dataset.index);
+    const nextImage = images[index] || images[0];
+
+    thumbnailContainer.querySelectorAll("button").forEach((node) => {
+      node.classList.remove("border-[#D4AF37]", "opacity-100");
+      node.classList.add("border-transparent", "opacity-60");
+    });
+    button.classList.remove("border-transparent", "opacity-60");
+    button.classList.add("border-[#D4AF37]", "opacity-100");
+
+    mainImgEl.style.opacity = "0";
+    window.setTimeout(() => {
+      mainImgEl.src = nextImage;
+      mainImgEl.style.opacity = "1";
+    }, 160);
+  });
+
+  const renderVariants = () => {
+    variantsGrid.innerHTML = variants
+      .map((variant) => {
+        const isSelected = selectedVariant.size === variant.size && selectedVariant.color === variant.color;
+        const isOutOfStock = variant.stock <= 0;
+
+        return `
+          <button
+            type="button"
+            data-size="${variant.size}"
+            data-color="${variant.color}"
+            class="variant-btn py-3 px-4 rounded-xl border text-sm font-medium tracking-wide transition-all ${
+              isSelected
+                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-white"
+                : isOutOfStock
+                ? "border-gray-800 text-gray-600 opacity-40 cursor-not-allowed"
+                : "border-gray-800 text-gray-300 hover:border-gray-500"
+            }"
+            ${isOutOfStock ? "disabled" : ""}
+          >
+            ${variant.size} - ${variant.color}
+            ${isOutOfStock ? '<span class="block text-[10px] text-red-400">OOS</span>' : ""}
+          </button>
+        `;
+      })
+      .join("");
+
+    stockStatus.textContent = `Stock: ${selectedVariant.stock}`;
+  };
+
+  variantsGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("button.variant-btn");
+    if (!button) {
+      return;
+    }
+
+    const size = button.dataset.size;
+    const color = button.dataset.color;
+    const found = variants.find((variant) => variant.size === size && variant.color === color);
+    if (!found || found.stock <= 0) {
+      return;
+    }
+
+    selectedVariant = found;
+    quantity = 1;
+    qtyValue.textContent = "1";
+    renderVariants();
+  });
+
+  const updateQuantity = (value) => {
+    quantity = Math.max(1, Math.min(value, selectedVariant.stock || 1));
+    qtyValue.textContent = String(quantity);
+  };
+
+  btnMinus.addEventListener("click", () => updateQuantity(quantity - 1));
+  btnPlus.addEventListener("click", () => updateQuantity(quantity + 1));
+
+  const variantLabel = () => `${selectedVariant.size}/${selectedVariant.color}`;
+
+  const syncWishlistState = () => {
+    const wishlist = loadWishlist();
+    const exists = wishlist.some((entry) => entry.id === product.id);
+    const icon = wishlistBtn.querySelector(".material-symbols-outlined");
+
+    icon.textContent = exists ? "favorite" : "favorite_border";
+    icon.classList.toggle("text-red-500", exists);
+    icon.classList.toggle("text-white", !exists);
+  };
+
+  wishlistBtn.addEventListener("click", () => {
+    toggleWishlist({ id: product.id, slug: product.slug, name: product.name, image: images[0], price: product.price });
+    syncWishlistState();
+    updateHeader();
+  });
+
+  btnAddToCart.addEventListener("click", () => {
+    const existing = loadCart().find((item) => item.slug === product.slug && item.variant === variantLabel());
+    if (existing) {
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      return;
+    }
+
+    addToCart({ ...product, image: images[0] }, variantLabel(), quantity);
+    updateHeader();
+
+    const originalText = btnAddToCart.textContent;
+    btnAddToCart.textContent = "Added";
+    window.setTimeout(() => {
+      btnAddToCart.textContent = originalText;
+    }, 1000);
+  });
+
+  btnBuyNow.addEventListener("click", () => {
+    const existing = loadCart().find((item) => item.slug === product.slug && item.variant === variantLabel());
+    if (!existing) {
+      addToCart({ ...product, image: images[0] }, variantLabel(), quantity);
+      updateHeader();
+    }
+    window.location.href = "checkout.html";
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+  });
+
+  renderVariants();
+  syncWishlistState();
+}
+
+document.addEventListener("DOMContentLoaded", initProductDetails);
