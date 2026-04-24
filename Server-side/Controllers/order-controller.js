@@ -9,6 +9,7 @@ const { createNotification, broadcastNotification } = require("../Utils/notifica
 const createOrder = catchAsync(async (req, res, next) => {
   const {
     items,
+    checkoutMode,
     shippingAddress,
     contactNumber,
     paymentMethod,
@@ -37,6 +38,8 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
   if (paymentMethod === "manual" && !paymentProofUrl?.trim()) {
     return next(new AppError("Receipt information is required for manual payment", 400));
   }
+
+  const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
 
   const session = await mongoose.startSession();
 
@@ -91,7 +94,11 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
           }
         }
 
-        const unitPrice = product.basePrice + (variant.priceAdjustment || 0);
+        const priceBeforeDiscount =
+          product.basePrice + (variant.priceAdjustment || 0);
+        const unitPrice = Math.round(
+          priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
+        );
         const itemTotal = unitPrice * quantity;
 
         variant.stock -= quantity;
@@ -133,7 +140,7 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
       createdOrder = orderDocument;
 
       const user = await User.findById(req.userInfo._id).session(session);
-      if (user) {
+      if (user && normalizedCheckoutMode === "cart") {
         user.cart = [];
         await user.save({ session, validateModifiedOnly: true });
       }

@@ -12,9 +12,59 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
 
 const getErrorMessage = (error, fallback) =>
   typeof error === "string" ? error : error?.message || fallback;
+
+const getDiscountedUnitPrice = (product = {}, variant = {}) => {
+  const basePrice =
+    Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
+
+  return Math.round(
+    basePrice * (1 - Number(product?.discountPercent || 0) / 100)
+  );
+};
+
+const normalizeBuyNowItem = (item) => {
+  if (!item?.product || !item?.variant) {
+    return null;
+  }
+
+  const quantity = Math.max(1, Number(item.quantity) || 1);
+  const unitPrice = getDiscountedUnitPrice(item.product, item.variant);
+
+  return {
+    id: `buynow-${item.product.id || item.product._id}-${item.variant.sku}`,
+    product: item.product,
+    variant: item.variant,
+    quantity,
+    unitPrice,
+    subTotal: unitPrice * quantity,
+  };
+};
+
+const loadPersistedBuyNowItem = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(BUY_NOW_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistBuyNowItem = (item) => {
+  if (typeof window === "undefined") return;
+
+  if (!item) {
+    window.sessionStorage.removeItem(BUY_NOW_STORAGE_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(item));
+};
 
 const Checkout = () => {
   const dispatch = useDispatch();
@@ -47,52 +97,60 @@ const Checkout = () => {
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [isBuyNow, setIsBuyNow] = useState(false);
+  const [hasInitializedSource, setHasInitializedSource] = useState(false);
+  const cartStateItems = Array.isArray(location.state?.cartItems)
+    ? location.state.cartItems
+    : null;
 
   useEffect(() => {
-    if (location.state?.cartItems) {
-      // From cart page
-      setCheckoutItems(location.state.cartItems);
+    const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
+    const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
+
+    if (routedBuyNowItem) {
+      persistBuyNowItem(location.state?.buyNowItem || routedBuyNowItem);
+      setIsBuyNow(true);
+      setCheckoutItems([routedBuyNowItem]);
+      setCheckoutTotal(routedBuyNowItem.subTotal);
+      setHasInitializedSource(true);
+      return;
+    }
+
+    if (cartStateItems?.length) {
+      persistBuyNowItem(null);
+      setIsBuyNow(false);
+      setCheckoutItems(cartStateItems);
       setCheckoutTotal(
         location.state.cartTotal ||
-          location.state.cartItems.reduce(
+          cartStateItems.reduce(
             (sum, item) => sum + item.unitPrice * item.quantity,
             0
           )
       );
-      setIsBuyNow(false);
-    } else if (location.state?.buyNowItem) {
-      // From buy now
+      setHasInitializedSource(true);
+      return;
+    }
+
+    if (persistedBuyNowItem) {
+      persistBuyNowItem(persistedBuyNowItem);
       setIsBuyNow(true);
-      const item = location.state.buyNowItem;
-      const unitPrice = item.product.basePrice + (item.variant.priceAdjustment || 0);
-      const normalizedItem = {
-        id: 'buynow',
-        product: item.product,
-        variant: item.variant,
-        quantity: item.quantity,
-        unitPrice,
-        subTotal: unitPrice * item.quantity
-      };
-      setCheckoutItems([normalizedItem]);
-      setCheckoutTotal(normalizedItem.subTotal);
-    } else {
-      // Direct access - redirect to cart
-      navigate('/shopping/cart');
+      setCheckoutItems([persistedBuyNowItem]);
+      setCheckoutTotal(persistedBuyNowItem.subTotal);
+      setHasInitializedSource(true);
+      return;
     }
-  }, [location.state, navigate]);
+
+    persistBuyNowItem(null);
+    setIsBuyNow(false);
+    setHasInitializedSource(true);
+    dispatch(fetchCartAction());
+  }, [cartStateItems, dispatch, location.state]);
 
   useEffect(() => {
-    if (!isBuyNow) {
-      dispatch(fetchCartAction());
-    }
-  }, [isBuyNow, dispatch]);
+    if (!hasInitializedSource || isBuyNow) return;
 
-  useEffect(() => {
-    if (!isBuyNow) {
-      setCheckoutItems(items);
-      setCheckoutTotal(totalPrice);
-    }
-  }, [isBuyNow, items, totalPrice]);
+    setCheckoutItems(items);
+    setCheckoutTotal(totalPrice);
+  }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
   // ---------------- CART ACTIONS ----------------
   const handleQuantityChange = async (item, quantity) => {
@@ -302,6 +360,7 @@ const Checkout = () => {
           variantSku: item.variant.sku,
           quantity: item.quantity,
         })),
+        checkoutMode: isBuyNow ? "buyNow" : "cart",
         shippingAddress: formData.shippingAddress,
         contactNumber: formData.contactNumber,
         paymentMethod: formData.paymentMethod,
@@ -323,6 +382,8 @@ const Checkout = () => {
         variant: "success",
       });
 
+      persistBuyNowItem(null);
+
       navigate("/shopping/checkout-success", { 
         state: { 
           orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
@@ -342,7 +403,7 @@ const Checkout = () => {
   };
 
   // ---------------- LOADING ----------------
-  if (isLoading) {
+  if ((!hasInitializedSource || isLoading) && !checkoutItems.length) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
