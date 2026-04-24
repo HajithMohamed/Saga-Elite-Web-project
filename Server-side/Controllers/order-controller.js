@@ -3,8 +3,49 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
+const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+
+const DASHBOARD_ORDER_STATUSES = [
+  "pending",
+  "verification_pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+const buildSalesTrend = (rawTrend) => {
+  const monthMap = new Map(
+    rawTrend.map((entry) => [
+      `${entry._id.year}-${String(entry._id.month).padStart(2, "0")}`,
+      entry,
+    ]),
+  );
+
+  const trend = [];
+  const now = new Date();
+
+  for (let offset = 5; offset >= 0; offset -= 1) {
+    const pointDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+    const key = `${pointDate.getUTCFullYear()}-${String(pointDate.getUTCMonth() + 1).padStart(2, "0")}`;
+    const monthEntry = monthMap.get(key);
+
+    trend.push({
+      monthKey: key,
+      label: pointDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      }),
+      revenue: monthEntry?.revenue || 0,
+      orders: monthEntry?.orders || 0,
+    });
+  }
+
+  return trend;
+};
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -292,24 +333,296 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 });
 
 const getDashboardStats = catchAsync(async (req, res, next) => {
-  const totalSalesQuery = await Order.aggregate([
-    { $match: { status: { $nin: ["Cancelled", "Failed"] } } },
-    { $group: { _id: null, total: { $sum: "$totalPrice" } } }
-  ]);
-  const totalSales = totalSalesQuery.length > 0 ? totalSalesQuery[0].total : 0;
+  const now = new Date();
+  const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+  const revenueMatch = { status: { $ne: "cancelled" } };
 
-  const activeOrders = await Order.countDocuments({ status: { $in: ["Pending", "Processing"] } });
-  const totalProducts = await Product.countDocuments();
-  const totalCustomers = await User.countDocuments({ role: "user" });
+  const [
+    revenueSummary,
+    totalOrders,
+    activeOrders,
+    totalProducts,
+    totalCustomers,
+    totalDrops,
+    liveDrops,
+    archivedDrops,
+    lowStockProducts,
+    statusBreakdownRaw,
+    paymentMethodBreakdown,
+    soldUnitsSummary,
+    bestSellingProductDoc,
+    mostWishedProductDoc,
+    topProductsDocs,
+    inventoryAlertsDocs,
+    recentOrdersDocs,
+    topDrops,
+    salesTrendRaw,
+    nextScheduledDropDoc,
+  ] = await Promise.all([
+    Order.aggregate([
+      { $match: revenueMatch },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$totalAmount" },
+          completedRevenue: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "delivered"] }, "$totalAmount", 0],
+            },
+          },
+          nonCancelledOrders: { $sum: 1 },
+        },
+      },
+    ]),
+    Order.countDocuments(),
+    Order.countDocuments({
+      status: { $in: ["pending", "verification_pending", "confirmed", "shipped"] },
+    }),
+    Product.countDocuments(),
+    User.countDocuments({ role: "user" }),
+    Drop.countDocuments(),
+    Drop.countDocuments({ isPublished: true, isArchived: false }),
+    Drop.countDocuments({ isArchived: true }),
+    Product.countDocuments({ isActive: true, totalStock: { $lte: 5 } }),
+    Order.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Order.aggregate([
+      {
+        $group: {
+          _id: "$paymentMethod",
+          count: { $sum: 1 },
+          revenue: {
+            $sum: {
+              $cond: [{ $ne: ["$status", "cancelled"] }, "$totalAmount", 0],
+            },
+          },
+        },
+      },
+      { $sort: { count: -1, revenue: -1 } },
+    ]),
+    Product.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSoldUnits: { $sum: "$soldCount" },
+          totalWishlistAdds: { $sum: "$wishCount" },
+          stockOnHand: { $sum: "$totalStock" },
+        },
+      },
+    ]),
+    Product.findOne({ soldCount: { $gt: 0 } })
+      .sort({ soldCount: -1, wishCount: -1, createdAt: 1 })
+      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+      .populate("drop", "name slug releaseDate isPublished isArchived")
+      .lean(),
+    Product.findOne({ wishCount: { $gt: 0 } })
+      .sort({ wishCount: -1, soldCount: -1, createdAt: 1 })
+      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+      .populate("drop", "name slug releaseDate isPublished isArchived")
+      .lean(),
+    Product.find({ soldCount: { $gt: 0 } })
+      .sort({ soldCount: -1, wishCount: -1, totalStock: 1 })
+      .limit(5)
+      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+      .populate("drop", "name slug releaseDate isPublished isArchived")
+      .lean(),
+    Product.find({ isActive: true, totalStock: { $lte: 5 } })
+      .sort({ totalStock: 1, soldCount: -1, wishCount: -1 })
+      .limit(6)
+      .select("name slug artNo totalStock soldCount wishCount drop")
+      .populate("drop", "name slug")
+      .lean(),
+    Order.find()
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select("_id totalAmount status paymentMethod paymentStatus createdAt items user")
+      .populate("user", "email")
+      .lean(),
+    Product.aggregate([
+      {
+        $group: {
+          _id: "$drop",
+          productCount: { $sum: 1 },
+          soldUnits: { $sum: "$soldCount" },
+          totalWishlistAdds: { $sum: "$wishCount" },
+          stockOnHand: { $sum: "$totalStock" },
+        },
+      },
+      { $sort: { soldUnits: -1, totalWishlistAdds: -1, productCount: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "drops",
+          localField: "_id",
+          foreignField: "_id",
+          as: "drop",
+        },
+      },
+      {
+        $unwind: {
+          path: "$drop",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          dropId: "$_id",
+          name: { $ifNull: ["$drop.name", "Independent Release"] },
+          slug: "$drop.slug",
+          releaseDate: "$drop.releaseDate",
+          isPublished: "$drop.isPublished",
+          isArchived: "$drop.isArchived",
+          productCount: 1,
+          soldUnits: 1,
+          totalWishlistAdds: 1,
+          stockOnHand: 1,
+        },
+      },
+    ]),
+    Order.aggregate([
+      {
+        $match: {
+          status: { $ne: "cancelled" },
+          createdAt: { $gte: sixMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          revenue: { $sum: "$totalAmount" },
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
+    ]),
+    Drop.findOne({
+      releaseDate: { $gt: now },
+      isArchived: false,
+    })
+      .sort({ releaseDate: 1 })
+      .select("name slug releaseDate isPublished isArchived")
+      .lean(),
+  ]);
+
+  const revenueStats = revenueSummary[0] || {
+    totalRevenue: 0,
+    completedRevenue: 0,
+    nonCancelledOrders: 0,
+  };
+  const soldUnitsStats = soldUnitsSummary[0] || {
+    totalSoldUnits: 0,
+    totalWishlistAdds: 0,
+    stockOnHand: 0,
+  };
+
+  const statusBreakdown = DASHBOARD_ORDER_STATUSES.reduce((accumulator, status) => {
+    accumulator[status] = 0;
+    return accumulator;
+  }, {});
+
+  statusBreakdownRaw.forEach((entry) => {
+    if (entry?._id) {
+      statusBreakdown[entry._id] = entry.count;
+    }
+  });
+
+  let nextScheduledDrop = null;
+
+  if (nextScheduledDropDoc) {
+    const nextDropProductCount = await Product.countDocuments({
+      drop: nextScheduledDropDoc._id,
+      isActive: true,
+    });
+
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysUntilRelease = Math.max(
+      0,
+      Math.ceil((new Date(nextScheduledDropDoc.releaseDate).getTime() - now.getTime()) / msPerDay),
+    );
+
+    nextScheduledDrop = {
+      ...nextScheduledDropDoc,
+      productCount: nextDropProductCount,
+      daysUntilRelease,
+    };
+  }
+
+  const recentOrders = recentOrdersDocs.map((order) => ({
+    _id: order._id,
+    customerEmail: order.user?.email || "Unknown customer",
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    totalAmount: order.totalAmount,
+    itemCount: Array.isArray(order.items) ? order.items.length : 0,
+    createdAt: order.createdAt,
+  }));
+
+  const topProducts = topProductsDocs.map((product) => ({
+    ...product,
+    dropName: product.drop?.name || "Independent Release",
+    dropSlug: product.drop?.slug || null,
+  }));
+
+  const inventoryAlerts = inventoryAlertsDocs.map((product) => ({
+    ...product,
+    dropName: product.drop?.name || "Independent Release",
+    dropSlug: product.drop?.slug || null,
+  }));
+
+  const paymentMix = paymentMethodBreakdown.map((entry) => ({
+    method: entry._id,
+    count: entry.count,
+    revenue: entry.revenue,
+  }));
 
   res.status(200).json({
     success: true,
     data: {
-      totalSales,
-      activeOrders,
-      totalProducts,
-      totalCustomers
-    }
+      overview: {
+        totalRevenue: revenueStats.totalRevenue,
+        completedRevenue: revenueStats.completedRevenue,
+        totalOrders,
+        activeOrders,
+        totalProducts,
+        totalCustomers,
+        totalDrops,
+        liveDrops,
+        archivedDrops,
+        lowStockProducts,
+        pendingVerification: statusBreakdown.verification_pending || 0,
+        deliveredOrders: statusBreakdown.delivered || 0,
+        totalSoldUnits: soldUnitsStats.totalSoldUnits,
+        totalWishlistAdds: soldUnitsStats.totalWishlistAdds,
+        stockOnHand: soldUnitsStats.stockOnHand,
+        averageOrderValue: revenueStats.nonCancelledOrders
+          ? revenueStats.totalRevenue / revenueStats.nonCancelledOrders
+          : 0,
+      },
+      highlights: {
+        bestSellingProduct: bestSellingProductDoc,
+        mostWishedProduct: mostWishedProductDoc,
+        topDrop: topDrops[0] || null,
+        nextScheduledDrop,
+      },
+      orderStatusBreakdown: statusBreakdown,
+      paymentMethodBreakdown: paymentMix,
+      salesTrend: buildSalesTrend(salesTrendRaw),
+      topProducts,
+      topDrops,
+      inventoryAlerts,
+      recentOrders,
+    },
   });
 });
 
