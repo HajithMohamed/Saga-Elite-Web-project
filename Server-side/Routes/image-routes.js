@@ -17,7 +17,10 @@ const {
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const adminMiddleware = require("../Middlewares/admin-middleware");
-const upload = require("../Middlewares/multer-middleware");
+const {
+  imageUpload,
+  receiptUpload,
+} = require("../Middlewares/multer-middleware");
 
 const router = express.Router();
 
@@ -28,7 +31,7 @@ router.post(
   "/upload-image",
   authMiddleware,
   adminMiddleware,
-  upload.array("images", 10),
+  imageUpload.array("images", 10),
   uploadImages,
 );
 
@@ -38,7 +41,7 @@ router.post(
 router.post(
   "/upload-receipt",
   authMiddleware,
-  upload.single("receipt"),
+  receiptUpload.single("receipt"),
   uploadReceiptImage
 );
 
@@ -49,7 +52,7 @@ router.patch(
   "/update-image/:id",
   authMiddleware,
   adminMiddleware,
-  upload.single("image"),
+  imageUpload.single("image"),
   updateImage,
 );
 

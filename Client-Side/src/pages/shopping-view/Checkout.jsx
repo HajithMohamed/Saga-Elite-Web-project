@@ -13,6 +13,9 @@ import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, Uploa
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 
+const getErrorMessage = (error, fallback) =>
+  typeof error === "string" ? error : error?.message || fallback;
+
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -106,7 +109,7 @@ const Checkout = () => {
     } catch (err) {
       toast({
         title: "Update failed",
-        description: err?.message || "Unable to update quantity.",
+        description: getErrorMessage(err, "Unable to update quantity."),
         variant: "destructive",
       });
     }
@@ -125,7 +128,7 @@ const Checkout = () => {
     } catch (err) {
       toast({
         title: "Remove failed",
-        description: err?.message || "Unable to remove item.",
+        description: getErrorMessage(err, "Unable to remove item."),
         variant: "destructive",
       });
     }
@@ -195,7 +198,7 @@ const Checkout = () => {
       });
       return res.data?.data?.url || "";
     } catch (err) {
-      throw new Error(err.response?.data?.message || "Failed to upload receipt");
+      throw new Error(getErrorMessage(err?.response?.data, "Failed to upload receipt"));
     }
   };
 
@@ -329,10 +332,10 @@ const Checkout = () => {
     } catch (err) {
       toast({
         title: "Checkout failed",
-        description: err?.message || "Try again later.",
+        description: getErrorMessage(err, "Try again later."),
         variant: "destructive",
       });
-      setFormError(err?.message || "Checkout failed");
+      setFormError(getErrorMessage(err, "Checkout failed"));
     } finally {
       setIsUploading(false);
     }
