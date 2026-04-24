@@ -1,31 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, Link } from "react-router-dom";
-import {
-  Mail,
-  Shield,
-  Key,
-  LogOut,
-  ChevronRight,
-  CheckCircle2,
-  AlertCircle,
-  Crown,
-  Calendar,
-} from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, Key, LogOut, Package, CheckCircle2, Clock3 } from "lucide-react";
 
 import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
 import { fetchWishlistAction } from "@/store/cart-slice";
 import { fetchUserOrders } from "@/store/order-slice";
-
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
-import { toast } from "@/hooks/use-toast";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
+import { toast } from "@/hooks/use-toast";
+
+const formatStatus = (status = "") =>
+  status
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 
 const Account = () => {
   const { user } = useSelector((state) => state.auth);
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
-  const { userOrders, isLoading: orderLoading } = useSelector((state) => state.order);
+  const { userOrders } = useSelector((state) => state.order);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -34,33 +30,42 @@ const Account = () => {
   const homeLink = isAdmin ? "/admin/dashboard" : "/shopping/home";
 
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
-
   const [formData, setFormData] = useState({
     oldPassword: "",
     newPassword: "",
     passwordConfirm: "",
   });
-
   const [errors, setErrors] = useState({});
+
+  const changePasswordControls = useMemo(() => {
+    if (user?.provider !== "google") {
+      return changePasswordFormControls;
+    }
+
+    return changePasswordFormControls.map((control) =>
+      control.name === "oldPassword"
+        ? {
+            ...control,
+            placeholder: "Current password (leave blank if not set yet)",
+          }
+        : control
+    );
+  }, [user?.provider]);
 
   useEffect(() => {
     dispatch(fetchWishlistAction());
-  }, [dispatch]);
-
-  useEffect(() => {
     dispatch(fetchUserOrders());
   }, [dispatch]);
 
   useEffect(() => {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-    const newErrors = {};
+    const nextErrors = {};
 
     if (formData.newPassword && !passwordRegex.test(formData.newPassword)) {
-      newErrors.newPassword =
+      nextErrors.newPassword =
         "Must be 8+ chars with uppercase, lowercase, number, and special character.";
     }
 
@@ -68,37 +73,42 @@ const Account = () => {
       formData.passwordConfirm &&
       formData.newPassword !== formData.passwordConfirm
     ) {
-      newErrors.passwordConfirm = "Passwords do not match.";
+      nextErrors.passwordConfirm = "Passwords do not match.";
     }
 
-    setErrors(newErrors);
+    setErrors(nextErrors);
   }, [formData]);
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
 
     if (Object.keys(errors).length > 0) return;
 
-    setIsLoading(true);
+    setIsSubmittingPassword(true);
+
     try {
-      const res = await dispatch(changePasswordAction(formData)).unwrap();
+      const response = await dispatch(changePasswordAction(formData)).unwrap();
 
       toast({
-        title: "Success",
-        description: res.message || "Password updated",
+        title: "Password updated",
+        description: response.message || "Your password has been saved.",
         variant: "success",
       });
 
-      setFormData({ oldPassword: "", newPassword: "", passwordConfirm: "" });
+      setFormData({
+        oldPassword: "",
+        newPassword: "",
+        passwordConfirm: "",
+      });
       setShowChangePassword(false);
-    } catch (err) {
+    } catch (error) {
       toast({
-        title: "Error",
-        description: err?.message || "Password change failed",
+        title: "Password update failed",
+        description: error?.message || error || "Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmittingPassword(false);
     }
   };
 
@@ -106,10 +116,10 @@ const Account = () => {
     try {
       await dispatch(logoutUserAction()).unwrap();
       navigate("/auth/login");
-    } catch (err) {
+    } catch (error) {
       toast({
         title: "Logout failed",
-        description: err?.message || "Try again",
+        description: error?.message || error || "Try again.",
         variant: "destructive",
       });
     }
@@ -117,133 +127,212 @@ const Account = () => {
 
   const displayName = user?.email?.split("@")[0] || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
-
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString("en-US", {
         month: "long",
         year: "numeric",
       })
-    : "—";
+    : "-";
+
+  const totalOrders = userOrders.length;
+  const deliveredOrders = userOrders.filter((order) => order.status === "delivered").length;
+  const activeOrders = userOrders.filter((order) =>
+    ["pending", "verification_pending", "confirmed", "shipped"].includes(order.status)
+  ).length;
+  const latestOrder = userOrders[0] || null;
 
   const inputClasses =
     "bg-transparent border-b border-gray-700 text-white focus:border-[#D4AF37]";
   const labelClasses = "text-white";
   const buttonClasses =
-    "bg-[#D4AF37] text-black font-bold uppercase py-2 rounded";
+    "bg-[#D4AF37] text-black font-bold uppercase py-3 rounded";
+  const isPasswordFormIncomplete =
+    !formData.newPassword ||
+    !formData.passwordConfirm ||
+    (user?.provider !== "google" && !formData.oldPassword);
 
   return (
     <div className="min-h-screen bg-[#060606] text-white">
       <div className="container mx-auto max-w-5xl px-4 py-10">
-
-        {/* breadcrumb */}
-        <nav className="flex gap-2 text-xs text-gray-500 mb-8 uppercase">
+        <nav className="mb-8 flex gap-2 text-xs uppercase text-gray-500">
           <Link to={homeLink}>{isAdmin ? "Dashboard" : "Home"}</Link>
-          <ChevronRight className="w-3 h-3" />
+          <ChevronRight className="h-3 w-3" />
           <span className="text-[#D4AF37]">Account</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* LEFT PROFILE */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6 text-center">
-              <div className="w-20 h-20 mx-auto rounded-full bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] font-bold text-xl">
+            <div className="rounded-2xl border border-[#D4AF37]/10 bg-[#0a0a0a] p-6 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#D4AF37]/10 text-xl font-bold text-[#D4AF37]">
                 {initials}
               </div>
 
               <h2 className="mt-4 font-bold">{displayName}</h2>
               <p className="text-sm text-gray-400">{user?.email}</p>
-
-              <p className="mt-3 text-xs text-gray-500">
-                Member since {memberSince}
-              </p>
+              <p className="mt-3 text-xs text-gray-500">Member since {memberSince}</p>
             </div>
           </div>
 
-          {/* RIGHT CONTENT */}
-          <div className="lg:col-span-8 space-y-6">
-
-            {/* ACCOUNT INFO */}
-            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6">
-              <h3 className="text-[#D4AF37] uppercase text-xs mb-4">
+          <div className="space-y-6 lg:col-span-8">
+            <div className="rounded-2xl border border-[#D4AF37]/10 bg-[#0a0a0a] p-6">
+              <h3 className="mb-4 text-xs uppercase text-[#D4AF37]">
                 Account Details
               </h3>
 
               <p>Email: {user?.email}</p>
               <p>Role: {user?.role}</p>
               <p>Status: {user?.isVerified ? "Verified" : "Not Verified"}</p>
+              <p>Sign-in method: {user?.provider || "local"}</p>
             </div>
 
-            {/* WISHLIST LINK */}
-            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6 flex items-center justify-between">
+            <div className="flex items-center justify-between rounded-2xl border border-[#D4AF37]/10 bg-[#0a0a0a] p-6">
               <div>
-                <h3 className="text-[#D4AF37] uppercase text-sm mb-1 font-bold tracking-wider">
+                <h3 className="mb-1 text-sm font-bold uppercase tracking-wider text-[#D4AF37]">
                   My Wishlist
                 </h3>
-                <p className="text-gray-400 text-sm">
-                  {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved
+                <p className="text-sm text-gray-400">
+                  {wishlistItems.length} {wishlistItems.length === 1 ? "item" : "items"} saved
                 </p>
               </div>
               <Link
                 to="/shopping/wishlist"
-                className="flex items-center gap-2 rounded-full bg-white/5 py-2 px-6 text-sm font-semibold text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
+                className="flex items-center gap-2 rounded-full bg-white/5 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
               >
-                View Wishlist <ChevronRight className="w-4 h-4" />
+                View Wishlist <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
 
-            {/* ORDERS */}
-            <div className="bg-[#0a0a0a] border border-[#D4AF37]/10 rounded-2xl p-6">
-              <h3 className="text-[#D4AF37] uppercase text-xs mb-4">
-                Orders
-              </h3>
+            <div className="rounded-2xl border border-[#D4AF37]/10 bg-[#0a0a0a] p-6">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xs uppercase text-[#D4AF37]">
+                    Order Summary
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-400">
+                    Quick view of your order activity. Open the full orders page for complete history.
+                  </p>
+                </div>
+                <Link
+                  to="/shopping/orders"
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
+                >
+                  <Package className="h-4 w-4" />
+                  View All Orders
+                </Link>
+              </div>
 
-              {orderLoading ? (
-                <p>Loading...</p>
-              ) : userOrders.length === 0 ? (
-                <p className="text-gray-400">No orders yet</p>
-              ) : (
-                userOrders.map((order) => (
-                  <div key={order._id} className="border-b border-gray-800 py-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <p className="font-medium">Order: <span className="text-[#D4AF37]">{order._id}</span></p>
-                        <p className="text-sm text-gray-400">Status: {order.status}</p>
-                      </div>
-                      <Link
-                        to="/shopping/order-tracking"
-                        state={{ orderId: order._id }}
-                        className="text-[#D4AF37] text-xs uppercase tracking-widest font-bold hover:text-white"
-                      >
-                        Track Order
-                      </Link>
-                    </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/5 bg-[#050505] p-5">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Total Orders</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{totalOrders}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-[#050505] p-5">
+                  <div className="flex items-center gap-2 text-[#D4AF37]">
+                    <Clock3 className="h-4 w-4" />
+                    <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Active Orders</p>
                   </div>
-                ))
+                  <p className="mt-2 text-2xl font-bold text-white">{activeOrders}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-[#050505] p-5">
+                  <div className="flex items-center gap-2 text-[#D4AF37]">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Delivered</p>
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-white">{deliveredOrders}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/5 bg-[#050505] p-5">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Latest Order</p>
+                {latestOrder ? (
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-white break-all">{latestOrder._id}</p>
+                      <p className="mt-1 text-sm text-gray-400">
+                        Status: {formatStatus(latestOrder.status)}
+                      </p>
+                    </div>
+                    <Link
+                      to={`/shopping/order-tracking?orderId=${latestOrder._id}`}
+                      className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] hover:text-white"
+                    >
+                      Track Latest Order
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-gray-400">No orders placed yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#D4AF37]/10 bg-[#0a0a0a] p-6">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="mb-2 text-xs uppercase text-[#D4AF37]">
+                    Change Password
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {user?.provider === "google"
+                      ? "You can add or update a local password here. If you have never set one before, the current password field can stay empty."
+                      : "Update your password here for better account security."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowChangePassword((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
+                >
+                  <Key className="h-4 w-4" />
+                  {showChangePassword ? "Hide" : "Open"}
+                </button>
+              </div>
+
+              {showChangePassword && (
+                <div className="space-y-5 rounded-2xl border border-white/5 bg-[#050505] p-5">
+                  <CommonForm
+                    formControls={changePasswordControls}
+                    formData={formData}
+                    setFormData={setFormData}
+                    onSubmit={handleChangePassword}
+                    buttonText={isSubmittingPassword ? "Saving..." : "Save Password"}
+                    inputClass={inputClasses}
+                    labelClass={labelClasses}
+                    buttonClass={buttonClasses}
+                    formErrors={errors}
+                    buttonDisabled={isPasswordFormIncomplete || Object.keys(errors).length > 0}
+                    isLoading={isSubmittingPassword}
+                  />
+                  <PasswordStrengthMeter password={formData.newPassword} />
+                </div>
               )}
             </div>
 
-            {/* LOGOUT */}
-            <div className="bg-[#0a0a0a] border border-red-500/20 rounded-2xl p-6">
+            <div className="rounded-2xl border border-red-500/20 bg-[#0a0a0a] p-6">
               {!confirmLogout ? (
                 <button
                   onClick={() => setConfirmLogout(true)}
-                  className="text-red-400 uppercase text-xs"
+                  className="inline-flex items-center gap-2 text-xs uppercase text-red-400"
                 >
+                  <LogOut className="h-4 w-4" />
                   Sign Out
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={() => setConfirmLogout(false)}>
+                  <button
+                    onClick={() => setConfirmLogout(false)}
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm text-white"
+                  >
                     Cancel
                   </button>
-                  <button onClick={handleLogout} className="text-red-500">
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400"
+                  >
                     Confirm
                   </button>
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ import ShoppinLayout from "./components/shopping-components/Layout";
 import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
+import Orders from "./pages/shopping-view/Orders";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
@@ -133,6 +134,7 @@ function App() {
           <Route index element={<Navigate to="home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="orders" element={<Orders />} />
           <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />

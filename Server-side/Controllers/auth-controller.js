@@ -248,8 +248,8 @@ const logout = catchAsync(async (req, res, next) => {
 const changePassword = catchAsync(async (req, res, next) => {
     const { oldPassword, newPassword, passwordConfirm } = req.body;
 
-    if (!oldPassword || !newPassword || !passwordConfirm) {
-        return next(new AppError("Old password, new password, and confirmation are required", 400));
+    if (!newPassword || !passwordConfirm) {
+        return next(new AppError("New password and confirmation are required", 400));
     }
 
     if (newPassword !== passwordConfirm) {
@@ -272,9 +272,17 @@ const changePassword = catchAsync(async (req, res, next) => {
         return next(new AppError("User not found", 404));
     }
 
-    const isCorrect = await user.correctPassword(oldPassword, user.password);
-    if (!isCorrect) {
-        return next(new AppError("Current password is incorrect", 401));
+    const hasExistingPassword = Boolean(user.password);
+
+    if (hasExistingPassword) {
+        if (!oldPassword) {
+            return next(new AppError("Current password is required", 400));
+        }
+
+        const isCorrect = await user.correctPassword(oldPassword, user.password);
+        if (!isCorrect) {
+            return next(new AppError("Current password is incorrect", 401));
+        }
     }
 
     user.password = newPassword;
@@ -294,7 +302,7 @@ const changePassword = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         status: "success",
-        message: "Password updated successfully",
+        message: hasExistingPassword ? "Password updated successfully" : "Password set successfully",
     });
 });
 

@@ -173,6 +173,14 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
 
 const getUserOrders = catchAsync(async (req, res, next) => {
   const orders = await Order.find({ user: req.userInfo._id })
+    .populate({
+      path: "items.product",
+      select: "name slug primaryImage",
+      populate: {
+        path: "images",
+        options: { sort: { order: 1 } },
+      },
+    })
     .sort({ createdAt: -1 })
     .lean();
 
@@ -198,10 +206,14 @@ const getAllOrders = catchAsync(async (req, res, next) => {
 
 const getOrderById = catchAsync(async (req, res, next) => {
   const order = await Order.findById(req.params.id)
-    .populate("user", "email role")
+    .populate("user", "email role profilePicture provider")
     .populate({
       path: "items.product",
-      select: "images imagesUrl name", // Adjust if needed
+      select: "primaryImage name slug",
+      populate: {
+        path: "images",
+        options: { sort: { order: 1 } },
+      },
     })
     .lean();
 
@@ -209,7 +221,11 @@ const getOrderById = catchAsync(async (req, res, next) => {
     return next(new AppError("Order not found", 404));
   }
 
-  if (!order.user._id.equals(req.userInfo._id) && req.userInfo.role !== "admin") {
+  const orderOwnerId = order.user?._id || order.user;
+  const isOwner = String(orderOwnerId) === String(req.userInfo._id);
+  const isAdmin = ["admin", "superadmin"].includes(req.userInfo.role);
+
+  if (!isOwner && !isAdmin) {
     return next(new AppError("You are not authorized to view this order", 403));
   }
 
@@ -222,7 +238,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
 const updateOrderStatus = catchAsync(async (req, res, next) => {
   const { status } = req.body;
-  const allowedStatuses = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+  const allowedStatuses = ["pending", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 
   if (!status || !allowedStatuses.includes(status)) {
     return next(new AppError("Invalid order status", 400));
@@ -235,7 +251,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   order.status = status;
-  if (status === "confirmed" && order.paymentMethod === "receipt") {
+  if (status === "confirmed" && ["manual", "cash", "receipt"].includes(order.paymentMethod)) {
     order.paymentStatus = "paid";
   }
 

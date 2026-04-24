@@ -75,8 +75,7 @@ const OrderSuccess = () => {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
             <Link
-              to="/shopping/order-tracking"
-              state={{ orderId }}
+              to={`/shopping/order-tracking?orderId=${orderId}`}
               className="w-full sm:w-auto px-10 py-4 bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] flex items-center justify-center"
             >
               Track Order
