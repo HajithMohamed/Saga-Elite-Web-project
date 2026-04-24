@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - Saga Elite Shop</title>
+  <script>
+    tailwind = { 
+      config: { 
+        theme: { 
+          extend: {
+            fontFamily: {
+              serif: ['Playfair Display', 'serif'],
+              sans: ['Inter', 'sans-serif'],
+              headline: ["Noto Serif"],
+              body: ["Manrope"],
+              label: ["Manrope"]
+            },
+            colors: {
+              saga: '#f2ca50', 
+              surface: '#131313', 
+              accent: '#d4af37', 
+              on: '#e5e2e1',
+              "surface-container-low": "#1c1b1b"
+            }
+          } 
+        } 
+      } 
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script type="module" src="js/common.js"></script>
+  <script src="js/demo-state.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body class="bg-[#060606] text-white font-sans min-h-screen">
+
+<div id="root-header"></div>
+
+<div class="bg-[#060606] text-white py-12 md:py-20 font-sans mt-16">
+    <div class="max-w-screen-2xl mx-auto px-6 md:px-12 grid lg:grid-cols-[3fr_2fr] gap-16 items-start">
+
+        <!-- LEFT: FORM (Shipping & Payment) -->
+        <div class="space-y-12 lg:space-y-16">
+            <section>
+                <h1 class="text-4xl font-extrabold tracking-tight mb-4 text-[#D4AF37]">Checkout</h1>
+                <p class="text-gray-400">Review your items and complete your architectural acquisition.</p>
+            </section>
+
+            <form id="checkout-form" class="space-y-12">
+                
+                <!-- 01 Shipping Destination -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">01</span>
+                        <h2 class="text-xl font-bold tracking-tight">Shipping Destination</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+                        <div class="md:col-span-2 flex flex-col gap-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Complete Address</label>
+                            <input required id="address" placeholder="124 Architecture Boulevard, Metropolis, NY 10001" class="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm" />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Contact Number</label>
+                            <input required id="phone" placeholder="+880 17 000 0000" class="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm" />
+                        </div>
+                        
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Notes (Optional)</label>
+                            <input id="notes" placeholder="Delivery instructions..." class="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 02 Payment Method -->
+                <section class="space-y-8">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">02</span>
+                        <h2 class="text-xl font-bold tracking-tight">Payment Method</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- COD Option -->
+                        <div id="btn-cod" class="payment-method-btn p-6 border-2 border-[#D4AF37] bg-[#0a0a0a] rounded-lg flex items-center justify-between cursor-pointer transition-all shadow-[0_0_20px_rgba(212,175,55,0.1)]">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-[#D4AF37]">local_shipping</span>
+                                <span class="font-bold text-white">Cash on Delivery</span>
+                            </div>
+                            <div class="indicator w-4 h-4 rounded-full border-4 border-[#D4AF37]"></div>
+                        </div>
+
+                        <!-- Card Payment Option -->
+                        <div id="btn-card" class="payment-method-btn p-6 border-2 border-transparent bg-[#111] rounded-lg flex items-center justify-between cursor-pointer transition-all opacity-60 hover:opacity-100 hover:bg-[#151515]">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-gray-400">credit_card</span>
+                                <span class="font-bold text-gray-400">Card Payment</span>
+                            </div>
+                            <div class="indicator w-4 h-4 rounded-full border-2 border-gray-600"></div>
+                        </div>
+                    </div>
+
+                    <!-- Dummy Card form for visual demo -->
+                    <div id="card-form" class="hidden bg-[#0a0a0a] rounded-xl p-8 space-y-8 border border-[#222] shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
+                        <p class="text-gray-400 text-sm mb-4">💳 This is a dummy interface. No real card will be charged.</p>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Card Number</label>
+                            <input value="4242 4242 4242 4242" class="bg-[#111] border-0 border-b border-gray-800 p-4 text-white rounded-t-sm" readonly />
+                        </div>
+                    </div>
+                </section>
+
+                <div class="lg:hidden block pt-6">
+                    <button type="submit" class="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                        Complete Purchase <span class="text-lg">→</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- RIGHT: ORDER SUMMARY (Sticky Sidebar) -->
+        <div class="w-full lg:sticky lg:top-32 hidden lg:block">
+            <div class="bg-[#0a0a0a] rounded-xl p-8 border border-[#222] shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+                <h3 class="text-xl font-bold tracking-tight mb-8">Order Summary</h3>
+                
+                <!-- Cart Items List -->
+                <div id="checkout-cart-items" class="space-y-6 mb-10 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Populated via JS -->
+                </div>
+
+                <div class="space-y-4 pt-8 border-t border-gray-800">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-400">Subtotal</span>
+                        <span id="checkout-subtotal" class="font-bold">BDT 0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-400">Shipping</span>
+                        <span class="text-[#D4AF37] font-bold uppercase text-[10px] tracking-widest">BDT 100</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-6 border-t border-gray-800">
+                        <span class="text-lg font-bold">Total</span>
+                        <span id="checkout-total" class="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">BDT 0</span>
+                    </div>
+                </div>
+
+                <button id="btn-submit-sidebar" class="w-full mt-10 bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                    Complete Purchase <span class="text-xl">→</span>
+                </button>
+
+                <p class="text-[10px] text-center text-gray-500 mt-6 uppercase tracking-widest leading-relaxed">
+                    By completing your purchase you agree to our <br/> Terms of Service and Privacy Policy.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module" src="js/checkout.js"></script>
+</body>
+</html>

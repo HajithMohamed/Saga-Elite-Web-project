@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Demo | Saga Elite</title>
+  <script>
+    tailwind = { config: { theme: { extend: {
+      fontFamily: { serif: ['Playfair Display', 'serif'], sans: ['Inter', 'sans-serif'] },
+      colors: { saga: '#f2ca50', surface: '#131313', 'surface-muted': '#1f1f1f', 'surface-soft': '#0e0e0e', accent: '#d4af37', on: '#e5e2e1' }
+    } } } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script type="module" src="js/common.js"></script>
+  <script src="js/demo-state.js"></script>
+</head>
+<body class="min-h-screen bg-surface text-on">
+  <div class="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <header class="mb-10 flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-center md:justify-between">
+      <div>
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Admin panel</p>
+        <h1 class="mt-3 text-4xl font-serif font-semibold text-white md:text-5xl">Saga Elite Admin Demo</h1>
+      </div>
+      <nav class="flex flex-wrap gap-3">
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="index.html">Customer Demo</a>
+        <a class="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm text-on hover:border-saga" href="product-listing.html">Shop Demo</a>
+      </nav>
+    </header>
+
+    <div class="grid gap-6 md:grid-cols-3">
+      <article class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Total sales</p>
+        <h2 class="mt-4 text-4xl font-semibold text-saga">LKR 23,400</h2>
+        <p class="mt-3 text-sm text-slate-300">This demo displays admin metrics and quick action links for managing orders and drops.</p>
+      </article>
+      <article class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Pending verifications</p>
+        <h2 class="mt-4 text-4xl font-semibold text-saga">2</h2>
+        <p class="mt-3 text-sm text-slate-300">Manual payment verification and order approvals are represented visually here.</p>
+      </article>
+      <article class="rounded-[32px] bg-[#0d0d0d] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <p class="text-sm uppercase tracking-[0.35em] text-slate-400">Stock alerts</p>
+        <h2 class="mt-4 text-4xl font-semibold text-saga">3 low</h2>
+        <p class="mt-3 text-sm text-slate-300">Realtime-like stock alert indicators complete the admin dashboard feel.</p>
+      </article>
+    </div>
+
+    <section class="mt-10 grid gap-6 lg:grid-cols-2">
+      <div class="rounded-[32px] bg-[#0d0d0d] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <h2 class="text-2xl font-semibold text-white">Latest orders</h2>
+        <ul class="mt-6 space-y-4 text-sm text-slate-300">
+          <li class="rounded-3xl bg-[#111111] p-4">ORD-345210 - Confirmed - LKR 7,350</li>
+          <li class="rounded-3xl bg-[#111111] p-4">ORD-345211 - Pending verification - LKR 3,250</li>
+          <li class="rounded-3xl bg-[#111111] p-4">ORD-345212 - Shipped - LKR 4,200</li>
+        </ul>
+      </div>
+      <div class="rounded-[32px] bg-[#0d0d0d] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+        <h2 class="text-2xl font-semibold text-white">Action tiles</h2>
+        <div class="mt-6 grid gap-4">
+          <a href="product-listing.html" class="rounded-3xl bg-surface px-5 py-4 text-sm text-slate-200 transition hover:border-saga hover:border">Review products</a>
+          <a href="checkout.html" class="rounded-3xl bg-surface px-5 py-4 text-sm text-slate-200 transition hover:border-saga hover:border">Open checkout flow</a>
+          <a href="index.html" class="rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-on transition hover:border-saga">Return to customer demo</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
