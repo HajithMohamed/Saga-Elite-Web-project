@@ -15,10 +15,13 @@ services:
       # can be added later if needed
       - ./.env
     volumes:
-      # mount source code for live editing.
+      # mount source code for live editing; do NOT override node_modules from
+      # the image because that wipes out the packages installed during build.
       - ./Server-side:/app
-      # keep container-installed dependencies available even with the bind mount
-      - /app/node_modules
+      # if you really need host modules, use a bind mount below and run
+      # `npm install` on the host; otherwise leave dependency handling to the
+      # Dockerfile.
+      # - ./Server-side/node_modules:/app/node_modules
     command: npm run dev
 
   frontend:
