@@ -1,5 +1,21 @@
-const cors = require("cors")
-const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://localhost:5175"];
+const cors = require("cors");
+
+const defaultOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175"
+];
+
+const configuredOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_URLS]
+    .filter(Boolean)
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const allowedOrigins = [...new Set([...configuredOrigins, ...defaultOrigins])];
 
 const configureCors = ()=>{
     return cors({
