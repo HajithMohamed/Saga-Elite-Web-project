@@ -28,6 +28,25 @@ cd Saga-Elite-Web-Project
 
 ### 2. Environment Variables
 
+Current recommended setup:
+
+```bash
+cp .env.example .env
+```
+
+Use the root `.env` for both services. For Docker-based development on another
+computer, make sure these values are set correctly:
+
+- `MONGO_DB_URI`
+- `JWT_SECRET`
+- `EMAIL` and `PASS`
+- `CLOUDINARY_*`
+- `GOOGLE_CLIENT_ID`
+- `FRONTEND_PORT` and `BACKEND_PORT` if you need different host ports
+
+If MongoDB is running on your computer and the backend runs in Docker, use
+`host.docker.internal` instead of `localhost` in `MONGO_DB_URI`.
+
 The preferred pattern is to maintain a single `.env` file at the workspace root
 which contains **all** the variables needed by both backend and frontend.
 The backend code will automatically load the root `.env` (even when run from
@@ -83,6 +102,14 @@ The root scripts simply proxy into the corresponding `Server-side` or `Client-Si
 
 #### (B) Using Docker (Recommended for full-stack environment)
 
+Docker quick notes for a fresh machine:
+
+- Frontend default URL: `http://localhost:5174`
+- Backend default URL: `http://localhost:5001/api`
+- Frontend hot reload uses polling for better Docker Desktop compatibility
+- Backend uses `nodemon --legacy-watch` for shared-volume reloads
+- `host.docker.internal` is mapped for the backend container
+
 ```bash
 # make sure you have a `.env` file at the root; you can copy
 # `.env.example` and edit as needed.  If you forget, Docker will still start
@@ -106,7 +133,7 @@ You can still open separate shells if you like:
 cd Server-side
 npm install
 npm run dev
-# Runs on http://localhost:5000
+# Runs on http://localhost:5001
 ```
 
 **Frontend:**
