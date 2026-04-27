@@ -10,7 +10,7 @@ const {
     archiveDrop,
 } = require("../Controllers/drop-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const adminMiddleware = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
 const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
 
 router.get("/get-all-drops", optionalAuthMiddleware, getAllDrops);
