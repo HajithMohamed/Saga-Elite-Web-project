@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const path = require("path");
 
-// Update path to your .env depending on workspace root (usually running this relative to project dir)
-dotenv.config({ path: path.join(__dirname, "../Config/.env") });
-dotenv.config({ path: path.join(__dirname, "../../.env") });
+// Update path sequentially starting from current dir upwards
+dotenv.config(); // tries current /Server-side/.env
+dotenv.config({ path: path.join(__dirname, "../../.env") }); // tries root workspace /.env
 
 const User = require("../Models/User");
 const db = require("../DataBase/db");
@@ -26,16 +26,13 @@ const DEFAULT_SUPER_PASSWORD = params.password || "SuperSecret123!";
 const seedSuperAdmin = async () => {
   try {
     console.log(`Connecting to database...`);
-    // NOTE: Replace process.env.DATABASE_URL or wherever your connect string sits if it differs
-    const DB_URI = process.env.MONGO_URI || process.env.DATABASE_URI || process.env.DATABASE;
+    // NOTE: Match the database env string used in your db.js
+    const DB_URI = process.env.MONGO_DB_URI || process.env.MONGO_URI || process.env.DATABASE_URI || process.env.DATABASE;
     if (!DB_URI) {
       console.warn("DB Connection string not found in environment, make sure .env is configured correctly.");
     }
     
-    await mongoose.connect(DB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(DB_URI);
     console.log("Database connected successfully.");
 
     const existingSuperAdmin = await User.findOne({ 

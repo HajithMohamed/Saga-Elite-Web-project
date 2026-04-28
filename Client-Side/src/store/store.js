@@ -6,6 +6,7 @@ import adminUsersReducer from "./admin/user-slice";
 import orderReducer from "./order-slice";
 import cartReducer from "./cart-slice";
 import notificationReducer from "./notification-slice";
+import superAdminReducer from "./admin/super-admin-slice";
 
 const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ const store = configureStore({
     order: orderReducer,
     cart: cartReducer,
     notification: notificationReducer,
+    superAdmin: superAdminReducer,
   },
 });
 

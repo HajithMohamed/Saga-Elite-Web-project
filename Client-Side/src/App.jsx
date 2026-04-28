@@ -26,6 +26,7 @@ import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
 import AdminUsers from "./pages/admin-view/Users";
+import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -117,6 +118,7 @@ function App() {
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="super-admin" element={<SuperAdminDashboard />} />
           <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops />} />

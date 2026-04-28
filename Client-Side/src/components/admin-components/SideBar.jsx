@@ -1,5 +1,5 @@
 import React from 'react'
-import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, User, Package, ImagePlus, MessageSquare, Users } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, User, Package, ImagePlus, MessageSquare, Users, Shield } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAction } from '@/store/auth-slice'
@@ -9,7 +9,7 @@ const SideBar = () => {
   const location = useLocation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { isLoading } = useSelector((state) => state.auth)
+  const { isLoading, user } = useSelector((state) => state.auth)
   
   const menuItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -21,6 +21,10 @@ const SideBar = () => {
     { label: 'Features', path: '/admin/feature', icon: <Star className="h-5 w-5" /> },
     { label: 'Drops', path: '/admin/drop', icon: <Package className="h-5 w-5" /> },
   ]
+
+  if (user?.role === 'super_admin' || user?.role === 'superadmin') {
+    menuItems.push({ label: 'Super Admins', path: '/admin/super-admin', icon: <Shield className="h-5 w-5" /> });
+  }
 
   const handleLogout = async () => {
     try {

@@ -3,6 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 
 const CheckAuth = ({ isAuthenticated, user, children }) => {
   const location = useLocation();
+  const isAdminLike = user?.role === "admin" || user?.role === "super_admin" || user?.role === "superadmin";
+
   if (
     !isAuthenticated &&
     !(
@@ -21,7 +23,7 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
     (location.pathname.includes("login") ||
       location.pathname.includes("register"))
   ) {
-    if (user?.role === "admin") {
+    if (isAdminLike) {
       return <Navigate to="/admin/dashboard" />;
     } else {
       return <Navigate to="/shopping/home" />;
@@ -29,14 +31,14 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
   }
   if (
     isAuthenticated &&
-    user?.role === "admin" &&
+    isAdminLike &&
     location.pathname.includes("shop")
   ) {
     return <Navigate to="/admin/dashboard" />;
   }
   if (
     isAuthenticated &&
-    user?.role !== "admin" &&
+    !isAdminLike &&
     location.pathname.includes("admin")
   ) {
     return <Navigate to="/un-auth-page" />;
