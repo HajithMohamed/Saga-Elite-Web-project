@@ -27,10 +27,12 @@ const NotificationsDropdown = () => {
   const { items, unreadCount, isLoading } = useSelector(
     (state) => state.notification,
   );
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     dispatch(fetchNotifications());
-  }, [dispatch]);
+  }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
     const onClickOutside = (event) => {
@@ -81,7 +83,7 @@ const NotificationsDropdown = () => {
             <button
               type="button"
               className="text-xs uppercase text-[#D4AF37] hover:text-white"
-              onClick={() => dispatch(fetchNotifications())}
+              onClick={() => isAuthenticated && dispatch(fetchNotifications())}
             >
               Refresh
             </button>

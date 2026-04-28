@@ -212,10 +212,14 @@ const createOrder = catchAsync(async (req, res, next) => {
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
 
-      const user = await User.findById(req.userInfo._id).session(session);
       if (user && normalizedCheckoutMode === "cart") {
         user.cart = [];
         await user.save({ session, validateModifiedOnly: true });
+      }
+
+      if (guest) {
+        guest.orderCount += 1;
+        await guest.save({ session });
       }
     });
   } finally {
