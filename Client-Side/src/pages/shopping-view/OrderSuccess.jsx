@@ -6,6 +6,8 @@ const OrderSuccess = () => {
   const location = useLocation();
   const orderId = location.state?.orderId || `TEM-${Math.floor(Math.random() * 100000000)}`;
   const totalAmount = location.state?.totalAmount || "0.00";
+  const referenceNumber = location.state?.referenceNumber;
+  const paymentMethod = location.state?.paymentMethod;
 
   return (
     <main className="min-h-screen bg-[#060606] text-white flex flex-col items-center pt-12 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
@@ -23,6 +25,13 @@ const OrderSuccess = () => {
         <div className="mt-8 bg-[#111] p-6 rounded-2xl border border-gray-800 inline-block">
           <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Order Reference</span>
           <p className="font-bold text-2xl tracking-widest text-[#D4AF37]">#{orderId}</p>
+          {paymentMethod === "manual" && referenceNumber && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Payment Reference</span>
+              <p className="font-bold text-lg tracking-widest text-[#D4AF37]">{referenceNumber}</p>
+              <p className="text-xs text-gray-400 mt-1">Use this reference for your bank transfer</p>
+            </div>
+          )}
         </div>
       </section>
 

@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema(
       default: "customer",
     },
 
+    permissions: {
+      products: { type: Boolean, default: false },
+      orders: { type: Boolean, default: false },
+      users: { type: Boolean, default: false },
+      notifications: { type: Boolean, default: false },
+      drops: { type: Boolean, default: false },
+    },
+
     provider: {
       type: String,
       enum: ["local", "google"],

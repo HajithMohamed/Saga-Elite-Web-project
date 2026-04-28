@@ -749,11 +749,40 @@ const removeFromWishlist = catchAsync(async (req, res, next) => {
   });
 });
 
+const getAllUsers = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const skip = (page - 1) * limit;
+
+  const users = await User.find({ role: 'customer' })
+    .select('email firstName lastName isActive createdAt updatedAt')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const totalUsers = await User.countDocuments({ role: 'customer' });
+
+  res.status(200).json({
+    status: "success",
+    results: users.length,
+    pagination: {
+      total: totalUsers,
+      page,
+      pages: Math.ceil(totalUsers / limit),
+      limit,
+    },
+    data: {
+      users,
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
   deleteAdminUser,
+  getAllUsers,
   getCart,
   addToCart,
   updateCartItem,

@@ -5,7 +5,7 @@ const AppError = require("../Utils/appError");
 
 // Creates a new regular admin account
 exports.createAdmin = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, permissions } = req.body;
 
   if (!email || !password) {
     return next(new AppError("Please provide an email and password", 400));
@@ -17,11 +17,23 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
     return next(new AppError("An account with this email already exists", 400));
   }
 
+  // Default permissions if not provided
+  const defaultPermissions = {
+    products: true,
+    orders: true,
+    users: false,
+    notifications: false,
+    drops: false,
+  };
+
+  const adminPermissions = permissions ? { ...defaultPermissions, ...permissions } : defaultPermissions;
+
   // Automatically mark as verified because a super admin created it
   const newAdmin = await User.create({
     email,
     password,
     role: "admin",
+    permissions: adminPermissions,
     isVerified: true,
     isActive: true,
   });
@@ -37,7 +49,112 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
         id: newAdmin._id,
         email: newAdmin.email,
         role: newAdmin.role,
+        permissions: newAdmin.permissions,
         isActive: newAdmin.isActive
+      },
+    },
+  });
+});
+
+// Updates permissions for an existing admin
+exports.updateAdminPermissions = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { permissions } = req.body;
+
+  if (!permissions || typeof permissions !== 'object') {
+    return next(new AppError("Please provide permissions object", 400));
+  }
+
+  const adminToUpdate = await User.findById(id);
+
+  if (!adminToUpdate) {
+    return next(new AppError("No admin found with that ID", 404));
+  }
+
+  if (!["admin"].includes(adminToUpdate.role)) {
+    return next(new AppError("Can only update permissions for regular admin accounts.", 403));
+  }
+
+  // Update permissions
+  adminToUpdate.permissions = { ...adminToUpdate.permissions, ...permissions };
+  await adminToUpdate.save({ validateBeforeSave: false });
+
+  req.adminAction = `Updated permissions for admin ${adminToUpdate.email}`;
+  req.adminResourceId = adminToUpdate._id;
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      admin: {
+        id: adminToUpdate._id,
+        email: adminToUpdate.email,
+        role: adminToUpdate.role,
+        permissions: adminToUpdate.permissions,
+        isActive: adminToUpdate.isActive
+      },
+    },
+  });
+});
+
+// Lists all admins and super_admins
+exports.listAdmins = catchAsync(async (req, res, next) => {
+  const admins = await User.find({
+    role: { $in: ["admin", "super_admin", "superadmin"] }
+  }).select('email role permissions isActive createdAt updatedAt');
+
+  res.status(200).json({
+    status: "success",
+    results: admins.length,
+    data: {
+      admins,
+    },
+  });
+});
+
+// Get admin logs
+exports.getActivityLogs = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const skip = (page - 1) * limit;
+
+  const logs = await AdminLog.find()
+    .populate("adminId", "email role")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const totalLogs = await AdminLog.countDocuments();
+
+  res.status(200).json({
+    status: "success",
+    results: logs.length,
+    pagination: {
+      total: totalLogs,
+      page,
+      pages: Math.ceil(totalLogs / limit),
+      limit,
+    },
+    data: {
+      logs,
+    },
+  });
+});
+
+// Get system stats
+exports.getSystemStats = catchAsync(async (req, res, next) => {
+  const totalUsers = await User.countDocuments({ role: 'customer' });
+  const totalAdmins = await User.countDocuments({ role: { $in: ['admin', 'super_admin', 'superadmin'] } });
+  const totalProducts = await require('../Models/Product').countDocuments();
+  const totalOrders = await require('../Models/Order').countDocuments();
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      stats: {
+        totalUsers,
+        totalAdmins,
+        totalProducts,
+        totalOrders,
       },
     },
   });
@@ -45,8 +162,6 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
 
 // Deactivates/reactivates an existing admin
 exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
-  const { id } = req.params;
-  const { isActive } = req.body;
   
   if (typeof isActive !== "boolean") {
     return next(new AppError("Please provide isActive status (boolean)", 400));

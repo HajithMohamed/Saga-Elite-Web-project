@@ -5,17 +5,17 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
   const location = useLocation();
   const isAdminLike = user?.role === "admin" || user?.role === "super_admin" || user?.role === "superadmin";
 
-  if (
-    !isAuthenticated &&
-    !(
-      location.pathname.includes("login") ||
-      location.pathname.includes("register") ||
-      location.pathname.includes('verify-otp') ||
-      location.pathname.includes('forgot-password') ||
-      location.pathname.includes('reset-password-otp') ||
-      location.pathname.includes('set-new-password')
-    )
-  ) {
+  // Allow public access to shopping routes
+  const isShoppingRoute = location.pathname.startsWith("/shopping");
+  const isPublicRoute = location.pathname === "/" ||
+    location.pathname.includes("login") ||
+    location.pathname.includes("register") ||
+    location.pathname.includes('verify-otp') ||
+    location.pathname.includes('forgot-password') ||
+    location.pathname.includes('reset-password-otp') ||
+    location.pathname.includes('set-new-password');
+
+  if (!isAuthenticated && !isPublicRoute && !isShoppingRoute) {
     return <Navigate to="/auth/login" />;
   }
   if (

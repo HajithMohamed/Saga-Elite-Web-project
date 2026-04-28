@@ -5,6 +5,7 @@ const Product = require("../Models/Product");
 const Order = require("../Models/Order");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
+const Guest = require("../Models/Guest");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 
 const DASHBOARD_ORDER_STATUSES = [
@@ -15,6 +16,13 @@ const DASHBOARD_ORDER_STATUSES = [
   "delivered",
   "cancelled",
 ];
+
+const generateReferenceNumber = () => {
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+  const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 chars
+  return `SE-${dateStr}-${randomStr}`;
+};
 
 const buildSalesTrend = (rawTrend) => {
   const monthMap = new Map(
@@ -56,6 +64,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     paymentMethod,
     paymentProofUrl,
     notes,
+    guestEmail,
   } = req.body;
 
   console.log("Order creation request:", req.body);
@@ -72,12 +81,28 @@ const createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Contact number is required", 400));
   }
 
-if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
+  if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
     return next(new AppError("Invalid payment method", 400));
   }
 
   if (paymentMethod === "manual" && !paymentProofUrl?.trim()) {
     return next(new AppError("Receipt information is required for manual payment", 400));
+  }
+
+  // Determine if guest or user
+  let user = req.userInfo;
+  let guest = null;
+  let guestEmailNormalized = null;
+
+  if (!user && guestEmail) {
+    guestEmailNormalized = guestEmail.trim().toLowerCase();
+    guest = await Guest.findOneAndUpdate(
+      { email: guestEmailNormalized },
+      { lastUsedAt: new Date() },
+      { upsert: true, new: true }
+    );
+  } else if (!user) {
+    return next(new AppError("Authentication required for registered users or guest email for guests", 401));
   }
 
   const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
@@ -119,7 +144,11 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
 
         if (product.isLimited) {
           const previousQuantityResult = await Order.aggregate([
-            { $match: { user: req.userInfo._id } },
+            {
+              $match: user
+                ? { user: user._id }
+                : { guest: guest._id }
+            },
             { $unwind: "$items" },
             { $match: { "items.product": product._id } },
             { $group: { _id: null, totalQuantity: { $sum: "$items.quantity" } } },
@@ -164,13 +193,16 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
       }
 
       const orderPayload = {
-        user: req.userInfo._id,
+        user: user ? user._id : undefined,
+        guest: guest ? guest._id : undefined,
+        guestEmail: guestEmailNormalized,
         items: orderItems,
         totalAmount,
         shippingAddress: shippingAddress.trim(),
         contactNumber: contactNumber.trim(),
         paymentMethod,
         paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
+        referenceNumber: paymentMethod === "manual" ? generateReferenceNumber() : undefined,
         notes: notes?.trim(),
         status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
         paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
@@ -191,7 +223,7 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
   }
 
   const orderNotification = {
-    userId: req.userInfo._id,
+    userId: user ? user._id : null,
     type: "order",
     title: "Order placed successfully",
     message: `Your order ${createdOrder._id} has been placed and is ${createdOrder.status}.`,
@@ -200,15 +232,17 @@ if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"]
     meta: { orderId: createdOrder._id },
   };
 
-  await createNotification(orderNotification);
+  if (user) {
+    await createNotification(orderNotification);
+  }
 
   await broadcastNotification({
     type: "admin",
     title: `New order received: ${createdOrder._id}`,
-    message: `Order ${createdOrder._id} was placed by ${req.userInfo.email || "a customer"} for ${createdOrder.totalAmount}.`,
+    message: `Order ${createdOrder._id} was placed by ${user ? user.email : guestEmailNormalized || "a guest"} for ${createdOrder.totalAmount}.`,
     entityRef: createdOrder._id,
     entityType: "Order",
-    meta: { orderId: createdOrder._id, customer: req.userInfo.email },
+    meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
     filter: { role: "admin" },
   });
 

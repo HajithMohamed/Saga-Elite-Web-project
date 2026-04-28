@@ -71,14 +71,14 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { items = [], totalPrice = 0, isLoading } =
-    useSelector((state) => state.cart.cart);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   const [formData, setFormData] = useState({
     shippingAddress: "",
     contactNumber: "",
     paymentMethod: "manual",
     notes: "",
+    guestEmail: "",
   });
 
   const [cardDetails, setCardDetails] = useState({
@@ -269,6 +269,11 @@ const Checkout = () => {
       return;
     }
 
+    if (!isAuthenticated && !formData.guestEmail) {
+      setFormError("Email address is required for guest checkout.");
+      return;
+    }
+
     if (!formData.shippingAddress || !formData.contactNumber) {
       setFormError("Shipping address and contact number are required.");
       return;
@@ -369,6 +374,7 @@ const Checkout = () => {
             ? uploadedUrl
             : "",
         notes: formData.notes,
+        guestEmail: !isAuthenticated ? formData.guestEmail : undefined,
       };
 
       const resultAction = await dispatch(createOrder(payload)).unwrap();
@@ -387,7 +393,9 @@ const Checkout = () => {
       navigate("/shopping/checkout-success", { 
         state: { 
           orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
-          totalAmount: checkoutTotal || checkoutTotalAmount || totalAmount
+          totalAmount: checkoutTotal || checkoutTotalAmount || totalAmount,
+          referenceNumber: resultAction?.referenceNumber,
+          paymentMethod: formData.paymentMethod
         } 
       });
     } catch (err) {
@@ -441,6 +449,30 @@ const Checkout = () => {
           </section>
 
           <form onSubmit={handleSubmit} className="space-y-12">
+            
+            {/* Guest Email (only for non-authenticated users) */}
+            {!isAuthenticated && (
+              <section className="space-y-8">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
+                  <h2 className="text-xl font-bold tracking-tight">Contact Information</h2>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Email Address</label>
+                  <input
+                    type="email"
+                    name="guestEmail"
+                    value={formData.guestEmail}
+                    onChange={handleChange}
+                    placeholder="your.email@example.com"
+                    className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
+                    required
+                  />
+                  <p className="text-xs text-gray-500">We'll send your order confirmation and tracking details to this email.</p>
+                </div>
+              </section>
+            )}
             
             {/* 01 Shipping Destination */}
             <section className="space-y-8">
