@@ -1,21 +1,50 @@
-import React from 'react'
-import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, User, Package, ImagePlus, MessageSquare, Users, Shield } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, User, Package, ImagePlus, MessageSquare, Users, Shield, CreditCard, StarHalf } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
+import axios from 'axios'
 
 const SideBar = () => {
   const location = useLocation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { isLoading, user } = useSelector((state) => state.auth)
-  
+
+  const [pendingPaymentCount, setPendingPaymentCount] = useState(0)
+  const [pendingReviewCount, setPendingReviewCount] = useState(0)
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [paymentRes, reviewRes] = await Promise.all([
+          axios.get('/api/v1/admin/manual-payments?status=proof_submitted&countOnly=true', { withCredentials: true }),
+          axios.get('/api/v1/admin/reviews?status=pending&countOnly=true', { withCredentials: true })
+        ]);
+        if (paymentRes.data?.success) {
+          setPendingPaymentCount(paymentRes.data.data?.count || 0);
+        }
+        if (reviewRes.data?.success) {
+          setPendingReviewCount(reviewRes.data.data?.count || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin badge counts', error);
+      }
+    };
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const menuItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
+    { label: 'Pending Payments', path: '/admin/payments/pending', icon: <CreditCard className="h-5 w-5" />, badge: pendingPaymentCount },
     { label: 'Home Images', path: '/admin/home-images', icon: <ImagePlus className="h-5 w-5" /> },
     { label: 'Products', path: '/admin/product', icon: <ShoppingBag className="h-5 w-5" /> },
     { label: 'Orders', path: '/admin/order', icon: <ShoppingCart className="h-5 w-5" /> },
+    { label: 'Review Moderation', path: '/admin/reviews', icon: <StarHalf className="h-5 w-5" />, badge: pendingReviewCount },
     { label: 'Users', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { label: 'Notifications', path: '/admin/notifications', icon: <MessageSquare className="h-5 w-5" /> },
     { label: 'Features', path: '/admin/feature', icon: <Star className="h-5 w-5" /> },
@@ -70,10 +99,15 @@ const SideBar = () => {
             <div className={`transition-transform duration-200 ${location.pathname === item.path ? 'scale-110' : 'group-hover:scale-110 group-hover:text-[#D4AF37]'}`}>
               {item.icon}
             </div>
-            <span className="font-bold text-sm tracking-wide uppercase font-sans">
+            <span className="font-bold text-sm tracking-wide uppercase font-sans flex-1">
               {item.label}
             </span>
-            {location.pathname === item.path && (
+            {item.badge > 0 && (
+              <span className="bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full min-w-5 text-center">
+                {item.badge}
+              </span>
+            )}
+            {location.pathname === item.path && !item.badge && (
               <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-black/50" />
             )}
           </Link>

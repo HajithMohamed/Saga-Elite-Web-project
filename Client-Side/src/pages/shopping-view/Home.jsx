@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { Star, StarHalf, Lock, Truck, CornerDownLeft, MessageCircle } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/v1`
@@ -53,26 +54,45 @@ const Home = () => {
   const [isHomepageLoading, setIsHomepageLoading] = useState(true);
   const [homepageError, setHomepageError] = useState(null);
 
-  // Universal fetch
-  useEffect(() => {
-    const fetchHomepageData = async () => {
-      setIsHomepageLoading(true);
-      setHomepageError(null);
+    const [featuredReviews, setFeaturedReviews] = useState([]);
+    const [isReviewsLoading, setIsReviewsLoading] = useState(true);
 
-      try {
-        const [heroRes, logoRes, boysRes, girlsRes, unisexRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
-          axios.get(`${API_BASE}/image/get-hero-images`).catch((err) => {
-            console.error("Hero images fetch failed", err);
-            return null;
-          }),
-          axios.get(`${API_BASE}/image/get-logo-images`).catch((err) => {
-            console.error("Logo images fetch failed", err);
-            return null;
-          }),
-          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch((err) => {
-            console.error("Boys category logo fetch failed", err);
-            return null;
-          }),
+    // Fetch featured reviews
+    useEffect(() => {
+      const fetchReviews = async () => {
+        try {
+          const res = await axios.get(`${API_BASE}/reviews/featured`);
+          // assuming res.data contains an array of reviews
+          setFeaturedReviews(Array.isArray(res.data) ? res.data : res.data?.data || []);
+        } catch (error) {
+          console.error("Featured reviews fetch failed", error);
+        } finally {
+          setIsReviewsLoading(false);
+        }
+      };
+      fetchReviews();
+    }, []);
+
+    // Universal fetch
+    useEffect(() => {
+      const fetchHomepageData = async () => {
+        setIsHomepageLoading(true);
+        setHomepageError(null);
+
+        try {
+          const [heroRes, logoRes, boysRes, girlsRes, unisexRes, adRes, activeProductsRes, archiveProductsRes, dropsRes] = await Promise.all([
+            axios.get(`${API_BASE}/image/get-hero-images`).catch((err) => {
+              console.error("Hero images fetch failed", err);
+              return null;
+            }),
+            axios.get(`${API_BASE}/image/get-logo-images`).catch((err) => {
+              console.error("Logo images fetch failed", err);
+              return null;
+            }),
+            axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch((err) => {
+              console.error("Boys category logo fetch failed", err);
+              return null;
+            }),
           axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch((err) => {
             console.error("Girls category logo fetch failed", err);
             return null;
@@ -412,8 +432,18 @@ const Home = () => {
                       <span className="font-sans text-[10px] tracking-widest text-primary uppercase">{getProductLabel(product)}</span>
                     </div>
                   </div>
-                  <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-1">{product.name}</h4>
-                  <p className="font-serif text-outline text-sm">${product.basePrice}</p>
+                  <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-1">{product.name}</h4>                    <Link to={`/product/${product._id}/reviews`} className="flex items-center gap-1 mb-1 hover:opacity-80 transition-opacity">
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < (product.averageRating || 0) ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-gray-600'}`} />
+                        ))}
+                      </div>
+                      {product.reviewCount > 0 ? (
+                        <span className="text-[10px] text-gray-500">({product.reviewCount} reviews)</span>
+                      ) : (
+                        <span className="text-[10px] text-gray-500">No reviews yet</span>
+                      )}
+                    </Link>                  <p className="font-serif text-outline text-sm">${product.basePrice}</p>
                 </div>
               ))
             ) : (
@@ -518,6 +548,77 @@ const Home = () => {
             </button>
           </form>
         </motion.section>
+
+        {/* Trust Signals Section */}
+        <section className="py-16 border-t border-outline/10 bg-surface-container-low">
+          <div className="container mx-auto px-4 md:px-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+              <Link to="/legal/privacy-policy" className="flex flex-col items-center text-center group hover:opacity-80 transition-opacity">
+                <Lock className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-2">Secure Payments</h4>
+                <p className="font-serif text-sm text-on-surface-variant">Powered by PayHere</p>
+              </Link>
+              <Link to="/legal/delivery-policy" className="flex flex-col items-center text-center group hover:opacity-80 transition-opacity">
+                <Truck className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-2">Island-wide Delivery</h4>
+                <p className="font-serif text-sm text-on-surface-variant">2–5 business days</p>
+              </Link>
+              <Link to="/legal/refund-policy" className="flex flex-col items-center text-center group hover:opacity-80 transition-opacity">
+                <CornerDownLeft className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-2">Easy Returns</h4>
+                <p className="font-serif text-sm text-on-surface-variant">30-day return policy</p>
+              </Link>
+              <Link to="/contact" className="flex flex-col items-center text-center group hover:opacity-80 transition-opacity">
+                <MessageCircle className="w-8 h-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                <h4 className="font-sans text-xs uppercase tracking-widest text-on-surface mb-2">Customer Support</h4>
+                <p className="font-serif text-sm text-on-surface-variant">WhatsApp & Email</p>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Customer Reviews Section */}
+        {(!isReviewsLoading && featuredReviews.length > 0) && (
+          <section className="py-24 bg-background border-t border-outline/10">
+            <div className="container mx-auto px-4 md:px-8">
+              <h2 className="font-serif text-4xl text-on-surface mb-12 text-center">What our customers say</h2>
+              <div className="flex overflow-x-auto lg:grid lg:grid-cols-4 gap-6 pb-4 snap-x">
+                {featuredReviews.map((review, idx) => (
+                  <div key={idx} className="min-w-[280px] lg:min-w-0 bg-surface-container-low p-6 border border-outline/5 snap-center shrink-0">
+                    <div className="flex items-center gap-1 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-[#D4AF37] text-[#D4AF37]' : 'text-gray-600'}`} />
+                      ))}
+                    </div>
+                    <h4 className="font-sans font-bold text-sm text-on-surface mb-2 line-clamp-1">{review.title}</h4>
+                    <p className="font-serif text-sm text-on-surface-variant mb-6 h-[60px] line-clamp-3">
+                      {review.content?.length > 120 ? `${review.content.substring(0, 120)}...` : review.content}
+                    </p>
+                    <div className="flex flex-col border-t border-outline/10 pt-4 mt-auto">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-sans text-xs font-bold uppercase tracking-wider">{review.username || review.user?.firstName || 'Anonymous'} {review.user?.lastName?.charAt(0) || ''}.</span>
+                        <span className="text-[10px] text-green-500 font-bold uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded">Verified</span>
+                      </div>
+                      <span className="text-[10px] text-gray-500 line-clamp-1">{review.product?.name || 'Saga Elite Archive'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+        {(isReviewsLoading) && (
+          <section className="py-24 bg-background border-t border-outline/10">
+            <div className="container mx-auto px-4 md:px-8">
+              <h2 className="font-serif text-4xl text-on-surface mb-12 text-center text-transparent bg-outline/10 rounded w-64 mx-auto animate-pulse">Loading...</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, idx) => (
+                  <div key={idx} className="bg-surface-container-low p-6 border border-outline/5 h-48 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

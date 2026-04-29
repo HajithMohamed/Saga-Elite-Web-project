@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart } from 'lucide-react';
+import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUserAction } from '@/store/auth-slice';
+import { fetchUserPaymentStatus } from '@/store/manualPaymentSlice'; // Added for payment warning mapping
 import { toast } from '@/hooks/use-toast';
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
 
@@ -12,6 +13,8 @@ const Header = () => {
   const userMenuRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  // manualPayment states
+  const { currentPaymentStatus, activeReference } = useSelector((state) => state.manualPayment || {});
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
@@ -28,6 +31,26 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchUserPaymentStatus());
+    }
+  }, [dispatch, user]);
+
+  const hasPendingPayment =
+    currentPaymentStatus === 'pending_payment' || currentPaymentStatus === 'proof_submitted';
+
+  const computeTimeLeft = () => {
+    if (!activeReference?.expiresAt) return { hours: 0, minutes: 0 };
+    const diff = new Date(activeReference.expiresAt) - new Date();
+    if (diff <= 0) return { hours: 0, minutes: 0 };
+    return {
+      hours: Math.floor(diff / (1000 * 60 * 60)),
+      minutes: Math.floor((diff / 1000 / 60) % 60),
+    };
+  };
+  const { hours, minutes } = hasPendingPayment ? computeTimeLeft() : { hours: 0, minutes: 0 };
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
@@ -137,18 +160,28 @@ const Header = () => {
               className="text-white hover:text-[#D4AF37] transition-colors focus:outline-none"
             >
               {user?.profilePicture ? (
-                <img
-                  src={user.profilePicture}
-                  alt="avatar"
-                  className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
-                />
+                <div className="relative">
+                  <img
+                    src={user.profilePicture}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
+                  />
+                  {hasPendingPayment && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                  )}
+                </div>
               ) : (
-                <User className="w-6 h-6" />
+                <div className="relative">
+                  <User className="w-6 h-6" />
+                  {hasPendingPayment && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                  )}
+                </div>
               )}
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-3 w-52 bg-[#0a0a0a] border border-[#D4AF37]/20 rounded shadow-xl divide-y divide-[#D4AF37]/10">
+              <div className="absolute right-0 mt-3 w-64 bg-[#0a0a0a] border border-[#D4AF37]/20 rounded shadow-xl divide-y divide-[#D4AF37]/10">
                 <div className="px-4 py-3">
                   <p className="text-xs text-gray-500 uppercase tracking-widest">
                     Signed in as
@@ -157,6 +190,20 @@ const Header = () => {
                     {user?.email || 'Guest'}
                   </p>
                 </div>
+                {hasPendingPayment && (
+                  <div className="px-4 py-3 bg-amber-500/10 border-l-2 border-amber-500">
+                    <p className="text-xs text-amber-500 font-medium mb-1">
+                      ⚠️ Pending payment — expires in {hours}h {minutes}m
+                    </p>
+                    <Link
+                      to={`/payment/manual/${activeReference?.orderId}`}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="text-[10px] uppercase font-bold text-amber-400 hover:text-amber-300 tracking-wider"
+                    >
+                      → Complete payment
+                    </Link>
+                  </div>
+                )}
                 <div className="py-1">
                   <Link
                     to="/shopping/account"
@@ -165,6 +212,30 @@ const Header = () => {
                   >
                     <Settings className="w-4 h-4" />
                     My Account
+                  </Link>
+                  <Link
+                    to="/shopping/orders"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/account/my-reviews"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <Star className="w-4 h-4" />
+                    My Reviews
+                  </Link>
+                  <Link
+                    to="/account/payments"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Payment History
                   </Link>
                   <button
                     onClick={handleLogout}
