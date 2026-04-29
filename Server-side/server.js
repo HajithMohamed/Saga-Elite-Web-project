@@ -32,20 +32,16 @@ const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
 const manualPaymentRoutes = require("./Routes/manualPaymentRoutes");
 const userRoutes = require("./Routes/userRoutes");
-<<<<<<< HEAD
 const notificationRoutes = require("./Routes/notification-routes");
 const contactRoutes = require("./Routes/contactRoutes");
 const reviewRoutes = require("./Routes/reviewRoutes");
+const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
 
 app.use(
   helmet({
     crossOriginOpenerPolicy: false
   })
 );
-=======
-const notificationRoutes = require("./Routes/notification-routes"); // ✅ added
-const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
->>>>>>> 7b7b51e381ec0d03679dab01ffd73fb597f6df31
 
 app.use(cookieParser());
 
@@ -67,8 +63,6 @@ app.use(requestLogger);
 
 /* ROUTES */
 app.use("/api/v1/auth", authRoutes);
-<<<<<<< HEAD
-=======
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/google", googleAuthRoute);
 app.use("/api/v1/image", imageRoutes);
@@ -76,32 +70,10 @@ app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1", manualPaymentRoutes);
 app.use("/api/v1/user", userRoutes);
-app.use("/api/v1/notifications", notificationRoutes); 
-app.use("/api/v1/contact", contactRoutes);
->>>>>>> 89d243c14187d0327e3ac9cf2d7f5ffa46fb4490
-
-app.use("/api/v1/products", productRoutes);
-
-app.use("/api/v1/google", googleAuthRoute);
-
-app.use("/api/v1/image", imageRoutes);
-
-app.use("/api/v1/drops", dropRoutes);
-
-app.use("/api/v1/orders", orderRoutes);
-
-app.use("/api/v1/user", userRoutes);
-
-app.use(
-  "/api/v1/notifications",
-  notificationRoutes
-);
+app.use("/api/v1/notifications", notificationRoutes);
 
 /* Contact */
-app.use(
-  "/api/v1/contact",
-  contactRoutes
-);
+app.use("/api/v1/contact", contactRoutes);
 
 /* Reviews */
 app.use(
@@ -131,17 +103,9 @@ const startServer = async () => {
 
   console.log(PORT);
 
-<<<<<<< HEAD
-app.listen(PORT, () => {
-  console.log(
-    `Server is listening on port ${PORT}`
-  );
-});
-=======
   app.listen(PORT, () => {
     console.log(`Server is listening on port ${PORT}`);
   });
 };
 
 startServer();
->>>>>>> 7b7b51e381ec0d03679dab01ffd73fb597f6df31
