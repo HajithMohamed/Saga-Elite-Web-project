@@ -61,6 +61,17 @@ app.use(requestLogger);
 
 /* ROUTES */
 app.use("/api/v1/auth", authRoutes);
+<<<<<<< HEAD
+=======
+app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/google", googleAuthRoute);
+app.use("/api/v1/image", imageRoutes);
+app.use("/api/v1/drops", dropRoutes);
+app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/notifications", notificationRoutes); 
+app.use("/api/v1/contact", contactRoutes);
+>>>>>>> 89d243c14187d0327e3ac9cf2d7f5ffa46fb4490
 
 app.use("/api/v1/products", productRoutes);
 
