@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Review = require("../Models/Review");
 const Order = require("../Models/Order");
 const Product = require("../Models/Product");
+const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
@@ -159,8 +160,8 @@ const getProductReviews = catchAsync(async (req, res, next) => {
   }
 
   const rating = normalizeNumber(req.query.rating, null);
-  const sort = req.query.sort || "recent";
-  const page = normalizeNumber(req.query.page, 1);
+  const sort = Math.max(1, normalizeNumber(req.query.page, 1));
+  const limit = Math.max(1, normalizeNumber(req.query.limit, 10)
   const limit = normalizeNumber(req.query.limit, 10);
   const skip = (page - 1) * limit;
 
