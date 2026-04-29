@@ -17,6 +17,8 @@ import {
   RefreshCcw,
   ArrowRight,
 } from "lucide-react";
+import StarRating from "@/components/Review/StarRating";
+import ReviewCard, { ReviewCardSkeleton } from "@/components/Review/ReviewCard";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 const FALLBACK_DROP_NAME = "Independent Release";
@@ -59,6 +61,9 @@ const ProductDetails = () => {
   const [latestProducts, setLatestProducts] = useState([]);
   const [famousProducts, setFamousProducts] = useState([]);
   const [showcaseError, setShowcaseError] = useState(null);
+  const [reviewPreview, setReviewPreview] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -118,6 +123,27 @@ const ProductDetails = () => {
 
     fetchProduct();
   }, [slug]);
+
+  useEffect(() => {
+    const fetchReviewPreview = async () => {
+      if (!product?._id) return;
+      try {
+        setReviewLoading(true);
+        const response = await axios.get(
+          `${API_BASE}/reviews/product/${product._id}?sort=recent&page=1&limit=3`
+        );
+        setReviewPreview(response.data?.reviews || []);
+        setReviewStats(response.data?.stats || null);
+      } catch (err) {
+        setReviewPreview([]);
+        setReviewStats(null);
+      } finally {
+        setReviewLoading(false);
+      }
+    };
+
+    fetchReviewPreview();
+  }, [product?._id]);
 
   if (isLoading) {
     return (
@@ -318,6 +344,15 @@ const ProductDetails = () => {
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
               {product.name}
             </h1>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <StarRating value={product.averageRating || 0} readOnly size="sm" />
+              <Link
+                to={`/product/${product._id}/reviews`}
+                className="text-xs uppercase tracking-[0.2em] text-gray-400 hover:text-[#D4AF37]"
+              >
+                {product.reviewCount || 0} reviews
+              </Link>
+            </div>
             <p className="text-gray-500 uppercase tracking-widest text-xs mb-4">
               Art No. {product.artNo}
             </p>
@@ -433,6 +468,46 @@ const ProductDetails = () => {
             </div>
           </div>
         </div>
+
+        <section className="mt-20 space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
+                Reviews
+              </p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight">
+                What customers are saying
+              </h2>
+              <p className="mt-2 text-sm text-gray-400">
+                {reviewStats?.averageRating || 0} average rating · {reviewStats?.totalReviews || 0} reviews
+              </p>
+            </div>
+            <Link
+              to={`/product/${product._id}/reviews`}
+              className="text-sm uppercase tracking-widest text-gray-400 transition-colors hover:text-[#D4AF37]"
+            >
+              See all {reviewStats?.totalReviews || 0} reviews
+            </Link>
+          </div>
+
+          {reviewLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <ReviewCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : reviewPreview.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-8 text-gray-400">
+              No reviews yet. Be the first to review this product!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reviewPreview.map((review) => (
+                <ReviewCard key={review._id} review={review} />
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="mt-24 grid gap-10">
           <div>

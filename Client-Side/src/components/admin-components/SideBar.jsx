@@ -16,6 +16,7 @@ const SideBar = () => {
     { label: 'Home Images', path: '/admin/home-images', icon: <ImagePlus className="h-5 w-5" /> },
     { label: 'Products', path: '/admin/product', icon: <ShoppingBag className="h-5 w-5" /> },
     { label: 'Orders', path: '/admin/order', icon: <ShoppingCart className="h-5 w-5" /> },
+    { label: 'Reviews', path: '/admin/reviews', icon: <Star className="h-5 w-5" /> },
     { label: 'Users', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { label: 'Notifications', path: '/admin/notifications', icon: <MessageSquare className="h-5 w-5" /> },
     { label: 'Features', path: '/admin/feature', icon: <Star className="h-5 w-5" /> },

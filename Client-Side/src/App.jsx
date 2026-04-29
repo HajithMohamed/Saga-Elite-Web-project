@@ -34,6 +34,7 @@ import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
+import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -45,12 +46,14 @@ import Orders from "./pages/shopping-view/Orders";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
-import DropDetails from "./pages/shopping-view/DropDetails"; // ✅ added
+import DropDetails from "./pages/shopping-view/DropDetails";
+import ProductReviewsPage from "./pages/ProductReviewsPage";
+import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
-import OrderTracking from "./pages/shopping-view/OrderTracking"; // ✅ kept
+import OrderTracking from "./pages/shopping-view/OrderTracking";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -60,9 +63,13 @@ import CheckAuth from "./components/common-components/CheckAuth";
 
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+
   const dispatch = useDispatch();
+
   const defaultAuthenticatedRoute =
-    user?.role === "admin" ? "/admin/dashboard" : "/shopping/home";
+    user?.role === "admin"
+      ? "/admin/dashboard"
+      : "/shopping/home";
 
   useEffect(() => {
     dispatch(checkAuthAction());
@@ -79,32 +86,76 @@ function App() {
   return (
     <div>
       <Routes>
+
+        {/* PUBLIC ROUTES */}
         <Route element={<PublicLayout />}>
           <Route
             path="/"
             element={
               isAuthenticated ? (
-                <Navigate to={defaultAuthenticatedRoute} replace />
+                <Navigate
+                  to={defaultAuthenticatedRoute}
+                  replace
+                />
               ) : (
                 <Home />
               )
             }
           />
-          <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+
+          {/* Legal Pages */}
+          <Route
+            path="/legal/privacy-policy"
+            element={<PrivacyPolicyPage />}
+          />
+
           <Route
             path="/legal/terms-and-conditions"
             element={<TermsConditionsPage />}
           />
-          <Route path="/legal/refund-policy" element={<RefundPolicyPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/about" element={<AboutPage />} />
+
+          <Route
+            path="/legal/refund-policy"
+            element={<RefundPolicyPage />}
+          />
+
+          <Route
+            path="/contact"
+            element={<ContactPage />}
+          />
+
+          <Route
+            path="/about"
+            element={<AboutPage />}
+          />
+
+          {/* Public/Product Review Pages */}
+          <Route
+            path="/product/:productId/reviews"
+            element={<ProductReviewsPage />}
+          />
+
+          <Route
+            path="/account/my-reviews"
+            element={
+              <CheckAuth
+                isAuthenticated={isAuthenticated}
+                user={user}
+              >
+                <MyReviewsPage />
+              </CheckAuth>
+            }
+          />
         </Route>
 
         {/* AUTH ROUTES */}
         <Route
           path="/auth"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <AuthLayout />
             </CheckAuth>
           }
@@ -112,60 +163,194 @@ function App() {
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
-          <Route path="forgot-password" element={<ForgotPassword />} />
-          <Route path="reset-password-otp" element={<VerifyResetOtp />} />
-          <Route path="set-new-password" element={<SetNewPassword />} />
-          <Route path="verify-otp" element={<VerifyOtp />} />
+          <Route
+            path="forgot-password"
+            element={<ForgotPassword />}
+          />
+          <Route
+            path="reset-password-otp"
+            element={<VerifyResetOtp />}
+          />
+          <Route
+            path="set-new-password"
+            element={<SetNewPassword />}
+          />
+          <Route
+            path="verify-otp"
+            element={<VerifyOtp />}
+          />
         </Route>
 
         {/* ADMIN ROUTES */}
         <Route
           path="/admin"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <AdminLayout />
             </CheckAuth>
           }
         >
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="home-images" element={<AdminHomeImages />} />
-          <Route path="feature" element={<AdminFeatures />} />
-          <Route path="order" element={<AdminOrders />} />
-          <Route path="product" element={<AdminProduct />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="super-admin" element={<SuperAdminDashboard />} />
-          <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
-          <Route path="account" element={<Account />} />
-          <Route path="drop" element={<AdminDrops />} />
+          <Route
+            path="dashboard"
+            element={<AdminDashboard />}
+          />
+
+          <Route
+            path="home-images"
+            element={<AdminHomeImages />}
+          />
+
+          <Route
+            path="feature"
+            element={<AdminFeatures />}
+          />
+
+          <Route
+            path="order"
+            element={<AdminOrders />}
+          />
+
+          <Route
+            path="product"
+            element={<AdminProduct />}
+          />
+
+          <Route
+            path="users"
+            element={<AdminUsers />}
+          />
+
+          <Route
+            path="super-admin"
+            element={<SuperAdminDashboard />}
+          />
+
+          <Route
+            path="notifications"
+            element={
+              <ErrorBoundary>
+                <NotificationsManager />
+              </ErrorBoundary>
+            }
+          />
+
+          <Route
+            path="reviews"
+            element={<ReviewModerationPage />}
+          />
+
+          <Route
+            path="account"
+            element={<Account />}
+          />
+
+          <Route
+            path="drop"
+            element={<AdminDrops />}
+          />
         </Route>
 
         {/* SHOPPING ROUTES */}
         <Route
           path="/shopping"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <ShoppinLayout />
             </CheckAuth>
           }
         >
-          <Route index element={<Navigate to="home" replace />} />
-          <Route path="home" element={<Home />} />
-          <Route path="account" element={<Account />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="cart" element={<Cart />} />
-          <Route path="checkout" element={<Checkout />} />
-          <Route path="product-list" element={<ProductListing />} />
-          <Route path="product/:slug" element={<ProductDetails />} />
-          <Route path="drop/:slug" element={<DropDetails />} /> {/* ✅ added */}
-          <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
-          <Route path="checkout-success" element={<OrderSuccess />} />
-          <Route path="wishlist" element={<Wishlist />} />
-          <Route path="order-tracking" element={<OrderTracking />} /> {/* ✅ kept */}
+          <Route
+            index
+            element={<Navigate to="home" replace />}
+          />
+
+          <Route
+            path="home"
+            element={<Home />}
+          />
+
+          <Route
+            path="account"
+            element={<Account />}
+          />
+
+          <Route
+            path="orders"
+            element={<Orders />}
+          />
+
+          <Route
+            path="cart"
+            element={<Cart />}
+          />
+
+          <Route
+            path="checkout"
+            element={<Checkout />}
+          />
+
+          <Route
+            path="product-list"
+            element={<ProductListing />}
+          />
+
+          <Route
+            path="product/:slug"
+            element={<ProductDetails />}
+          />
+
+          <Route
+            path="drop/:slug"
+            element={<DropDetails />}
+          />
+
+          <Route
+            path="notifications"
+            element={
+              <ErrorBoundary>
+                <NotificationsPage />
+              </ErrorBoundary>
+            }
+          />
+
+          <Route
+            path="checkout-success"
+            element={<OrderSuccess />}
+          />
+
+          <Route
+            path="wishlist"
+            element={<Wishlist />}
+          />
+
+          <Route
+            path="order-tracking"
+            element={<OrderTracking />}
+          />
+
+          <Route
+            path="account/my-reviews"
+            element={<MyReviewsPage />}
+          />
         </Route>
 
         {/* OTHER ROUTES */}
-        <Route path="/un-auth-page" element={<UnauthPage />} />
-        <Route path="*" element={<NotFound />} />
+        <Route
+          path="/un-auth-page"
+          element={<UnauthPage />}
+        />
+
+        <Route
+          path="*"
+          element={<NotFound />}
+        />
+
       </Routes>
     </div>
   );

@@ -22,7 +22,11 @@ const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
 const userRoutes = require("./Routes/userRoutes");
 const notificationRoutes = require("./Routes/notification-routes"); // ✅ added
+<<<<<<< HEAD
 const contactRoutes = require("./Routes/contactRoutes");
+=======
+const reviewRoutes = require("./Routes/reviewRoutes");
+>>>>>>> 92648eeed0ff6bfb3ad10b091dac8554d6fa1acd
 
 app.use(helmet({ crossOriginOpenerPolicy: false }));
 app.use(cookieParser());
@@ -43,7 +47,12 @@ app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/notifications", notificationRoutes); // ✅ kept
+<<<<<<< HEAD
 app.use("/api/v1/contact", contactRoutes);
+=======
+app.use("/api/v1/reviews", reviewRoutes.userRouter);
+app.use("/api/v1/admin/reviews", reviewRoutes.adminRouter);
+>>>>>>> 92648eeed0ff6bfb3ad10b091dac8554d6fa1acd
 
 app.use(globalErrorController);
 
