@@ -160,9 +160,9 @@ const getProductReviews = catchAsync(async (req, res, next) => {
   }
 
   const rating = normalizeNumber(req.query.rating, null);
-  const sort = Math.max(1, normalizeNumber(req.query.page, 1));
-  const limit = Math.max(1, normalizeNumber(req.query.limit, 10)
-  const limit = normalizeNumber(req.query.limit, 10);
+  const sort = req.query.sort || "recent";
+  const page = Math.max(1, normalizeNumber(req.query.page, 1));
+  const limit = Math.max(1, normalizeNumber(req.query.limit, 10));
   const skip = (page - 1) * limit;
 
   const filter = { productId, status: "approved" };
