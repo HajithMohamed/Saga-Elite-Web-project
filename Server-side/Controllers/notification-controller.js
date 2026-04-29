@@ -328,6 +328,34 @@ const sendAdminMessage = catchAsync(async (req, res, next) => {
   });
 });
 
+const getAllNotifications = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const skip = (page - 1) * limit;
+
+  const notifications = await Notification.find()
+    .populate('user', 'email firstName lastName')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const totalNotifications = await Notification.countDocuments();
+
+  res.status(200).json({
+    status: "success",
+    results: notifications.length,
+    pagination: {
+      total: totalNotifications,
+      page,
+      pages: Math.ceil(totalNotifications / limit),
+      limit,
+    },
+    data: {
+      notifications,
+    },
+  });
+});
+
 module.exports = {
   getNotifications,
   markNotificationRead,
@@ -336,4 +364,5 @@ module.exports = {
   getAdminNotification,
   updateNotification,
   deleteNotification,
+  getAllNotifications,
 };

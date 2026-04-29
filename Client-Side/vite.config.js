@@ -10,12 +10,22 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    strictPort: true,
+    // allow Vite to move to the next free local port when 5173 is already in use
+    strictPort: false,
     hmr: {
       host: 'localhost',
       protocol: 'ws',
-      clientPort: 5173,
     },
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+    proxy: {
+      '/api/v1/': {
+        target: 'http://backend:5001',
+        changeOrigin: true,
+      }
+    }
   },
   resolve : {
     alias : {

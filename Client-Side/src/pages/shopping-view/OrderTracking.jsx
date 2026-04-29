@@ -1,16 +1,43 @@
-import React, { useEffect } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchOrderById } from '@/store/order-slice';
+import React, { useEffect } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOrderById } from "@/store/order-slice";
+
+const TRACKING_STEPS = [
+  { key: "pending_payment", label: "Awaiting Transfer" },
+  { key: "verification_pending", label: "Payment Review" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "shipped", label: "Shipped" },
+  { key: "delivered", label: "Delivered" },
+];
+
+const formatCurrency = (amount = 0) =>
+  Number(amount).toLocaleString("en-LK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+const formatDate = (value) =>
+  new Date(value).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+const formatStatus = (status = "") =>
+  status
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 
 const OrderTracking = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { currentOrder, isLoading } = useSelector(state => state.order);
+  const { currentOrder, isLoading, orderError } = useSelector((state) => state.order);
 
-  const orderId = location.state?.orderId || searchParams.get('orderId');
-  const orderReference = orderId ? `#${orderId.replace(/^#/, '')}` : '';
+  const orderId = location.state?.orderId || searchParams.get("orderId");
 
   useEffect(() => {
     if (orderId) {
@@ -18,9 +45,31 @@ const OrderTracking = () => {
     }
   }, [dispatch, orderId]);
 
-  if (isLoading || !currentOrder) {
+  if (!orderId) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black text-white">
+      <div className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
+        <div className="max-w-xl rounded-3xl border border-[#D4AF37]/10 bg-[#090909] p-8 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
+            Order Tracking
+          </p>
+          <h1 className="mt-4 text-3xl font-bold">No order selected</h1>
+          <p className="mt-3 text-sm text-gray-400">
+            Choose an order from your account history to load its tracking details.
+          </p>
+          <Link
+            to="/shopping/orders"
+            className="mt-6 inline-flex rounded-full bg-[#D4AF37] px-6 py-3 text-sm font-bold uppercase tracking-widest text-black"
+          >
+            Go to Order History
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center space-y-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#D4AF37] border-t-transparent"></div>
           <p className="text-sm tracking-widest text-[#D4AF37]">LOADING ORDER...</p>
@@ -29,133 +78,233 @@ const OrderTracking = () => {
     );
   }
 
-  const { items, shippingAddress, contactNumber, user, status, totalAmount, createdAt } = currentOrder;
+  if (orderError || !currentOrder) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black px-6 text-white">
+        <div className="max-w-xl rounded-3xl border border-red-500/20 bg-[#090909] p-8 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-red-400">
+            Unable to Load Order
+          </p>
+          <h1 className="mt-4 text-3xl font-bold">Tracking is unavailable</h1>
+          <p className="mt-3 text-sm text-gray-400">
+            {orderError || "We could not load that order right now."}
+          </p>
+          <Link
+            to="/shopping/orders"
+            className="mt-6 inline-flex rounded-full bg-[#D4AF37] px-6 py-3 text-sm font-bold uppercase tracking-widest text-black"
+          >
+            Back to Orders
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const {
+    _id,
+    items = [],
+    shippingAddress,
+    contactNumber,
+    user,
+    status,
+    paymentMethod,
+    paymentStatus,
+    totalAmount,
+    createdAt,
+  } = currentOrder;
 
-  const statusList = [
-    { key: "pending", label: "Confirmed", icon: "check" },
-    { key: "confirmed", label: "Processing", icon: "inventory_2" },
-    { key: "shipped", label: "Shipped", icon: "package_2" },
-    { key: "delivered", label: "Delivered", icon: "home_pin" },
-  ];
+  const isCancelled = status === "cancelled";
+  const currentStepIndex = TRACKING_STEPS.findIndex((step) => step.key === status);
+  const progressSteps = isCancelled
+    ? TRACKING_STEPS.map((step) => ({ ...step, isCompleted: false }))
+    : TRACKING_STEPS.map((step, index) => ({
+        ...step,
+        isCompleted: currentStepIndex >= index,
+      }));
+  const progressWidth =
+    currentStepIndex <= 0 || isCancelled
+      ? "0%"
+      : `${(currentStepIndex / (TRACKING_STEPS.length - 1)) * 100}%`;
 
-  const currentStatusIndex = statusList.findIndex(s => s.key === status);
+  const heroTitle = isCancelled
+    ? "Cancelled."
+    : status === "pending_payment"
+      ? "Awaiting Transfer."
+      : status === "verification_pending"
+        ? "Payment Review."
+    : status === "delivered"
+      ? "Delivered."
+      : status === "shipped"
+        ? "In Transit."
+        : "Processing.";
 
   return (
-    <div className="bg-black text-white min-h-screen">
-      <main className="pt-24 pb-24 px-8 max-w-screen-xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
+    <div className="min-h-screen bg-black text-white">
+      <main className="mx-auto max-w-screen-xl px-8 pb-24 pt-24">
+        <div className="mb-20 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
-            <p className="font-label text-xs tracking-widest uppercase text-gray-400 font-medium">Tracking Narrative</p>
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-white">
-              {status === 'delivered' ? 'Delivered.' : status === 'shipped' ? 'In Transit.' : 'Processing.'}
+            <p className="text-xs font-medium uppercase tracking-widest text-gray-400">
+              Tracking Narrative
+            </p>
+            <h1 className="text-5xl font-extrabold tracking-tighter text-white md:text-7xl">
+              {heroTitle}
             </h1>
+            <p className="max-w-xl text-sm text-gray-400">
+              This page is loaded from your order record in the database and reflects the latest saved order, payment, and item details.
+            </p>
           </div>
-          <div className="flex flex-col md:items-end space-y-1">
-            <div className="font-label text-sm text-gray-400">Order Reference</div>
-            <div className="text-2xl font-bold text-[#D4AF37]">{orderReference}</div>
+          <div className="flex flex-col space-y-1 md:items-end">
+            <div className="text-sm text-gray-400">Order Reference</div>
+            <div className="text-2xl font-bold text-[#D4AF37]">#{_id}</div>
             <div className="text-sm text-gray-500">Placed {formatDate(createdAt)}</div>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          <div className="lg:col-span-7 space-y-16">
-            <div className="relative py-8">
-              <div className="absolute top-1/2 left-0 w-full h-[1px] bg-neutral-800 -translate-y-1/2"></div>
-              <div 
-                className="absolute top-1/2 left-0 h-[2px] bg-[#D4AF37] -translate-y-1/2 transition-all duration-1000"
-                style={{ width: `${Math.max(0, currentStatusIndex) * 33.33}%` }}
-              ></div>
-              <div className="relative flex justify-between">
-                {statusList.map((s, index) => {
-                  const isCompleted = currentStatusIndex >= index;
-                  return (
-                    <div key={s.key} className="flex flex-col items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 shadow-xl transition-colors duration-500 ${isCompleted ? 'bg-[#D4AF37] text-black shadow-[#D4AF37]/20' : 'bg-neutral-800 text-gray-500'}`}>
-                        <span className="material-symbols-outlined text-lg" data-icon={s.icon} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
+
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+          <div className="space-y-16 lg:col-span-7">
+            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-8">
+              <div className="relative py-8">
+                <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-neutral-800"></div>
+                <div
+                  className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 bg-[#D4AF37] transition-all duration-700"
+                  style={{ width: progressWidth }}
+                ></div>
+                <div className="relative grid grid-cols-5 gap-2">
+                  {progressSteps.map((step) => (
+                    <div key={step.key} className="flex flex-col items-center gap-4 text-center">
+                      <div
+                        className={`z-10 flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold uppercase shadow-xl transition-colors duration-500 ${
+                          step.isCompleted
+                            ? "bg-[#D4AF37] text-black shadow-[#D4AF37]/20"
+                            : "bg-neutral-800 text-gray-500"
+                        }`}
+                      >
+                        {step.label.slice(0, 1)}
                       </div>
-                      <span className={`font-label text-[10px] uppercase tracking-widest font-semibold ${isCompleted ? 'text-white' : 'text-gray-500'}`}>{s.label}</span>
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-widest ${
+                          step.isCompleted ? "text-white" : "text-gray-500"
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 pt-6 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/5 bg-black/40 p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-500">
+                    Current Status
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">{formatStatus(status)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-black/40 p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-500">
+                    Payment
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {formatStatus(paymentStatus)} via {formatStatus(paymentMethod)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-8">
+              <div className="mb-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-500">
+                  Consignment Items
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-white">Items in this order</h2>
+              </div>
+
+              <div className="space-y-6">
+                {items.map((item, index) => {
+                  const productImg = item.product?.images?.[0]?.url || "/LOGO.png";
+
+                  return (
+                    <div
+                      key={`${item.variantSku}-${index}`}
+                      className="flex gap-4 rounded-2xl border border-white/5 bg-black/30 p-4"
+                    >
+                      <div className="h-24 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-neutral-800">
+                        <img
+                          className="h-full w-full object-cover"
+                          src={productImg}
+                          alt={item.productName}
+                        />
+                      </div>
+                      <div className="flex-grow">
+                        <h5 className="text-sm font-bold text-white">{item.productName}</h5>
+                        <p className="mt-1 text-xs text-gray-400">
+                          {item.color || "Default"} / {item.size || "Standard"}
+                        </p>
+                        <p className="mt-1 text-xs uppercase tracking-widest text-gray-500">
+                          SKU {item.variantSku}
+                        </p>
+                        <div className="mt-3 flex items-end justify-between">
+                          <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
+                          <span className="text-sm font-semibold text-[#D4AF37]">
+                            LKR {formatCurrency(item.totalPrice)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-            
-            <div className="w-full aspect-video rounded-xl bg-neutral-900 border border-white/10 overflow-hidden relative grayscale opacity-80 hover:grayscale-0 transition-all duration-700">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHD9c51bZaKAoLseQWD9epeHAe1NhPdSA5e5E0Um-_HTmuSyF9tw4rQlfyutH81nmrAcVueWpvzaad054-ibxcSUTm6SW0_Z2G8rEfK4GyG6CkSBGThifRZJ2walCapopVcprXFeEooO4MHY2fZFYAZddxZtc4rvw9mHQw4dMGWXaSD_re7OseNALn2D2n78OiLYR6Yz4dTFhvXFYv74kQxFa0Qv2IbpSbORu2zmFqro2VgQZYrmRqzIwTYABLjdE_-mXFj67IEYs" alt="Map Tracking" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-[#D4AF37] flex items-center justify-center text-black shadow-2xl shadow-[#D4AF37]/50 animate-pulse">
-                  <span className="material-symbols-outlined" data-icon="near_me">near_me</span>
-                </div>
-              </div>
-            </div>
           </div>
+
           <div className="lg:col-span-5">
-            <div className="bg-neutral-900/50 backdrop-blur-md p-10 rounded-xl space-y-12 sticky top-32 border border-white/5">
+            <div className="sticky top-32 space-y-8 rounded-3xl border border-white/5 bg-neutral-900/50 p-10 backdrop-blur-md">
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-[#D4AF37]" data-icon="location_on">location_on</span>
-                  <h4 className="font-label text-[10px] uppercase tracking-widest font-bold text-gray-400">Shipping Destination</h4>
-                </div>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400">
+                  Shipping Destination
+                </h4>
                 <div className="text-lg font-medium leading-relaxed text-white">
-                  {user?.email}<br />
-                  <span className="text-gray-300">{shippingAddress}</span><br />
-                  <span className="text-gray-400 text-sm mt-2 block">{contactNumber}</span>
+                  {user?.email || "Customer"}
+                  <br />
+                  <span className="text-gray-300">{shippingAddress}</span>
+                  <br />
+                  <span className="mt-2 block text-sm text-gray-400">{contactNumber}</span>
                 </div>
               </div>
-              <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-[#D4AF37]" data-icon="list_alt">list_alt</span>
-                  <h4 className="font-label text-[10px] uppercase tracking-widest font-bold text-gray-400">Consignment Items</h4>
-                </div>
-                <div className="space-y-8">
-                  {items.map((item, idx) => {
-                    const productImg = item.product?.images?.[0]?.url || item.product?.primaryImage || "https://placehold.co/400x500/111/444.png?text=Product";
-                    return (
-                      <div key={idx} className="flex gap-4 items-center">
-                        <div className="w-20 h-24 bg-neutral-800 rounded border border-white/10 overflow-hidden flex-shrink-0">
-                          <img className="w-full h-full object-cover" src={productImg} alt={item.productName} />
-                        </div>
-                        <div className="flex-grow">
-                          <h5 className="text-sm font-bold text-white">{item.productName}</h5>
-                          <p className="text-xs text-gray-400 mt-1">{item.color} / {item.size}</p>
-                          <div className="flex justify-between items-end mt-3">
-                            <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
-                            <span className="text-sm font-semibold text-[#D4AF37]">LKR {item.totalPrice.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="pt-8 space-y-4 border-t border-white/10">
+
+              <div className="space-y-4 border-t border-white/10 pt-8">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400">
+                  Order Summary
+                </h4>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Subtotal</span>
-                  <span className="text-white">LKR {totalAmount.toFixed(2)}</span>
+                  <span className="text-gray-400">Items Total</span>
+                  <span className="text-white">LKR {formatCurrency(totalAmount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Premium Shipping</span>
-                  <span className="text-[#D4AF37] font-medium">Complimentary</span>
+                  <span className="text-gray-400">Shipping</span>
+                  <span className="font-medium text-[#D4AF37]">Complimentary</span>
                 </div>
                 <div className="flex justify-between pt-4 text-xl font-black text-white">
                   <span>Total</span>
-                  <span>LKR {totalAmount.toFixed(2)}</span>
+                  <span>LKR {formatCurrency(totalAmount)}</span>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <button className="bg-[#D4AF37] text-black py-4 rounded-lg font-label text-xs uppercase tracking-widest font-bold hover:bg-[#eadd99] transition-colors" onClick={() => window.location.href = 'mailto:support@sagaelite.com'}>
+                <button
+                  className="rounded-lg bg-[#D4AF37] py-4 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#eadd99]"
+                  onClick={() => {
+                    window.location.href = "mailto:support@sagaelite.com";
+                  }}
+                >
                   Need Help?
                 </button>
-                <button className="bg-neutral-800 text-white py-4 rounded-lg font-label text-xs uppercase tracking-widest font-bold hover:bg-neutral-700 border border-white/5 transition-colors">
-                  Invoice PDF
-                </button>
+                <Link
+                  to="/shopping/orders"
+                  className="flex items-center justify-center rounded-lg border border-white/5 bg-neutral-800 py-4 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-neutral-700"
+                >
+                  More Orders
+                </Link>
               </div>
             </div>
           </div>

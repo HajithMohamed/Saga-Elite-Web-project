@@ -1,8 +1,1 @@
-node_modules
-npm-debug.log
-Dockerfile
-.dockerignore
-.git
-.gitignore
-.env
-.env.local
+node_modules\nnpm-debug.log\n.env\n.env.local\n.git\n.gitignore\n*.md

@@ -7,6 +7,13 @@ import { Loader2 } from "lucide-react";
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
 
+// legal page imports
+import PrivacyPolicyPage from "./pages/Legal/PrivacyPolicyPage";
+import TermsConditionsPage from "./pages/Legal/TermsConditionsPage";
+import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
+import ContactPage from "./pages/Legal/ContactPage";
+import AboutPage from "./pages/Legal/AboutPage";
+
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
@@ -25,6 +32,11 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
+import PendingPaymentsPage from "./pages/Admin/PendingPaymentsPage";
+import PaymentVerificationPage from "./pages/Admin/PaymentVerificationPage";
+import AdminUsers from "./pages/admin-view/Users";
+import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
+import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -32,15 +44,19 @@ import ShoppinLayout from "./components/shopping-components/Layout";
 import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
+import Orders from "./pages/shopping-view/Orders";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
-import DropDetails from "./pages/shopping-view/DropDetails"; // ✅ added
+import DropDetails from "./pages/shopping-view/DropDetails";
+import ProductReviewsPage from "./pages/ProductReviewsPage";
+import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
-import OrderTracking from "./pages/shopping-view/OrderTracking"; // ✅ kept
+import OrderTracking from "./pages/shopping-view/OrderTracking";
+import ManualPaymentPage from "./pages/ManualPaymentPage";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -49,8 +65,20 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 import CheckAuth from "./components/common-components/CheckAuth";
 
 function App() {
-  const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+  const {
+    isAuthenticated,
+    user,
+    isLoading
+  } = useSelector(
+    (state) => state.auth
+  );
+
   const dispatch = useDispatch();
+
+  const defaultAuthenticatedRoute =
+    user?.role === "admin"
+      ? "/admin/dashboard"
+      : "/shopping/home";
 
   useEffect(() => {
     dispatch(checkAuthAction());
@@ -67,15 +95,77 @@ function App() {
   return (
     <div>
       <Routes>
+
+        {/* PUBLIC */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
+
+          <Route
+            path="/"
+            element={
+              isAuthenticated
+                ? (
+                  <Navigate
+                    to={defaultAuthenticatedRoute}
+                    replace
+                  />
+                )
+                : <Home />
+            }
+          />
+
+          <Route
+            path="/legal/privacy-policy"
+            element={<PrivacyPolicyPage />}
+          />
+
+          <Route
+            path="/legal/terms-and-conditions"
+            element={<TermsConditionsPage />}
+          />
+
+          <Route
+            path="/legal/refund-policy"
+            element={<RefundPolicyPage />}
+          />
+
+          <Route
+            path="/contact"
+            element={<ContactPage />}
+          />
+
+          <Route
+            path="/about"
+            element={<AboutPage />}
+          />
+
+          <Route
+            path="/product/:productId/reviews"
+            element={<ProductReviewsPage />}
+          />
+
+          <Route
+            path="/account/my-reviews"
+            element={
+              <CheckAuth
+                isAuthenticated={isAuthenticated}
+                user={user}
+              >
+                <MyReviewsPage />
+              </CheckAuth>
+            }
+          />
+
         </Route>
 
-        {/* AUTH ROUTES */}
+
+        {/* AUTH */}
         <Route
           path="/auth"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <AuthLayout />
             </CheckAuth>
           }
@@ -89,51 +179,160 @@ function App() {
           <Route path="verify-otp" element={<VerifyOtp />} />
         </Route>
 
-        {/* ADMIN ROUTES */}
+
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <AdminLayout />
             </CheckAuth>
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
+
           <Route path="home-images" element={<AdminHomeImages />} />
+
           <Route path="feature" element={<AdminFeatures />} />
+
           <Route path="order" element={<AdminOrders />} />
+
           <Route path="product" element={<AdminProduct />} />
-          <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
-          <Route path="account" element={<Account />} />
-          <Route path="drop" element={<AdminDrops />} />
+
+          <Route path="users" element={<AdminUsers />} />
+
+          <Route path="super-admin" element={<SuperAdminDashboard />} />
+
+          <Route
+            path="notifications"
+            element={
+              <ErrorBoundary>
+                <NotificationsManager />
+              </ErrorBoundary>
+            }
+          />
+
+          <Route
+            path="manual-payments"
+            element={<PendingPaymentsPage />}
+          />
+
+          <Route
+            path="manual-payments/:paymentId"
+            element={<PaymentVerificationPage />}
+          />
+
+          <Route
+            path="reviews"
+            element={<ReviewModerationPage />}
+          />
+
+          <Route
+            path="account"
+            element={<Account />}
+          />
+
+          <Route
+            path="drop"
+            element={<AdminDrops />}
+          />
+
         </Route>
 
-        {/* SHOPPING ROUTES */}
+
+        {/* SHOPPING */}
         <Route
           path="/shopping"
           element={
-            <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+            <CheckAuth
+              isAuthenticated={isAuthenticated}
+              user={user}
+            >
               <ShoppinLayout />
             </CheckAuth>
           }
         >
-          <Route index element={<Navigate to="home" replace />} />
+          <Route
+            index
+            element={<Navigate to="home" replace />}
+          />
+
           <Route path="home" element={<Home />} />
+
           <Route path="account" element={<Account />} />
+
+          <Route path="orders" element={<Orders />} />
+
           <Route path="cart" element={<Cart />} />
+
           <Route path="checkout" element={<Checkout />} />
-          <Route path="product-list" element={<ProductListing />} />
-          <Route path="product/:slug" element={<ProductDetails />} />
-          <Route path="drop/:slug" element={<DropDetails />} /> {/* ✅ added */}
-          <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
-          <Route path="checkout-success" element={<OrderSuccess />} />
-          <Route path="wishlist" element={<Wishlist />} />
-          <Route path="order-tracking" element={<OrderTracking />} /> {/* ✅ kept */}
+
+          <Route
+            path="product-list"
+            element={<ProductListing />}
+          />
+
+          <Route
+            path="product/:slug"
+            element={<ProductDetails />}
+          />
+
+          <Route
+            path="drop/:slug"
+            element={<DropDetails />}
+          />
+
+          <Route
+            path="notifications"
+            element={
+              <ErrorBoundary>
+                <NotificationsPage />
+              </ErrorBoundary>
+            }
+          />
+
+          <Route
+            path="checkout-success"
+            element={<OrderSuccess />}
+          />
+
+          <Route
+            path="manual-payment"
+            element={<ManualPaymentPage />}
+          />
+
+          <Route
+            path="wishlist"
+            element={<Wishlist />}
+          />
+
+          <Route
+            path="order-tracking"
+            element={<OrderTracking />}
+          />
+
+          <Route
+            path="account/my-reviews"
+            element={<MyReviewsPage />}
+          />
+
         </Route>
 
-        {/* OTHER ROUTES */}
-        <Route path="/un-auth-page" element={<UnauthPage />} />
-        <Route path="*" element={<NotFound />} />
+
+        {/* OTHER */}
+        <Route
+          path="/un-auth-page"
+          element={<UnauthPage />}
+        />
+
+        <Route
+          path="*"
+          element={<NotFound />}
+        />
+
       </Routes>
     </div>
   );

@@ -5,7 +5,7 @@ const { getAllProducts, getSingleProduct, addProduct, updateProduct, deleteProdu
 const paginatedResult = require("../Middlewares/pagination-middleware");
 const Product = require("../Models/Product");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const adminMiddleware = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
 
 router.get("/get-all-products", paginatedResult(Product), getAllProducts);
 router.get("/get-single-product/:slug", getSingleProduct);

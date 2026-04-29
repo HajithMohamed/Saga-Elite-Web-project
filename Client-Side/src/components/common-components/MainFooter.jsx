@@ -53,78 +53,85 @@ const MainFooter = () => {
   return (
     <footer className="bg-[#111] text-gray-400 py-12 border-t border-[#D4AF37]/20 mt-auto">
       <div className="container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          {/* Brand Column */}
-          <div className="flex flex-col gap-4">
-            <Link to="/shopping/home" className="flex items-center gap-3">
-              <div className="flex flex-col">
-                <span className="font-bold text-xl tracking-widest text-[#D4AF37] uppercase">Saga Elite</span>
-                <span className="text-[10px] tracking-[0.2em] text-gray-500 uppercase">Rare Fit Forever</span>
-              </div>
-            </Link>
-            <p className="text-sm font-light mt-2 max-w-xs text-white/50 leading-relaxed">
-              Sri Lanka's limited-edition streetwear brand. New drops, rare fits — never restocked.
-            </p>
-            {countdown && nextDrop && (
-              <div className="mt-4 px-4 py-2 border border-[#D4AF37]/30 rounded bg-[#D4AF37]/5 text-[#D4AF37] text-xs tracking-widest uppercase inline-block text-center shadow-[0_0_15px_rgba(212,175,55,0.1)]">
+        
+        {/* Brand & Countdown - Preserved for backward compatibility */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#D4AF37]/10 pb-8 mb-8 gap-4">
+          <Link to="/shopping/home" className="flex items-center gap-3">
+            <div className="flex flex-col">
+              <span className="font-bold text-xl tracking-widest text-[#D4AF37] uppercase">Saga Elite</span>
+              <span className="text-[10px] tracking-[0.2em] text-gray-500 uppercase">Rare Fit Forever</span>
+            </div>
+          </Link>
+          <div className="flex flex-col md:items-end text-sm font-light text-white/50">
+            <span className="mb-2">Sri Lanka's limited-edition streetwear brand.</span>
+            {countdown && nextDrop ? (
+              <div className="px-4 py-2 border border-[#D4AF37]/30 rounded bg-[#D4AF37]/5 text-[#D4AF37] text-xs tracking-widest uppercase inline-block text-center shadow-[0_0_15px_rgba(212,175,55,0.1)]">
                 Next Drop: {countdown.days}d {countdown.hours}h {countdown.minutes}m
               </div>
-            )}
-            {!countdown && (
-               <div className="mt-4 px-4 py-2 border border-[#D4AF37]/30 rounded bg-[#D4AF37]/5 text-[#D4AF37] text-[10px] tracking-widest font-semibold uppercase inline-block text-center">
+            ) : (
+               <div className="px-4 py-2 border border-[#D4AF37]/30 rounded bg-[#D4AF37]/5 text-[#D4AF37] text-[10px] tracking-widest font-semibold uppercase inline-block text-center">
                  Next drop loading...
                </div>
             )}
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Shop Column */}
           <div className="flex flex-col gap-3">
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Shop</h3>
-            <Link to="/shopping/product-list" className="text-sm hover:text-[#D4AF37] transition-all">All products</Link>
-            <Link to="/shopping/product-list?category=drops" className="text-sm hover:text-[#D4AF37] transition-all">Current drop</Link>
-            <Link to="/shopping/product-list?category=archive" className="text-sm hover:text-[#D4AF37] transition-all">Drop archive</Link>
-            <Link to="/shopping/product-list?category=unisex" className="text-sm hover:text-[#D4AF37] transition-all">Unisex</Link>
-            <Link to="/shopping/product-list?category=boys" className="text-sm hover:text-[#D4AF37] transition-all">Boys</Link>
-            <Link to="/shopping/product-list?category=girls" className="text-sm hover:text-[#D4AF37] transition-all">Girls</Link>
+            <Link to="/shopping/product-list" className="text-sm hover:text-[#D4AF37] transition-all">All Products</Link>
+            <Link to="/shopping/product-list?sort=newest" className="text-sm hover:text-[#D4AF37] transition-all">New Arrivals</Link>
+            <Link to="/shopping/product-list?sale=true" className="text-sm hover:text-[#D4AF37] transition-all">Sale Items</Link>
           </div>
 
           {/* Account Column */}
           <div className="flex flex-col gap-3">
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Account</h3>
-            <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My orders</Link>
-            <Link to="/shopping/order-tracking" className="text-sm hover:text-[#D4AF37] transition-all">Order tracking</Link>
-            <Link to="/shopping/wishlist" className="text-sm hover:text-[#D4AF37] transition-all">Wishlist</Link>
-            <Link to="/shopping/notifications" className="text-sm hover:text-[#D4AF37] transition-all">Notifications</Link>
-            <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My account</Link>
+            <Link to="/shopping/orders" className="text-sm hover:text-[#D4AF37] transition-all">My Orders</Link>
+            <Link to="/account/my-reviews" className="text-sm hover:text-[#D4AF37] transition-all">My Reviews</Link>
+            <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My Profile</Link>
           </div>
 
-          {/* Info Column */}
+          {/* Support Column */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Info</h3>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">How drops work</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Payment guide</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Shipping policy</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Returns & exchanges</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Contact us</Link>
+            <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Support</h3>
+            <Link to="/contact" className="text-sm hover:text-[#D4AF37] transition-all">Contact Us</Link>
+            <Link to="/about" className="text-sm hover:text-[#D4AF37] transition-all">About Us</Link>
+            <a href="https://wa.me/94770000000" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">WhatsApp Us</a>
+          </div>
+
+          {/* Legal Column */}
+          <div className="flex flex-col gap-3">
+            <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Legal</h3>
+            <Link to="/legal/privacy-policy" className="text-sm hover:text-[#D4AF37] transition-all">Privacy Policy</Link>
+            <Link to="/legal/terms-and-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
+            <Link to="/legal/refund-policy" className="text-sm hover:text-[#D4AF37] transition-all">Refund Policy</Link>
+            <Link to="/legal/delivery-policy" className="text-sm hover:text-[#D4AF37] transition-all">Delivery Policy</Link>
           </div>
         </div>
 
         {/* Bottom Strip */}
-        <div className="flex flex-col md:flex-row items-center justify-between pt-6 border-t border-[#D4AF37]/10 text-xs">
-          <div className="flex flex-col md:flex-row items-center gap-4 mb-4 md:mb-0 text-gray-500">
-            <p>&copy; {new Date().getFullYear()} Saga Elite. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <Link to="#" className="hover:text-white transition-all">Privacy policy</Link>
-              <Link to="#" className="hover:text-white transition-all">Terms of use</Link>
+        <div className="flex flex-col pt-6 border-t border-[#D4AF37]/10 text-xs gap-4">
+          <div className="flex items-center gap-3 text-gray-400">
+            <span className="uppercase tracking-widest text-[10px] font-bold">We accept:</span>
+            <div className="flex gap-2">
+              {["Visa", "Mastercard", "AMEX", "eZ Cash", "Genie", "Bank Transfer"].map((method) => (
+                <span key={method} className="px-2 py-1 border border-gray-700 bg-gray-900 rounded-[4px] text-[10px] tracking-wider uppercase text-gray-500">
+                  {method}
+                </span>
+              ))}
             </div>
           </div>
-          
-          <div className="flex gap-2">
-            {["Manual transfer", "PayHere", "GPay", "LankaPay"].map((method) => (
-              <span key={method} className="px-3 py-1 border border-gray-700 bg-gray-900 rounded-[4px] text-[10px] tracking-wider uppercase text-gray-400">
-                {method}
-              </span>
-            ))}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-gray-500 text-[10px]">
+            <p>&copy; {new Date().getFullYear()} Saga Elite. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <Link to="/legal/privacy-policy" className="hover:text-white transition-all">Privacy Policy</Link>
+              <span>&middot;</span>
+              <Link to="/legal/terms-and-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
+              <span>&middot;</span>
+              <Link to="/legal/refund-policy" className="hover:text-white transition-all">Refund Policy</Link>
+            </div>
           </div>
         </div>
       </div>

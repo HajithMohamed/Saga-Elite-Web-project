@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchAdminOrders, updateOrderStatus } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 
-const statusOptions = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+const statusOptions = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 const Orders = () => {
   const dispatch = useDispatch();

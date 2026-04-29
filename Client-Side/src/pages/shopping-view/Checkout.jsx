@@ -7,25 +7,82 @@ import {
   updateCartItemAction,
   removeFromCartAction,
 } from "@/store/cart-slice";
+import { checkGuestAction, registerGuestAction } from "@/store/auth-slice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
+
+const getErrorMessage = (error, fallback) =>
+  typeof error === "string" ? error : error?.message || fallback;
+
+const getDiscountedUnitPrice = (product = {}, variant = {}) => {
+  const basePrice =
+    Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
+
+  return Math.round(
+    basePrice * (1 - Number(product?.discountPercent || 0) / 100)
+  );
+};
+
+const normalizeBuyNowItem = (item) => {
+  if (!item?.product || !item?.variant) {
+    return null;
+  }
+
+  const quantity = Math.max(1, Number(item.quantity) || 1);
+  const unitPrice = getDiscountedUnitPrice(item.product, item.variant);
+
+  return {
+    id: `buynow-${item.product.id || item.product._id}-${item.variant.sku}`,
+    product: item.product,
+    variant: item.variant,
+    quantity,
+    unitPrice,
+    subTotal: unitPrice * quantity,
+  };
+};
+
+const loadPersistedBuyNowItem = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(BUY_NOW_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistBuyNowItem = (item) => {
+  if (typeof window === "undefined") return;
+
+  if (!item) {
+    window.sessionStorage.removeItem(BUY_NOW_STORAGE_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(item));
+};
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { items = [], totalPrice = 0, isLoading } =
-    useSelector((state) => state.cart.cart);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { items, totalPrice, isLoading: cartIsLoading } = useSelector(
+    (state) => state.cart.cart
+  );
 
   const [formData, setFormData] = useState({
     shippingAddress: "",
     contactNumber: "",
-    paymentMethod: "manual",
+    paymentMethod: "manual_bank_transfer",
     notes: "",
+    guestEmail: "",
   });
 
   const [cardDetails, setCardDetails] = useState({
@@ -44,52 +101,65 @@ const Checkout = () => {
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [isBuyNow, setIsBuyNow] = useState(false);
+  const [hasInitializedSource, setHasInitializedSource] = useState(false);
+  
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [guestCheckInfo, setGuestCheckInfo] = useState(null);
+  const [isProcessingSelection, setIsProcessingSelection] = useState(false);
+
+  const cartStateItems = Array.isArray(location.state?.cartItems)
+    ? location.state.cartItems
+    : null;
+  const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
 
   useEffect(() => {
-    if (location.state?.cartItems) {
-      // From cart page
-      setCheckoutItems(location.state.cartItems);
+    const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
+
+    if (routedBuyNowItem) {
+      persistBuyNowItem(location.state?.buyNowItem || routedBuyNowItem);
+      setIsBuyNow(true);
+      setCheckoutItems([routedBuyNowItem]);
+      setCheckoutTotal(routedBuyNowItem.subTotal);
+      setHasInitializedSource(true);
+      return;
+    }
+
+    if (cartStateItems?.length) {
+      persistBuyNowItem(null);
+      setIsBuyNow(false);
+      setCheckoutItems(cartStateItems);
       setCheckoutTotal(
         location.state.cartTotal ||
-          location.state.cartItems.reduce(
+          cartStateItems.reduce(
             (sum, item) => sum + item.unitPrice * item.quantity,
             0
           )
       );
-      setIsBuyNow(false);
-    } else if (location.state?.buyNowItem) {
-      // From buy now
+      setHasInitializedSource(true);
+      return;
+    }
+
+    if (persistedBuyNowItem) {
+      persistBuyNowItem(persistedBuyNowItem);
       setIsBuyNow(true);
-      const item = location.state.buyNowItem;
-      const unitPrice = item.product.basePrice + (item.variant.priceAdjustment || 0);
-      const normalizedItem = {
-        id: 'buynow',
-        product: item.product,
-        variant: item.variant,
-        quantity: item.quantity,
-        unitPrice,
-        subTotal: unitPrice * item.quantity
-      };
-      setCheckoutItems([normalizedItem]);
-      setCheckoutTotal(normalizedItem.subTotal);
-    } else {
-      // Direct access - redirect to cart
-      navigate('/shopping/cart');
+      setCheckoutItems([persistedBuyNowItem]);
+      setCheckoutTotal(persistedBuyNowItem.subTotal);
+      setHasInitializedSource(true);
+      return;
     }
-  }, [location.state, navigate]);
+
+    persistBuyNowItem(null);
+    setIsBuyNow(false);
+    setHasInitializedSource(true);
+    dispatch(fetchCartAction());
+  }, [cartStateItems, dispatch, location.state, routedBuyNowItem]);
 
   useEffect(() => {
-    if (!isBuyNow) {
-      dispatch(fetchCartAction());
-    }
-  }, [isBuyNow, dispatch]);
+    if (!hasInitializedSource || isBuyNow) return;
 
-  useEffect(() => {
-    if (!isBuyNow) {
-      setCheckoutItems(items);
-      setCheckoutTotal(totalPrice);
-    }
-  }, [isBuyNow, items, totalPrice]);
+    setCheckoutItems(items);
+    setCheckoutTotal(totalPrice);
+  }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
   // ---------------- CART ACTIONS ----------------
   const handleQuantityChange = async (item, quantity) => {
@@ -106,7 +176,7 @@ const Checkout = () => {
     } catch (err) {
       toast({
         title: "Update failed",
-        description: err?.message || "Unable to update quantity.",
+        description: getErrorMessage(err, "Unable to update quantity."),
         variant: "destructive",
       });
     }
@@ -125,7 +195,7 @@ const Checkout = () => {
     } catch (err) {
       toast({
         title: "Remove failed",
-        description: err?.message || "Unable to remove item.",
+        description: getErrorMessage(err, "Unable to remove item."),
         variant: "destructive",
       });
     }
@@ -195,7 +265,35 @@ const Checkout = () => {
       });
       return res.data?.data?.url || "";
     } catch (err) {
-      throw new Error(err.response?.data?.message || "Failed to upload receipt");
+      throw new Error(getErrorMessage(err?.response?.data, "Failed to upload receipt"));
+    }
+  };
+
+  const handleGuestChoice = async (choice) => {
+    setIsProcessingSelection(true);
+    setShowGuestDialog(false);
+    
+    if (choice === 'register') {
+      try {
+        await dispatch(registerGuestAction(formData.guestEmail)).unwrap();
+        toast({
+          title: "Account Created",
+          description: "Temporary password sent to your email. You are now logged in.",
+          variant: "success"
+        });
+        // After registration, proceed as authenticated user
+        await proceedWithOrder();
+      } catch (err) {
+        toast({
+          title: "Registration failed",
+          description: getErrorMessage(err, "Could not create account."),
+          variant: "destructive"
+        });
+        setIsProcessingSelection(false);
+      }
+    } else {
+      // Proceed as one-time guest
+      await proceedWithOrder();
     }
   };
 
@@ -208,15 +306,17 @@ const Checkout = () => {
       return;
     }
 
+    if (!isAuthenticated && !formData.guestEmail) {
+      setFormError("Email address is required for guest checkout.");
+      return;
+    }
+
     if (!formData.shippingAddress || !formData.contactNumber) {
       setFormError("Shipping address and contact number are required.");
       return;
     }
 
-    if (
-      formData.paymentMethod === "manual" &&
-      !receiptFile
-    ) {
+    if (formData.paymentMethod === "manual" && !receiptFile) {
       setFormError("Please upload a receipt for manual payment.");
       return;
     }
@@ -267,18 +367,48 @@ const Checkout = () => {
       setFormError("Contact number is required.");
       return;
     }
-    if (!["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
+    if (!["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
       setFormError("Please select a valid payment method.");
       return;
     }
 
     setIsUploading(true);
 
+    // If not authenticated, check guest status
+    if (!isAuthenticated) {
+      try {
+        const guestRes = await dispatch(checkGuestAction(formData.guestEmail)).unwrap();
+        if (guestRes.data.existsAsUser) {
+          toast({
+            title: "Account exists",
+            description: "An account with this email already exists. Please log in.",
+            variant: "destructive",
+          });
+          navigate("/auth/login", { state: { email: formData.guestEmail } });
+          setIsUploading(false);
+          return;
+        }
+
+        // Show dialog asking to register OR proceed as guest
+        setGuestCheckInfo(guestRes.data);
+        setShowGuestDialog(true);
+        setIsUploading(false);
+        return;
+      } catch (err) {
+        console.error("Guest check failed", err);
+      }
+    }
+
+    await proceedWithOrder();
+  };
+
+  const proceedWithOrder = async () => {
+    setIsUploading(true);
     try {
       let uploadedUrl = "";
-      if (formData.paymentMethod === "manual") {
+      if (["manual", "manual_bank_transfer"].includes(formData.paymentMethod)) {
         uploadedUrl = await uploadReceipt();
-        if (!uploadedUrl) {
+        if (formData.paymentMethod === "manual" && !uploadedUrl) {
           setFormError("Receipt upload failed. Please try again.");
           return;
         }
@@ -299,17 +429,22 @@ const Checkout = () => {
           variantSku: item.variant.sku,
           quantity: item.quantity,
         })),
+        checkoutMode: isBuyNow ? "buyNow" : "cart",
         shippingAddress: formData.shippingAddress,
         contactNumber: formData.contactNumber,
         paymentMethod: formData.paymentMethod,
         paymentProofUrl:
-          formData.paymentMethod === "manual"
+          ["manual", "manual_bank_transfer"].includes(formData.paymentMethod)
             ? uploadedUrl
             : "",
         notes: formData.notes,
+        guestEmail: !isAuthenticated ? formData.guestEmail : undefined,
       };
 
       const resultAction = await dispatch(createOrder(payload)).unwrap();
+      const createdOrder = resultAction?.data || {};
+      const createdOrderId = resultAction?.orderId || createdOrder._id || `TEM-${Math.floor(Math.random() * 100000)}`;
+      const resolvedTotal = createdOrder.totalAmount || checkoutTotal || checkoutTotalAmount || totalAmount;
       if (!isBuyNow) {
         dispatch(fetchCartAction());
       }
@@ -320,26 +455,43 @@ const Checkout = () => {
         variant: "success",
       });
 
-      navigate("/shopping/checkout-success", { 
-        state: { 
-          orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
-          totalAmount: checkoutTotal || checkoutTotalAmount || totalAmount
-        } 
+      persistBuyNowItem(null);
+
+      if (formData.paymentMethod === "manual_bank_transfer") {
+        navigate(
+          `/shopping/manual-payment?orderId=${createdOrderId}&amount=${resolvedTotal}`,
+          {
+            state: {
+              orderId: createdOrderId,
+              amount: resolvedTotal,
+            },
+          },
+        );
+        return;
+      }
+
+      navigate("/shopping/checkout-success", {
+        state: {
+          orderId: createdOrderId,
+          totalAmount: resolvedTotal,
+          referenceNumber: createdOrder.referenceNumber,
+          paymentMethod: formData.paymentMethod,
+        },
       });
     } catch (err) {
       toast({
         title: "Checkout failed",
-        description: err?.message || "Try again later.",
+        description: getErrorMessage(err, "Try again later."),
         variant: "destructive",
       });
-      setFormError(err?.message || "Checkout failed");
+      setFormError(getErrorMessage(err, "Checkout failed"));
     } finally {
       setIsUploading(false);
     }
   };
 
   // ---------------- LOADING ----------------
-  if (isLoading) {
+  if ((!hasInitializedSource || cartIsLoading) && !checkoutItems.length) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
@@ -377,6 +529,30 @@ const Checkout = () => {
           </section>
 
           <form onSubmit={handleSubmit} className="space-y-12">
+            
+            {/* Guest Email (only for non-authenticated users) */}
+            {!isAuthenticated && (
+              <section className="space-y-8">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
+                  <h2 className="text-xl font-bold tracking-tight">Contact Information</h2>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Email Address</label>
+                  <input
+                    type="email"
+                    name="guestEmail"
+                    value={formData.guestEmail}
+                    onChange={handleChange}
+                    placeholder="your.email@example.com"
+                    className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
+                    required
+                  />
+                  <p className="text-xs text-gray-500">We'll send your order confirmation and tracking details to this email.</p>
+                </div>
+              </section>
+            )}
             
             {/* 01 Shipping Destination */}
             <section className="space-y-8">
@@ -431,7 +607,7 @@ const Checkout = () => {
               {/* Payment Choice */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { id: "manual", label: "Bank Transfer", icon: <Building2 className="w-6 h-6" /> },
+                  { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="w-6 h-6" /> },
                   { id: "card", label: "Card Payment", icon: <CreditCard className="w-6 h-6" /> }
                 ].map(method => (
                   <div 
@@ -517,7 +693,7 @@ const Checkout = () => {
                   </>
                 )}
 
-                {formData.paymentMethod === "manual" && (
+                {formData.paymentMethod === "manual_bank_transfer" && (
                   <div className="space-y-6">
                     <div className="bg-[#111] border border-gray-800 p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
                        <div className="absolute top-0 right-0 bg-[#D4AF37]/10 w-32 h-32 blur-3xl rounded-full"></div>
@@ -549,7 +725,7 @@ const Checkout = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt (Optional)</label>
                       <div
                         onClick={() => fileInputRef.current?.click()}
                         onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}
@@ -690,6 +866,46 @@ const Checkout = () => {
         </div>
 
       </div>
+
+      {/* Guest Checkout Dialog */}
+      {showGuestDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#111] border border-gray-800 p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold text-[#D4AF37]">
+                {guestCheckInfo?.existsAsGuest ? "Welcome Back!" : "Personalize Your Experience"}
+              </h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                {guestCheckInfo?.existsAsGuest 
+                  ? "We noticed you've shopped with us before. Would you like to create an account to track your orders and enjoy a faster checkout next time?"
+                  : "Would you like to register with us for a better experience, or proceed with a one-time guest purchase?"}
+              </p>
+            </div>
+
+            <div className="grid gap-4">
+              <button
+                onClick={() => handleGuestChoice('register')}
+                disabled={isProcessingSelection}
+                className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {isProcessingSelection ? <Loader2 className="animate-spin w-5 h-5" /> : "Register & Continue"}
+              </button>
+              
+              <button
+                onClick={() => handleGuestChoice('guest')}
+                disabled={isProcessingSelection}
+                className="w-full bg-transparent border border-gray-700 hover:border-gray-500 text-white py-4 rounded-xl font-bold transition-all"
+              >
+                Continue as Guest
+              </button>
+            </div>
+            
+            <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest">
+              Registration generates a temporary password sent to your email.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

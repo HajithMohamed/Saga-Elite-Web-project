@@ -248,8 +248,8 @@ const logout = catchAsync(async (req, res, next) => {
 const changePassword = catchAsync(async (req, res, next) => {
     const { oldPassword, newPassword, passwordConfirm } = req.body;
 
-    if (!oldPassword || !newPassword || !passwordConfirm) {
-        return next(new AppError("Old password, new password, and confirmation are required", 400));
+    if (!newPassword || !passwordConfirm) {
+        return next(new AppError("New password and confirmation are required", 400));
     }
 
     if (newPassword !== passwordConfirm) {
@@ -272,9 +272,17 @@ const changePassword = catchAsync(async (req, res, next) => {
         return next(new AppError("User not found", 404));
     }
 
-    const isCorrect = await user.correctPassword(oldPassword, user.password);
-    if (!isCorrect) {
-        return next(new AppError("Current password is incorrect", 401));
+    const hasExistingPassword = Boolean(user.password);
+
+    if (hasExistingPassword) {
+        if (!oldPassword) {
+            return next(new AppError("Current password is required", 400));
+        }
+
+        const isCorrect = await user.correctPassword(oldPassword, user.password);
+        if (!isCorrect) {
+            return next(new AppError("Current password is incorrect", 401));
+        }
     }
 
     user.password = newPassword;
@@ -294,7 +302,7 @@ const changePassword = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         status: "success",
-        message: "Password updated successfully",
+        message: hasExistingPassword ? "Password updated successfully" : "Password set successfully",
     });
 });
 
@@ -480,6 +488,69 @@ const checkAuth = catchAsync(async (req, res, next) => {
     });
 });
 
+const checkGuest = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+    if (!email) return next(new AppError("Email is required", 400));
+
+    const user = await User.findOne({ email });
+    const guest = await Guest.findOne({ email });
+
+    res.status(200).json({
+        status: "success",
+        data: {
+            existsAsUser: !!user,
+            existsAsGuest: !!guest,
+            guestDetails: guest
+        }
+    });
+});
+
+const registerGuest = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+    if (!email) return next(new AppError("Email is required", 400));
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return next(new AppError("User already exists", 400));
+
+    // Generate random 10-char password
+    const temporaryPassword = Math.random().toString(36).slice(-10) + "S1!";
+
+    const newUser = await User.create({
+        email,
+        password: temporaryPassword,
+        isVerified: true, 
+        provider: "local",
+    });
+
+    const guest = await Guest.findOne({ email });
+    if (guest) {
+        guest.isRegistered = true;
+        await guest.save();
+    }
+
+    const registrationBody = `
+        <p>Hi there,</p>
+        <p>Welcome to <strong>Saga Elite</strong>!</p>
+        <p>Your account has been created based on your recent activity.</p>
+        <p>Your temporary password is: <strong>${temporaryPassword}</strong></p>
+        <p>Please log in and change your password for security.</p>
+        <br/>
+        <p>Happy shopping!<br/>The Saga Elite Team</p>
+    `;
+
+    try {
+        await sendMail({
+            email: newUser.email,
+            subject: "Welcome & Your Temporary Password",
+            html: buildEmailTemplate("Account Created", registrationBody),
+        });
+    } catch (err) {
+        console.error("Mail failed", err);
+    }
+
+    createSendToken(newUser, 201, res, "Registration successful. Check your email for password.");
+});
+
 module.exports = {
     registerUser,
     otpVerify,
@@ -492,4 +563,6 @@ module.exports = {
     resetPassword,
     logout,
     checkAuth,
+    checkGuest,
+    registerGuest,
 };

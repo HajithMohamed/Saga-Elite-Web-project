@@ -10,10 +10,12 @@
     "Client-Side"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm run dev --workspace=Server-side\" \"npm run dev --workspace=Client-Side\"",
+    "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm --prefix Server-side run dev\" \"npm --prefix Client-Side run dev\"",
+    "dev:backend": "npm --prefix Server-side run dev",
+    "dev:frontend": "npm --prefix Client-Side run dev",
     "start": "node Server-side/server.js",
-    "build": "npm run build --workspace=Client-Side",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore",
+    "build": "npm --prefix Client-Side run build",
+    "lint": "npm --prefix Server-side run lint && npm --prefix Client-Side run lint",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

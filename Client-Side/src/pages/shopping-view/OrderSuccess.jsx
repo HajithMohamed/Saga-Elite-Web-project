@@ -6,6 +6,8 @@ const OrderSuccess = () => {
   const location = useLocation();
   const orderId = location.state?.orderId || `TEM-${Math.floor(Math.random() * 100000000)}`;
   const totalAmount = location.state?.totalAmount || "0.00";
+  const referenceNumber = location.state?.referenceNumber;
+  const paymentMethod = location.state?.paymentMethod;
 
   return (
     <main className="min-h-screen bg-[#060606] text-white flex flex-col items-center pt-12 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
@@ -23,6 +25,13 @@ const OrderSuccess = () => {
         <div className="mt-8 bg-[#111] p-6 rounded-2xl border border-gray-800 inline-block">
           <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Order Reference</span>
           <p className="font-bold text-2xl tracking-widest text-[#D4AF37]">#{orderId}</p>
+          {["manual", "manual_bank_transfer"].includes(paymentMethod) && referenceNumber && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Payment Reference</span>
+              <p className="font-bold text-lg tracking-widest text-[#D4AF37]">{referenceNumber}</p>
+              <p className="text-xs text-gray-400 mt-1">Use this reference for your bank transfer</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -75,8 +84,7 @@ const OrderSuccess = () => {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
             <Link
-              to="/shopping/order-tracking"
-              state={{ orderId }}
+              to={`/shopping/order-tracking?orderId=${orderId}`}
               className="w-full sm:w-auto px-10 py-4 bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] flex items-center justify-center"
             >
               Track Order

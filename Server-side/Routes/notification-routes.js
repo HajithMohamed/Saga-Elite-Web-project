@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const adminMiddleware = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
 const {
   getNotifications,
   markNotificationRead,
