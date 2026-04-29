@@ -16,5 +16,6 @@ const createRateLimiting = (maxRequests, time) => {
 // Pre-configured limiters for different endpoint types
 const authLimiter = createRateLimiting(10, 15 * 60 * 1000); // 10 requests per 15 minutes for auth
 const generalLimiter = createRateLimiting(100, 15 * 60 * 1000); // 100 requests per 15 minutes for general
+const contactLimiter = createRateLimiting(3, 60 * 60 * 1000); // 3 requests per 60 minutes for contact
 
-module.exports = { createRateLimiting, authLimiter, generalLimiter };
+module.exports = { createRateLimiting, authLimiter, generalLimiter, contactLimiter };

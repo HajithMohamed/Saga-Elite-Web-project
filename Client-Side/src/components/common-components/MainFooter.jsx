@@ -98,14 +98,14 @@ const MainFooter = () => {
             <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My account</Link>
           </div>
 
-          {/* Info Column */}
+          {/* Legal Column */}
           <div className="flex flex-col gap-3">
-            <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Info</h3>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">How drops work</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Payment guide</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Shipping policy</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Returns & exchanges</Link>
-            <Link to="#" className="text-sm hover:text-[#D4AF37] transition-all">Contact us</Link>
+            <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Legal</h3>
+            <Link to="/legal/privacy-policy" className="text-sm hover:text-[#D4AF37] transition-all">Privacy Policy</Link>
+            <Link to="/legal/terms-and-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
+            <Link to="/legal/refund-policy" className="text-sm hover:text-[#D4AF37] transition-all">Refund Policy</Link>
+            <Link to="/contact" className="text-sm hover:text-[#D4AF37] transition-all">Contact Us</Link>
+            <Link to="/about" className="text-sm hover:text-[#D4AF37] transition-all">About Us</Link>
           </div>
         </div>
 
@@ -114,8 +114,8 @@ const MainFooter = () => {
           <div className="flex flex-col md:flex-row items-center gap-4 mb-4 md:mb-0 text-gray-500">
             <p>&copy; {new Date().getFullYear()} Saga Elite. All rights reserved.</p>
             <div className="flex items-center gap-4">
-              <Link to="#" className="hover:text-white transition-all">Privacy policy</Link>
-              <Link to="#" className="hover:text-white transition-all">Terms of use</Link>
+              <Link to="/legal/privacy-policy" className="hover:text-white transition-all">Privacy policy</Link>
+              <Link to="/legal/terms-and-conditions" className="hover:text-white transition-all">Terms of use</Link>
             </div>
           </div>
           

@@ -1,5 +1,16 @@
 const SERVER_URL = "http://localhost:5001";
 
+export const RETURN_WINDOW_DAYS = 30;
+
+export const CONTACT_INFO = {
+  email: "support@sagaelite.lk",
+  phone: "+94 77 123 4567",
+  whatsapp: "+94771234567",
+  addressLine1: "123 Galle Road",
+  addressLine2: "Colombo 03, Sri Lanka",
+  hours: "Mon - Sat, 9:00 AM - 6:00 PM (Sri Lanka Time)",
+};
+
 export { SERVER_URL };
 
 

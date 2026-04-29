@@ -7,6 +7,13 @@ import { Loader2 } from "lucide-react";
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
 
+// legal page imports
+import PrivacyPolicyPage from "./pages/Legal/PrivacyPolicyPage";
+import TermsConditionsPage from "./pages/Legal/TermsConditionsPage";
+import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
+import ContactPage from "./pages/Legal/ContactPage";
+import AboutPage from "./pages/Legal/AboutPage";
+
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
@@ -83,6 +90,14 @@ function App() {
               )
             }
           />
+          <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route
+            path="/legal/terms-and-conditions"
+            element={<TermsConditionsPage />}
+          />
+          <Route path="/legal/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/about" element={<AboutPage />} />
         </Route>
 
         {/* AUTH ROUTES */}
