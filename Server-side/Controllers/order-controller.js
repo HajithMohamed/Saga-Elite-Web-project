@@ -10,6 +10,7 @@ const { createNotification, broadcastNotification } = require("../Utils/notifica
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
+  "pending_payment",
   "verification_pending",
   "confirmed",
   "shipped",
@@ -81,11 +82,14 @@ const createOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Contact number is required", 400));
   }
 
-  if (!paymentMethod || !["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(paymentMethod)) {
+  if (!paymentMethod || !["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(paymentMethod)) {
     return next(new AppError("Invalid payment method", 400));
   }
 
-  if (paymentMethod === "manual" && !paymentProofUrl?.trim()) {
+  const isLegacyManualPayment = paymentMethod === "manual";
+  const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
+
+  if (isLegacyManualPayment && !paymentProofUrl?.trim()) {
     return next(new AppError("Receipt information is required for manual payment", 400));
   }
 
@@ -202,11 +206,17 @@ const createOrder = catchAsync(async (req, res, next) => {
         contactNumber: contactNumber.trim(),
         paymentMethod,
         paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
-        referenceNumber: paymentMethod === "manual" ? generateReferenceNumber() : undefined,
+        referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
         notes: notes?.trim(),
-        status: ["manual", "cash"].includes(paymentMethod) ? "verification_pending" : "confirmed",
-        paymentStatus: ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
-        expiresAt: ["manual", "cash"].includes(paymentMethod) ? new Date(Date.now() + 15 * 60000) : undefined,
+        status: isBankTransferPayment
+          ? "pending_payment"
+          : ["manual", "cash"].includes(paymentMethod)
+            ? "verification_pending"
+            : "confirmed",
+        paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
+        expiresAt: isLegacyManualPayment || paymentMethod === "cash"
+          ? new Date(Date.now() + 15 * 60000)
+          : undefined,
       };
 
       const [orderDocument] = await Order.create([orderPayload], { session });
@@ -253,6 +263,7 @@ const createOrder = catchAsync(async (req, res, next) => {
   res.status(201).json({
     success: true,
     message: "Order placed successfully",
+    orderId: createdOrder._id,
     data: createdOrder,
   });
 });
@@ -324,7 +335,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
 const updateOrderStatus = catchAsync(async (req, res, next) => {
   const { status } = req.body;
-  const allowedStatuses = ["pending", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
+  const allowedStatuses = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 
   if (!status || !allowedStatuses.includes(status)) {
     return next(new AppError("Invalid order status", 400));
@@ -337,7 +348,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   order.status = status;
-  if (status === "confirmed" && ["manual", "cash", "receipt"].includes(order.paymentMethod)) {
+  if (status === "confirmed" && ["manual", "manual_bank_transfer", "cash", "receipt"].includes(order.paymentMethod)) {
     order.paymentStatus = "paid";
   }
 
@@ -414,7 +425,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     ]),
     Order.countDocuments(),
     Order.countDocuments({
-      status: { $in: ["pending", "verification_pending", "confirmed", "shipped"] },
+      status: { $in: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped"] },
     }),
     Product.countDocuments(),
     User.countDocuments({ role: "user" }),
@@ -638,7 +649,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         liveDrops,
         archivedDrops,
         lowStockProducts,
-        pendingVerification: statusBreakdown.verification_pending || 0,
+        pendingVerification: (statusBreakdown.pending_payment || 0) + (statusBreakdown.verification_pending || 0),
         deliveredOrders: statusBreakdown.delivered || 0,
         totalSoldUnits: soldUnitsStats.totalSoldUnits,
         totalWishlistAdds: soldUnitsStats.totalWishlistAdds,

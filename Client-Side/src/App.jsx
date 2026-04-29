@@ -25,6 +25,8 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
+import PendingPaymentsPage from "./pages/Admin/PendingPaymentsPage";
+import PaymentVerificationPage from "./pages/Admin/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
@@ -44,6 +46,7 @@ import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
 import OrderTracking from "./pages/shopping-view/OrderTracking"; // ✅ kept
+import ManualPaymentPage from "./pages/ManualPaymentPage";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -120,6 +123,8 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="super-admin" element={<SuperAdminDashboard />} />
           <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
+          <Route path="manual-payments" element={<PendingPaymentsPage />} />
+          <Route path="manual-payments/:paymentId" element={<PaymentVerificationPage />} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops />} />
         </Route>
@@ -144,6 +149,7 @@ function App() {
           <Route path="drop/:slug" element={<DropDetails />} /> {/* ✅ added */}
           <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
           <Route path="checkout-success" element={<OrderSuccess />} />
+          <Route path="manual-payment" element={<ManualPaymentPage />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="order-tracking" element={<OrderTracking />} /> {/* ✅ kept */}
         </Route>

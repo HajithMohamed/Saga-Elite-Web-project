@@ -20,8 +20,10 @@ const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes");
 const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
+const manualPaymentRoutes = require("./Routes/manualPaymentRoutes");
 const userRoutes = require("./Routes/userRoutes");
 const notificationRoutes = require("./Routes/notification-routes"); // ✅ added
+const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
 
 app.use(helmet({ crossOriginOpenerPolicy: false }));
 app.use(cookieParser());
@@ -40,6 +42,7 @@ app.use("/api/v1/google", googleAuthRoute);
 app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1", manualPaymentRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/notifications", notificationRoutes); // ✅ kept
 
@@ -50,10 +53,15 @@ const PORT = Number(rawPort) || 5001;
 
 const connectToDB = require("./DataBase/db");
 
-connectToDB();
+const startServer = async () => {
+  await connectToDB();
+  startManualPaymentCleanupJob();
 
-console.log(PORT);
+  console.log(PORT);
 
-app.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
-});
+  app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+  });
+};
+
+startServer();
