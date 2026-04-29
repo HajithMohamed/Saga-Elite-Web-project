@@ -110,9 +110,9 @@ const Checkout = () => {
   const cartStateItems = Array.isArray(location.state?.cartItems)
     ? location.state.cartItems
     : null;
+  const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
 
   useEffect(() => {
-      if (!["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
     const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
 
     if (routedBuyNowItem) {
@@ -152,7 +152,7 @@ const Checkout = () => {
     setIsBuyNow(false);
     setHasInitializedSource(true);
     dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, location.state]);
+  }, [cartStateItems, dispatch, location.state, routedBuyNowItem]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;
@@ -316,9 +316,7 @@ const Checkout = () => {
       return;
     }
 
-      "payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"
-    ].includes(formData.paymentMethod)) {
-    ) {
+    if (formData.paymentMethod === "manual" && !receiptFile) {
       setFormError("Please upload a receipt for manual payment.");
       return;
     }

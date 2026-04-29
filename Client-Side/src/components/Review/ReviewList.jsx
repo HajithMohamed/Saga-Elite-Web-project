@@ -30,8 +30,6 @@ const ReviewList = ({ productId, initialStats }) => {
     submitting,
     userReviews,
   } = useSelector((state) => state.review);
-    (state) => state.review
-  );
   const { userOrders } = useSelector((state) => state.order);
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
