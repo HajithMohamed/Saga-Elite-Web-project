@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -7,22 +7,58 @@ import {
   removeFromCartAction,
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Minus, Plus, Trash2, ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  Loader2,
+  LockKeyhole,
+  Minus,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  Truck,
+  Trash2,
+} from "lucide-react";
+
+const formatCurrency = (value = 0) =>
+  new Intl.NumberFormat("en-LK", {
+    style: "currency",
+    currency: "LKR",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+
+const getProductImage = (product) =>
+  product?.image || product?.images?.[0]?.url || "/LOGO.png";
+
+const getVariantLabel = (variant = {}) =>
+  [variant?.size, variant?.color].filter(Boolean).join(" / ") || "Standard";
+
+const getErrorMessage = (error, fallback) =>
+  typeof error === "string" ? error : error?.message || fallback;
 
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [activeItemId, setActiveItemId] = useState(null);
+  const [removingItemId, setRemovingItemId] = useState(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   const { items = [], totalPrice = 0, totalQuantity = 0, isLoading } =
     useSelector((state) => state.cart.cart);
 
   useEffect(() => {
-    dispatch(fetchCartAction());
+    dispatch(fetchCartAction()).finally(() => {
+      setHasLoadedOnce(true);
+    });
   }, [dispatch]);
 
   const handleQuantityChange = async (item, quantity) => {
     try {
-      if (quantity < 1) return;
+      if (quantity < 1 || activeItemId === item.id || removingItemId === item.id) {
+        return;
+      }
+
+      setActiveItemId(item.id);
 
       await dispatch(
         updateCartItemAction({
@@ -33,14 +69,21 @@ const Cart = () => {
     } catch (err) {
       toast({
         title: "Update failed",
-        description: err?.message || "Unable to update quantity.",
+        description: getErrorMessage(err, "Unable to update quantity."),
         variant: "destructive",
       });
+    } finally {
+      setActiveItemId((current) => (current === item.id ? null : current));
     }
   };
 
   const handleRemove = async (itemId) => {
     try {
+      if (activeItemId === itemId || removingItemId === itemId) {
+        return;
+      }
+
+      setRemovingItemId(itemId);
       await dispatch(removeFromCartAction(itemId)).unwrap();
 
       toast({
@@ -51,131 +94,400 @@ const Cart = () => {
     } catch (err) {
       toast({
         title: "Remove failed",
-        description: err?.message || "Unable to remove item.",
+        description: getErrorMessage(err, "Unable to remove item."),
         variant: "destructive",
       });
+    } finally {
+      setRemovingItemId((current) => (current === itemId ? null : current));
     }
   };
 
   const handleProceedToCheckout = () => {
-    if (items.length === 0) return;
-    
-    navigate("/shopping/checkout", { 
-      state: { 
-        cartItems: items, 
-        cartTotal: totalPrice 
-      } 
+    if (items.length === 0 || activeItemId || removingItemId) return;
+
+    navigate("/shopping/checkout", {
+      state: {
+        cartItems: items,
+        cartTotal: totalPrice,
+      },
     });
   };
 
-  if (isLoading) {
+  const showInitialLoader = !hasLoadedOnce && isLoading && items.length === 0;
+  const hasPendingItemAction = Boolean(activeItemId || removingItemId);
+
+  if (showInitialLoader) {
     return (
-      <div className="flex h-screen items-center justify-center bg-black">
-        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] px-4 text-white">
+        <div className="flex h-20 w-20 items-center justify-center rounded-[28px] border border-white/10 bg-white/5">
+          <Loader2 className="h-9 w-9 animate-spin text-[#D4AF37]" />
+        </div>
+        <p className="mt-6 text-lg font-semibold">Loading your cart</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          Bringing your selected pieces into view.
+        </p>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-4">
-        <div className="text-center space-y-6">
-          <div className="w-24 h-24 mx-auto bg-[#111] rounded-full flex items-center justify-center">
-            <Trash2 className="w-12 h-12 text-gray-400" />
+      <div className="min-h-screen overflow-hidden bg-[#050505] text-white">
+        <div className="relative isolate flex min-h-screen items-center justify-center px-4 py-16">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#d4af3726,transparent_35%),radial-gradient(circle_at_bottom_right,#ffffff12,transparent_28%)]" />
+          <div className="relative w-full max-w-3xl rounded-[36px] border border-white/10 bg-white/[0.04] p-8 text-center shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-12">
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/10 bg-black/30">
+              <ShoppingBag className="h-11 w-11 text-[#D4AF37]" />
+            </div>
+
+            <span className="mt-8 inline-flex items-center rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-[#f1d27a]">
+              Cart refreshed
+            </span>
+
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-5xl">
+              Your cart is empty
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-zinc-400 sm:text-base">
+              Start building a sharper checkout. Add a few standout pieces and
+              your bag will be ready right here.
+            </p>
+
+            <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+              <Link
+                to="/shopping/product-list"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-7 py-3 text-sm font-bold text-black transition-colors hover:bg-[#f2ca50]"
+              >
+                Browse Collection
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                to="/shopping/home"
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-7 py-3 text-sm font-semibold text-white transition-colors hover:border-white/20 hover:bg-white/10"
+              >
+                Back to Home
+              </Link>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
-            <p className="text-gray-400">Add some items to get started</p>
-          </div>
-          <Link
-            to="/shopping/home"
-            className="inline-flex items-center gap-2 bg-[#D4AF37] text-black px-6 py-3 rounded-full font-bold hover:bg-[#F2CA50] transition-colors"
-          >
-            Continue Shopping
-          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Shopping Cart</h1>
-          <span className="text-gray-400">{totalQuantity} items</span>
-        </div>
+    <div className="min-h-screen bg-[#050505] text-white">
+      <section className="relative overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#d4af372b,transparent_30%),radial-gradient(circle_at_top_right,#ffffff12,transparent_25%)]" />
 
-        {/* Cart Items */}
-        <div className="space-y-6 mb-8">
-          {items.map((item) => (
-            <div key={item.id} className="flex gap-6 items-center bg-[#111] rounded-xl p-6 border border-gray-800">
-              <div className="w-24 h-24 bg-[#0a0a0a] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
-                <img
-                  src={item.product.image || "/LOGO.png"}
-                  className="w-full h-full object-cover"
-                  alt={item.product.name}
-                />
-              </div>
-              
-              <div className="flex-1 space-y-2">
-                <h3 className="font-bold text-lg">{item.product.name}</h3>
-                <p className="text-sm text-gray-400">
-                  {item.variant.size} • {item.variant.color}
-                </p>
-                <p className="font-bold text-[#D4AF37]">LKR {item.unitPrice}</p>
-              </div>
-
-              {/* Quantity Controls */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                  disabled={item.quantity <= 1}
-                  className="w-8 h-8 rounded-full bg-[#222] hover:bg-[#333] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-8 text-center font-bold">{item.quantity}</span>
-                <button
-                  onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                  className="w-8 h-8 rounded-full bg-[#222] hover:bg-[#333] flex items-center justify-center transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Subtotal */}
-              <div className="text-right min-w-[100px]">
-                <p className="font-bold text-lg text-[#D4AF37]">LKR {item.subTotal}</p>
-              </div>
-
-              {/* Remove Button */}
-              <button
-                onClick={() => handleRemove(item.id)}
-                className="w-8 h-8 rounded-full bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 flex items-center justify-center transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Total & Checkout */}
-        <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-xl font-bold">Total</span>
-            <span className="text-2xl font-extrabold text-[#D4AF37]">LKR {totalPrice}</span>
-          </div>
-          
-          <button
-            onClick={handleProceedToCheckout}
-            className="w-full bg-[#D4AF37] hover:bg-[#F2CA50] text-black font-bold py-4 rounded-full transition-colors flex items-center justify-center gap-2 text-lg"
+        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 md:px-6 md:pb-14 md:pt-12">
+          <Link
+            to="/shopping/product-list"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
-            Proceed to Checkout
-            <ArrowRight className="w-5 h-5" />
-          </button>
+            <ChevronLeft className="h-4 w-4" />
+            Continue shopping
+          </Link>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1.45fr_0.95fr] lg:items-end">
+            <div className="max-w-2xl">
+              <span className="inline-flex rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-[#f1d27a]">
+                Cart overview
+              </span>
+              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
+                Ready to check out?
+              </h1>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-zinc-400 sm:text-base">
+                Review your pieces, adjust quantities, and move to checkout from
+                a cleaner, more premium bag experience.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+                  Items
+                </p>
+                <p className="mt-3 text-3xl font-semibold">{totalQuantity}</p>
+              </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+                  Current total
+                </p>
+                <p className="mt-3 text-lg font-semibold text-[#f1d27a]">
+                  {formatCurrency(totalPrice)}
+                </p>
+              </div>
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+                  Checkout
+                </p>
+                <p className="mt-3 text-sm font-medium text-zinc-300">
+                  Secure and streamlined
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
+        <div className="grid gap-8 lg:grid-cols-[1.45fr_0.95fr]">
+          <div className="space-y-5">
+            <div className="rounded-[32px] border border-white/10 bg-[#0c0c0c] p-5 shadow-[0_20px_90px_rgba(0,0,0,0.35)] sm:p-7">
+              <div className="mb-6 flex flex-col gap-2 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                    Bag review
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                    Cart items
+                  </h2>
+                </div>
+                <p className="text-sm text-zinc-400">
+                  Fine-tune quantities before checkout.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {items.map((item) => {
+                  const isUpdating = activeItemId === item.id;
+                  const isRemoving = removingItemId === item.id;
+                  const isBusy = isUpdating || isRemoving;
+                  const itemSubtotal =
+                    item.subTotal ?? item.unitPrice * item.quantity;
+                  const productSlug = item.product?.slug;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 transition-colors hover:border-white/15 sm:p-5"
+                    >
+                      <div className="flex flex-col gap-5 md:flex-row">
+                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-white/10 bg-black/30 md:h-36 md:w-32 md:flex-shrink-0">
+                          <img
+                            src={getProductImage(item.product)}
+                            className="h-full w-full object-cover"
+                            alt={item.product?.name}
+                          />
+                        </div>
+
+                        <div className="flex min-w-0 flex-1 flex-col gap-4">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              {productSlug ? (
+                                <Link
+                                  to={`/shopping/product/${productSlug}`}
+                                  className="text-xl font-semibold tracking-tight transition-colors hover:text-[#f1d27a]"
+                                >
+                                  {item.product?.name}
+                                </Link>
+                              ) : (
+                                <h3 className="text-xl font-semibold tracking-tight">
+                                  {item.product?.name}
+                                </h3>
+                              )}
+                              <p className="mt-2 text-sm text-zinc-400">
+                                {getVariantLabel(item.variant)}
+                              </p>
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-300">
+                                  Unit {formatCurrency(item.unitPrice)}
+                                </span>
+                                <span className="rounded-full border border-[#D4AF37]/15 bg-[#D4AF37]/10 px-3 py-1 text-xs font-medium text-[#f1d27a]">
+                                  Subtotal {formatCurrency(itemSubtotal)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemove(item.id)}
+                              disabled={isBusy}
+                              className="inline-flex items-center gap-2 self-start rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isRemoving ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col gap-4 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+                                Quantity
+                              </p>
+                              <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-black/30 p-1">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleQuantityChange(item, item.quantity - 1)
+                                  }
+                                  disabled={item.quantity <= 1 || isBusy}
+                                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </button>
+                                <span className="flex h-10 min-w-12 items-center justify-center text-sm font-semibold">
+                                  {isUpdating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" />
+                                  ) : (
+                                    item.quantity
+                                  )}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleQuantityChange(item, item.quantity + 1)
+                                  }
+                                  disabled={isBusy}
+                                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="sm:text-right">
+                              <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
+                                Line total
+                              </p>
+                              <p className="mt-3 text-2xl font-semibold text-[#f1d27a]">
+                                {formatCurrency(itemSubtotal)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-zinc-400">
+                  Need a different piece? Keep browsing before you check out.
+                </p>
+                <Link
+                  to="/shopping/product-list"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#f1d27a] transition-colors hover:text-[#f7df98]"
+                >
+                  Explore more products
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {isLoading && hasLoadedOnce ? (
+              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
+                Cart totals are refreshing in the background.
+              </div>
+            ) : null}
+          </div>
+
+          <aside className="space-y-5 lg:sticky lg:top-28">
+            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#0d0d0d] shadow-[0_20px_90px_rgba(0,0,0,0.35)]">
+              <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top,#d4af3720,transparent_55%)] p-6 sm:p-7">
+                <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                  Order summary
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                  Checkout snapshot
+                </h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Everything you need before payment.
+                </p>
+              </div>
+
+              <div className="space-y-6 p-6 sm:p-7">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-sm text-zinc-400">
+                    <span>Items</span>
+                    <span className="font-medium text-white">{totalQuantity}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-zinc-400">
+                    <span>Subtotal</span>
+                    <span className="font-medium text-white">
+                      {formatCurrency(totalPrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-zinc-400">
+                    <span>Shipping</span>
+                    <span className="font-medium text-white">
+                      Calculated at checkout
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm uppercase tracking-[0.22em] text-zinc-500">
+                      Total
+                    </span>
+                    <span className="text-3xl font-semibold tracking-tight text-[#f1d27a]">
+                      {formatCurrency(totalPrice)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-zinc-400">
+                    Final delivery costs will be confirmed in the checkout step.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleProceedToCheckout}
+                  disabled={hasPendingItemAction}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-6 py-4 text-base font-bold text-black transition-colors hover:bg-[#f2ca50] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Proceed to Checkout
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <LockKeyhole className="h-4 w-4 text-[#f1d27a]" />
+                  Protected payment flow and encrypted checkout steps.
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur sm:p-7">
+              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
+                Why this cart feels better
+              </p>
+              <div className="mt-5 space-y-4">
+                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
+                  <Truck className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
+                  <div>
+                    <p className="font-medium text-white">Delivery clarity</p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                      Shipping details stay visible before you commit.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
+                  <div>
+                    <p className="font-medium text-white">Secure checkout</p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                      Your order summary stays anchored and easy to review.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
+                  <ShoppingBag className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
+                  <div>
+                    <p className="font-medium text-white">Curated flow</p>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                      Clean hierarchy keeps focus on products and the next step.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
     </div>
   );
 };

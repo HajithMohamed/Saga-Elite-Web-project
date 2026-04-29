@@ -73,12 +73,39 @@ const ImageUpload = ({
 
   /* ---------------- REMOVE IMAGE ---------------- */
 
-  const removeImage = (index) => {
+  const removeImage = async (index) => {
     const img = images[index];
-    if (img && !img.isUploaded) {
+    if (!img) return;
+
+    // Persisted image: delete on server first so it does not reappear after refresh.
+    if (img.isUploaded && img._id) {
+      setIsUploading(true);
+      setUploadError(null);
+      try {
+        const res = await axios.delete(`${API_BASE}/image/delete-image/${img._id}`, {
+          withCredentials: true,
+        });
+
+        if (res.data?.success) {
+          setImages((prev) => prev.filter((_, i) => i !== index));
+        } else {
+          setUploadError(res.data?.message || "Failed to delete image");
+        }
+      } catch (err) {
+        setUploadError(
+          err.response?.data?.message || err.message || "Failed to delete image"
+        );
+      } finally {
+        setIsUploading(false);
+      }
+      return;
+    }
+
+    // Pending local image: revoke object URL and remove locally.
+    if (!img.isUploaded && img.url?.startsWith("blob:")) {
       URL.revokeObjectURL(img.url);
     }
-    setImages(images.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   /* ---------------- UPLOAD IMAGES ---------------- */
@@ -262,7 +289,11 @@ const ImageUpload = ({
                       <Upload size={14} />
                     </Button>
                   )}
-                  <Button size="icon" onClick={() => removeImage(i)}>
+                  <Button
+                    size="icon"
+                    disabled={isUploading}
+                    onClick={() => removeImage(i)}
+                  >
                     <X size={14} />
                   </Button>
                 </div>

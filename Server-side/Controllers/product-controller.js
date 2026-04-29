@@ -37,7 +37,9 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product slug is required", 400));
     }
 
-    const product = await Product.findOne({ slug: productSlug }).populate('images');
+    const product = await Product.findOne({ slug: productSlug })
+        .populate('images')
+        .populate('drop', 'name slug releaseDate endDate');
 
     if (!product) {
         return next(new AppError("Product not found", 404));

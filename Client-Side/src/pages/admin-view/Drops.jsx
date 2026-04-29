@@ -142,7 +142,13 @@ const Drops = () => {
       const images = res.data.images || [];
       setDropImages(images);
       return images;
-    } catch {
+    } catch (error) {
+      console.error("Failed to fetch drop images", error);
+      toast({
+        title: "Unable to load drop images",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
       setDropImages([]);
       return [];
     }
@@ -182,10 +188,10 @@ const Drops = () => {
         await uploadPendingDropImages(currentEditedId);
       } else {
         result = await dispatch(createDrop(formData)).unwrap();
-        const newId = result.drop._id;
+        const newId = result._id;
         await uploadPendingDropImages(newId);
         setCurrentEditedId(newId);
-        setCurrentEditedSlug(result.drop.slug);
+        setCurrentEditedSlug(result.slug);
       }
 
       dispatch(getAllDrops());

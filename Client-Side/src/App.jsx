@@ -25,6 +25,8 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
+import AdminUsers from "./pages/admin-view/Users";
+import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -32,6 +34,7 @@ import ShoppinLayout from "./components/shopping-components/Layout";
 import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
+import Orders from "./pages/shopping-view/Orders";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
@@ -51,6 +54,8 @@ import CheckAuth from "./components/common-components/CheckAuth";
 function App() {
   const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const defaultAuthenticatedRoute =
+    user?.role === "admin" ? "/admin/dashboard" : "/shopping/home";
 
   useEffect(() => {
     dispatch(checkAuthAction());
@@ -68,7 +73,16 @@ function App() {
     <div>
       <Routes>
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Navigate to={defaultAuthenticatedRoute} replace />
+              ) : (
+                <Home />
+              )
+            }
+          />
         </Route>
 
         {/* AUTH ROUTES */}
@@ -103,6 +117,8 @@ function App() {
           <Route path="feature" element={<AdminFeatures />} />
           <Route path="order" element={<AdminOrders />} />
           <Route path="product" element={<AdminProduct />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="super-admin" element={<SuperAdminDashboard />} />
           <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops />} />
@@ -120,6 +136,7 @@ function App() {
           <Route index element={<Navigate to="home" replace />} />
           <Route path="home" element={<Home />} />
           <Route path="account" element={<Account />} />
+          <Route path="orders" element={<Orders />} />
           <Route path="cart" element={<Cart />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="product-list" element={<ProductListing />} />

@@ -2,11 +2,13 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-
 # Copy package files and install dependencies (cache-friendly)
 COPY package*.json ./
-# use --production here if you don't need devDependencies in image
-RUN npm ci --legacy-peer-deps
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 20000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 300000 \
+    && npm ci --legacy-peer-deps
 
 # copy the rest of the sources
 COPY . .

@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
+const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const adminMiddleware = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
 const {
   createOrder,
   getUserOrders,
@@ -12,7 +13,7 @@ const {
   getDashboardStats,
 } = require("../Controllers/order-controller");
 
-router.post("/create-order", authMiddleware, createOrder);
+router.post("/create-order", optionalAuthMiddleware, createOrder);
 router.get("/user-orders", authMiddleware, getUserOrders);
 router.get("/get-order/:id", authMiddleware, getOrderById);
 router.get("/get-all-orders", authMiddleware, adminMiddleware, getAllOrders);

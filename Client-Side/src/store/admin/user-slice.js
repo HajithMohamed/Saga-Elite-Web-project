@@ -1,0 +1,159 @@
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
+
+const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+
+const initialState = {
+  users: [],
+  stats: null,
+  selectedUser: null,
+  isListLoading: false,
+  isDetailLoading: false,
+  isMutating: false,
+  error: null,
+};
+
+export const fetchAdminUsers = createAsyncThunk(
+  "adminUsers/fetchAll",
+  async (_, thunkAPI) => {
+    try {
+      const response = await axios.get(`${API_BASE}/user/admin/users`, {
+        withCredentials: true,
+      });
+      return response.data.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to load users";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const fetchAdminUserDetail = createAsyncThunk(
+  "adminUsers/fetchDetail",
+  async (userId, thunkAPI) => {
+    try {
+      const response = await axios.get(`${API_BASE}/user/admin/users/${userId}`, {
+        withCredentials: true,
+      });
+      return response.data.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to load user detail";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const updateAdminUserStatus = createAsyncThunk(
+  "adminUsers/updateStatus",
+  async ({ userId, isActive }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/user/admin/users/${userId}/status`,
+        { isActive },
+        { withCredentials: true }
+      );
+      return response.data.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to update user status";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const deleteAdminUser = createAsyncThunk(
+  "adminUsers/delete",
+  async (userId, thunkAPI) => {
+    try {
+      const response = await axios.delete(`${API_BASE}/user/admin/users/${userId}`, {
+        withCredentials: true,
+      });
+      return response.data.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to delete user";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+const syncUserInList = (users, nextUser) =>
+  users.map((user) => (user._id === nextUser._id ? nextUser : user));
+
+const adminUserSlice = createSlice({
+  name: "adminUsers",
+  initialState,
+  reducers: {
+    clearSelectedAdminUser: (state) => {
+      state.selectedUser = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchAdminUsers.pending, (state) => {
+        state.isListLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAdminUsers.fulfilled, (state, action) => {
+        state.isListLoading = false;
+        state.users = action.payload.users || [];
+        state.stats = action.payload.stats || null;
+      })
+      .addCase(fetchAdminUsers.rejected, (state, action) => {
+        state.isListLoading = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchAdminUserDetail.pending, (state) => {
+        state.isDetailLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAdminUserDetail.fulfilled, (state, action) => {
+        state.isDetailLoading = false;
+        state.selectedUser = action.payload;
+        state.users = syncUserInList(state.users, action.payload);
+      })
+      .addCase(fetchAdminUserDetail.rejected, (state, action) => {
+        state.isDetailLoading = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(updateAdminUserStatus.pending, (state) => {
+        state.isMutating = true;
+        state.error = null;
+      })
+      .addCase(updateAdminUserStatus.fulfilled, (state, action) => {
+        state.isMutating = false;
+        state.users = syncUserInList(state.users, action.payload);
+        if (state.selectedUser?._id === action.payload._id) {
+          state.selectedUser = {
+            ...state.selectedUser,
+            ...action.payload,
+          };
+        }
+      })
+      .addCase(updateAdminUserStatus.rejected, (state, action) => {
+        state.isMutating = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(deleteAdminUser.pending, (state) => {
+        state.isMutating = true;
+        state.error = null;
+      })
+      .addCase(deleteAdminUser.fulfilled, (state, action) => {
+        state.isMutating = false;
+        state.users = state.users.filter((user) => user._id !== action.payload._id);
+        if (state.selectedUser?._id === action.payload._id) {
+          state.selectedUser = null;
+        }
+      })
+      .addCase(deleteAdminUser.rejected, (state, action) => {
+        state.isMutating = false;
+        state.error = action.payload || action.error.message;
+      });
+  },
+});
+
+export const { clearSelectedAdminUser } = adminUserSlice.actions;
+
+export default adminUserSlice.reducer;

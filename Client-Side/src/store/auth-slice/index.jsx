@@ -3,6 +3,11 @@ import axios from "axios";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 
+const unwrapAxiosError = (error) => {
+  const serverMsg = error?.response?.data?.message;
+  return serverMsg || error.message || "Request failed";
+};
+
 const initialState = {
   isAuthenticated: false,
   isLoading: false,
@@ -12,148 +17,131 @@ const initialState = {
 export const registerUserAction = createAsyncThunk(
   "auth/register",
   async (formData, thunkAPI) => {
-    console.log("registerUserAction using API_BASE", API_BASE);
     try {
-      const respose = await axios.post(
-        `${API_BASE}/auth/register`,
-        formData,
-        {
-          withCredentials: true,
-        },
-      ); 
-      return respose.data;
+      const response = await axios.post(`${API_BASE}/auth/register`, formData, {
+        withCredentials: true,
+      });
+      return response.data;
     } catch (err) {
-      const serverMsg = err?.response?.data?.message;
-      const message = serverMsg || err.message || "Registration failed";
-      return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(err));
     }
-  },
+  }
 );
 
 export const verifyOtpAction = createAsyncThunk(
-  'auth/otp-verify',
-  async(formData,thunkAPI)=>{
+  "auth/otp-verify",
+  async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/otp-verify`,formData,{
-        withCredentials : true
-      })
+      const apiResponse = await axios.post(`${API_BASE}/auth/otp-verify`, formData, {
+        withCredentials: true,
+      });
       return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "OTP verification failed";
-      return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
-)
-
-export const resendOtpAction = createAsyncThunk(
-  'auth/resend-otp',
-  async(formData,thunkAPI)=>{
-    try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/resend-otp`,formData,{
-        withCredentials : true
-      })
-      return apiResponse.data;
-    } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Resend OTP failed";
-      return thunkAPI.rejectWithValue(message);
-    }
-  }
-)
-
-export const loginUserAction = createAsyncThunk('auth/login',
-  async(formData, thunkAPI)=>{
-    try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/login`,formData,{
-        withCredentials:true
-      })
-      return apiResponse.data
-    } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Login Failed";
-      return thunkAPI.rejectWithValue(message);
-    }
-  }
-
-)
-
-export const checkAuthAction = createAsyncThunk(
-    "/auth/checkauth",
-    async (_, thunkAPI) => {
-      try {
-        const response = await axios.get(`${API_BASE}/auth/check-auth`, {
-          withCredentials: true,
-        });
-  
-        return response.data;
-      } catch (error) {
-        const serverMsg = error?.response?.data?.message;
-        const message = serverMsg || error.message || "Check Auth Failed";
-        return thunkAPI.rejectWithValue(message);
-      }
-    }
 );
 
-export const forgotPasswordAction = createAsyncThunk('auth/forgot-password',
-  async(formData, thunkAPI)=>{
+export const resendOtpAction = createAsyncThunk(
+  "auth/resend-otp",
+  async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/forgot-password`,formData,{
-        withCredentials : true
-      })
-      return apiResponse.data
+      const apiResponse = await axios.post(`${API_BASE}/auth/resend-otp`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-        const message = serverMsg || error.message || "Forgot password request failed";
-        return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
-)
+);
 
-export const resetPasswordAction = createAsyncThunk('auth/reset-password',
-  async(formData, thunkAPI)=>{
+export const loginUserAction = createAsyncThunk(
+  "auth/login",
+  async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/reset-password`,formData,{
-        withCredentials : true
-      })
-      return apiResponse.data
+      const apiResponse = await axios.post(`${API_BASE}/auth/login`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-        const message = serverMsg || error.message || "Password reset failed";
-        return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
-)
+);
 
-export const resendResetPasswordOtpAction = createAsyncThunk('auth/resend-reset-otp',
-  async(formData, thunkAPI)=>{
+export const checkAuthAction = createAsyncThunk(
+  "auth/checkauth",
+  async (_, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/resend-reset-otp`,formData,{
-        withCredentials : true
-      })
-      return apiResponse.data
+      const response = await axios.get(`${API_BASE}/auth/check-auth`, {
+        withCredentials: true,
+      });
+      return response.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-        const message = serverMsg || error.message || "Failed to resend reset OTP";
-        return thunkAPI.rejectWithValue(message);
+      if (error?.response?.status === 401) {
+        return { success: false };
+      }
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
-)
+);
 
-export const verifyResetOtpAction = createAsyncThunk('auth/verify-reset-otp',
-  async(formData, thunkAPI)=>{
+export const forgotPasswordAction = createAsyncThunk(
+  "auth/forgot-password",
+  async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/verify-reset-otp`,formData,{
-        withCredentials : true
-      })
-      return apiResponse.data
+      const apiResponse = await axios.post(`${API_BASE}/auth/forgot-password`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-        const message = serverMsg || error.message || "OTP verification failed";
-        return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
-)
+);
+
+export const resetPasswordAction = createAsyncThunk(
+  "auth/reset-password",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/reset-password`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const resendResetPasswordOtpAction = createAsyncThunk(
+  "auth/resend-reset-otp",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/resend-reset-otp`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const verifyResetOtpAction = createAsyncThunk(
+  "auth/verify-reset-otp",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axios.post(`${API_BASE}/auth/verify-reset-otp`, formData, {
+        withCredentials: true,
+      });
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
 
 export const googleSignInAction = createAsyncThunk(
   "auth/google-sign-in",
@@ -166,9 +154,7 @@ export const googleSignInAction = createAsyncThunk(
       );
       return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Google sign-in failed";
-      return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
 );
@@ -184,9 +170,7 @@ export const googleSignUpAction = createAsyncThunk(
       );
       return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Google sign-up failed";
-      return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
 );
@@ -202,32 +186,51 @@ export const changePasswordAction = createAsyncThunk(
       );
       return apiResponse.data;
     } catch (error) {
-      const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Password change failed";
-      return thunkAPI.rejectWithValue(message);
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
   }
 );
 
-// thunk action for logging the user out
 export const logoutUserAction = createAsyncThunk(
-  'auth/logout',
+  "auth/logout",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/auth/logout`,
-        {},
-        {
-          withCredentials: true,
-        },
-      );
+      const response = await axios.post(`${API_BASE}/auth/logout`, {}, {
+        withCredentials: true,
+      });
       return response.data;
-    } catch (err) {
-      const serverMsg = err?.response?.data?.message;
-      const message = serverMsg || err.message || 'Logout failed';
-      return thunkAPI.rejectWithValue(message);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
     }
-  },
+  }
+);
+
+export const checkGuestAction = createAsyncThunk(
+  "auth/checkGuest",
+  async (email, thunkAPI) => {
+    try {
+      const response = await axios.post(`${API_BASE}/auth/check-guest`, { email }, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const registerGuestAction = createAsyncThunk(
+  "auth/registerGuest",
+  async (email, thunkAPI) => {
+    try {
+      const response = await axios.post(`${API_BASE}/auth/register-guest`, { email }, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
 );
 
 const authSlice = createSlice({
@@ -238,47 +241,62 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
   },
-  extraReducers : (builder)=>{
-    builder.addCase(registerUserAction.pending,(state)=>{
-        state.isLoading = true
-    }).addCase(registerUserAction.fulfilled,(state,action)=>{
+  extraReducers: (builder) => {
+    builder
+      // Register
+      .addCase(registerUserAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(registerUserAction.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.data;
-        state.isAuthenticated = false
-    }).addCase(registerUserAction.rejected,(state,action)=>{
+        state.isAuthenticated = false;
+      })
+      .addCase(registerUserAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
-        state.isAuthenticated = false
-    })
-    .addCase(verifyOtpAction.pending,(state)=>{
-        state.isLoading = true
-    }).addCase(verifyOtpAction.fulfilled,(state,action)=>{
+        state.isAuthenticated = false;
+      })
+      // OTP Verification
+      .addCase(verifyOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(verifyOtpAction.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.data.user;
-        state.isAuthenticated = true
-    }).addCase(verifyOtpAction.rejected,(state,action)=>{
+        state.isAuthenticated = true;
+      })
+      .addCase(verifyOtpAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
-        state.isAuthenticated = false
-    })
-    .addCase(resendOtpAction.pending,(state)=>{
-        state.isLoading = true
-    }).addCase(resendOtpAction.fulfilled,(state,action)=>{
+        state.isAuthenticated = false;
+      })
+      // Resend OTP
+      .addCase(resendOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(resendOtpAction.fulfilled, (state) => {
         state.isLoading = false;
-    }).addCase(resendOtpAction.rejected,(state,action)=>{
+      })
+      .addCase(resendOtpAction.rejected, (state) => {
         state.isLoading = false;
-    })
-    .addCase(loginUserAction.pending,(state)=>{
-        state.isLoading = true
-    }).addCase(loginUserAction.fulfilled,(state,action)=>{
+      })
+      // Login
+      .addCase(loginUserAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(loginUserAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true
-    }).addCase(loginUserAction.rejected,(state,action)=>{
+        state.user = action.payload.success ? action.payload.data : null;
+        state.isAuthenticated = action.payload.success;
+      })
+      .addCase(loginUserAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
-        state.isAuthenticated = false
-    })    .addCase(checkAuthAction.pending, (state) => {
+        state.isAuthenticated = false;
+      })
+      // Check Auth
+      .addCase(checkAuthAction.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(checkAuthAction.fulfilled, (state, action) => {
@@ -291,56 +309,48 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
-      }).addCase(forgotPasswordAction.pending, (state) => {
+      })
+      // Forgot Password
+      .addCase(forgotPasswordAction.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(forgotPasswordAction.fulfilled, (state, action) => {
+      .addCase(forgotPasswordAction.fulfilled, (state) => {
         state.isLoading = false;
-        // Don't change auth state for forgot password
       })
       .addCase(forgotPasswordAction.rejected, (state) => {
         state.isLoading = false;
-        // Don't change auth state for forgot password
-      }).addCase(resetPasswordAction.pending, (state) => {
+      })
+      // Reset Password
+      .addCase(resetPasswordAction.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(resetPasswordAction.fulfilled, (state, action) => {
+      .addCase(resetPasswordAction.fulfilled, (state) => {
         state.isLoading = false;
-        // Password reset successful, but user needs to login again
       })
       .addCase(resetPasswordAction.rejected, (state) => {
         state.isLoading = false;
-      }).addCase(resendResetPasswordOtpAction.pending, (state) => {
+      })
+      // Resend Reset OTP
+      .addCase(resendResetPasswordOtpAction.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(resendResetPasswordOtpAction.fulfilled, (state, action) => {
+      .addCase(resendResetPasswordOtpAction.fulfilled, (state) => {
         state.isLoading = false;
       })
       .addCase(resendResetPasswordOtpAction.rejected, (state) => {
         state.isLoading = false;
       })
+      // Verify Reset OTP
       .addCase(verifyResetOtpAction.pending, (state) => {
         state.isLoading = true;
       })
-      .addCase(verifyResetOtpAction.fulfilled, (state, action) => {
+      .addCase(verifyResetOtpAction.fulfilled, (state) => {
         state.isLoading = false;
       })
-      .addCase(verifyResetOtpAction.rejected, (state, action) => {
+      .addCase(verifyResetOtpAction.rejected, (state) => {
         state.isLoading = false;
       })
-      // logout handling
-      .addCase(logoutUserAction.pending, (state) => {
-        state.isLoading = true;
-      })
-      .addCase(logoutUserAction.fulfilled, (state) => {
-        state.isLoading = false;
-        // reset to initial state on successful logout
-        state.user = null;
-        state.isAuthenticated = false;
-      })
-      .addCase(logoutUserAction.rejected, (state) => {
-        state.isLoading = false;
-      })
+      // Google Sign In
       .addCase(googleSignInAction.pending, (state) => {
         state.isLoading = true;
       })
@@ -354,6 +364,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
       })
+      // Google Sign Up
       .addCase(googleSignUpAction.pending, (state) => {
         state.isLoading = true;
       })
@@ -367,6 +378,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
       })
+      // Change Password
       .addCase(changePasswordAction.pending, (state) => {
         state.isLoading = true;
       })
@@ -375,10 +387,45 @@ const authSlice = createSlice({
       })
       .addCase(changePasswordAction.rejected, (state) => {
         state.isLoading = false;
+      })
+      // Logout
+      .addCase(logoutUserAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutUserAction.fulfilled, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      .addCase(logoutUserAction.rejected, (state) => {
+        state.isLoading = false;
+      })
+      // Check Guest
+      .addCase(checkGuestAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(checkGuestAction.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(checkGuestAction.rejected, (state) => {
+        state.isLoading = false;
+      })
+      // Register Guest
+      .addCase(registerGuestAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(registerGuestAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.success ? action.payload.data : null;
+        state.isAuthenticated = action.payload.success;
+      })
+      .addCase(registerGuestAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
       });
-    }
+  },
 });
 
 export const { setUser } = authSlice.actions;
-
 export default authSlice.reducer;

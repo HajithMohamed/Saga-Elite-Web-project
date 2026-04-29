@@ -8,7 +8,8 @@ import {
   Settings,
   X,
   Heart,
-  Shield
+  Shield,
+  Package
 } from "lucide-react";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -40,15 +41,9 @@ const computeCountdown = (targetDate) => {
 
   return {
     days: String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, "0"),
-    hours: String(
-      Math.floor((diff / (1000 * 60 * 60)) % 24)
-    ).padStart(2, "0"),
-    minutes: String(
-      Math.floor((diff / 1000 / 60) % 60)
-    ).padStart(2, "0"),
-    seconds: String(
-      Math.floor((diff / 1000) % 60)
-    ).padStart(2, "0"),
+    hours: String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, "0"),
+    minutes: String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, "0"),
+    seconds: String(Math.floor((diff / 1000) % 60)).padStart(2, "0"),
   };
 };
 
@@ -273,11 +268,7 @@ const MainHeader = () => {
             </Link>
 
             <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() =>
-                  setUserMenuOpen(!userMenuOpen)
-                }
-              >
+              <button onClick={() => setUserMenuOpen(!userMenuOpen)}>
                 <User className="w-6 h-6"/>
               </button>
 
@@ -288,6 +279,7 @@ const MainHeader = () => {
                     <Link
                       to="/admin/dashboard"
                       className="flex items-center gap-3 px-4 py-2"
+                      onClick={() => setUserMenuOpen(false)}
                     >
                       <Shield className="w-4 h-4"/>
                       Admin Panel
@@ -296,15 +288,25 @@ const MainHeader = () => {
 
                   <Link
                     to="/shopping/account"
-                    className="flex items-center gap-3 px-4 py-2"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
                   >
                     <Settings className="w-4 h-4"/>
                     My Account
                   </Link>
 
+                  <Link
+                    to="/shopping/orders"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <Package className="w-4 h-4"/>
+                    Order History
+                  </Link>
+
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors"
                   >
                     <LogOut className="w-4 h-4"/>
                     Sign Out
