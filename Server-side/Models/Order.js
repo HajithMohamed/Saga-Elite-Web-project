@@ -59,8 +59,16 @@ const orderSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
+    },
+    guest: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Guest",
+    },
+    guestEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
     },
     items: {
       type: [orderItemSchema],
@@ -105,6 +113,11 @@ const orderSchema = new mongoose.Schema(
     paymentProofHash: {
       type: String,
       trim: true,
+    },
+    referenceNumber: {
+      type: String,
+      trim: true,
+      index: true,
     },
     status: {
       type: String,

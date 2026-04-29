@@ -22,9 +22,9 @@ const DropDetails = () => {
       setError(null);
       try {
         const res = await axios.get(`${API_BASE}/drops/get-single-drop/${slug}`);
-        if (res.data?.status === "success" && res.data?.data?.drop) {
-          setDrop(res.data.data.drop);
-          setProducts(res.data.data.products || []);
+        if (res.data?.success && res.data?.drop) {
+          setDrop(res.data.drop);
+          setProducts(res.data.products || []);
         } else {
           setError("Drop not found");
         }

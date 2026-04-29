@@ -1,5 +1,5 @@
 import React from 'react'
-import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, X, User, Package, ImagePlus, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, ShoppingCart, Star, LogOut, User, Package, ImagePlus, MessageSquare, Users, Shield } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAction } from '@/store/auth-slice'
@@ -9,17 +9,22 @@ const SideBar = () => {
   const location = useLocation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { isLoading } = useSelector((state) => state.auth)
+  const { isLoading, user } = useSelector((state) => state.auth)
   
   const menuItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: 'Home Images', path: '/admin/home-images', icon: <ImagePlus className="h-5 w-5" /> },
     { label: 'Products', path: '/admin/product', icon: <ShoppingBag className="h-5 w-5" /> },
     { label: 'Orders', path: '/admin/order', icon: <ShoppingCart className="h-5 w-5" /> },
+    { label: 'Users', path: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { label: 'Notifications', path: '/admin/notifications', icon: <MessageSquare className="h-5 w-5" /> },
     { label: 'Features', path: '/admin/feature', icon: <Star className="h-5 w-5" /> },
     { label: 'Drops', path: '/admin/drop', icon: <Package className="h-5 w-5" /> },
   ]
+
+  if (user?.role === 'super_admin' || user?.role === 'superadmin') {
+    menuItems.push({ label: 'Super Admins', path: '/admin/super-admin', icon: <Shield className="h-5 w-5" /> });
+  }
 
   const handleLogout = async () => {
     try {

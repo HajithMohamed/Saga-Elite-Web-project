@@ -127,15 +127,24 @@ const Home = () => {
           console.warn("Archive products endpoint returned data but no list", archiveProductsRes.data);
         }
 
-        if (dropsRes?.data?.drops) {
-          const drops = dropsRes.data.drops;
-          const validDrops = drops
-            .filter((drop) => !drop.endDate || new Date(drop.endDate) > new Date())
-            .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+        const drops = Array.isArray(dropsRes?.data?.drops) ? dropsRes.data.drops : [];
 
-          setValidDrops(validDrops);
-          setNextDrop(validDrops[0] || null);
-        }
+        const availableDrops = drops
+          .filter((drop) => !drop?.endDate || new Date(drop.endDate) > new Date())
+          .sort((a, b) => new Date(a.releaseDate || 0) - new Date(b.releaseDate || 0));
+
+        const upcomingDrop =
+          availableDrops.find(
+            (drop) => drop?.releaseDate && new Date(drop.releaseDate) > new Date()
+          ) || null;
+
+        const liveDrop =
+          availableDrops.find(
+            (drop) => !drop?.releaseDate || new Date(drop.releaseDate) <= new Date()
+          ) || null;
+
+        setValidDrops(availableDrops);
+        setNextDrop(upcomingDrop || liveDrop);
       } catch (error) {
         console.error("Failed to load homepage data", error);
         setHomepageError("Unable to load homepage products. Please refresh the page.");

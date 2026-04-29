@@ -91,8 +91,8 @@ const MainFooter = () => {
           {/* Account Column */}
           <div className="flex flex-col gap-3">
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Account</h3>
-            <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My orders</Link>
-            <Link to="/shopping/order-tracking" className="text-sm hover:text-[#D4AF37] transition-all">Order tracking</Link>
+            <Link to="/shopping/orders" className="text-sm hover:text-[#D4AF37] transition-all">My orders</Link>
+            <Link to="/shopping/orders" className="text-sm hover:text-[#D4AF37] transition-all">Order tracking</Link>
             <Link to="/shopping/wishlist" className="text-sm hover:text-[#D4AF37] transition-all">Wishlist</Link>
             <Link to="/shopping/notifications" className="text-sm hover:text-[#D4AF37] transition-all">Notifications</Link>
             <Link to="/shopping/account" className="text-sm hover:text-[#D4AF37] transition-all">My account</Link>

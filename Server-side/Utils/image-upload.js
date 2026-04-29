@@ -14,7 +14,7 @@ const uploadToCloudinary = (buffer, folder, mimetype = "image/jpeg", retries = 3
     return new Promise((resolve, reject) => {
         const attempt = (attemptsLeft) => {
             const uploadStream = cloudinary.uploader.upload_stream(
-                { folder, resource_type: "image", timeout: 60000 },
+                { folder, resource_type: "auto", timeout: 60000 },
                 (error, result) => {
                     if (error) {
                         if (attemptsLeft > 0 && isTransientError(error)) {

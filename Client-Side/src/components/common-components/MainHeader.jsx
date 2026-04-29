@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, LayoutDashboard, Shield } from "lucide-react";
+import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Shield, Package } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUserAction } from "@/store/auth-slice";
 import { getAllDrops } from "@/store/admin/drop-slice";
-import { fetchNotifications } from "@/store/notification-slice";
 import { toast } from "@/hooks/use-toast";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 
@@ -203,6 +202,14 @@ const MainHeader = () => {
                     <Link to="/shopping/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors">
                       <Settings className="w-4 h-4" />
                       My Account
+                    </Link>
+                    <Link
+                      to="/shopping/orders"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                    >
+                      <Package className="w-4 h-4" />
+                      Order History
                     </Link>
                     <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors">
                       <LogOut className="w-4 h-4" />
