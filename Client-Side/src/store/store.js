@@ -7,6 +7,7 @@ import orderReducer from "./order-slice";
 import cartReducer from "./cart-slice";
 import notificationReducer from "./notification-slice";
 import superAdminReducer from "./admin/super-admin-slice";
+import reviewReducer from "./reviewSlice";
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     cart: cartReducer,
     notification: notificationReducer,
     superAdmin: superAdminReducer,
+    review: reviewReducer,
   },
 });
 

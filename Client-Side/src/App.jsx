@@ -27,6 +27,7 @@ import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
+import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -39,6 +40,8 @@ import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
 import DropDetails from "./pages/shopping-view/DropDetails"; // ✅ added
+import ProductReviewsPage from "./pages/ProductReviewsPage";
+import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
@@ -83,6 +86,15 @@ function App() {
               )
             }
           />
+          <Route path="/product/:productId/reviews" element={<ProductReviewsPage />} />
+          <Route
+            path="/account/my-reviews"
+            element={
+              <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+                <MyReviewsPage />
+              </CheckAuth>
+            }
+          />
         </Route>
 
         {/* AUTH ROUTES */}
@@ -120,6 +132,7 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="super-admin" element={<SuperAdminDashboard />} />
           <Route path="notifications" element={<ErrorBoundary><NotificationsManager /></ErrorBoundary>} />
+          <Route path="reviews" element={<ReviewModerationPage />} />
           <Route path="account" element={<Account />} />
           <Route path="drop" element={<AdminDrops />} />
         </Route>
@@ -146,6 +159,7 @@ function App() {
           <Route path="checkout-success" element={<OrderSuccess />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="order-tracking" element={<OrderTracking />} /> {/* ✅ kept */}
+          <Route path="account/my-reviews" element={<MyReviewsPage />} />
         </Route>
 
         {/* OTHER ROUTES */}

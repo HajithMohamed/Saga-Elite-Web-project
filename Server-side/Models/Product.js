@@ -123,6 +123,19 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     isLimited: {
       type: Boolean,
       default: true,
