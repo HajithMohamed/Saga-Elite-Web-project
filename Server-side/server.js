@@ -22,6 +22,7 @@ const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
 const userRoutes = require("./Routes/userRoutes");
 const notificationRoutes = require("./Routes/notification-routes"); // ✅ added
+const contactRoutes = require("./Routes/contactRoutes");
 
 app.use(helmet({ crossOriginOpenerPolicy: false }));
 app.use(cookieParser());
@@ -42,6 +43,7 @@ app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/notifications", notificationRoutes); // ✅ kept
+app.use("/api/v1/contact", contactRoutes);
 
 app.use(globalErrorController);
 
