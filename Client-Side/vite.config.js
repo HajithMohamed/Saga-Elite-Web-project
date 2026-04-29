@@ -16,6 +16,16 @@ export default defineConfig({
       host: 'localhost',
       protocol: 'ws',
     },
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+    proxy: {
+      '/api/v1/': {
+        target: 'http://backend:5001',
+        changeOrigin: true,
+      }
+    }
   },
   resolve : {
     alias : {

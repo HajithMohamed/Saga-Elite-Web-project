@@ -1,18 +1,7 @@
 FROM node:20-alpine
-
 WORKDIR /app
-
-# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm config set fetch-retries 5 \
-    && npm config set fetch-retry-mintimeout 20000 \
-    && npm config set fetch-retry-maxtimeout 120000 \
-    && npm config set fetch-timeout 300000 \
-    && if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
-# copy source files
+RUN npm install
 COPY . .
-
 EXPOSE 5173
-
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["npx", "vite", "--host", "0.0.0.0", "--port", "5173"]

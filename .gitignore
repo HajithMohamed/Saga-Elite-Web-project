@@ -10,6 +10,7 @@ npm-debug.log
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Build / output
 dist/
