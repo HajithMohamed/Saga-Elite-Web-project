@@ -80,7 +80,7 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     shippingAddress: "",
     contactNumber: "",
-    paymentMethod: "manual",
+    paymentMethod: "manual_bank_transfer",
     notes: "",
     guestEmail: "",
   });
@@ -112,7 +112,7 @@ const Checkout = () => {
     : null;
 
   useEffect(() => {
-    const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
+      if (!["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
     const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
 
     if (routedBuyNowItem) {
@@ -316,9 +316,8 @@ const Checkout = () => {
       return;
     }
 
-    if (
-      formData.paymentMethod === "manual" &&
-      !receiptFile
+      "payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"
+    ].includes(formData.paymentMethod)) {
     ) {
       setFormError("Please upload a receipt for manual payment.");
       return;
@@ -370,7 +369,7 @@ const Checkout = () => {
       setFormError("Contact number is required.");
       return;
     }
-    if (!["payhere", "gpay", "manual", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
+    if (!["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
       setFormError("Please select a valid payment method.");
       return;
     }
@@ -409,9 +408,9 @@ const Checkout = () => {
     setIsUploading(true);
     try {
       let uploadedUrl = "";
-      if (formData.paymentMethod === "manual") {
+      if (["manual", "manual_bank_transfer"].includes(formData.paymentMethod)) {
         uploadedUrl = await uploadReceipt();
-        if (!uploadedUrl) {
+        if (formData.paymentMethod === "manual" && !uploadedUrl) {
           setFormError("Receipt upload failed. Please try again.");
           return;
         }
@@ -437,7 +436,7 @@ const Checkout = () => {
         contactNumber: formData.contactNumber,
         paymentMethod: formData.paymentMethod,
         paymentProofUrl:
-          formData.paymentMethod === "manual"
+          ["manual", "manual_bank_transfer"].includes(formData.paymentMethod)
             ? uploadedUrl
             : "",
         notes: formData.notes,
@@ -445,6 +444,9 @@ const Checkout = () => {
       };
 
       const resultAction = await dispatch(createOrder(payload)).unwrap();
+      const createdOrder = resultAction?.data || {};
+      const createdOrderId = resultAction?.orderId || createdOrder._id || `TEM-${Math.floor(Math.random() * 100000)}`;
+      const resolvedTotal = createdOrder.totalAmount || checkoutTotal || checkoutTotalAmount || totalAmount;
       if (!isBuyNow) {
         dispatch(fetchCartAction());
       }
@@ -457,13 +459,26 @@ const Checkout = () => {
 
       persistBuyNowItem(null);
 
-      navigate("/shopping/checkout-success", { 
-        state: { 
-          orderId: resultAction?.orderId || resultAction?._id || "TEM-" + Math.floor(Math.random() * 100000),
-          totalAmount: checkoutTotal || checkoutTotalAmount || totalAmount,
-          referenceNumber: resultAction?.referenceNumber,
-          paymentMethod: formData.paymentMethod
-        } 
+      if (formData.paymentMethod === "manual_bank_transfer") {
+        navigate(
+          `/shopping/manual-payment?orderId=${createdOrderId}&amount=${resolvedTotal}`,
+          {
+            state: {
+              orderId: createdOrderId,
+              amount: resolvedTotal,
+            },
+          },
+        );
+        return;
+      }
+
+      navigate("/shopping/checkout-success", {
+        state: {
+          orderId: createdOrderId,
+          totalAmount: resolvedTotal,
+          referenceNumber: createdOrder.referenceNumber,
+          paymentMethod: formData.paymentMethod,
+        },
       });
     } catch (err) {
       toast({
@@ -594,7 +609,7 @@ const Checkout = () => {
               {/* Payment Choice */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { id: "manual", label: "Bank Transfer", icon: <Building2 className="w-6 h-6" /> },
+                  { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="w-6 h-6" /> },
                   { id: "card", label: "Card Payment", icon: <CreditCard className="w-6 h-6" /> }
                 ].map(method => (
                   <div 
@@ -680,7 +695,7 @@ const Checkout = () => {
                   </>
                 )}
 
-                {formData.paymentMethod === "manual" && (
+                {formData.paymentMethod === "manual_bank_transfer" && (
                   <div className="space-y-6">
                     <div className="bg-[#111] border border-gray-800 p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
                        <div className="absolute top-0 right-0 bg-[#D4AF37]/10 w-32 h-32 blur-3xl rounded-full"></div>
@@ -712,7 +727,7 @@ const Checkout = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt (Optional)</label>
                       <div
                         onClick={() => fileInputRef.current?.click()}
                         onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}

@@ -1,11 +1,33 @@
-import { loadOrders } from './demo-state.js';
+import { renderNav, updateHeader } from "./common.js";
+import { loadOrders } from "./demo-state.js";
 
-const orderIdEl = document.getElementById('order-id');
-const params = new URLSearchParams(window.location.search);
-const orderId = params.get('orderId');
+function resolveOrderId() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("orderId");
+  if (fromQuery) {
+    return fromQuery;
+  }
 
-if (orderIdEl) {
+  const fromStorage = localStorage.getItem("saga_demo_last_order");
+  if (fromStorage) {
+    return fromStorage;
+  }
+
   const orders = loadOrders();
-  const order = orders.find((item) => item.id === orderId);
-  orderIdEl.textContent = order ? order.id : orderId || 'ORD-000000';
+  return orders.length > 0 ? orders[orders.length - 1].id : "ORD-000000";
 }
+
+function initOrderSuccess() {
+  renderNav({ activePath: "product-listing.html", mode: "shopping" });
+  updateHeader();
+
+  const display = document.getElementById("order-id-display");
+  if (!display) {
+    return;
+  }
+
+  display.textContent = resolveOrderId();
+  display.classList.remove("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", initOrderSuccess);

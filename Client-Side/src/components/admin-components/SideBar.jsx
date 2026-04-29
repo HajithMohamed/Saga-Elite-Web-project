@@ -12,7 +12,8 @@ import {
   Users,
   Shield,
   CreditCard,
-  StarHalf
+  StarHalf,
+  Landmark
 } from 'lucide-react'
 
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -22,7 +23,6 @@ import { toast } from '@/hooks/use-toast'
 import axios from 'axios'
 
 const SideBar = () => {
-
   const location = useLocation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -95,6 +95,12 @@ const SideBar = () => {
       path: '/admin/payments/pending',
       icon: <CreditCard className="h-5 w-5" />,
       badge: pendingPaymentCount
+    },
+
+    {
+      label: 'Manual Payments',
+      path: '/admin/manual-payments',
+      icon: <Landmark className="h-5 w-5" />
     },
 
     {
@@ -191,7 +197,6 @@ const SideBar = () => {
   return (
     <div className="fixed inset-y-0 left-0 z-50 w-64 bg-black border-r border-gray-800 flex flex-col transform transition-transform duration-300 lg:translate-x-0">
 
-      {/* Brand */}
       <div className="p-8 border-b border-gray-800">
         <Link
           to="/admin/dashboard"
@@ -207,7 +212,6 @@ const SideBar = () => {
         </Link>
       </div>
 
-      {/* Menu */}
       <nav className="flex-1 px-4 py-8 space-y-4">
         {menuItems.map((item) => (
           <Link
@@ -249,7 +253,6 @@ const SideBar = () => {
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="p-6 border-t border-gray-800 space-y-3">
 
         <Link
@@ -261,24 +264,11 @@ const SideBar = () => {
                 : 'text-gray-400 hover:bg-gray-900 border-transparent hover:border-gray-800'
             }`}
         >
-          <div
-            className={`transition-transform duration-200 ${
-              location.pathname === '/admin/account'
-                ? 'scale-110'
-                : 'group-hover:scale-110 group-hover:text-[#D4AF37]'
-            }`}
-          >
-            <User className="h-5 w-5" />
-          </div>
+          <User className="h-5 w-5" />
 
           <span className="font-bold text-sm tracking-wide uppercase font-sans">
             My Account
           </span>
-
-          {location.pathname === '/admin/account' && (
-            <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-black/50" />
-          )}
-
         </Link>
 
         <button
@@ -290,24 +280,12 @@ const SideBar = () => {
               : 'text-gray-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'
           }`}
         >
-
-          <LogOut className="h-5 w-5 group-hover:animate-pulse" />
+          <LogOut className="h-5 w-5" />
 
           <span className="font-bold text-sm tracking-wide uppercase font-sans">
-            {isLoading
-              ? 'Logging out…'
-              : 'Log Out'}
+            {isLoading ? 'Logging out…' : 'Log Out'}
           </span>
-
         </button>
-
-        <div className="mt-6 flex flex-col items-center gap-1 opacity-50 grayscale hover:grayscale-0 transition-all">
-          <span className="text-[10px] font-medium text-gray-500">
-            v1.2.0 PRE-RELEASE
-          </span>
-
-          <div className="h-px w-8 bg-gray-800" />
-        </div>
 
       </div>
     </div>

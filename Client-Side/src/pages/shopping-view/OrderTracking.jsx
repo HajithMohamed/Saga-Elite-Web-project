@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderById } from "@/store/order-slice";
 
 const TRACKING_STEPS = [
-  { key: "pending", label: "Placed" },
+  { key: "pending_payment", label: "Awaiting Transfer" },
   { key: "verification_pending", label: "Payment Review" },
   { key: "confirmed", label: "Confirmed" },
   { key: "shipped", label: "Shipped" },
@@ -128,13 +128,15 @@ const OrderTracking = () => {
 
   const heroTitle = isCancelled
     ? "Cancelled."
+    : status === "pending_payment"
+      ? "Awaiting Transfer."
+      : status === "verification_pending"
+        ? "Payment Review."
     : status === "delivered"
       ? "Delivered."
       : status === "shipped"
         ? "In Transit."
-        : status === "verification_pending"
-          ? "Payment Review."
-          : "Processing.";
+        : "Processing.";
 
   return (
     <div className="min-h-screen bg-black text-white">

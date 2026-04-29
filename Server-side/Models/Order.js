@@ -97,7 +97,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["payhere", "gpay", "manual", "card", "lankapay", "cash"],
+      enum: ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"],
       required: true,
     },
     paymentProofUrl: {
@@ -114,6 +114,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    paymentVerifiedAt: {
+      type: Date,
+      default: null,
+    },
     referenceNumber: {
       type: String,
       trim: true,
@@ -121,7 +125,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"],
       default: "pending",
       index: true,
     },

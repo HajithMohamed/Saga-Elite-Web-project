@@ -25,7 +25,7 @@ const OrderSuccess = () => {
         <div className="mt-8 bg-[#111] p-6 rounded-2xl border border-gray-800 inline-block">
           <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Order Reference</span>
           <p className="font-bold text-2xl tracking-widest text-[#D4AF37]">#{orderId}</p>
-          {paymentMethod === "manual" && referenceNumber && (
+          {["manual", "manual_bank_transfer"].includes(paymentMethod) && referenceNumber && (
             <div className="mt-4 pt-4 border-t border-gray-700">
               <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Payment Reference</span>
               <p className="font-bold text-lg tracking-widest text-[#D4AF37]">{referenceNumber}</p>

@@ -32,6 +32,8 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
+import PendingPaymentsPage from "./pages/Admin/PendingPaymentsPage";
+import PaymentVerificationPage from "./pages/Admin/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
@@ -54,6 +56,7 @@ import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
 import OrderTracking from "./pages/shopping-view/OrderTracking";
+import ManualPaymentPage from "./pages/ManualPaymentPage";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -62,7 +65,13 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 import CheckAuth from "./components/common-components/CheckAuth";
 
 function App() {
-  const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+  const {
+    isAuthenticated,
+    user,
+    isLoading
+  } = useSelector(
+    (state) => state.auth
+  );
 
   const dispatch = useDispatch();
 
@@ -87,23 +96,23 @@ function App() {
     <div>
       <Routes>
 
-        {/* PUBLIC ROUTES */}
+        {/* PUBLIC */}
         <Route element={<PublicLayout />}>
+
           <Route
             path="/"
             element={
-              isAuthenticated ? (
-                <Navigate
-                  to={defaultAuthenticatedRoute}
-                  replace
-                />
-              ) : (
-                <Home />
-              )
+              isAuthenticated
+                ? (
+                  <Navigate
+                    to={defaultAuthenticatedRoute}
+                    replace
+                  />
+                )
+                : <Home />
             }
           />
 
-          {/* Legal Pages */}
           <Route
             path="/legal/privacy-policy"
             element={<PrivacyPolicyPage />}
@@ -129,7 +138,6 @@ function App() {
             element={<AboutPage />}
           />
 
-          {/* Public/Product Review Pages */}
           <Route
             path="/product/:productId/reviews"
             element={<ProductReviewsPage />}
@@ -146,9 +154,11 @@ function App() {
               </CheckAuth>
             }
           />
+
         </Route>
 
-        {/* AUTH ROUTES */}
+
+        {/* AUTH */}
         <Route
           path="/auth"
           element={
@@ -163,25 +173,14 @@ function App() {
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="login" element={<Login />} />
-          <Route
-            path="forgot-password"
-            element={<ForgotPassword />}
-          />
-          <Route
-            path="reset-password-otp"
-            element={<VerifyResetOtp />}
-          />
-          <Route
-            path="set-new-password"
-            element={<SetNewPassword />}
-          />
-          <Route
-            path="verify-otp"
-            element={<VerifyOtp />}
-          />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password-otp" element={<VerifyResetOtp />} />
+          <Route path="set-new-password" element={<SetNewPassword />} />
+          <Route path="verify-otp" element={<VerifyOtp />} />
         </Route>
 
-        {/* ADMIN ROUTES */}
+
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={
@@ -193,40 +192,19 @@ function App() {
             </CheckAuth>
           }
         >
-          <Route
-            path="dashboard"
-            element={<AdminDashboard />}
-          />
+          <Route path="dashboard" element={<AdminDashboard />} />
 
-          <Route
-            path="home-images"
-            element={<AdminHomeImages />}
-          />
+          <Route path="home-images" element={<AdminHomeImages />} />
 
-          <Route
-            path="feature"
-            element={<AdminFeatures />}
-          />
+          <Route path="feature" element={<AdminFeatures />} />
 
-          <Route
-            path="order"
-            element={<AdminOrders />}
-          />
+          <Route path="order" element={<AdminOrders />} />
 
-          <Route
-            path="product"
-            element={<AdminProduct />}
-          />
+          <Route path="product" element={<AdminProduct />} />
 
-          <Route
-            path="users"
-            element={<AdminUsers />}
-          />
+          <Route path="users" element={<AdminUsers />} />
 
-          <Route
-            path="super-admin"
-            element={<SuperAdminDashboard />}
-          />
+          <Route path="super-admin" element={<SuperAdminDashboard />} />
 
           <Route
             path="notifications"
@@ -235,6 +213,16 @@ function App() {
                 <NotificationsManager />
               </ErrorBoundary>
             }
+          />
+
+          <Route
+            path="manual-payments"
+            element={<PendingPaymentsPage />}
+          />
+
+          <Route
+            path="manual-payments/:paymentId"
+            element={<PaymentVerificationPage />}
           />
 
           <Route
@@ -251,9 +239,11 @@ function App() {
             path="drop"
             element={<AdminDrops />}
           />
+
         </Route>
 
-        {/* SHOPPING ROUTES */}
+
+        {/* SHOPPING */}
         <Route
           path="/shopping"
           element={
@@ -270,30 +260,15 @@ function App() {
             element={<Navigate to="home" replace />}
           />
 
-          <Route
-            path="home"
-            element={<Home />}
-          />
+          <Route path="home" element={<Home />} />
 
-          <Route
-            path="account"
-            element={<Account />}
-          />
+          <Route path="account" element={<Account />} />
 
-          <Route
-            path="orders"
-            element={<Orders />}
-          />
+          <Route path="orders" element={<Orders />} />
 
-          <Route
-            path="cart"
-            element={<Cart />}
-          />
+          <Route path="cart" element={<Cart />} />
 
-          <Route
-            path="checkout"
-            element={<Checkout />}
-          />
+          <Route path="checkout" element={<Checkout />} />
 
           <Route
             path="product-list"
@@ -325,6 +300,11 @@ function App() {
           />
 
           <Route
+            path="manual-payment"
+            element={<ManualPaymentPage />}
+          />
+
+          <Route
             path="wishlist"
             element={<Wishlist />}
           />
@@ -338,9 +318,11 @@ function App() {
             path="account/my-reviews"
             element={<MyReviewsPage />}
           />
+
         </Route>
 
-        {/* OTHER ROUTES */}
+
+        {/* OTHER */}
         <Route
           path="/un-auth-page"
           element={<UnauthPage />}

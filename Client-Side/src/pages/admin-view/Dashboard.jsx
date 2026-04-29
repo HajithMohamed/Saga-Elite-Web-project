@@ -28,6 +28,7 @@ const numberFormatter = new Intl.NumberFormat("en-LK");
 
 const statusToneMap = {
   pending: "bg-amber-500/10 text-amber-300 border-amber-500/20",
+  pending_payment: "bg-amber-500/10 text-amber-300 border-amber-500/20",
   verification_pending: "bg-orange-500/10 text-orange-300 border-orange-500/20",
   confirmed: "bg-sky-500/10 text-sky-300 border-sky-500/20",
   shipped: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20",
@@ -69,6 +70,12 @@ const quickLinks = [
     description: "Approve manual payments and move fulfilment forward.",
     to: "/admin/order",
     icon: ShoppingCart,
+  },
+  {
+    title: "Manual payments",
+    description: "Review bank-transfer proofs and verify payments.",
+    to: "/admin/manual-payments",
+    icon: Wallet,
   },
   {
     title: "Product catalog",
@@ -185,6 +192,7 @@ const Dashboard = () => {
 
   const statusCards = [
     { key: "pending", icon: Clock3 },
+    { key: "pending_payment", icon: Wallet },
     { key: "verification_pending", icon: Wallet },
     { key: "confirmed", icon: Sparkles },
     { key: "shipped", icon: Truck },
