@@ -102,9 +102,12 @@ const io = new Server(server, {
       process.env.CLIENT_URL ||
       process.env.FRONTEND_URL ||
       "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true
   }
 });
+
+app.set("io", io);
 
 setSocketServer(io);
 

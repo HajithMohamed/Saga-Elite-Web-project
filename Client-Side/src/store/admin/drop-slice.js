@@ -100,7 +100,15 @@ export const deleteDrop = createAsyncThunk(
 const dropSlice = createSlice({
   name: "drop",
   initialState,
-  reducers: {},
+  reducers: {
+    updateDropInStore: (state, action) => {
+      const { dropId, drop } = action.payload;
+      const idx = state.drops.findIndex(d => d._id === dropId);
+      if (idx !== -1) {
+        state.drops[idx] = drop;
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getAllDrops.pending, (state) => {
@@ -154,5 +162,7 @@ const dropSlice = createSlice({
       });
   },
 });
+
+export const { updateDropInStore } = dropSlice.actions;
 
 export default dropSlice.reducer;

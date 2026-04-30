@@ -191,6 +191,14 @@ const updateDrop = catchAsync(async (req, res, next) => {
 
     const populatedDrop = await Drop.findById(drop._id).populate("images");
 
+    const io = req.app.get("io");
+    if (io) {
+        io.emit("drop:updated", {
+            dropId: populatedDrop._id,
+            drop: populatedDrop
+        });
+    }
+
     res.status(200).json({
         success: true,
         message: "Drop updated successfully",
@@ -290,6 +298,14 @@ const archiveDrop = catchAsync(async (req, res, next) => {
         drop.isPublished = false;
     }
     await drop.save();
+
+    const io = req.app.get("io");
+    if (io) {
+        io.emit("drop:updated", {
+            dropId: drop._id,
+            drop: drop
+        });
+    }
 
     res.status(200).json({
         success: true,

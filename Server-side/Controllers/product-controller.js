@@ -199,6 +199,18 @@ const updateProduct = catchAsync(async (req, res, next) => {
         });
     }
 
+    const io = req.app.get("io");
+    if (io) {
+        io.emit("product:updated", {
+            productId: product._id,
+            changes: {
+                basePrice: product.basePrice,
+                discountPercent: product.discountPercent,
+                variants: product.variants
+            }
+        });
+    }
+
     res.status(200).json({
         success: true,
         message: "Product updated successfully",
