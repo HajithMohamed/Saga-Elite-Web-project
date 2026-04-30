@@ -21,21 +21,16 @@ const formatCurrency = (amount) =>
   });
 
 const getBankDetails = () => ({
-  bankName: process.env.MANUAL_PAYMENT_BANK_NAME || process.env.BANK_NAME || "",
-  accountName:
-    process.env.MANUAL_PAYMENT_ACCOUNT_NAME || process.env.BANK_ACCOUNT_NAME || "",
-  accountNumber:
-    process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER || process.env.BANK_ACCOUNT_NUMBER || "",
-  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || process.env.BANK_BRANCH || "",
-  swiftCode: process.env.MANUAL_PAYMENT_SWIFT_CODE || process.env.BANK_SWIFT_CODE || "",
-  transferNote:
-    process.env.MANUAL_PAYMENT_TRANSFER_NOTE ||
-    "Use the reference number exactly as shown when making your transfer.",
-  supportEmail:
-    process.env.MANUAL_PAYMENT_SUPPORT_EMAIL || process.env.BANK_SUPPORT_EMAIL || process.env.EMAIL || "",
-  supportWhatsapp:
-    process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || process.env.BANK_SUPPORT_WHATSAPP || "",
+  bankName: process.env.MANUAL_PAYMENT_BANK_NAME || "Sampath Bank",
+  accountName: process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "N.Gayathree",
+  accountNumber: process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER || "108052612262",
+  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || "Hatton Branch",
+  swiftCode: process.env.MANUAL_PAYMENT_SWIFT_CODE || "BSAMLKLX",
   currency: process.env.MANUAL_PAYMENT_CURRENCY || "LKR",
+  transferNote: process.env.MANUAL_PAYMENT_TRANSFER_NOTE ||
+    "Include your reference number exactly as shown in the transfer note/remarks field.",
+  supportEmail: process.env.MANUAL_PAYMENT_SUPPORT_EMAIL || "sagaaelite@gmail.com",
+  supportWhatsapp: process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || "+94770704274",
 });
 
 const getAdminEmails = async () => {
