@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markNotificationRead } from "@/store/notification-slice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const NotificationsPage = () => {
   const dispatch = useDispatch();
@@ -11,6 +12,14 @@ const NotificationsPage = () => {
   useEffect(() => {
     dispatch(fetchNotifications());
   }, [dispatch]);
+
+  useSocketEvent(
+    "notification:refresh",
+    () => {
+      dispatch(fetchNotifications());
+    },
+    [dispatch]
+  );
 
   const handleMarkRead = (id) => {
     dispatch(markNotificationRead(id));

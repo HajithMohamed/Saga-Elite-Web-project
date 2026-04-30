@@ -63,6 +63,7 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
+import SocketBridge from "./components/common-components/SocketBridge";
 
 function App() {
   const {
@@ -94,6 +95,7 @@ function App() {
 
   return (
     <div>
+      <SocketBridge />
       <Routes>
 
         {/* PUBLIC */}

@@ -7,6 +7,7 @@ import {
 } from "@/store/reviewSlice";
 import { toast } from "@/hooks/use-toast";
 import StarRating from "@/components/Review/StarRating";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const statusTabs = ["pending", "approved", "rejected"];
 
@@ -26,6 +27,14 @@ const ReviewModerationPage = () => {
     dispatch(fetchAdminReviews({ status: activeStatus, page: 1 }));
     setSelectedIds([]);
   }, [dispatch, activeStatus]);
+
+  useSocketEvent(
+    "review:refresh",
+    () => {
+      dispatch(fetchAdminReviews({ status: activeStatus, page: 1 }));
+    },
+    [dispatch, activeStatus]
+  );
 
   const handleSelect = (reviewId) => {
     setSelectedIds((prev) =>

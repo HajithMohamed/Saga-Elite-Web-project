@@ -6,6 +6,7 @@ const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -143,6 +144,22 @@ const createReview = catchAsync(async (req, res, next) => {
     images: Array.isArray(images) ? images : [],
     verifiedPurchase: true,
     status: "pending",
+  });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    userId,
+    reviewId: review._id,
+    status: review.status,
+    productId,
+    source: "review-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    userId,
+    reviewId: review._id,
+    status: review.status,
+    productId,
+    source: "review-submitted",
   });
 
   res.status(201).json({
@@ -419,6 +436,22 @@ const moderateReview = catchAsync(async (req, res, next) => {
     success: true,
     message: "Review moderation updated",
     review,
+  });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    userId: review.userId,
+    reviewId: review._id,
+    status: review.status,
+    productId: review.productId,
+    source: "review-moderated",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    userId: review.userId,
+    reviewId: review._id,
+    status: review.status,
+    productId: review.productId,
+    source: "review-moderated",
   });
 });
 

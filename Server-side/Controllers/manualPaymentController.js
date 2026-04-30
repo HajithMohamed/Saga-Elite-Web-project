@@ -6,6 +6,7 @@ const ManualPayment = require("../Models/ManualPayment");
 const User = require("../Models/User");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("../Utils/whatsapp-service");
@@ -339,6 +340,31 @@ const submitProof = catchAsync(async (req, res, next) => {
     },
   });
 
+  emitToUser(payment.userId?._id || payment.userId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: payment.userId?._id || payment.userId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-proof-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: payment.userId?._id || payment.userId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-proof-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "payment-proof-submitted",
+    paymentId: payment._id,
+    orderId,
+    userId: payment.userId?._id || payment.userId,
+  });
+
   const proofEmail = buildEmailTemplate(
     "Payment proof submitted",
     `<p>We received your proof for reference <strong>${payment.referenceNumber}</strong>.</p>
@@ -568,6 +594,39 @@ const verifyPayment = catchAsync(async (req, res, next) => {
       }
     }
 
+    emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+      userId: customerUserId,
+      paymentId: payment._id,
+      orderId,
+      referenceNumber: payment.referenceNumber,
+      status: payment.status,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+      userId: customerUserId,
+      paymentId: payment._id,
+      orderId,
+      referenceNumber: payment.referenceNumber,
+      status: payment.status,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+      userId: customerUserId,
+      orderId,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+      source: "payment-verified",
+      paymentId: payment._id,
+      orderId,
+      userId: customerUserId,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully",
@@ -629,6 +688,39 @@ const verifyPayment = catchAsync(async (req, res, next) => {
       console.error("Failed to send payment rejection WhatsApp message:", whatsAppError);
     }
   }
+
+  emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+    userId: customerUserId,
+    orderId,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "payment-rejected",
+    paymentId: payment._id,
+    orderId,
+    userId: customerUserId,
+  });
 
   return res.status(200).json({
     success: true,

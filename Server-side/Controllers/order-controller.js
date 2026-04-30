@@ -7,6 +7,7 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
@@ -372,6 +373,27 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     entityType: "Order",
     meta: { orderId: order._id, status: order.status },
     filter: { role: "admin" },
+  });
+
+  emitToUser(order.user, SOCKET_EVENTS.ORDER_REFRESH, {
+    userId: order.user,
+    orderId: order._id,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+  });
+
+  emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+    userId: order.user,
+    orderId: order._id,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    source: "order-status-update",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "order-status-update",
+    orderId: order._id,
+    userId: order.user,
   });
 
   res.status(200).json({

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { fetchManualPaymentById, verifyManualPayment } from "@/store/manualPaymentSlice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -42,6 +43,18 @@ const PaymentVerificationPage = () => {
       dispatch(fetchManualPaymentById(paymentId));
     }
   }, [dispatch, paymentId]);
+
+  useSocketEvent(
+    "payment:refresh",
+    (payload) => {
+      if (!paymentId) return;
+
+      if (!payload?.paymentId || String(payload.paymentId) === String(paymentId)) {
+        dispatch(fetchManualPaymentById(paymentId));
+      }
+    },
+    [dispatch, paymentId]
+  );
 
   const handleDecision = async (action) => {
     if (!paymentId) return;

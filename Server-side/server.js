@@ -22,6 +22,10 @@ require("dotenv").config({
 require("dotenv").config();
 
 const globalErrorController = require("./Controllers/errorController");
+const {
+  setSocketServer,
+  registerSocketHandlers,
+} = require("./Utils/socket-service");
 
 const app = express();
 
@@ -92,14 +96,26 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*", // ⚠️ change in production
+    origin:
+      process.env.CLIENT_URL ||
+      process.env.FRONTEND_URL ||
+      "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
   }
 });
 
+setSocketServer(io);
+
 /* ================== SOCKET EVENTS ================== */
 io.on("connection", (socket) => {
   console.log("User Connected:", socket.id);
+
+  registerSocketHandlers(socket);
+
+  socket.emit("server:connected", {
+    success: true,
+    socketId: socket.id,
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);

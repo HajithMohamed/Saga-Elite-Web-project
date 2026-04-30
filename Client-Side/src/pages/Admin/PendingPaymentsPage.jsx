@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Filter, Landmark, Loader2, RefreshCcw, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { fetchPendingManualPayments } from "@/store/manualPaymentSlice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const statusOptions = ["proof_submitted", "pending_payment", "rejected", "verified", "expired"];
 
@@ -34,6 +35,14 @@ const PendingPaymentsPage = () => {
   useEffect(() => {
     dispatch(fetchPendingManualPayments({ status: statusFilter, page, limit }));
   }, [dispatch, page, statusFilter]);
+
+  useSocketEvent(
+    "payment:refresh",
+    () => {
+      dispatch(fetchPendingManualPayments({ status: statusFilter, page, limit }));
+    },
+    [dispatch, page, statusFilter]
+  );
 
   useEffect(() => {
     setPage(1);
