@@ -64,6 +64,8 @@ const ProductDetails = () => {
   const [reviewPreview, setReviewPreview] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -286,6 +288,11 @@ const ProductDetails = () => {
     );
   };
 
+  const uniqueSizes = [...new Set(product.variants?.map(v => v.size) || [])];
+  const colorsForSize = (product.variants || [])
+    .filter(v => v.size === selectedSize)
+    .map(v => ({ color: v.color, sku: v.sku, stock: v.stock }));
+
   return (
     <div className="min-h-screen bg-[#060606] text-white pt-24 pb-20">
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
@@ -377,23 +384,62 @@ const ProductDetails = () => {
                   <span>Size & Color</span>
                   <span>Stock: {selectedVariant?.stock || 0}</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {product.variants?.map((variant) => (
-                    <button
-                      key={variant.sku}
-                      onClick={() => setSelectedVariantSku(variant.sku)}
-                      disabled={variant.stock === 0}
-                      className={`py-3 px-4 rounded-xl border text-sm font-medium tracking-wide transition-all ${
-                        variant.stock === 0
-                          ? "opacity-30 cursor-not-allowed border-gray-800"
-                          : selectedVariantSku === variant.sku
-                            ? "border-[#D4AF37] bg-[#D4AF37]/10 text-white"
-                            : "border-gray-800 hover:border-gray-500 text-gray-400"
-                      }`}
-                    >
-                      {variant.size} - {variant.color}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-4">
+                  {/* Size Row */}
+                  <div>
+                    <p className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Size</p>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueSizes.map(size => {
+                        const allOOS = product.variants
+                          .filter(v => v.size === size)
+                          .every(v => v.stock === 0);
+                        return (
+                          <button
+                            key={size}
+                            onClick={() => { setSelectedSize(size); setSelectedColor(null); }}
+                            disabled={allOOS}
+                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all
+                              ${allOOS ? "opacity-30 cursor-not-allowed border-gray-700 text-gray-600" :
+                                selectedSize === size
+                                  ? "bg-[#D4AF37] border-[#D4AF37] text-black"
+                                  : "border-gray-600 text-white hover:border-[#D4AF37]"}`}
+                          >
+                            {size}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Color Row — only shows after size is selected */}
+                  {selectedSize && (
+                    <div>
+                      <p className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Color</p>
+                      <div className="flex flex-wrap gap-2">
+                        {colorsForSize.map(({ color, sku, stock }) => (
+                          <button
+                            key={sku}
+                            onClick={() => { setSelectedColor(color); setSelectedVariantSku(sku); }}
+                            disabled={stock === 0}
+                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all
+                              ${stock === 0 ? "opacity-30 cursor-not-allowed border-gray-700 text-gray-600" :
+                                selectedColor === color
+                                  ? "bg-[#D4AF37] border-[#D4AF37] text-black"
+                                  : "border-gray-600 text-white hover:border-[#D4AF37]"}`}
+                          >
+                            {color} {stock === 0 ? "(OOS)" : ""}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock count for selected combo */}
+                  {selectedSize && selectedColor && (
+                    <p className="text-xs text-gray-500">
+                      {colorsForSize.find(c => c.color === selectedColor)?.stock ?? 0} in stock
+                    </p>
+                  )}
                 </div>
               </div>
 
