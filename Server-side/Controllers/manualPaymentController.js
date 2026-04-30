@@ -437,6 +437,7 @@ const getMyPaymentStatus = catchAsync(async (req, res, next) => {
 
 const getPendingPayments = catchAsync(async (req, res, next) => {
   const status = String(req.query.status || "proof_submitted").trim();
+  const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
   const limit = Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20);
   const skip = (page - 1) * limit;
@@ -444,6 +445,18 @@ const getPendingPayments = catchAsync(async (req, res, next) => {
   const filter = {};
   if (status) {
     filter.status = status;
+  }
+
+  if (countOnly) {
+    const totalCount = await ManualPayment.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: "Manual payment count fetched successfully",
+      data: {
+        count: totalCount,
+      },
+    });
   }
 
   const [totalCount, payments] = await Promise.all([

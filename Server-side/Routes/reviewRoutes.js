@@ -5,6 +5,7 @@ const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middlewa
 const { imageUpload } = require("../Middlewares/multer-middleware");
 const {
   createReview,
+  getFeaturedReviews,
   getProductReviews,
   getUserReviews,
   voteHelpful,
@@ -19,6 +20,7 @@ const userRouter = express.Router();
 const adminRouter = express.Router();
 
 userRouter.post("/", authMiddleware, createReview);
+userRouter.get("/featured", getFeaturedReviews);
 userRouter.post(
   "/upload-images",
   authMiddleware,

@@ -242,6 +242,28 @@ const getUserReviews = catchAsync(async (req, res, next) => {
   });
 });
 
+const getFeaturedReviews = catchAsync(async (req, res, next) => {
+  const limit = Math.max(1, normalizeNumber(req.query.limit, 4));
+  const featuredReviews = await Review.find({ status: "approved" })
+    .sort({ helpfulCount: -1, approvedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .populate("userId", "email firstName lastName profilePicture")
+    .populate("productId", "name slug")
+    .lean();
+
+  const reviews = featuredReviews.map((review) => ({
+    ...review,
+    user: review.userId || null,
+    product: review.productId || null,
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: "Featured reviews fetched successfully",
+    data: reviews,
+  });
+});
+
 const voteHelpful = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
   const userId = req.userInfo?._id;
@@ -371,11 +393,24 @@ const updateReview = catchAsync(async (req, res, next) => {
 
 const getAllReviews = catchAsync(async (req, res, next) => {
   const status = req.query.status || "pending";
+  const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
   const filter = status ? { status } : {};
+
+  if (countOnly) {
+    const totalReviews = await Review.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: "Reviews count fetched successfully",
+      data: {
+        count: totalReviews,
+      },
+    });
+  }
 
   const [reviews, totalReviews] = await Promise.all([
     Review.find(filter)
@@ -486,6 +521,7 @@ const uploadReviewImages = catchAsync(async (req, res, next) => {
 
 module.exports = {
   createReview,
+  getFeaturedReviews,
   getProductReviews,
   getUserReviews,
   voteHelpful,
