@@ -20,6 +20,52 @@ const initialState = {
   error: null,
 };
 
+const normalizeRealtimeProductPayload = (payload = {}) => {
+  const productId = payload.productId || payload._id || payload.id;
+
+  if (!productId) {
+    return null;
+  }
+
+  const changes = payload.changes || {};
+
+  return {
+    productId: String(productId),
+    changes: {
+      ...(changes.basePrice != null || payload.basePrice != null || payload.price != null
+        ? {
+            basePrice:
+              changes.basePrice ??
+              payload.basePrice ??
+              payload.price,
+          }
+        : {}),
+      ...(changes.discountPercent != null ||
+      payload.discountPercent != null ||
+      payload.discount != null
+        ? {
+            discountPercent:
+              changes.discountPercent ??
+              payload.discountPercent ??
+              payload.discount,
+          }
+        : {}),
+      ...(changes.variants || payload.variants
+        ? {
+            variants: changes.variants || payload.variants,
+          }
+        : {}),
+      ...(changes.drop !== undefined || payload.drop !== undefined
+        ? {
+            drop:
+              changes.drop !== undefined ? changes.drop : payload.drop,
+          }
+        : {}),
+      ...(payload.slug ? { slug: payload.slug } : {}),
+    },
+  };
+};
+
 export const getAllProducts = createAsyncThunk(
   "product/getAllProducts",
   async (params = {}, { rejectWithValue }) => {
@@ -131,8 +177,13 @@ const productSlice = createSlice({
   initialState,
   reducers: {
     updateProductInStore: (state, action) => {
-      const { productId, changes } = action.payload;
-      const idx = state.productList.findIndex(p => p._id === productId);
+      const normalizedPayload = normalizeRealtimeProductPayload(action.payload);
+      if (!normalizedPayload) {
+        return;
+      }
+
+      const { productId, changes } = normalizedPayload;
+      const idx = state.productList.findIndex((p) => String(p._id) === productId);
       if (idx !== -1) {
         state.productList[idx] = { ...state.productList[idx], ...changes };
       }

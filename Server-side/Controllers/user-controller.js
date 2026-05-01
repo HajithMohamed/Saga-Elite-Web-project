@@ -31,6 +31,16 @@ const normalizeCartItem = (item) => {
       discountPercent: product.discountPercent,
       basePrice: product.basePrice,
       image: product.images?.[0]?.url || null,
+      sizes: [...new Set((product.variants || []).map((entry) => entry?.size).filter(Boolean))],
+      colors: [...new Set((product.variants || []).map((entry) => entry?.color).filter(Boolean))],
+      variants: (product.variants || []).map((entry) => ({
+        id: entry._id,
+        sku: entry.sku,
+        size: entry.size,
+        color: entry.color,
+        stock: entry.stock,
+        priceAdjustment: entry.priceAdjustment,
+      })),
     },
     variant: {
       id: variant._id,
@@ -540,14 +550,14 @@ const addToCart = catchAsync(async (req, res, next) => {
 
 const updateCartItem = catchAsync(async (req, res, next) => {
   const { itemId } = req.params;
-  const { quantity } = req.body;
+  const { quantity, variantId } = req.body;
 
   if (!itemId) {
     return next(new AppError("Cart item ID is required", 400));
   }
 
-  if (quantity == null || isNaN(quantity)) {
-    return next(new AppError("Quantity must be provided", 400));
+  if (quantity == null && !variantId) {
+    return next(new AppError("Quantity or variant must be provided", 400));
   }
 
   const user = await User.findById(req.userInfo.id);
@@ -565,23 +575,52 @@ const updateCartItem = catchAsync(async (req, res, next) => {
     return next(new AppError("Product not found", 404));
   }
 
-  const variant = product.variants.id(cartItem.variant);
-  if (!variant) {
+  const currentVariant = product.variants.id(cartItem.variant);
+  if (!currentVariant) {
     return next(new AppError("Product variant not found", 400));
   }
 
-  if (quantity <= 0) {
+  const nextVariant = variantId ? product.variants.id(variantId) : currentVariant;
+  if (!nextVariant) {
+    return next(new AppError("Selected product variant not found", 400));
+  }
+
+  const nextQuantity = quantity == null ? cartItem.quantity : Number(quantity);
+
+  if (Number.isNaN(nextQuantity)) {
+    return next(new AppError("Quantity must be a valid number", 400));
+  }
+
+  if (nextQuantity <= 0) {
     user.cart.pull(itemId);
   } else {
-    if (quantity > variant.stock) {
+    const duplicateItem = user.cart.find(
+      (item) =>
+        item._id.toString() !== itemId.toString() &&
+        item.product.toString() === product._id.toString() &&
+        item.variant.toString() === nextVariant._id.toString()
+    );
+
+    const requestedQuantity = duplicateItem
+      ? duplicateItem.quantity + nextQuantity
+      : nextQuantity;
+
+    if (requestedQuantity > nextVariant.stock) {
       return next(
         new AppError(
-          `Only ${variant.stock} units are available for this variant`,
+          `Only ${nextVariant.stock} units are available for this variant`,
           400
         )
       );
     }
-    cartItem.quantity = quantity;
+
+    if (duplicateItem) {
+      duplicateItem.quantity = requestedQuantity;
+      user.cart.pull(itemId);
+    } else {
+      cartItem.variant = nextVariant._id;
+      cartItem.quantity = nextQuantity;
+    }
   }
 
   await user.save({ validateBeforeSave: false });

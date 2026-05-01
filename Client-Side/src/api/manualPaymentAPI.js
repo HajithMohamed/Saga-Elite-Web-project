@@ -31,7 +31,7 @@ export const uploadManualPaymentProof = async (file) => {
 
 export const generateManualPaymentReference = async ({ orderId, amount }) => {
   const response = await axios.post(
-    `${API_BASE}/manual-payment/generate`,
+    `${API_BASE}/payments/generate-reference`,
     { orderId, amount },
     withAuth,
   );
@@ -49,9 +49,9 @@ export const submitManualPaymentProof = async ({ referenceNumber, proofUrl }) =>
   return response.data;
 };
 
-export const fetchMyManualPaymentStatus = async (referenceNumber) => {
+export const fetchMyManualPaymentStatus = async (paymentIdentifier) => {
   const response = await axios.get(
-    `${API_BASE}/manual-payment/status/${referenceNumber}`,
+    `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,
     {
       withCredentials: true,
     },

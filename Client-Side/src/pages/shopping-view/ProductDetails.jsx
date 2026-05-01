@@ -7,6 +7,8 @@ import {
   addToWishlistAction,
   removeFromWishlistAction,
 } from "@/store/cart-slice";
+import useLiveProductUpdates from "@/hooks/use-live-product-updates";
+import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { toast } from "@/hooks/use-toast";
 import {
   Heart,
@@ -19,6 +21,11 @@ import {
 } from "lucide-react";
 import StarRating from "@/components/Review/StarRating";
 import ReviewCard, { ReviewCardSkeleton } from "@/components/Review/ReviewCard";
+import VariantSelectors, {
+  getColorsForSize,
+  getProductSizes,
+  getVariantBySelection,
+} from "@/components/shopping-components/VariantSelectors";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 const FALLBACK_DROP_NAME = "Independent Release";
@@ -50,6 +57,7 @@ const ProductDetails = () => {
 
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const cartItems = useSelector((state) => state.cart.cart?.items ?? []);
+  const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
 
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +74,11 @@ const ProductDetails = () => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+  const [variantErrors, setVariantErrors] = useState({});
+
+  useLiveProductUpdates(
+    (payload = {}) => String(product?._id || "") === String(payload.productId || "")
+  );
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -87,10 +100,6 @@ const ProductDetails = () => {
 
         const fetchedProduct = productRes.value.data?.product;
         setProduct(fetchedProduct);
-
-        if (fetchedProduct?.variants?.length > 0) {
-          setSelectedVariantSku(fetchedProduct.variants[0].sku);
-        }
 
         if (
           latestRes.status === "fulfilled" &&
@@ -127,6 +136,35 @@ const ProductDetails = () => {
   }, [slug]);
 
   useEffect(() => {
+    if (!product?.variants?.length) return;
+
+    const firstAvailableVariant =
+      product.variants.find((variant) => variant.stock > 0) || product.variants[0];
+
+    setSelectedVariantSku((currentSku) =>
+      currentSku && product.variants.some((variant) => variant.sku === currentSku)
+        ? currentSku
+        : firstAvailableVariant?.sku || ""
+    );
+  }, [product]);
+
+  useEffect(() => {
+    if (!product?.variants?.length || !selectedVariantSku) return;
+
+    const matchedVariant = product.variants.find(
+      (variant) => variant.sku === selectedVariantSku
+    );
+
+    if (!matchedVariant) return;
+
+    setSelectedSize(matchedVariant.size || "");
+    setSelectedColor(matchedVariant.color || "");
+    setQuantity((current) =>
+      Math.max(1, Math.min(current, matchedVariant.stock || 1))
+    );
+  }, [product, selectedVariantSku]);
+
+  useEffect(() => {
     const fetchReviewPreview = async () => {
       if (!product?._id) return;
       try {
@@ -146,6 +184,15 @@ const ProductDetails = () => {
 
     fetchReviewPreview();
   }, [product?._id]);
+
+  useEffect(() => {
+    if (!product?._id) return;
+
+    const liveUpdate = liveProductUpdates[String(product._id)];
+    if (!liveUpdate) return;
+
+    setProduct((currentProduct) => applyLiveProductUpdate(currentProduct, liveUpdate));
+  }, [liveProductUpdates, product?._id]);
 
   if (isLoading) {
     return (
@@ -170,15 +217,62 @@ const ProductDetails = () => {
   }
 
   const selectedVariant =
-    product.variants?.find((variant) => variant.sku === selectedVariantSku) ||
-    product.variants?.[0];
+    product.variants?.find((variant) => variant.sku === selectedVariantSku) || null;
   const basePrice = product.basePrice + (selectedVariant?.priceAdjustment || 0);
   const price = basePrice * (1 - (product.discountPercent || 0) / 100);
   const inWishlist = wishlistItems.some((item) => item.id === product._id);
   const productDropName = product.drop?.name || FALLBACK_DROP_NAME;
+  const productSizes = getProductSizes(product);
+  const colorsForSelectedSize = getColorsForSize(product, selectedSize);
+  const uniqueSizes = productSizes;
+  const colorsForSize = (product.variants || [])
+    .filter((variant) => variant.size === selectedSize)
+    .map((variant) => ({
+      color: variant.color,
+      sku: variant.sku,
+      stock: variant.stock,
+    }));
+
+  const validateVariantSelection = () => {
+    const nextErrors = {};
+
+    if (productSizes.length > 0 && !selectedSize) {
+      nextErrors.size = "Please choose a size.";
+    }
+
+    if (colorsForSelectedSize.length > 0 && !selectedColor) {
+      nextErrors.color = "Please choose a color.";
+    }
+
+    setVariantErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSizeChange = (size) => {
+    const nextColors = getColorsForSize(product, size);
+    const preservedColor = nextColors.includes(selectedColor) ? selectedColor : "";
+    const autoSelectedColor =
+      preservedColor || (nextColors.length === 1 ? nextColors[0] : "");
+    const matchedVariant = autoSelectedColor
+      ? getVariantBySelection(product, size, autoSelectedColor)
+      : null;
+
+    setSelectedSize(size);
+    setSelectedColor(autoSelectedColor);
+    setSelectedVariantSku(matchedVariant?.sku || "");
+    setVariantErrors((current) => ({ ...current, size: "", color: "" }));
+  };
+
+  const handleColorChange = (color) => {
+    const matchedVariant = getVariantBySelection(product, selectedSize, color);
+
+    setSelectedColor(color);
+    setSelectedVariantSku(matchedVariant?.sku || "");
+    setVariantErrors((current) => ({ ...current, color: "" }));
+  };
 
   const handleAddToCart = () => {
-    if (!selectedVariant) return;
+    if (!validateVariantSelection() || !selectedVariant) return;
 
     dispatch(
       addToCartAction({
@@ -201,7 +295,7 @@ const ProductDetails = () => {
   };
 
   const handleBuyNow = () => {
-    if (!selectedVariant) return;
+    if (!validateVariantSelection() || !selectedVariant) return;
 
     const isInCart = cartItems.some(
       (item) =>
@@ -287,11 +381,6 @@ const ProductDetails = () => {
       </Link>
     );
   };
-
-  const uniqueSizes = [...new Set(product.variants?.map(v => v.size) || [])];
-  const colorsForSize = (product.variants || [])
-    .filter(v => v.size === selectedSize)
-    .map(v => ({ color: v.color, sku: v.sku, stock: v.stock }));
 
   return (
     <div className="min-h-screen bg-[#060606] text-white pt-24 pb-20">
@@ -384,7 +473,20 @@ const ProductDetails = () => {
                   <span>Size & Color</span>
                   <span>Stock: {selectedVariant?.stock || 0}</span>
                 </div>
-                <div className="flex flex-col gap-4">
+                <VariantSelectors
+                  product={{ ...product, sizes: productSizes }}
+                  selectedSize={selectedSize}
+                  selectedColor={selectedColor}
+                  onSizeChange={handleSizeChange}
+                  onColorChange={handleColorChange}
+                  errors={variantErrors}
+                />
+                {selectedSize && selectedColor ? (
+                  <p className="mt-3 text-xs text-gray-500">
+                    {selectedVariant?.stock ?? 0} in stock
+                  </p>
+                ) : null}
+                <div className="hidden flex-col gap-4">
                   {/* Size Row */}
                   <div>
                     <p className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Size</p>

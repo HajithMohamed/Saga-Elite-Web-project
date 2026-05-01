@@ -203,11 +203,13 @@ const updateProduct = catchAsync(async (req, res, next) => {
     if (io) {
         io.emit("product:updated", {
             productId: product._id,
-            changes: {
-                basePrice: product.basePrice,
-                discountPercent: product.discountPercent,
-                variants: product.variants
-            }
+            slug: product.slug,
+            price: product.basePrice,
+            discount: product.discountPercent,
+            basePrice: product.basePrice,
+            discountPercent: product.discountPercent,
+            variants: product.variants,
+            drop: product.drop,
         });
     }
 

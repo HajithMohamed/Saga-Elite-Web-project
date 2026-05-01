@@ -265,6 +265,8 @@ const createOrder = catchAsync(async (req, res, next) => {
     success: true,
     message: "Order placed successfully",
     orderId: createdOrder._id,
+    amount: createdOrder.totalAmount,
+    referenceNumber: createdOrder.referenceNumber || null,
     data: createdOrder,
   });
 });

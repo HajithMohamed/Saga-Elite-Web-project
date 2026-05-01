@@ -24,13 +24,13 @@ const getBankDetails = () => ({
   bankName: process.env.MANUAL_PAYMENT_BANK_NAME || "Sampath Bank",
   accountName: process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "N.Gayathree",
   accountNumber: process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER || "108052612262",
-  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || "Hatton Branch",
+  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || "Hatton",
   swiftCode: process.env.MANUAL_PAYMENT_SWIFT_CODE || "BSAMLKLX",
   currency: process.env.MANUAL_PAYMENT_CURRENCY || "LKR",
   transferNote: process.env.MANUAL_PAYMENT_TRANSFER_NOTE ||
     "Include your reference number exactly as shown in the transfer note/remarks field.",
   supportEmail: process.env.MANUAL_PAYMENT_SUPPORT_EMAIL || "sagaaelite@gmail.com",
-  supportWhatsapp: process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || "+94770704274",
+  supportWhatsapp: process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || "+94 77 070 4274",
 });
 
 const getAdminEmails = async () => {
@@ -119,6 +119,7 @@ const syncOrderWithPayment = async (order, payment, { status, paymentStatus, cle
 
 const buildManualPaymentSummary = (payment) => ({
   _id: payment._id,
+  slug: payment.slug,
   referenceNumber: payment.referenceNumber,
   orderId: payment.orderId,
   userId: payment.userId,
@@ -136,6 +137,16 @@ const buildManualPaymentSummary = (payment) => ({
   adminNotes: payment.adminNotes,
   createdAt: payment.createdAt,
   updatedAt: payment.updatedAt,
+});
+
+const buildManualPaymentResponse = (manualPayment, bankDetails) => ({
+  slug: manualPayment.slug,
+  referenceNumber: manualPayment.referenceNumber,
+  amount: manualPayment.amount,
+  orderId: manualPayment.orderId,
+  expiresAt: manualPayment.expiresAt,
+  bankDetails,
+  manualPayment: buildManualPaymentSummary(manualPayment),
 });
 
 const generateReference = catchAsync(async (req, res, next) => {
@@ -198,14 +209,10 @@ const generateReference = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Active payment reference already exists for this order",
-      data: {
-        manualPayment: buildManualPaymentSummary(activePayment),
-        referenceNumber: activePayment.referenceNumber,
-        amount: activePayment.amount,
-        expiresAt: activePayment.expiresAt,
-        bankDetails,
-        orderId: order._id,
-      },
+      referenceNumber: activePayment.referenceNumber,
+      amount: activePayment.amount,
+      orderId: order._id,
+      data: buildManualPaymentResponse(activePayment, bankDetails),
     });
   }
 
@@ -232,14 +239,10 @@ const generateReference = catchAsync(async (req, res, next) => {
   return res.status(201).json({
     success: true,
     message: "Manual payment reference generated successfully",
-    data: {
-      manualPayment: buildManualPaymentSummary(manualPayment),
-      referenceNumber,
-      amount: manualPayment.amount,
-      expiresAt: manualPayment.expiresAt,
-      bankDetails,
-      orderId: order._id,
-    },
+    referenceNumber,
+    amount: manualPayment.amount,
+    orderId: order._id,
+    data: buildManualPaymentResponse(manualPayment, bankDetails),
   });
 });
 
@@ -400,9 +403,12 @@ const submitProof = catchAsync(async (req, res, next) => {
 });
 
 const getMyPaymentStatus = catchAsync(async (req, res, next) => {
-  const { referenceNumber } = req.params;
+  const { paymentIdentifier } = req.params;
 
-  const payment = await ManualPayment.findOne({ referenceNumber })
+  const identifier = String(paymentIdentifier || "").trim();
+  const payment = await ManualPayment.findOne({
+    $or: [{ slug: identifier }, { referenceNumber: identifier }],
+  })
     .populate({
       path: "orderId",
       populate: {

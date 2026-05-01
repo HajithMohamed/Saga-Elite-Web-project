@@ -8,12 +8,34 @@ import {
   removeFromCartAction,
 } from "@/store/cart-slice";
 import { checkGuestAction, registerGuestAction } from "@/store/auth-slice";
+import {
+  generateManualPaymentReference,
+  storeManualPaymentContext,
+} from "@/store/manualPaymentSlice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import VariantSelectors, {
+  getColorsForSize,
+  getProductSizes,
+  getVariantBySelection,
+} from "@/components/shopping-components/VariantSelectors";
 import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
+const MANUAL_BANK_DETAILS = {
+  bankName: "Sampath Bank",
+  branch: "Hatton",
+  accountName: "N.Gayathree",
+  accountNumber: "108052612262",
+  whatsapp: "+94 77 070 4274",
+  deadline: "Pay within 24 hours to confirm your order.",
+};
+
+const buildManualPaymentPath = (paymentSlug) =>
+  paymentSlug
+    ? `/shopping/manual-payment/${encodeURIComponent(paymentSlug)}`
+    : "/shopping/manual-payment";
 
 const getErrorMessage = (error, fallback) =>
   typeof error === "string" ? error : error?.message || fallback;
@@ -32,13 +54,14 @@ const normalizeBuyNowItem = (item) => {
     return null;
   }
 
+  const variant = normalizeCheckoutVariant(item.variant);
   const quantity = Math.max(1, Number(item.quantity) || 1);
-  const unitPrice = getDiscountedUnitPrice(item.product, item.variant);
+  const unitPrice = getDiscountedUnitPrice(item.product, variant);
 
   return {
-    id: `buynow-${item.product.id || item.product._id}-${item.variant.sku}`,
+    id: `buynow-${item.product.id || item.product._id}-${variant.sku}`,
     product: item.product,
-    variant: item.variant,
+    variant,
     quantity,
     unitPrice,
     subTotal: unitPrice * quantity,
@@ -65,6 +88,63 @@ const persistBuyNowItem = (item) => {
   }
 
   window.sessionStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(item));
+};
+
+const getVariantId = (variant = {}) => variant?.id || variant?._id || "";
+
+const normalizeCheckoutVariant = (variant = {}) => ({
+  id: getVariantId(variant),
+  sku: variant?.sku || "",
+  size: variant?.size || "",
+  color: variant?.color || "",
+  stock: Number(variant?.stock ?? 0),
+  priceAdjustment: Number(variant?.priceAdjustment || 0),
+});
+
+const buildCheckoutItem = (item, variantOverride) => {
+  const variant = normalizeCheckoutVariant(variantOverride || item?.variant);
+  const quantity = Math.max(1, Number(item?.quantity) || 1);
+  const unitPrice = getDiscountedUnitPrice(item?.product, variant);
+
+  return {
+    ...item,
+    variant,
+    quantity,
+    unitPrice,
+    subTotal: unitPrice * quantity,
+  };
+};
+
+const buildBuyNowPersistencePayload = (item) => {
+  if (!item?.product || !item?.variant?.sku) {
+    return null;
+  }
+
+  return {
+    product: item.product,
+    variant: item.variant,
+    quantity: item.quantity,
+  };
+};
+
+const getCheckoutItemErrors = (item) => {
+  const errors = {};
+  const sizes = getProductSizes(item?.product);
+  const colors = getColorsForSize(item?.product, item?.variant?.size);
+
+  if (sizes.length > 0 && !item?.variant?.size) {
+    errors.size = "Please choose a size.";
+  }
+
+  if (colors.length > 0 && !item?.variant?.color) {
+    errors.color = "Please choose a color.";
+  }
+
+  if ((sizes.length > 0 || colors.length > 0) && !item?.variant?.sku) {
+    errors.color = errors.color || "Please choose an available variant.";
+  }
+
+  return errors;
 };
 
 const Checkout = () => {
@@ -106,6 +186,8 @@ const Checkout = () => {
   const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [guestCheckInfo, setGuestCheckInfo] = useState(null);
   const [isProcessingSelection, setIsProcessingSelection] = useState(false);
+  const [variantErrorsByItem, setVariantErrorsByItem] = useState({});
+  const [variantUpdateItemId, setVariantUpdateItemId] = useState(null);
 
   const cartStateItems = Array.isArray(location.state?.cartItems)
     ? location.state.cartItems
@@ -161,6 +243,19 @@ const Checkout = () => {
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
+  useEffect(() => {
+    setCheckoutTotal(
+      checkoutItems.reduce(
+        (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
+        0
+      )
+    );
+
+    if (isBuyNow) {
+      persistBuyNowItem(buildBuyNowPersistencePayload(checkoutItems[0]));
+    }
+  }, [checkoutItems, isBuyNow]);
+
   // ---------------- CART ACTIONS ----------------
   const handleQuantityChange = async (item, quantity) => {
     if (isBuyNow) return;
@@ -199,6 +294,106 @@ const Checkout = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const updateCheckoutItemLocally = (itemId, updater) => {
+    setCheckoutItems((currentItems) =>
+      currentItems.map((entry) => {
+        if (entry.id !== itemId) {
+          return entry;
+        }
+
+        const nextItem = updater(entry);
+        return buildCheckoutItem(nextItem, nextItem.variant);
+      })
+    );
+  };
+
+  const validateCheckoutItems = (itemsToValidate = checkoutItems) => {
+    const nextErrors = {};
+
+    itemsToValidate.forEach((item) => {
+      const itemErrors = getCheckoutItemErrors(item);
+      if (Object.keys(itemErrors).length > 0) {
+        nextErrors[item.id] = itemErrors;
+      }
+    });
+
+    setVariantErrorsByItem(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const syncCartVariant = async (item, nextVariant) => {
+    if (isBuyNow || !nextVariant?.sku) {
+      return;
+    }
+
+    setVariantUpdateItemId(item.id);
+
+    try {
+      await dispatch(
+        updateCartItemAction({
+          itemId: item.id,
+          quantity: item.quantity,
+          variantId: getVariantId(nextVariant),
+        })
+      ).unwrap();
+    } catch (err) {
+      toast({
+        title: "Variant update failed",
+        description: getErrorMessage(err, "Unable to update size or color."),
+        variant: "destructive",
+      });
+
+      updateCheckoutItemLocally(item.id, () => buildCheckoutItem(item, item.variant));
+    } finally {
+      setVariantUpdateItemId(null);
+    }
+  };
+
+  const applyVariantSelection = async (item, nextSize, nextColor) => {
+    const resolvedVariant = nextSize && nextColor
+      ? getVariantBySelection(item.product, nextSize, nextColor)
+      : null;
+
+    updateCheckoutItemLocally(item.id, (currentItem) => ({
+      ...currentItem,
+      variant: resolvedVariant
+        ? normalizeCheckoutVariant(resolvedVariant)
+        : {
+            sku: "",
+            size: nextSize || "",
+            color: nextColor || "",
+            stock: 0,
+            priceAdjustment: 0,
+            id: "",
+          },
+    }));
+
+    setVariantErrorsByItem((current) => ({
+      ...current,
+      [item.id]: {},
+    }));
+    setFormError(null);
+
+    if (resolvedVariant) {
+      await syncCartVariant(item, normalizeCheckoutVariant(resolvedVariant));
+    }
+  };
+
+  const handleSizeSelection = async (item, size) => {
+    const nextColors = getColorsForSize(item.product, size);
+    const preservedColor = nextColors.includes(item.variant?.color)
+      ? item.variant.color
+      : "";
+    const nextColor =
+      preservedColor || (nextColors.length === 1 ? nextColors[0] : "");
+
+    await applyVariantSelection(item, size, nextColor);
+  };
+
+  const handleColorSelection = async (item, color) => {
+    await applyVariantSelection(item, item.variant?.size, color);
   };
 
   // ---------------- FORM HANDLING ----------------
@@ -240,6 +435,10 @@ const Checkout = () => {
     (sum, item) => sum + item.unitPrice * item.quantity,
     0
   );
+  const submitButtonLabel =
+    formData.paymentMethod === "manual_bank_transfer"
+      ? "Place Order & Get Reference"
+      : "Complete Purchase";
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -303,6 +502,11 @@ const Checkout = () => {
 
     if (!checkoutItems.length) {
       setFormError("Your cart is empty.");
+      return;
+    }
+
+    if (!validateCheckoutItems()) {
+      setFormError("Please choose a valid size and color for each item.");
       return;
     }
 
@@ -405,6 +609,11 @@ const Checkout = () => {
   const proceedWithOrder = async () => {
     setIsUploading(true);
     try {
+      if (!validateCheckoutItems()) {
+        setFormError("Please choose a valid size and color for each item.");
+        return;
+      }
+
       let uploadedUrl = "";
       if (["manual", "manual_bank_transfer"].includes(formData.paymentMethod)) {
         uploadedUrl = await uploadReceipt();
@@ -427,6 +636,8 @@ const Checkout = () => {
         items: checkoutItems.map((item) => ({
           productId: item.product.id || item.product._id,
           variantSku: item.variant.sku,
+          size: item.variant.size,
+          color: item.variant.color,
           quantity: item.quantity,
         })),
         checkoutMode: isBuyNow ? "buyNow" : "cart",
@@ -458,12 +669,57 @@ const Checkout = () => {
       persistBuyNowItem(null);
 
       if (formData.paymentMethod === "manual_bank_transfer") {
+        const paymentReferenceResponse = await dispatch(
+          generateManualPaymentReference({
+            orderId: createdOrderId,
+            amount: resolvedTotal,
+          })
+        ).unwrap();
+
+        const manualPaymentData = paymentReferenceResponse?.data || {};
+        const manualReference =
+          paymentReferenceResponse?.referenceNumber ||
+          manualPaymentData.referenceNumber ||
+          manualPaymentData.manualPayment?.referenceNumber ||
+          createdOrder.referenceNumber;
+        const manualAmount =
+          paymentReferenceResponse?.amount ||
+          manualPaymentData.amount ||
+          resolvedTotal;
+        const manualOrderId =
+          paymentReferenceResponse?.orderId ||
+          manualPaymentData.orderId ||
+          createdOrderId;
+
+        dispatch(
+          storeManualPaymentContext({
+            orderId: manualOrderId,
+            amount: manualAmount,
+            slug:
+              paymentReferenceResponse?.slug ||
+              manualPaymentData.slug ||
+              manualPaymentData.manualPayment?.slug ||
+              null,
+            referenceNumber: manualReference,
+          })
+        );
+
         navigate(
-          `/shopping/manual-payment?orderId=${createdOrderId}&amount=${resolvedTotal}`,
+          buildManualPaymentPath(
+            paymentReferenceResponse?.slug ||
+              manualPaymentData.slug ||
+              manualPaymentData.manualPayment?.slug
+          ),
           {
             state: {
-              orderId: createdOrderId,
-              amount: resolvedTotal,
+              orderId: manualOrderId,
+              amount: manualAmount,
+              slug:
+                paymentReferenceResponse?.slug ||
+                manualPaymentData.slug ||
+                manualPaymentData.manualPayment?.slug ||
+                null,
+              referenceNumber: manualReference,
             },
           },
         );
@@ -529,12 +785,122 @@ const Checkout = () => {
           </section>
 
           <form onSubmit={handleSubmit} className="space-y-12">
+            <section className="space-y-8">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
+                <h2 className="text-xl font-bold tracking-tight">Review Items</h2>
+              </div>
+
+              <div className="space-y-5">
+                {checkoutItems.map((item) => {
+                  const itemErrors = variantErrorsByItem[item.id] || {};
+                  const isVariantUpdating = variantUpdateItemId === item.id;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-[28px] border border-white/10 bg-[#0c0c0c] p-5 shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
+                    >
+                      <div className="flex flex-col gap-5 md:flex-row">
+                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-white/10 bg-black/30 md:h-36 md:w-28 md:flex-shrink-0">
+                          <img
+                            src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
+                            className="h-full w-full object-cover"
+                            alt={item.product.name}
+                          />
+                        </div>
+
+                        <div className="flex-1 space-y-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-lg font-semibold tracking-tight">{item.product.name}</p>
+                              <p className="mt-1 text-xs uppercase tracking-[0.22em] text-gray-500">
+                                Unit LKR {item.unitPrice}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#f1d27a]">
+                                Qty {item.quantity}
+                              </span>
+                              {!isBuyNow ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemove(item.id)}
+                                  disabled={isVariantUpdating || isUploading}
+                                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-red-300 transition-colors hover:bg-red-500/15"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <VariantSelectors
+                            product={item.product}
+                            selectedSize={item.variant?.size}
+                            selectedColor={item.variant?.color}
+                            onSizeChange={(size) => handleSizeSelection(item, size)}
+                            onColorChange={(color) => handleColorSelection(item, color)}
+                            errors={itemErrors}
+                            disabled={isVariantUpdating || isUploading}
+                          />
+
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            {!isBuyNow ? (
+                              <div className="inline-flex items-center rounded-full border border-white/10 bg-black/30 p-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                                  disabled={item.quantity <= 1 || isVariantUpdating || isUploading}
+                                  className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </button>
+                                <span className="flex h-11 min-w-12 items-center justify-center text-sm font-semibold">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                                  disabled={item.quantity >= (item.variant?.stock || 1) || isVariantUpdating || isUploading}
+                                  className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">
+                                Buy now quantity: {item.quantity}
+                              </p>
+                            )}
+
+                            <div className="text-right">
+                              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                                Variant stock
+                              </p>
+                              <p className="text-sm font-semibold text-white">
+                                {item.variant?.stock ?? 0} available
+                              </p>
+                              {isVariantUpdating ? (
+                                <p className="mt-1 text-xs text-[#D4AF37]">Updating selection...</p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
             
             {/* Guest Email (only for non-authenticated users) */}
             {!isAuthenticated && (
               <section className="space-y-8">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">01</span>
                   <h2 className="text-xl font-bold tracking-tight">Contact Information</h2>
                 </div>
                 
@@ -557,7 +923,7 @@ const Checkout = () => {
             {/* 01 Shipping Destination */}
             <section className="space-y-8">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">01</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">02</span>
                 <h2 className="text-xl font-bold tracking-tight">Shipping Destination</h2>
               </div>
               
@@ -600,7 +966,7 @@ const Checkout = () => {
             {/* 02 Payment Method */}
             <section className="space-y-8">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">02</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">03</span>
                 <h2 className="text-xl font-bold tracking-tight">Payment Method</h2>
               </div>
               
@@ -701,18 +1067,23 @@ const Checkout = () => {
                         <h4 className="font-bold text-[#D4AF37] text-lg">Bank Information</h4>
                         <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
                           <span className="text-gray-400">Bank:</span>
-                          <span className="font-medium">Commercial Bank</span>
+                          <span className="font-medium">{MANUAL_BANK_DETAILS.bankName}</span>
+                          
+                          <span className="text-gray-400">Branch:</span>
+                          <span className="font-medium">{MANUAL_BANK_DETAILS.branch}</span>
                           
                           <span className="text-gray-400">Account Name:</span>
-                          <span className="font-medium">Saga Elite Pvt Ltd</span>
+                          <span className="font-medium">{MANUAL_BANK_DETAILS.accountName}</span>
                           
                           <span className="text-gray-400">Account No:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">123456789</span>
+                            <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">
+                              {MANUAL_BANK_DETAILS.accountNumber}
+                            </span>
                             <button 
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText("123456789");
+                                navigator.clipboard.writeText(MANUAL_BANK_DETAILS.accountNumber);
                                 toast({ title: "Copied!", description: "Account number copied to clipboard." });
                               }}
                               className="text-xs bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black px-2 py-1 rounded transition-colors"
@@ -720,6 +1091,18 @@ const Checkout = () => {
                               Copy
                             </button>
                           </div>
+
+                          <span className="text-gray-400">WhatsApp:</span>
+                          <span className="font-medium">{MANUAL_BANK_DETAILS.whatsapp}</span>
+                        </div>
+                        <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-gray-300">
+                          <p className="font-semibold text-[#D4AF37]">
+                            You must place the order first to get your payment reference.
+                          </p>
+                          <p className="mt-1">
+                            Step 1: place the order. Step 2: we show your unique reference. Step 3: make the bank transfer using that reference in the memo.
+                          </p>
+                          <p className="mt-2 text-amber-200">{MANUAL_BANK_DETAILS.deadline}</p>
                         </div>
                       </div>
                     </div>
@@ -790,7 +1173,7 @@ const Checkout = () => {
               >
                 {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
                   <>
-                    Complete Purchase <span className="text-lg">→</span>
+                    {submitButtonLabel} <span className="text-lg">→</span>
                   </>
                 )}
               </button>
@@ -818,7 +1201,7 @@ const Checkout = () => {
                   <div className="flex-1 space-y-1">
                     <p className="font-bold text-sm leading-tight line-clamp-1">{item.product.name}</p>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      {item.variant.size} • {item.variant.color} • Qty: {item.quantity}
+                      Qty: {item.quantity}
                     </p>
                     <p className="font-bold text-base mt-2 text-[#D4AF37]">LKR {item.unitPrice * item.quantity}</p>
                   </div>
@@ -855,7 +1238,7 @@ const Checkout = () => {
             >
                {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
                  <>
-                   Complete Purchase <span className="text-xl">→</span>
+                   {submitButtonLabel} <span className="text-xl">→</span>
                  </>
                )}
             </button>

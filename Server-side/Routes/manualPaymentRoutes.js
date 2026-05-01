@@ -14,8 +14,9 @@ const {
 const router = express.Router();
 
 router.post("/manual-payment/generate", authMiddleware, generateReference);
+router.post("/payments/generate-reference", authMiddleware, generateReference);
 router.post("/manual-payment/submit-proof", authMiddleware, submitProof);
-router.get("/manual-payment/status/:referenceNumber", authMiddleware, getMyPaymentStatus);
+router.get("/manual-payment/status/:paymentIdentifier", authMiddleware, getMyPaymentStatus);
 
 router.get("/admin/manual-payments", authMiddleware, requireAdmin, getPendingPayments);
 router.get("/admin/manual-payments/:id", authMiddleware, requireAdmin, getPaymentById);

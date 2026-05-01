@@ -7,6 +7,8 @@ import { fetchNotifications, fetchAdminNotifications } from "@/store/notificatio
 import { fetchDashboardStats, fetchUserOrders, fetchAdminOrders } from "@/store/order-slice";
 import { fetchPendingManualPayments } from "@/store/manualPaymentSlice";
 import { fetchAdminReviews } from "@/store/reviewSlice";
+import { updateProductInStore } from "@/store/admin/product-slice";
+import { updateDropInStore } from "@/store/admin/drop-slice";
 
 const adminPaymentParams = {
   status: "proof_submitted",
@@ -41,6 +43,26 @@ const SocketBridge = () => {
       disconnectSocket();
     };
   }, [isAuthenticated, user]);
+
+  useSocketEvent(
+    "product:updated",
+    (payload = {}) => {
+      if (!isAdmin) return;
+
+      dispatch(updateProductInStore(payload));
+    },
+    [dispatch, isAdmin],
+  );
+
+  useSocketEvent(
+    "drop:updated",
+    (payload = {}) => {
+      if (!isAdmin) return;
+
+      dispatch(updateDropInStore(payload));
+    },
+    [dispatch, isAdmin],
+  );
 
   useSocketEvent(
     "admin:refresh",

@@ -64,10 +64,8 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
-import { useSocket } from "@/hooks/useSocket";
 
 function App() {
-  useSocket();
   const {
     isAuthenticated,
     user,
@@ -305,6 +303,11 @@ function App() {
 
           <Route
             path="manual-payment"
+            element={<ManualPaymentPage />}
+          />
+
+          <Route
+            path="manual-payment/:paymentSlug"
             element={<ManualPaymentPage />}
           />
 
