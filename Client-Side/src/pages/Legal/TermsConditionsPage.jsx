@@ -2,9 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import LegalLayout from "@/components/Legal/LegalLayout";
 import usePageMeta from "@/hooks/use-page-meta";
-import { CONTACT_INFO } from "@/config";
 
-const LAST_UPDATED = "April 29, 2026";
+const LAST_UPDATED = "May 2, 2026";
 
 const TermsConditionsPage = () => {
   usePageMeta({
@@ -31,22 +30,9 @@ const TermsConditionsPage = () => {
         </h2>
         <p>
           Saga Elite is a Sri Lankan fashion and lifestyle brand offering
-          limited-edition apparel and accessories through our online store.
+          limited-edition apparel and accessories through our online store. 
+          There are no age restrictions on purchases, and we do not have any restricted product categories.
         </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="user-accounts" className="text-xl font-semibold text-white">
-          User accounts and responsibilities
-        </h2>
-        <ul className="list-disc pl-5 space-y-2">
-          <li>You must provide accurate and complete information.</li>
-          <li>You are responsible for keeping your account secure.</li>
-          <li>
-            Prohibited activities include fraud, abuse, scraping, or reselling
-            without permission.
-          </li>
-        </ul>
       </section>
 
       <section className="space-y-3">
@@ -54,10 +40,9 @@ const TermsConditionsPage = () => {
           Products and pricing
         </h2>
         <ul className="list-disc pl-5 space-y-2">
-          <li>We reserve the right to change prices without prior notice.</li>
+          <li>Prices are in LKR and subject to change without prior notice.</li>
           <li>Product images are representative; colors may vary slightly.</li>
           <li>We reserve the right to limit quantities.</li>
-          <li>All prices are in LKR unless stated otherwise.</li>
         </ul>
       </section>
 
@@ -65,26 +50,22 @@ const TermsConditionsPage = () => {
         <h2 id="ordering-payment" className="text-xl font-semibold text-white">
           Ordering and payment
         </h2>
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>Select your items and add them to the cart.</li>
-          <li>Review your order and proceed to checkout.</li>
-          <li>Provide delivery details and choose a payment method.</li>
-          <li>Confirm your order and wait for confirmation.</li>
-        </ol>
-        <ul className="mt-3 list-disc pl-5 space-y-2">
+        <ul className="list-disc pl-5 space-y-2">
           <li>
-            Online payments are processed by PayHere (card, wallet, or internet
-            banking).
+            Order confirmation is sent via email and WhatsApp upon successful placement.
           </li>
           <li>
-            Manual bank transfers use a reference number in the format
-            SAGA-[ID]-[DATE]-[CODE] to identify your order.
+            Manual payment orders require payment within 24 hours using the provided reference number.
           </li>
           <li>
-            We will confirm your order once payment is verified and items are
-            available.
+            Our official banking details for manual bank transfers:
+            <ul className="list-disc pl-5 mt-2 space-y-1">
+              <li><strong>Bank:</strong> Sampath Bank</li>
+              <li><strong>Branch:</strong> Hatton</li>
+              <li><strong>A/C Number:</strong> 108052612262</li>
+              <li><strong>Account Name:</strong> N.Gayathree</li>
+            </ul>
           </li>
-          <li>We reserve the right to cancel orders for any reason.</li>
         </ul>
       </section>
 
@@ -93,10 +74,9 @@ const TermsConditionsPage = () => {
           Shipping and delivery
         </h2>
         <ul className="list-disc pl-5 space-y-2">
-          <li>We deliver to approved areas within Sri Lanka.</li>
-          <li>Estimated timeframes include processing plus shipping.</li>
+          <li>Delivery is strictly within Sri Lanka only.</li>
+          <li>Estimated delivery time is 15 days from order confirmation.</li>
           <li>Risk transfers to the buyer once the order is shipped.</li>
-          <li>We are not liable for courier delays beyond our control.</li>
         </ul>
       </section>
 
@@ -107,32 +87,10 @@ const TermsConditionsPage = () => {
         <p>
           Please review our{" "}
           <Link to="/legal/refund-policy" className="text-[#D4AF37]">
-            Refund Policy
+            Refund &amp; Return Policy
           </Link>{" "}
-          for eligibility, timelines, and instructions.
+          for our policy on exchanges and final sales.
         </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="intellectual-property" className="text-xl font-semibold text-white">
-          Intellectual property
-        </h2>
-        <p>
-          All site content, including images, text, and branding, is owned by
-          Saga Elite. You may not reproduce or reuse content without written
-          permission.
-        </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="limitation-of-liability" className="text-xl font-semibold text-white">
-          Limitation of liability
-        </h2>
-        <ul className="list-disc pl-5 space-y-2">
-          <li>The site is provided "as-is" without warranties.</li>
-          <li>We are not liable for indirect or consequential damages.</li>
-          <li>Maximum liability is capped at the value of your last order.</li>
-        </ul>
       </section>
 
       <section className="space-y-3">
@@ -146,23 +104,16 @@ const TermsConditionsPage = () => {
       </section>
 
       <section className="space-y-3">
-        <h2 id="changes-to-terms" className="text-xl font-semibold text-white">
-          Changes to terms
-        </h2>
-        <p>
-          We may update these terms from time to time. Updates will be posted on
-          this page with a new last-updated date.
-        </p>
-      </section>
-
-      <section className="space-y-3">
         <h2 id="contact" className="text-xl font-semibold text-white">
           Contact us
         </h2>
         <p>
-          For questions about these terms, email {CONTACT_INFO.email} or contact
-          us at {CONTACT_INFO.phone}.
+          For questions about these terms, contact us at:
         </p>
+        <ul className="list-none space-y-1">
+          <li><strong>Email:</strong> sagaaelite@gmail.com</li>
+          <li><strong>WhatsApp / Phone:</strong> +94 77 070 4274</li>
+        </ul>
       </section>
     </LegalLayout>
   );

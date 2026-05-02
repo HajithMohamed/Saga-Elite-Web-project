@@ -71,8 +71,9 @@ import WhatsAppFloatingButton from "./components/common-components/WhatsAppFloat
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user } = useSelector((state) => state.auth);
   const location = useLocation();
+
   const isAdminLike = ["admin", "super_admin", "superadmin"].includes(
-    String(user?.role || "").toLowerCase(),
+    String(user?.role || "").toLowerCase()
   );
 
   if (adminOnly && !isAdminLike) {
@@ -93,18 +94,23 @@ const ROUTE_META = [
 
 const RouteMetaManager = () => {
   const location = useLocation();
-  const matchedMeta = ROUTE_META.find((entry) => entry.match.test(location.pathname));
+  const matchedMeta = ROUTE_META.find((entry) =>
+    entry.match.test(location.pathname)
+  );
 
   usePageMeta({
     title: matchedMeta?.title || "Page Not Found",
-    description: "Saga Elite limited-edition streetwear and customer experience platform.",
+    description:
+      "Saga Elite limited-edition streetwear and customer experience platform.",
   });
 
   return null;
 };
 
 function App() {
-  const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, isLoading } = useSelector(
+    (state) => state.auth
+  );
   const dispatch = useDispatch();
 
   const defaultAuthenticatedRoute =
@@ -137,9 +143,11 @@ function App() {
             <Route
               path="/"
               element={
-                isAuthenticated
-                  ? <Navigate to={defaultAuthenticatedRoute} replace />
-                  : <Home />
+                isAuthenticated ? (
+                  <Navigate to={defaultAuthenticatedRoute} replace />
+                ) : (
+                  <Home />
+                )
               }
             />
 
@@ -171,8 +179,8 @@ function App() {
             }
           >
             <Route index element={<Login />} />
-            <Route path="register" element={<Register />} />
             <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password-otp" element={<VerifyResetOtp />} />
             <Route path="set-new-password" element={<SetNewPassword />} />
@@ -195,14 +203,8 @@ function App() {
             <Route path="product" element={<AdminProduct />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="super-admin" element={<SuperAdminDashboard />} />
-
             <Route path="notifications" element={<NotificationsManager />} />
-
-            <Route
-              path="payments/pending"
-              element={<ProtectedRoute adminOnly><PendingPaymentsPage /></ProtectedRoute>}
-            />
-
+            <Route path="payments/pending" element={<PendingPaymentsPage />} />
             <Route path="manual-payments" element={<PendingPaymentsPage />} />
             <Route path="manual-payments/:paymentId" element={<PaymentVerificationPage />} />
             <Route path="reviews" element={<ReviewModerationPage />} />
