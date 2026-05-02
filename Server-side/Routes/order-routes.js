@@ -17,6 +17,7 @@ router.post("/create-order", optionalAuthMiddleware, createOrder);
 router.get("/user-orders", authMiddleware, getUserOrders);
 router.get("/get-order/:id", authMiddleware, getOrderById);
 router.get("/get-all-orders", authMiddleware, adminMiddleware, getAllOrders);
+router.put("/:id/status", authMiddleware, adminMiddleware, updateOrderStatus);
 router.patch("/update-order-status/:id", authMiddleware, adminMiddleware, updateOrderStatus);
 router.get("/dashboard-stats", authMiddleware, adminMiddleware, getDashboardStats);
 
