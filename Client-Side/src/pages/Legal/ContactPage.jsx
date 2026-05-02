@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import axios from "axios";
-import { Loader2 } from "lucide-react";
+import { Loader2, Instagram, Facebook } from "lucide-react";
 import LegalLayout from "@/components/Legal/LegalLayout";
 import usePageMeta from "@/hooks/use-page-meta";
 import { CONTACT_INFO } from "@/config";
@@ -37,12 +37,6 @@ const ContactPage = () => {
     () => CONTACT_INFO.whatsapp.replace(/\D/g, ""),
     []
   );
-  const mapsLink = useMemo(() => {
-    const query = `${CONTACT_INFO.addressLine1}, ${CONTACT_INFO.addressLine2}`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      query
-    )}`;
-  }, []);
 
   const messageCount = formData.message.length;
 
@@ -105,22 +99,50 @@ const ContactPage = () => {
               </p>
               <p className="mt-2 text-sm text-white">{CONTACT_INFO.phone}</p>
             </a>
-            <a
-              href={mapsLink}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded border border-white/10 bg-[#0f0f0f] px-5 py-4 transition-colors hover:border-[#D4AF37]/50"
-            >
-              <p className="text-xs uppercase tracking-[0.2em] text-white/60">
-                Address
-              </p>
-              <p className="mt-2 text-sm text-white">
-                {CONTACT_INFO.addressLine1}, {CONTACT_INFO.addressLine2}
-              </p>
-            </a>
             <div className="rounded border border-white/10 bg-[#0f0f0f] px-5 py-4">
               <p className="text-xs uppercase tracking-[0.2em] text-white/60">
-                Hours
+                Social Media
+              </p>
+              <div className="mt-4 flex gap-4">
+                <a
+                  href={CONTACT_INFO.socials.instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-white/60 hover:text-[#D4AF37] transition-colors"
+                >
+                  <Instagram className="h-5 w-5" />
+                  <span className="sr-only">Instagram</span>
+                </a>
+                <a
+                  href={CONTACT_INFO.socials.facebook}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-white/60 hover:text-[#D4AF37] transition-colors"
+                >
+                  <Facebook className="h-5 w-5" />
+                  <span className="sr-only">Facebook</span>
+                </a>
+                <a
+                  href={CONTACT_INFO.socials.tiktok}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-white/60 hover:text-[#D4AF37] transition-colors"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.04-.1z" />
+                  </svg>
+                  <span className="sr-only">TikTok</span>
+                </a>
+              </div>
+            </div>
+            <div className="rounded border border-white/10 bg-[#0f0f0f] px-5 py-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+                Operating Hours
               </p>
               <p className="mt-2 text-sm text-white">{CONTACT_INFO.hours}</p>
             </div>

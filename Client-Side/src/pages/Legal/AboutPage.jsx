@@ -13,123 +13,61 @@ const AboutPage = () => {
   return (
     <LegalLayout title="About Us">
       <section className="space-y-4">
-        <h2 id="hero" className="text-xl font-semibold text-white">
-          Hero
+        <h2 id="our-story" className="text-2xl font-semibold text-white">
+          Our Story
         </h2>
-        {/* TODO: Replace with approved brand tagline and hero image. */}
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-3">
-            <p className="text-lg text-white">
-              Saga Elite is built for bold self-expression and timeless street
-              culture.
+        <div className="grid gap-6">
+          <div className="space-y-4 text-white/80">
+            <p>
+              Welcome to Saga Elite—a proudly Sri Lankan fashion and lifestyle brand born from a love for modern style and premium craftsmanship. 
             </p>
             <p>
-              We blend Sri Lankan creativity with global fashion energy to create
-              limited-edition fits that feel personal, powerful, and rare.
+              We started with a simple belief: that everyone deserves access to high-quality, contemporary fashion without the exclusive price tags. Rooted in local culture but inspired by global trends, Saga Elite is more than just clothing. It’s about building a community of individuals who express themselves boldly every single day.
+            </p>
+            <p>
+              Our pieces are carefully designed with premium quality materials, ensuring that every drop not only looks incredible but feels like it was made just for you. From our local roots to your wardrobe, we're dedicated to bringing you approachable, elevated fashion that fits seamlessly into your lifestyle.
             </p>
           </div>
-          <div className="h-48 w-full rounded border border-white/10 bg-[#0f0f0f] flex items-center justify-center text-white/40">
-            Image placeholder
+          
+          <div className="h-80 w-full rounded-lg border-2 border-dashed border-white/20 bg-[#0a0a0a] flex flex-col items-center justify-center text-white/40 my-6">
+            <svg
+              className="w-12 h-12 mb-3 text-white/30"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            <span className="text-sm font-medium uppercase tracking-widest">Team Photo Placeholder</span>
+            <span className="text-xs mt-1 text-white/30">Upload your amazing team here</span>
+          </div>
+
+          <div className="space-y-4 text-white/80">
+            <p>
+              We're a close-knit team that treats our community like family. Whether you're picking up your very first essential tee or lining up for one of our limited drops, we want your experience with Saga Elite to be completely personal. 
+            </p>
+            <p>
+              Thanks for being a part of our story. We can't wait to see how you style your Saga Elite gear!
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 id="our-story" className="text-xl font-semibold text-white">
-          Our story
-        </h2>
-        {/* TODO: Replace with the authentic brand origin story. */}
-        <p>
-          Saga Elite began as a small creative collective inspired by local
-          streetwear and the confidence it brings. What started as a passion
-          project grew into a lifestyle brand focused on quality, craft, and
-          community.
-        </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="what-we-offer" className="text-xl font-semibold text-white">
-          What we offer
-        </h2>
-        {/* TODO: Replace categories with the official product lineup. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[
-            "Limited-edition drops",
-            "Everyday essentials",
-            "Accessories & add-ons",
-            "Seasonal collections",
-          ].map((item) => (
-            <div
-              key={item}
-              className="rounded border border-white/10 bg-[#0f0f0f] px-4 py-3"
-            >
-              <p className="text-sm text-white/80">{item}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="why-choose-us" className="text-xl font-semibold text-white">
-          Why choose us
-        </h2>
-        {/* TODO: Replace value propositions with approved messaging. */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {[
-            {
-              title: "Quality first",
-              copy: "Carefully selected fabrics and reliable construction.",
-            },
-            {
-              title: "Fast delivery",
-              copy: "Prompt dispatch across Sri Lanka with trusted couriers.",
-            },
-            {
-              title: "Personal service",
-              copy: "Friendly support that treats every order with care.",
-            },
-            {
-              title: "Easy returns",
-              copy: "Clear, fair return policy for peace of mind.",
-            },
-          ].map((value) => (
-            <div
-              key={value.title}
-              className="rounded border border-white/10 bg-[#0f0f0f] px-5 py-4"
-            >
-              <h3 className="text-sm font-semibold text-white">
-                {value.title}
-              </h3>
-              <p className="mt-2 text-sm text-white/70">{value.copy}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="how-to-shop" className="text-xl font-semibold text-white">
-          How to shop
-        </h2>
-        {/* TODO: Update steps to match the final checkout flow. */}
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>Browse the latest drops and select your fit.</li>
-          <li>Place your order and choose a payment method.</li>
-          <li>Receive delivery and enjoy your Saga Elite gear.</li>
-        </ol>
-      </section>
-
-      <section className="space-y-4">
+      <section className="space-y-4 mt-12 pt-8 border-t border-white/10">
         <h2 id="contact-cta" className="text-xl font-semibold text-white">
-          Contact us
+          Get in Touch
         </h2>
-        {/* TODO: Replace CTA copy when brand messaging is finalized. */}
-        <p>
-          Have questions or want to collaborate? Reach out and we will get back
-          to you shortly.
+        <p className="text-white/80">
+          Have questions, feedback, or just want to say hi? We'd love to hear from you.
         </p>
         <Link
           to="/contact"
-          className="inline-flex items-center justify-center rounded border border-[#D4AF37]/40 px-5 py-2 text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors"
+          className="inline-flex items-center justify-center rounded border border-[#D4AF37]/40 px-5 py-2 text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors mt-2"
         >
           Contact Saga Elite
         </Link>

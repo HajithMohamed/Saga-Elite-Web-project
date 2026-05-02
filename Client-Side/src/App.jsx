@@ -11,6 +11,7 @@ import PublicLayout from "./components/common-components/PublicLayout";
 import PrivacyPolicyPage from "./pages/Legal/PrivacyPolicyPage";
 import TermsConditionsPage from "./pages/Legal/TermsConditionsPage";
 import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
+import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
 import AboutPage from "./pages/Legal/AboutPage";
 
@@ -143,6 +144,11 @@ function App() {
           <Route
             path="/legal/refund-policy"
             element={<RefundPolicyPage />}
+          />
+
+          <Route
+            path="/legal/delivery-policy"
+            element={<DeliveryPolicyPage />}
           />
 
           <Route

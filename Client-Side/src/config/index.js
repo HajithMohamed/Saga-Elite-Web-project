@@ -8,7 +8,7 @@ export const CONTACT_INFO = {
   whatsapp: "+94770704274",
   addressLine1: "123 Galle Road",
   addressLine2: "Colombo 03, Sri Lanka",
-  hours: "Mon - Sat, 9:00 AM - 6:00 PM (Sri Lanka Time)",
+  hours: "Normal office hours (Mon–Fri, 9am–6pm LKT)",
   socials: {
     instagram: "https://www.instagram.com/sagaaelite",
     facebook: "https://www.facebook.com/share/1aXufbN6EX/",

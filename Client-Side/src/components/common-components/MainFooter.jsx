@@ -135,6 +135,8 @@ const MainFooter = () => {
               <Link to="/legal/terms-and-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
               <span>&middot;</span>
               <Link to="/legal/refund-policy" className="hover:text-white transition-all">Refund Policy</Link>
+              <span>&middot;</span>
+              <Link to="/legal/delivery-policy" className="hover:text-white transition-all">Delivery Policy</Link>
             </div>
           </div>
         </div>
