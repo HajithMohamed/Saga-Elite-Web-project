@@ -2,6 +2,7 @@ import { SOCKET_URL as SERVER_URL } from "@/lib/api";
 
 export const RETURN_WINDOW_DAYS = 30;
 
+/* ================== CONTACT INFO ================== */
 export const CONTACT_INFO = {
   email: "support@sagaelite.lk",
   phone: "+94 77 123 4567",
@@ -9,10 +10,16 @@ export const CONTACT_INFO = {
   addressLine1: "123 Galle Road",
   addressLine2: "Colombo 03, Sri Lanka",
   hours: "Mon - Sat, 9:00 AM - 6:00 PM (Sri Lanka Time)",
+  socials: {
+    instagram: "https://www.instagram.com/sagaaelite",
+    facebook: "https://www.facebook.com/share/1aXufbN6EX/",
+    tiktok: "https://www.tiktok.com/@sagaa_elite"
+  }
 };
 
 export { SERVER_URL };
 
+/* ================== AUTH FORMS ================== */
 export const loginFormControl = [
   {
     name: "email",
@@ -20,7 +27,7 @@ export const loginFormControl = [
     placeholder: "exampl@gmail.com",
     id: "email",
     label: "Email",
-    componentType : "INPUT"
+    componentType: "INPUT"
   },
   {
     name: "password",
@@ -28,10 +35,10 @@ export const loginFormControl = [
     placeholder: "ABcd@12",
     id: "password",
     label: "Password",
-    componentType : "INPUT"
-  },
+    componentType: "INPUT"
+  }
 ];
- 
+
 export const registerFormControl = [
   {
     name: "email",
@@ -39,7 +46,7 @@ export const registerFormControl = [
     placeholder: "exampl@gmail.com",
     id: "email",
     label: "Email",
-    componentType : "INPUT"
+    componentType: "INPUT"
   },
   {
     name: "password",
@@ -47,7 +54,7 @@ export const registerFormControl = [
     placeholder: "ABcd@12",
     id: "password",
     label: "Password",
-    componentType : "INPUT"
+    componentType: "INPUT"
   },
   {
     name: "confirmPassword",
@@ -55,8 +62,8 @@ export const registerFormControl = [
     placeholder: "ABcd@12",
     id: "confirmPassword",
     label: "Confirm Password",
-    componentType : "INPUT"
-  },
+    componentType: "INPUT"
+  }
 ];
 
 export const verifyOtpFormControls = [
@@ -75,8 +82,8 @@ export const forgotPasswordControls = [
     placeholder: "exampl@gmail.com",
     id: "email",
     label: "Email",
-    componentType : "INPUT"
-  },
+    componentType: "INPUT"
+  }
 ];
 
 export const resetPasswordOtpFormControls = [
@@ -92,7 +99,7 @@ export const resetPasswordOtpFormControls = [
     placeholder: "Enter new password",
     id: "newPassword",
     label: "New Password",
-    componentType : "INPUT"
+    componentType: "INPUT"
   },
   {
     name: "confirmPassword",
@@ -100,8 +107,8 @@ export const resetPasswordOtpFormControls = [
     placeholder: "Confirm new password",
     id: "confirmPassword",
     label: "Confirm Password",
-    componentType : "INPUT"
-  },
+    componentType: "INPUT"
+  }
 ];
 
 export const setPasswordFormControls = [
@@ -111,7 +118,7 @@ export const setPasswordFormControls = [
     placeholder: "Enter new password",
     id: "newPassword",
     label: "New Password",
-    componentType : "INPUT"
+    componentType: "INPUT"
   },
   {
     name: "confirmPassword",
@@ -119,8 +126,8 @@ export const setPasswordFormControls = [
     placeholder: "Confirm new password",
     id: "confirmPassword",
     label: "Confirm Password",
-    componentType : "INPUT"
-  },
+    componentType: "INPUT"
+  }
 ];
 
 export const changePasswordFormControls = [
@@ -130,7 +137,7 @@ export const changePasswordFormControls = [
     placeholder: "Current password",
     id: "oldPassword",
     label: "Current Password",
-    componentType: "INPUT",
+    componentType: "INPUT"
   },
   {
     name: "newPassword",
@@ -138,7 +145,7 @@ export const changePasswordFormControls = [
     placeholder: "New password",
     id: "newPassword",
     label: "New Password",
-    componentType: "INPUT",
+    componentType: "INPUT"
   },
   {
     name: "passwordConfirm",
@@ -146,10 +153,11 @@ export const changePasswordFormControls = [
     placeholder: "Confirm new password",
     id: "passwordConfirm",
     label: "Confirm New Password",
-    componentType: "INPUT",
-  },
+    componentType: "INPUT"
+  }
 ];
 
+/* ================== DROP FORM ================== */
 export const dropFormControls = [
   {
     name: "name",
@@ -190,5 +198,5 @@ export const dropFormControls = [
     label: "Archived",
     type: "checkbox",
     componentType: "CHECKBOX"
-  },
+  }
 ];

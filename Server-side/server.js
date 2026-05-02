@@ -32,6 +32,7 @@ validateRuntimeConfig();
 const app = express();
 
 const authRoutes = require("./Routes/authRoutes");
+const whatsappWebhookRoutes = require("./Routes/whatsapp-webhook-routes");
 const googleAuthRoute = require("./Routes/google-routes");
 const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes");
@@ -63,6 +64,9 @@ app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
 
+/* ================== API ROUTES ================== */
+app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/google", googleAuthRoute);
@@ -86,8 +90,13 @@ const PORT = Number(rawPort) || 5001;
 const socketOrigin =
   process.env.CLIENT_URL ||
   process.env.FRONTEND_URL ||
-  process.env.FRONTEND_URLS?.split(",").map((value) => value.trim()).filter(Boolean)[0] ||
-  (process.env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined);
+  process.env.FRONTEND_URLS
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)[0] ||
+  (process.env.NODE_ENV !== "production"
+    ? "http://localhost:5173"
+    : undefined);
 
 const server = http.createServer(app);
 const io = new Server(server, {
