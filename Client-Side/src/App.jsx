@@ -35,7 +35,7 @@ import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
 import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
-import PaymentVerificationPage from "./pages/Admin/PaymentVerificationPage";
+import PaymentVerificationPage from "./pages/admin/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
