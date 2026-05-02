@@ -29,9 +29,7 @@ export default defineConfig({
   },
   resolve : {
     alias : {
-      "@":path.resolve(__dirname,"./src"),
-      // Reuse the Socket.IO client bundle already available from the installed socket.io package.
-      "socket.io-client":path.resolve(__dirname,"../node_modules/socket.io/client-dist/socket.io.esm.min.js")
+      "@":path.resolve(__dirname,"./src")
     }
   }
 })
