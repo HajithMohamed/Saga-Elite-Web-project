@@ -14,6 +14,7 @@ const {
   moderateReview,
   uploadReviewImages,
   updateReview,
+  flagReview,
 } = require("../Controllers/reviewController");
 
 const userRouter = express.Router();
@@ -30,6 +31,7 @@ userRouter.post(
 userRouter.get("/product/:productId", getProductReviews);
 userRouter.get("/my-reviews", authMiddleware, getUserReviews);
 userRouter.post("/:reviewId/helpful", authMiddleware, voteHelpful);
+userRouter.post("/:reviewId/flag", authMiddleware, flagReview);
 userRouter.patch("/:reviewId", authMiddleware, updateReview);
 userRouter.delete("/:reviewId", authMiddleware, deleteReview);
 

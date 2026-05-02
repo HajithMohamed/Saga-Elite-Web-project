@@ -303,6 +303,34 @@ const voteHelpful = catchAsync(async (req, res, next) => {
   });
 });
 
+const flagReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { reason } = req.body;
+  const userId = req.userInfo?._id;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (review.userId.toString() === userId.toString()) {
+    return next(new AppError("You cannot flag your own review", 400));
+  }
+
+  review.isFlagged = true;
+  review.flagReason = reason || "Inappropriate content";
+  await review.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Review flagged successfully",
+  });
+});
+
 const deleteReview = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
   const userId = req.userInfo?._id;
@@ -393,12 +421,23 @@ const updateReview = catchAsync(async (req, res, next) => {
 
 const getAllReviews = catchAsync(async (req, res, next) => {
   const status = req.query.status || "pending";
+  const search = req.query.search || "";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
   const filter = status ? { status } : {};
+
+  if (search) {
+    const products = await Product.find({ name: { $regex: search, $options: "i" } }).select("_id");
+    const users = await User.find({ email: { $regex: search, $options: "i" } }).select("_id");
+
+    filter.$or = [
+      { productId: { $in: products.map((p) => p._id) } },
+      { userId: { $in: users.map((u) => u._id) } },
+    ];
+  }
 
   if (countOnly) {
     const totalReviews = await Review.countDocuments(filter);
@@ -414,7 +453,7 @@ const getAllReviews = catchAsync(async (req, res, next) => {
 
   const [reviews, totalReviews] = await Promise.all([
     Review.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ isFlagged: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("productId", "name slug")
@@ -530,6 +569,7 @@ module.exports = {
   moderateReview,
   uploadReviewImages,
   updateReview,
+  flagReview,
   recalculateProductRating,
   getRatingStats,
 };

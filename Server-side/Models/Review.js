@@ -53,6 +53,16 @@ const reviewSchema = new mongoose.Schema(
       default: 0,
     },
     helpfulVotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    isFlagged: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    flagReason: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],

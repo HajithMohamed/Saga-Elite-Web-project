@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CheckCircle2, ImageOff, ThumbsUp } from "lucide-react";
+import { CheckCircle2, ImageOff, ThumbsUp, Flag } from "lucide-react";
 import StarRating from "./StarRating";
 
 const getDisplayName = (user) => {
@@ -31,10 +31,13 @@ const ReviewCard = ({
   isOwnReview = false,
   onEdit,
   onDelete,
+  onFlag,
   currentUserId,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [lightbox, setLightbox] = useState(null);
+  const [isFlagging, setIsFlagging] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
 
   const displayName = useMemo(
     () => getDisplayName(review?.userId),
@@ -128,6 +131,15 @@ const ReviewCard = ({
         </button>
 
         <div className="flex flex-wrap items-center gap-3">
+          {!isOwnReview && currentUserId && (
+            <button
+              type="button"
+              onClick={() => setIsFlagging(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-red-500/50 hover:text-red-400"
+            >
+              <Flag className="h-3 w-3" /> Report
+            </button>
+          )}
           {isOwnReview && review?.status && (
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
@@ -174,6 +186,44 @@ const ReviewCard = ({
             alt="Review"
             className="max-h-[80vh] w-full max-w-3xl rounded-3xl object-contain"
           />
+        </div>
+      )}
+
+      {isFlagging && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+          <div className="w-full max-w-lg rounded-3xl bg-[#0b0b0b] p-6">
+            <h2 className="text-lg font-semibold text-white">Report Review</h2>
+            <p className="mt-2 text-sm text-white/60">
+              Why are you reporting this review? (Spam, abusive, irrelevant, etc.)
+            </p>
+            <textarea
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              className="mt-4 min-h-[100px] w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-red-500/50"
+              placeholder="Provide a reason..."
+            />
+            <div className="mt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsFlagging(false)}
+                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onFlag && onFlag(review._id, flagReason);
+                  setIsFlagging(false);
+                  setFlagReason("");
+                }}
+                disabled={!flagReason.trim()}
+                className="rounded-full bg-red-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-200 hover:bg-red-500/30 disabled:opacity-50"
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

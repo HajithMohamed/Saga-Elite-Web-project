@@ -8,6 +8,7 @@ import {
   fetchAdminReviewsApi,
   moderateReviewApi,
   updateReviewApi,
+  flagReviewApi,
 } from "@/api/reviewAPI";
 
 const unwrapError = (error, fallback) => {
@@ -126,13 +127,27 @@ export const deleteReview = createAsyncThunk(
 
 export const fetchAdminReviews = createAsyncThunk(
   "review/fetchAdminReviews",
-  async ({ status, page, limit = 20 }, thunkAPI) => {
+  async ({ status, page, limit = 20, search }, thunkAPI) => {
     try {
-      const response = await fetchAdminReviewsApi({ status, page, limit });
+      const response = await fetchAdminReviewsApi({ status, page, limit, search });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
         unwrapError(error, "Failed to fetch admin reviews")
+      );
+    }
+  }
+);
+
+export const flagReview = createAsyncThunk(
+  "review/flagReview",
+  async ({ reviewId, reason }, thunkAPI) => {
+    try {
+      const response = await flagReviewApi(reviewId, reason);
+      return { ...response.data, reviewId };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to flag review")
       );
     }
   }
