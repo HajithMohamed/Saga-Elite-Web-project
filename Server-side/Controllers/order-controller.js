@@ -8,6 +8,7 @@ const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
+const { sendWhatsAppMessage, cleanPhoneNumber } = require("../Utils/whatsapp-service");
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
@@ -261,6 +262,24 @@ const createOrder = catchAsync(async (req, res, next) => {
     filter: { role: "admin" },
   });
 
+  // WhatsApp Order Confirmation
+  const phone = cleanPhoneNumber(createdOrder.contactNumber);
+  if (phone) {
+    const isManual = ["manual", "manual_bank_transfer"].includes(createdOrder.paymentMethod);
+    let waMessage = `Hi Customer, your Saga Elite order #${createdOrder._id} has been confirmed! 🛍️\nTotal: LKR ${createdOrder.totalAmount}`;
+    
+    if (isManual) {
+      const ref = createdOrder.referenceNumber || "PENDING";
+      waMessage += `\n\nPlease pay using reference SAGA-${ref} to Sampath Bank, A/C 108052612262 (N.Gayathree), Hatton branch.`;
+    }
+    
+    try {
+      await sendWhatsAppMessage({ to: phone, message: waMessage });
+    } catch (waErr) {
+      console.error("Failed to send WhatsApp confirmation:", waErr);
+    }
+  }
+
   res.status(201).json({
     success: true,
     message: "Order placed successfully",
@@ -356,6 +375,25 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   }
 
   await order.save({ validateModifiedOnly: true });
+
+  // WhatsApp Shipping Notification
+  if (status === "shipped") {
+    const phone = cleanPhoneNumber(order.contactNumber);
+    if (phone) {
+      // Create a dummy date for Expected Delivery (e.g. +3 days). Alternatively check if order has an estimatedDeliveryDate
+      const expectedDeliveryDate = new Date();
+      expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + 3);
+      const formattedDate = expectedDeliveryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      
+      const waMessage = `Your Saga Elite order #${order._id} is on its way! Expected delivery: ${formattedDate}. 🚚`;
+      
+      try {
+        await sendWhatsAppMessage({ to: phone, message: waMessage });
+      } catch (waErr) {
+        console.error("Failed to send WhatsApp shipping notification:", waErr);
+      }
+    }
+  }
 
   await createNotification({
     userId: order.user,

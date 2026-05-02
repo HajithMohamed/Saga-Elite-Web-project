@@ -31,6 +31,7 @@ const app = express();
 
 /* ================== ROUTES ================== */
 const authRoutes = require("./Routes/authRoutes");
+const whatsappWebhookRoutes = require("./Routes/whatsapp-webhook-routes");
 const googleAuthRoute = require("./Routes/google-routes");
 const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes");
@@ -68,6 +69,7 @@ app.use(generalLimiter);
 app.use(requestLogger);
 
 /* ================== API ROUTES ================== */
+app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/google", googleAuthRoute);

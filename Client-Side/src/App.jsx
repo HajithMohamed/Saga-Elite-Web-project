@@ -64,6 +64,7 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
+import WhatsAppFloatingButton from "./components/common-components/WhatsAppFloatingButton";
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user } = useSelector((state) => state.auth);
@@ -360,6 +361,7 @@ function App() {
         />
 
       </Routes>
+      <WhatsAppFloatingButton />
     </div>
   );
 }
