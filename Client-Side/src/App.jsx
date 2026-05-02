@@ -1,4 +1,4 @@
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
@@ -32,7 +32,7 @@ import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
-import PendingPaymentsPage from "./pages/Admin/PendingPaymentsPage";
+import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
 import PaymentVerificationPage from "./pages/Admin/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
@@ -64,6 +64,20 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
+
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { user } = useSelector((state) => state.auth);
+  const location = useLocation();
+  const isAdminLike = ["admin", "super_admin", "superadmin"].includes(
+    String(user?.role || "").toLowerCase(),
+  );
+
+  if (adminOnly && !isAdminLike) {
+    return <Navigate to="/un-auth-page" replace state={{ from: location }} />;
+  }
+
+  return children;
+};
 
 function App() {
   const {
@@ -218,8 +232,13 @@ function App() {
           />
 
           <Route
+            path="payments/pending"
+            element={<ProtectedRoute adminOnly><PendingPaymentsPage /></ProtectedRoute>}
+          />
+
+          <Route
             path="manual-payments"
-            element={<PendingPaymentsPage />}
+            element={<ProtectedRoute adminOnly><PendingPaymentsPage /></ProtectedRoute>}
           />
 
           <Route

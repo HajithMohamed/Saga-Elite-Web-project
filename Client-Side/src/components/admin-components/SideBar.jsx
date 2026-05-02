@@ -78,6 +78,22 @@ const SideBar = () => {
 
   }, [fetchCounts])
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchCounts()
+    }, 30000)
+
+    return () => clearInterval(intervalId)
+  }, [fetchCounts])
+
+  useSocketEvent(
+    'payment:new_pending',
+    () => {
+      fetchCounts()
+    },
+    [fetchCounts]
+  )
+
   useSocketEvent(
     'admin:refresh',
     () => {

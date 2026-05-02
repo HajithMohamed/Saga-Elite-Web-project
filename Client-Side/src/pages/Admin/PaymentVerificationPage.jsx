@@ -84,7 +84,7 @@ const PaymentVerificationPage = () => {
         variant: "success",
       });
 
-      navigate("/admin/manual-payments");
+      navigate("/admin/payments/pending");
     } catch (error) {
       toast({
         title: "Action failed",
@@ -114,7 +114,7 @@ const PaymentVerificationPage = () => {
             The selected payment record could not be loaded. Return to the queue and open another payment.
           </p>
           <Link
-            to="/admin/manual-payments"
+            to="/admin/payments/pending"
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
           >
             <ArrowLeft className="h-4 w-4" /> Back to queue
@@ -143,7 +143,7 @@ const PaymentVerificationPage = () => {
             <h1 className="mt-2 text-2xl font-black text-white">Review receipt and customer details</h1>
           </div>
           <Link
-            to="/admin/manual-payments"
+            to="/admin/payments/pending"
             className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37]/30"
           >
             <ArrowLeft className="h-4 w-4" /> Back to queue

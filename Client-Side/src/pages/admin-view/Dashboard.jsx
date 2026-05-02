@@ -74,7 +74,7 @@ const quickLinks = [
   {
     title: "Manual payments",
     description: "Review bank-transfer proofs and verify payments.",
-    to: "/admin/manual-payments",
+    to: "/admin/payments/pending",
     icon: Wallet,
   },
   {
