@@ -3,7 +3,7 @@ import LegalLayout from "@/components/Legal/LegalLayout";
 import usePageMeta from "@/hooks/use-page-meta";
 import { CONTACT_INFO } from "@/config";
 
-const LAST_UPDATED = "April 29, 2026";
+const LAST_UPDATED = "May 2, 2026";
 
 const PrivacyPolicyPage = () => {
   usePageMeta({
@@ -19,98 +19,76 @@ const PrivacyPolicyPage = () => {
           Introduction
         </h2>
         <p>
-          Saga Elite is a Sri Lanka-based fashion and lifestyle e-commerce brand.
-          This policy explains what data we collect, why we collect it, and how
-          it is used. By using our website and services, you agree to this
-          Privacy Policy.
+          This policy covers what data Saga Elite collects, why we collect it, and how it is used to deliver our services.
+          <br />
+          <strong>Last Updated:</strong> {LAST_UPDATED}
         </p>
       </section>
 
       <section className="space-y-3">
-        <h2 id="information-we-collect" className="text-xl font-semibold text-white">
-          Information we collect
+        <h2 id="data-we-collect" className="text-xl font-semibold text-white">
+          Data We Collect
         </h2>
+        <p>We may collect the following personal and technical data:</p>
         <ul className="list-disc pl-5 space-y-2">
-          <li>Personal info such as name, email, phone, and delivery address.</li>
-          <li>
-            Payment info: card payments are processed by PayHere (we never store
-            card numbers); manual payment reference numbers we generate.
-          </li>
+          <li>Name, email, phone number, and delivery address.</li>
           <li>Order history and purchase records.</li>
-          <li>
-            Technical data such as IP address, browser type, device information,
-            and pages visited.
-          </li>
-          <li>Cookies and session data.</li>
+          <li>Technical data such as IP address.</li>
+        </ul>
+        <p>
+          <strong>Note:</strong> Payment card data is handled securely by PayHere. We never store or process your card details on our servers.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 id="how-we-use-your-data" className="text-xl font-semibold text-white">
+          How We Use Your Data
+        </h2>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Processing and fulfilling your orders.</li>
+          <li>Sending order and shipping notifications via WhatsApp ({CONTACT_INFO.phone}) and email.</li>
+          <li>Providing responsive customer support.</li>
+          <li>Sending marketing and promotional emails (these invariably contain an opt-out link).</li>
         </ul>
       </section>
 
       <section className="space-y-3">
-        <h2 id="how-we-use-your-information" className="text-xl font-semibold text-white">
-          How we use your information
+        <h2 id="data-sharing" className="text-xl font-semibold text-white">
+          Data Sharing
         </h2>
+        <p>
+          We partner with select third-party services to fulfill our business operations. These include:
+        </p>
         <ul className="list-disc pl-5 space-y-2">
-          <li>Processing and fulfilling orders.</li>
-          <li>Sending order confirmations and updates via email.</li>
-          <li>Verifying manual payments using your reference number.</li>
-          <li>Responding to customer support inquiries.</li>
-          <li>Improving our website and services.</li>
-          <li>Sending promotional emails (only if you opted in at checkout).</li>
-          <li>Complying with legal obligations.</li>
+          <li><strong>PayHere:</strong> For secure payment processing.</li>
+          <li><strong>Cloudinary:</strong> For image hosting and management.</li>
+          <li><strong>Mailtrap/Nodemailer:</strong> To facilitate email delivery.</li>
         </ul>
+        <p><strong>We do NOT sell your data to any third parties.</strong></p>
       </section>
 
       <section className="space-y-3">
-        <h2 id="third-party-services" className="text-xl font-semibold text-white">
-          Third-party services we use
+        <h2 id="data-storage" className="text-xl font-semibold text-white">
+          Data Storage
         </h2>
         <ul className="list-disc pl-5 space-y-2">
-          <li>PayHere processes card payments (their privacy policy applies).</li>
-          <li>Cloudinary stores product and review images.</li>
-          <li>Nodemailer / SMTP sends transactional emails.</li>
-          <li>MongoDB Atlas hosts our database securely.</li>
-          <li>We do not sell your personal data to any third party.</li>
-        </ul>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="data-storage-security" className="text-xl font-semibold text-white">
-          Data storage and security
-        </h2>
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Data is stored on MongoDB Atlas with encryption at rest.</li>
-          <li>All connections use SSL/TLS encryption.</li>
-          <li>Access is restricted to authorized personnel only.</li>
-          <li>Passwords are stored as bcrypt hashes, never plaintext.</li>
-          <li>Payment card data never touches our servers.</li>
-        </ul>
-      </section>
-
-      <section className="space-y-3">
-        <h2 id="data-retention" className="text-xl font-semibold text-white">
-          Data retention
-        </h2>
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Order records are retained for 7 years for tax/legal compliance.</li>
-          <li>Account data is retained while your account is active.</li>
-          <li>You may request deletion of your account and associated data.</li>
-          <li>Some data may be retained longer if required by law.</li>
+          <li>All your personal data is stored securely on <strong>MongoDB Atlas</strong> databases.</li>
+          <li>We employ industry-standard <strong>SSL/TLS encryption</strong> to protect data in transit.</li>
+          <li>Your personal data is retained for exactly <strong>2 years</strong> following your last order with us.</li>
         </ul>
       </section>
 
       <section className="space-y-3">
         <h2 id="your-rights" className="text-xl font-semibold text-white">
-          Your rights
+          Your Rights
         </h2>
+        <p>Under data protection laws, you retain essential rights regarding your personal data:</p>
         <ul className="list-disc pl-5 space-y-2">
-          <li>Right to access: request a copy of data we hold about you.</li>
-          <li>Right to correction: update inaccurate information.</li>
-          <li>Right to deletion: request we delete your personal data.</li>
-          <li>Right to opt-out: unsubscribe from marketing at any time.</li>
-          <li>
-            Contact us at {CONTACT_INFO.email} to exercise any of these rights.
-          </li>
+          <li><strong>Access:</strong> Request a copy of the data we hold on you.</li>
+          <li><strong>Correction:</strong> Update any incorrect personal information.</li>
+          <li><strong>Deletion:</strong> Request permanent deletion of all your data from our systems.</li>
         </ul>
+        <p>To exercise these rights, please contact us at <a className="text-[#D4AF37]" href={`mailto:${CONTACT_INFO.email}`}>{CONTACT_INFO.email}</a>.</p>
       </section>
 
       <section className="space-y-3">
@@ -118,33 +96,26 @@ const PrivacyPolicyPage = () => {
           Cookies
         </h2>
         <ul className="list-disc pl-5 space-y-2">
-          <li>Session cookies keep you logged in during your visit.</li>
-          <li>Preference cookies remember your settings.</li>
-          <li>Analytics cookies help us understand site usage (if applicable).</li>
-          <li>You can disable cookies in your browser settings.</li>
+          <li><strong>Session Cookies:</strong> Kept to allow you to log in smoothly during your visit.</li>
+          <li><strong>Preference Cookies:</strong> Used to remember your website layout and preferences.</li>
         </ul>
+        <p>You have full control over cookies and can disable them within your browser settings.</p>
       </section>
 
       <section className="space-y-3">
-        <h2 id="changes-to-this-policy" className="text-xl font-semibold text-white">
-          Changes to this policy
+        <h2 id="delivery-scope" className="text-xl font-semibold text-white">
+          Delivery Scope
         </h2>
-        <p>
-          We may update this policy from time to time and will post the new date
-          at the top of this page. Continued use of the site after changes means
-          acceptance.
-        </p>
+        <p>At present, we exclusively support deliveries within <strong>Sri Lanka</strong>.</p>
       </section>
 
       <section className="space-y-3">
-        <h2 id="contact-us" className="text-xl font-semibold text-white">
-          Contact us
+        <h2 id="contact" className="text-xl font-semibold text-white">
+          Contact
         </h2>
         <address className="not-italic text-white/70">
           <div>Saga Elite</div>
-          <div>{CONTACT_INFO.addressLine1}</div>
-          <div>{CONTACT_INFO.addressLine2}</div>
-          <div className="mt-3">
+          <div className="mt-2">
             Email: <a className="text-[#D4AF37]" href={`mailto:${CONTACT_INFO.email}`}>{CONTACT_INFO.email}</a>
           </div>
           <div>
