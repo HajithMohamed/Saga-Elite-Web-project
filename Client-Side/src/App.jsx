@@ -135,7 +135,7 @@ function App() {
           />
 
           <Route
-            path="/legal/terms-and-conditions"
+            path="/legal/terms-conditions"
             element={<TermsConditionsPage />}
           />
 

@@ -109,7 +109,7 @@ const MainFooter = () => {
           <div className="flex flex-col gap-3">
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Legal</h3>
             <Link to="/legal/privacy-policy" className="text-sm hover:text-[#D4AF37] transition-all">Privacy Policy</Link>
-            <Link to="/legal/terms-and-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
+            <Link to="/legal/terms-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
             <Link to="/legal/refund-policy" className="text-sm hover:text-[#D4AF37] transition-all">Refund Policy</Link>
             <Link to="/legal/delivery-policy" className="text-sm hover:text-[#D4AF37] transition-all">Delivery Policy</Link>
           </div>
@@ -132,7 +132,7 @@ const MainFooter = () => {
             <div className="flex items-center gap-4">
               <Link to="/legal/privacy-policy" className="hover:text-white transition-all">Privacy Policy</Link>
               <span>&middot;</span>
-              <Link to="/legal/terms-and-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
+              <Link to="/legal/terms-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
               <span>&middot;</span>
               <Link to="/legal/refund-policy" className="hover:text-white transition-all">Refund Policy</Link>
             </div>
