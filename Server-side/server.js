@@ -87,16 +87,35 @@ app.use(globalErrorController);
 const rawPort = process.env.PORT || process.env.BACKEND_PORT;
 const PORT = Number(rawPort) || 5001;
 
-const socketOrigin =
-  process.env.CLIENT_URL ||
-  process.env.FRONTEND_URL ||
-  process.env.FRONTEND_URLS
-    ?.split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)[0] ||
-  (process.env.NODE_ENV !== "production"
-    ? "http://localhost:5173"
-    : undefined);
+const parseOriginList = (value) =>
+  String(value || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const socketOrigins = new Set();
+
+if (process.env.CLIENT_URL) {
+  socketOrigins.add(process.env.CLIENT_URL.trim());
+}
+
+if (process.env.FRONTEND_URL) {
+  socketOrigins.add(process.env.FRONTEND_URL.trim());
+}
+
+parseOriginList(process.env.FRONTEND_URLS).forEach((origin) => {
+  socketOrigins.add(origin);
+});
+
+if (process.env.NODE_ENV !== "production") {
+  ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"].forEach(
+    (origin) => {
+      socketOrigins.add(origin);
+    }
+  );
+}
+
+const socketOrigin = socketOrigins.size ? Array.from(socketOrigins) : undefined;
 
 const server = http.createServer(app);
 const io = new Server(server, {

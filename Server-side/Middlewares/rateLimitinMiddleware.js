@@ -1,5 +1,25 @@
 const rateLimiting = require("express-rate-limit");
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const parsePositiveNumber = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const devMultiplier = parsePositiveNumber(
+    process.env.RATE_LIMIT_DEV_MULTIPLIER,
+    10
+);
+
+const getMaxRequests = (baseMax) => {
+    if (isProduction) {
+        return baseMax;
+    }
+
+    return Math.max(1, Math.floor(baseMax * devMultiplier));
+};
+
 const createRateLimiting = (maxRequests, time) => {
     return rateLimiting({
         max: maxRequests,
@@ -13,16 +33,46 @@ const createRateLimiting = (maxRequests, time) => {
     });
 };
 
+const loginMax = parsePositiveNumber(process.env.RATE_LIMIT_LOGIN_MAX, 5);
+const loginWindow = parsePositiveNumber(
+    process.env.RATE_LIMIT_LOGIN_WINDOW_MS,
+    15 * 60 * 1000
+);
+
+const authMax = parsePositiveNumber(process.env.RATE_LIMIT_AUTH_MAX, 10);
+const authWindow = parsePositiveNumber(
+    process.env.RATE_LIMIT_AUTH_WINDOW_MS,
+    15 * 60 * 1000
+);
+
+const generalMax = parsePositiveNumber(process.env.RATE_LIMIT_GENERAL_MAX, 100);
+const generalWindow = parsePositiveNumber(
+    process.env.RATE_LIMIT_GENERAL_WINDOW_MS,
+    15 * 60 * 1000
+);
+
+const contactMax = parsePositiveNumber(process.env.RATE_LIMIT_CONTACT_MAX, 3);
+const contactWindow = parsePositiveNumber(
+    process.env.RATE_LIMIT_CONTACT_WINDOW_MS,
+    60 * 60 * 1000
+);
+
 // Pre-configured limiters for different endpoint types
-const loginLimiter = createRateLimiting(5, 15 * 60 * 1000); // 5 login attempts per 15 minutes
-const authLimiter = createRateLimiting(10, 15 * 60 * 1000); // 10 requests per 15 minutes for auth
-const generalLimiter = createRateLimiting(100, 15 * 60 * 1000); // 100 requests per 15 minutes for general
-const contactLimiter = createRateLimiting(3, 60 * 60 * 1000); // 3 requests per 60 minutes for contact
+const loginLimiter = createRateLimiting(getMaxRequests(loginMax), loginWindow);
+const authLimiter = createRateLimiting(getMaxRequests(authMax), authWindow);
+const generalLimiter = createRateLimiting(
+    getMaxRequests(generalMax),
+    generalWindow
+);
+const contactLimiter = createRateLimiting(
+    getMaxRequests(contactMax),
+    contactWindow
+);
 
 module.exports = {
     createRateLimiting,
     loginLimiter,
     authLimiter,
     generalLimiter,
-    contactLimiter
+    contactLimiter,
 };

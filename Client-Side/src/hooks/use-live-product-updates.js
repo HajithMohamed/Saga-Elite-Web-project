@@ -1,12 +1,9 @@
 import { useEffect, useRef } from "react";
-import { io } from "socket.io-client";
 import { useDispatch } from "react-redux";
 
-import { SOCKET_URL } from "@/lib/api";
+import { connectSocket } from "@/lib/socket";
 import { toast } from "@/hooks/use-toast";
 import { receiveLiveProductUpdate } from "@/store/live-product-slice";
-
-const getSocketUrl = () => SOCKET_URL;
 
 export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
   const dispatch = useDispatch();
@@ -17,10 +14,7 @@ export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
   }, [isRelevantUpdate]);
 
   useEffect(() => {
-    const socket = io(getSocketUrl(), {
-      withCredentials: true,
-      transports: ["websocket"],
-    });
+    const socket = connectSocket();
 
     const handleProductUpdated = (payload = {}) => {
       if (
@@ -41,7 +35,6 @@ export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
 
     return () => {
       socket.off("product:updated", handleProductUpdated);
-      socket.disconnect();
     };
   }, [dispatch, ...dependencies]);
 };

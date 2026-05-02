@@ -7,6 +7,9 @@ const getSocketUrl = () => SOCKET_URL;
 
 export const connectSocket = () => {
   if (socketInstance) {
+    if (!socketInstance.connected) {
+      socketInstance.connect();
+    }
     return socketInstance;
   }
 
