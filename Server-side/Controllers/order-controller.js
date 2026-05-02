@@ -8,6 +8,7 @@ const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
+const logger = require("../Utils/logger");
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
@@ -69,7 +70,12 @@ const createOrder = catchAsync(async (req, res, next) => {
     guestEmail,
   } = req.body;
 
-  console.log("Order creation request:", req.body);
+  logger.debug("Order creation request received", {
+    checkoutMode,
+    itemCount: Array.isArray(items) ? items.length : 0,
+    paymentMethod,
+    hasGuestEmail: Boolean(guestEmail),
+  });
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return next(new AppError("Order items are required", 400));

@@ -4,6 +4,7 @@ const AppError = require("../Utils/appError");
 const filterObj = require("../Utils/filter-object");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 
 const escapeHtml = (value = "") =>
   value.replace(/[&<>"']/g, (char) => {
@@ -66,7 +67,7 @@ const submitContactInquiry = catchAsync(async (req, res, next) => {
       ),
     });
   } catch (error) {
-    console.error("Contact email delivery failed:", error.message);
+    logger.error("Contact email delivery failed", { error: error.message });
   }
 
   return res.status(201).json({

@@ -20,6 +20,7 @@ import VariantSelectors, {
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
 import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
+import { compressImageFile } from "@/lib/image-compression";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
 const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
@@ -440,8 +441,9 @@ const Checkout = () => {
       ? "Place Order & Get Reference"
       : "Complete Purchase";
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = async (e) => {
+    const originalFile = e.target.files?.[0];
+    const file = await compressImageFile(originalFile);
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setFormError("File size must be less than 5MB");

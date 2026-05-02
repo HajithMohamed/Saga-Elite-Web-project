@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/admin-components/ImageUpload";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Search,
   Settings,
@@ -24,10 +25,6 @@ import {
   Package,
   Eye,
 } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
 
 // Helper components for visual consistency
 const PulseDot = ({ active }) => (

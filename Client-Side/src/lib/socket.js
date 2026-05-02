@@ -1,10 +1,9 @@
 import { io } from "socket.io-client";
-
-import { SERVER_URL } from "@/config";
+import { SOCKET_URL } from "@/lib/api";
 
 let socketInstance = null;
 
-const getSocketUrl = () => import.meta.env.VITE_SOCKET_URL || SERVER_URL;
+const getSocketUrl = () => SOCKET_URL;
 
 export const connectSocket = () => {
   if (socketInstance) {

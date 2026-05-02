@@ -111,7 +111,6 @@ const MainFooter = () => {
             <Link to="/legal/privacy-policy" className="text-sm hover:text-[#D4AF37] transition-all">Privacy Policy</Link>
             <Link to="/legal/terms-and-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
             <Link to="/legal/refund-policy" className="text-sm hover:text-[#D4AF37] transition-all">Refund Policy</Link>
-            <Link to="/legal/delivery-policy" className="text-sm hover:text-[#D4AF37] transition-all">Delivery Policy</Link>
           </div>
         </div>
 

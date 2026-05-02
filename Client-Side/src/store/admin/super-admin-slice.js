@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { API_V1_URL } from "@/lib/api";
 
-const API_BASE = `${import.meta.env.VITE_API_URL || "http://localhost:5001/api"}/v1/super-admin`;
+const API_BASE = `${API_V1_URL}/super-admin`;
 
 export const fetchAdmins = createAsyncThunk("superAdmin/fetchAdmins", async (_, thunkAPI) => {
   try {

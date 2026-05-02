@@ -22,6 +22,7 @@ import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
 import axios from 'axios'
 import { useSocketEvent } from '@/hooks/use-socket-events'
+import { API_V1_URL } from '@/lib/api'
 
 const SideBar = () => {
   const location = useLocation()
@@ -43,12 +44,12 @@ const SideBar = () => {
       const [paymentRes, reviewRes] =
         await Promise.all([
           axios.get(
-            '/api/v1/admin/manual-payments?status=proof_submitted&countOnly=true',
+            `${API_V1_URL}/admin/manual-payments?status=proof_submitted&countOnly=true`,
             { withCredentials: true }
           ),
 
           axios.get(
-            '/api/v1/admin/reviews?status=pending&countOnly=true',
+            `${API_V1_URL}/admin/reviews?status=pending&countOnly=true`,
             { withCredentials: true }
           )
         ])
@@ -66,10 +67,8 @@ const SideBar = () => {
       }
 
     } catch (error) {
-      console.error(
-        'Failed to fetch admin badge counts',
-        error
-      )
+      setPendingPaymentCount(0)
+      setPendingReviewCount(0)
     }
   }, [])
 

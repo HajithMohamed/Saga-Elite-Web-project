@@ -149,6 +149,7 @@ const orderSchema = new mongoose.Schema(
 // TTL Index for auto-expiring pending orders
 orderSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+orderSchema.index({ user: 1 });
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Order", orderSchema);

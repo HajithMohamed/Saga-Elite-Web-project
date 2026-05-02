@@ -3,10 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { Star, StarHalf, Lock, Truck, CornerDownLeft, MessageCircle } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const formatTime = (value) => String(value).padStart(2, "0");
 

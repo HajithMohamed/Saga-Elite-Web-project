@@ -2,13 +2,11 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useDispatch } from "react-redux";
 
+import { SOCKET_URL } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { receiveLiveProductUpdate } from "@/store/live-product-slice";
 
-const getSocketUrl = () =>
-  import.meta.env.VITE_API_URL?.replace(/\/api(?:\/v\d+)?\/?$/, "") ||
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5001";
+const getSocketUrl = () => SOCKET_URL;
 
 export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
   const dispatch = useDispatch();

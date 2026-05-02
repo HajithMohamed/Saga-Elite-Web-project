@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FileImage, Loader2, UploadCloud, X } from "lucide-react";
+import { compressImageFile } from "@/lib/image-compression";
 
 const ProofSubmission = ({ onSubmitProof, isSubmitting, title = "Submit payment proof", description = "Upload a receipt image or PDF after completing your transfer." }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -14,18 +15,19 @@ const ProofSubmission = ({ onSubmitProof, isSubmitting, title = "Submit payment 
     };
   }, [previewUrl]);
 
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = async (event) => {
+    const rawFile = event.target.files?.[0];
 
-    if (!file) {
+    if (!rawFile) {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (rawFile.size > 5 * 1024 * 1024) {
       setLocalError("File size must be 5MB or smaller.");
       return;
     }
 
+    const file = await compressImageFile(rawFile);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setLocalError(null);

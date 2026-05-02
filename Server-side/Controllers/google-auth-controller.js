@@ -4,6 +4,7 @@ const User = require("../Models/User");
 const createSendToken = require("../Utils/create-send-token");
 const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 
 // ── shared helper: exchange Google access token for profile ──
 const verifyGoogleToken = async (accessToken, next) => {
@@ -97,7 +98,7 @@ const googleSignUp = catchAsync(async (req, res, next) => {
             html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
         });
     } catch (err) {
-        console.error("[googleSignUp] welcome email failed", err);
+        logger.error("Google sign-up welcome email failed", { error: err });
     }
 
     return createSendToken(newUser, 201, res, "Account created successfully");

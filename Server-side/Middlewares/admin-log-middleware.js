@@ -1,4 +1,5 @@
 const AdminLog = require("../Models/AdminLog");
+const logger = require("../Utils/logger");
 
 /**
  * Middleware that auto-logs successful mutating requests (POST, PUT, PATCH, DELETE)
@@ -41,7 +42,7 @@ const adminLogMiddleware = (req, res, next) => {
             route: req.originalUrl,
           });
         } catch (error) {
-          console.error("Failed to write to AdminLog:", error);
+          logger.error("Failed to write to AdminLog", { error });
         }
       }
     }

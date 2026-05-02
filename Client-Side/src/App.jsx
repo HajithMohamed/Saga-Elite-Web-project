@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import { Loader2 } from "lucide-react";
+import usePageMeta from "./hooks/use-page-meta";
 
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
@@ -79,6 +80,61 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
+const ROUTE_META = [
+  { match: /^\/$/, title: "Home" },
+  { match: /^\/about$/, title: "About" },
+  { match: /^\/contact$/, title: "Contact" },
+  { match: /^\/legal\/privacy-policy$/, title: "Privacy Policy" },
+  { match: /^\/legal\/terms-and-conditions$/, title: "Terms & Conditions" },
+  { match: /^\/legal\/refund-policy$/, title: "Refund Policy" },
+  { match: /^\/auth(\/login)?$/, title: "Login" },
+  { match: /^\/auth\/register$/, title: "Register" },
+  { match: /^\/auth\/forgot-password$/, title: "Forgot Password" },
+  { match: /^\/auth\/reset-password-otp$/, title: "Reset Password" },
+  { match: /^\/auth\/set-new-password$/, title: "Set New Password" },
+  { match: /^\/auth\/verify-otp$/, title: "Verify OTP" },
+  { match: /^\/admin\/dashboard$/, title: "Admin Dashboard" },
+  { match: /^\/admin\/home-images$/, title: "Homepage Images" },
+  { match: /^\/admin\/feature$/, title: "Admin Features" },
+  { match: /^\/admin\/order$/, title: "Admin Orders" },
+  { match: /^\/admin\/product$/, title: "Admin Products" },
+  { match: /^\/admin\/users$/, title: "Admin Users" },
+  { match: /^\/admin\/super-admin$/, title: "Super Admin" },
+  { match: /^\/admin\/notifications$/, title: "Admin Notifications" },
+  { match: /^\/admin\/payments\/pending$/, title: "Pending Payments" },
+  { match: /^\/admin\/manual-payments$/, title: "Manual Payments" },
+  { match: /^\/admin\/manual-payments\/[^/]+$/, title: "Payment Verification" },
+  { match: /^\/admin\/reviews$/, title: "Review Moderation" },
+  { match: /^\/shopping\/home$/, title: "Home" },
+  { match: /^\/shopping\/account$/, title: "My Account" },
+  { match: /^\/shopping\/orders$/, title: "My Orders" },
+  { match: /^\/shopping\/cart$/, title: "Cart" },
+  { match: /^\/shopping\/checkout$/, title: "Checkout" },
+  { match: /^\/shopping\/product-list$/, title: "Product Listing" },
+  { match: /^\/shopping\/product\/[^/]+$/, title: "Product Details" },
+  { match: /^\/shopping\/drop\/[^/]+$/, title: "Drop Details" },
+  { match: /^\/shopping\/notifications$/, title: "Notifications" },
+  { match: /^\/shopping\/checkout-success$/, title: "Order Success" },
+  { match: /^\/shopping\/manual-payment(\/[^/]+)?$/, title: "Manual Payment" },
+  { match: /^\/shopping\/wishlist$/, title: "Wishlist" },
+  { match: /^\/shopping\/order-tracking$/, title: "Order Tracking" },
+  { match: /^\/product\/[^/]+\/reviews$/, title: "Product Reviews" },
+  { match: /^\/account\/my-reviews$/, title: "My Reviews" },
+  { match: /^\/un-auth-page$/, title: "Unauthorized" },
+];
+
+const RouteMetaManager = () => {
+  const location = useLocation();
+  const matchedMeta = ROUTE_META.find((entry) => entry.match.test(location.pathname));
+
+  usePageMeta({
+    title: matchedMeta?.title || "Page Not Found",
+    description: "Saga Elite limited-edition streetwear and customer experience platform.",
+  });
+
+  return null;
+};
+
 function App() {
   const {
     isAuthenticated,
@@ -110,7 +166,9 @@ function App() {
   return (
     <div>
       <SocketBridge />
-      <Routes>
+      <RouteMetaManager />
+      <ErrorBoundary>
+        <Routes>
 
         {/* PUBLIC */}
         <Route element={<PublicLayout />}>
@@ -359,7 +417,8 @@ function App() {
           element={<NotFound />}
         />
 
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </div>
   );
 }

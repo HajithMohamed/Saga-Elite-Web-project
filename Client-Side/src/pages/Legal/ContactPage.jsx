@@ -4,10 +4,7 @@ import { Loader2 } from "lucide-react";
 import LegalLayout from "@/components/Legal/LegalLayout";
 import usePageMeta from "@/hooks/use-page-meta";
 import { CONTACT_INFO } from "@/config";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const SUBJECT_OPTIONS = [
   "Order inquiry",

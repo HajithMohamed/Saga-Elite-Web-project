@@ -18,10 +18,11 @@ const configuredOrigins = [
     .map((value) => value.trim())
     .filter(Boolean);
 
-const allowedOrigins = new Set([
-    ...configuredOrigins,
-    ...defaultOrigins
-]);
+const allowedOrigins = new Set(
+    process.env.NODE_ENV === "production"
+        ? configuredOrigins
+        : [...configuredOrigins, ...defaultOrigins]
+);
 
 const isLocalDevOrigin = (origin) =>
     /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
