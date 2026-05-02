@@ -143,7 +143,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-w-6xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl">
+      <div className="max-w-7xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-5 bg-surface-container-low">
           <div>
             <h2 className="text-xl font-bold">{title}</h2>

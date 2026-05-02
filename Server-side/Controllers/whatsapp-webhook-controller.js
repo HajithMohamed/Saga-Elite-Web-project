@@ -32,6 +32,12 @@ exports.verifyWebhook = catchAsync(async (req, res, next) => {
 exports.handleIncomingMessage = catchAsync(async (req, res, next) => {
   const body = req.body;
 
+  console.log(
+    "[WhatsApp webhook] POST received",
+    body?.object,
+    Array.isArray(body?.entry) ? body.entry.length : 0
+  );
+
   // Always respond immediately to avoid retries from Meta
   if (body.object === "whatsapp_business_account") {
     res.status(200).send("EVENT_RECEIVED");

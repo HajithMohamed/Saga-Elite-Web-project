@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, X, ChevronDown, Search, Flag } from "lucide-react";
 import {
   fetchAdminReviews,
@@ -198,13 +199,19 @@ const ReviewModerationPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            <AnimatePresence initial={false}>
             {groupedReviews.map((review) => {
               const isExpanded = expandedId === review._id;
               const productName = review.productId?.name || "Product";
               const reviewer = review.userId?.email || "Customer";
               return (
-                <div
+                <motion.div
                   key={review._id}
+                  layout
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.22 }}
                   className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-6"
                 >
                     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -290,9 +297,10 @@ const ReviewModerationPage = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                </motion.div>
               );
             })}
+            </AnimatePresence>
           </div>
         )}
       </div>

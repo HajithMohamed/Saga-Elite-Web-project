@@ -122,9 +122,20 @@ function App() {
     dispatch(checkAuthAction());
   }, [dispatch]);
 
+  useEffect(() => {
+    const applyTheme = (isDark) => {
+      document.documentElement.classList.toggle("dark", isDark);
+    };
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    applyTheme(mq.matches);
+    const handler = (e) => applyTheme(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-black">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
       </div>
     );

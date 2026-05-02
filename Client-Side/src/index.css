@@ -4,8 +4,8 @@
 
 @layer base {
   body {
-    background-color: #131313;
-    color: #e5e2e1;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: 'Manrope', sans-serif;
   }
   .grain {
@@ -21,8 +21,8 @@
   }
   
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
@@ -48,8 +48,8 @@
     --radius: 0.5rem
   }
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 7.5%;
+    --foreground: 0 0% 89.8%;
     --card: 224 71.4% 4.1%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71.4% 4.1%;
@@ -87,4 +87,45 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #353535;
+}
+
+@keyframes homepage-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.homepage-marquee-track {
+  animation: homepage-marquee 28s linear infinite;
+}
+
+@keyframes bounce-scroll-hint {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.5;
+  }
+}
+
+.animate-bounce-scroll-hint {
+  animation: bounce-scroll-hint 1.6s ease-in-out infinite;
+}
+
+@keyframes header-marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.header-marquee-track {
+  animation: header-marquee-scroll 45s linear infinite;
 }

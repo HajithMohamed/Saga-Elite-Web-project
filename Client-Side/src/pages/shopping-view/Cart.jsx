@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -132,8 +133,12 @@ const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen overflow-hidden bg-[#050505] text-white">
-        <div className="relative isolate flex min-h-screen items-center justify-center px-4 py-16">
+      <div className="min-h-screen overflow-hidden bg-background text-on-surface">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative isolate flex min-h-screen items-center justify-center px-4 py-16"
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#d4af3726,transparent_35%),radial-gradient(circle_at_bottom_right,#ffffff12,transparent_28%)]" />
           <div className="relative w-full max-w-3xl rounded-[36px] border border-white/10 bg-white/[0.04] p-8 text-center shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-12">
             <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/10 bg-black/30">
@@ -168,13 +173,13 @@ const Cart = () => {
               </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-screen bg-background text-on-surface">
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#d4af372b,transparent_30%),radial-gradient(circle_at_top_right,#ffffff12,transparent_25%)]" />
 
@@ -248,6 +253,7 @@ const Cart = () => {
               </div>
 
               <div className="space-y-4">
+              <AnimatePresence initial={false}>
                 {items.map((item) => {
                   const isUpdating = activeItemId === item.id;
                   const isRemoving = removingItemId === item.id;
@@ -257,12 +263,17 @@ const Cart = () => {
                   const productSlug = item.product?.slug;
 
                   return (
-                    <div
+                    <motion.div
                       key={item.id}
-                      className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 transition-colors hover:border-white/15 sm:p-5"
+                      layout
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -100, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 transition-colors hover:border-white/15 sm:p-5 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]"
                     >
                       <div className="flex flex-col gap-5 md:flex-row">
-                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-white/10 bg-black/30 md:h-36 md:w-32 md:flex-shrink-0">
+                        <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30 md:h-20 md:w-20">
                           <img
                             src={getProductImage(item.product)}
                             className="h-full w-full object-cover"
@@ -285,7 +296,7 @@ const Cart = () => {
                                   {item.product?.name}
                                 </h3>
                               )}
-                              <p className="mt-2 text-sm text-zinc-400">
+                              <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
                                 {getVariantLabel(item.variant)}
                               </p>
                               <div className="mt-4 flex flex-wrap gap-2">
@@ -319,8 +330,9 @@ const Cart = () => {
                                 Quantity
                               </p>
                               <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-black/30 p-1">
-                                <button
+                                <motion.button
                                   type="button"
+                                  whileTap={{ scale: 0.9 }}
                                   onClick={() =>
                                     handleQuantityChange(item, item.quantity - 1)
                                   }
@@ -328,7 +340,7 @@ const Cart = () => {
                                   className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   <Minus className="h-4 w-4" />
-                                </button>
+                                </motion.button>
                                 <span className="flex h-10 min-w-12 items-center justify-center text-sm font-semibold">
                                   {isUpdating ? (
                                     <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" />
@@ -336,8 +348,9 @@ const Cart = () => {
                                     item.quantity
                                   )}
                                 </span>
-                                <button
+                                <motion.button
                                   type="button"
+                                  whileTap={{ scale: 0.9 }}
                                   onClick={() =>
                                     handleQuantityChange(item, item.quantity + 1)
                                   }
@@ -345,7 +358,7 @@ const Cart = () => {
                                   className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   <Plus className="h-4 w-4" />
-                                </button>
+                                </motion.button>
                               </div>
                             </div>
 
@@ -360,9 +373,10 @@ const Cart = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
+              </AnimatePresence>
               </div>
 
               <div className="mt-6 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -386,7 +400,7 @@ const Cart = () => {
             ) : null}
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-28">
+          <aside className="space-y-5 lg:sticky lg:top-4">
             <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#0d0d0d] shadow-[0_20px_90px_rgba(0,0,0,0.35)]">
               <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top,#d4af3720,transparent_55%)] p-6 sm:p-7">
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
@@ -413,9 +427,9 @@ const Cart = () => {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-zinc-400">
-                    <span>Shipping</span>
-                    <span className="font-medium text-white">
-                      Calculated at checkout
+                    <span>Delivery</span>
+                    <span className="font-medium text-emerald-400">
+                      Free Delivery 🚚
                     </span>
                   </div>
                 </div>
@@ -438,15 +452,21 @@ const Cart = () => {
                   type="button"
                   onClick={handleProceedToCheckout}
                   disabled={hasPendingItemAction}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-6 py-4 text-base font-bold text-black transition-colors hover:bg-[#f2ca50] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-black transition-colors hover:bg-[#f2ca50] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Proceed to Checkout
                   <ArrowRight className="h-5 w-5" />
                 </button>
 
-                <div className="flex items-center gap-2 text-sm text-zinc-400">
-                  <LockKeyhole className="h-4 w-4 text-[#f1d27a]" />
-                  Protected payment flow and encrypted checkout steps.
+                <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400">
+                  <span className="inline-flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-[#f1d27a]" />
+                    Secure Checkout
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <LockKeyhole className="h-4 w-4 text-[#f1d27a]" />
+                    SSL Encrypted
+                  </span>
                 </div>
               </div>
             </div>

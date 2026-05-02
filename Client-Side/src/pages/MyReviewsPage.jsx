@@ -75,7 +75,7 @@ const MyReviewsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#060606] text-white">
-      <div className="container mx-auto max-w-6xl px-4 py-10">
+      <div className="container mx-auto max-w-7xl px-4 py-10">
         <div className="mb-8">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
             My reviews

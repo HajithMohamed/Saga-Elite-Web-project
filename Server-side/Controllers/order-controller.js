@@ -7,6 +7,10 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const {
+  sendWhatsAppMessage,
+  parsePhoneList,
+} = require("../Utils/whatsapp-service");
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
@@ -259,6 +263,29 @@ const createOrder = catchAsync(async (req, res, next) => {
     meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
     filter: { role: "admin" },
   });
+
+  const orderNotifyPhones = parsePhoneList(
+    process.env.WHATSAPP_ORDER_NOTIFY_NUMBERS ||
+      process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS ||
+      ""
+  );
+
+  if (orderNotifyPhones.length > 0) {
+    const customerLabel = user?.email || guestEmailNormalized || "Guest";
+    const notifyBody =
+      `New order — Saga Elite\n` +
+      `Order: ${createdOrder._id}\n` +
+      `Total: LKR ${createdOrder.totalAmount}\n` +
+      `Contact: ${contactNumber.trim()}\n` +
+      `Customer: ${customerLabel}\n` +
+      `Payment: ${paymentMethod}`;
+
+    orderNotifyPhones.forEach((to) => {
+      sendWhatsAppMessage({ to, message: notifyBody }).catch((err) =>
+        console.error("[order-controller] WhatsApp order notify failed:", err.message)
+      );
+    });
+  }
 
   res.status(201).json({
     success: true,

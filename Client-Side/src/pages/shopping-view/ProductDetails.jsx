@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,6 +19,7 @@ import {
   Truck,
   RefreshCcw,
   ArrowRight,
+  Check,
 } from "lucide-react";
 import StarRating from "@/components/Review/StarRating";
 import ReviewCard, { ReviewCardSkeleton } from "@/components/Review/ReviewCard";
@@ -27,7 +29,7 @@ import VariantSelectors, {
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
 
 const mergePopularProducts = (mostWished = [], bestSellers = [], currentSlug) => {
@@ -75,6 +77,9 @@ const ProductDetails = () => {
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [variantErrors, setVariantErrors] = useState({});
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [productTab, setProductTab] = useState("description");
+  const [cartAddedPulse, setCartAddedPulse] = useState(false);
 
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
@@ -216,8 +221,10 @@ const ProductDetails = () => {
     );
   }
 
-  const selectedVariant =
-    product.variants?.find((variant) => variant.sku === selectedVariantSku) || null;
+  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const selectedVariant = hasVariants
+    ? product.variants.find((variant) => variant.sku === selectedVariantSku) || null
+    : null;
   const basePrice = product.basePrice + (selectedVariant?.priceAdjustment || 0);
   const price = basePrice * (1 - (product.discountPercent || 0) / 100);
   const inWishlist = wishlistItems.some((item) => item.id === product._id);
@@ -234,6 +241,10 @@ const ProductDetails = () => {
     }));
 
   const validateVariantSelection = () => {
+    if (!hasVariants) {
+      setVariantErrors({});
+      return true;
+    }
     const nextErrors = {};
 
     if (productSizes.length > 0 && !selectedSize) {
@@ -272,6 +283,15 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = () => {
+    if (!hasVariants) {
+      toast({
+        title: "Unavailable",
+        description:
+          "This listing has no variants yet. Please contact us on WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!validateVariantSelection() || !selectedVariant) return;
 
     dispatch(
@@ -282,19 +302,30 @@ const ProductDetails = () => {
       })
     )
       .unwrap()
-      .then(() =>
+      .then(() => {
+        setCartAddedPulse(true);
+        setTimeout(() => setCartAddedPulse(false), 1500);
         toast({
           title: "In the bag",
           description: `${product.name} added.`,
           variant: "success",
-        })
-      )
+        });
+      })
       .catch((err) =>
         toast({ title: "Error", description: err, variant: "destructive" })
       );
   };
 
   const handleBuyNow = () => {
+    if (!hasVariants) {
+      toast({
+        title: "Unavailable",
+        description:
+          "This listing has no variants yet. Please contact us on WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!validateVariantSelection() || !selectedVariant) return;
 
     const isInCart = cartItems.some(
@@ -414,15 +445,31 @@ const ProductDetails = () => {
               ))}
             </div>
 
-            <div className="flex-1 relative rounded-[2rem] overflow-hidden bg-[#111] aspect-[4/5] lg:aspect-auto">
-              <img
-                src={product.images?.[activeImageIndex]?.url || "/placeholder.jpg"}
-                className="w-full h-full object-cover"
-                alt={product.name}
+            <div className="relative flex-1 overflow-hidden rounded-[2rem] bg-[#111] aspect-[4/5] lg:aspect-auto">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={activeImageIndex}
+                  src={
+                    product.images?.[activeImageIndex]?.url || "/placeholder.jpg"
+                  }
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.28 }}
+                  className="pointer-events-none h-full w-full object-cover"
+                  alt={product.name}
+                />
+              </AnimatePresence>
+              <button
+                type="button"
+                className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
+                aria-label="Open image preview"
+                onClick={() => setLightboxOpen(true)}
               />
               <button
+                type="button"
                 onClick={toggleWishlist}
-                className="absolute top-6 right-6 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl transition hover:bg-black/80"
+                className="absolute top-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl transition hover:bg-black/80"
               >
                 <Heart
                   className={`w-6 h-6 ${
@@ -437,16 +484,20 @@ const ProductDetails = () => {
             <p className="text-[#D4AF37] font-bold uppercase tracking-[0.2em] text-sm mb-3">
               {product.category} {product.isLimited && "• Limited Drop"}
             </p>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+            <h1 className="font-serif text-4xl font-bold tracking-tight md:text-5xl mb-2">
               {product.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
               <StarRating value={product.averageRating || 0} readOnly size="sm" />
+              <span className="text-xs text-gray-400">
+                {(product.averageRating || 0).toFixed(1)} avg ·{" "}
+                {product.reviewCount || 0} reviews
+              </span>
               <Link
                 to={`/product/${product._id}/reviews`}
-                className="text-xs uppercase tracking-[0.2em] text-gray-400 hover:text-[#D4AF37]"
+                className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:underline"
               >
-                {product.reviewCount || 0} reviews
+                See all
               </Link>
             </div>
             <p className="text-gray-500 uppercase tracking-widest text-xs mb-4">
@@ -456,8 +507,13 @@ const ProductDetails = () => {
               Drop: <span className="text-[#D4AF37]">{productDropName}</span>
             </p>
 
-            <div className="flex items-baseline gap-4 mb-10">
-              <span className="text-3xl font-semibold">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="mb-6 flex flex-wrap items-baseline gap-4"
+            >
+              <span className="text-3xl font-semibold text-[#D4AF37]">
                 LKR {price.toLocaleString()}
               </span>
               {product.discountPercent > 0 && (
@@ -465,27 +521,49 @@ const ProductDetails = () => {
                   LKR {basePrice.toLocaleString()}
                 </span>
               )}
-            </div>
+            </motion.div>
+
+            {hasVariants && selectedVariant ? (
+              <p className="mb-8 text-sm font-medium">
+                {selectedVariant.stock === 0 ? (
+                  <span className="text-red-500">Out of Stock</span>
+                ) : selectedVariant.stock < 5 ? (
+                  <span className="text-amber-500">
+                    Only {selectedVariant.stock} left in stock
+                  </span>
+                ) : (
+                  <span className="text-emerald-500">In Stock</span>
+                )}
+              </p>
+            ) : !hasVariants ? (
+              <p className="mb-8 text-sm text-gray-400">One size fits all</p>
+            ) : null}
 
             <div className="space-y-6 mb-10">
               <div>
-                <div className="flex justify-between mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
-                  <span>Size & Color</span>
-                  <span>Stock: {selectedVariant?.stock || 0}</span>
-                </div>
-                <VariantSelectors
-                  product={{ ...product, sizes: productSizes }}
-                  selectedSize={selectedSize}
-                  selectedColor={selectedColor}
-                  onSizeChange={handleSizeChange}
-                  onColorChange={handleColorChange}
-                  errors={variantErrors}
-                />
-                {selectedSize && selectedColor ? (
-                  <p className="mt-3 text-xs text-gray-500">
-                    {selectedVariant?.stock ?? 0} in stock
-                  </p>
-                ) : null}
+                {hasVariants ? (
+                  <>
+                    <div className="mb-3 flex justify-between text-sm font-semibold uppercase tracking-widest text-gray-400">
+                      <span>Size & Color</span>
+                      <span>Stock: {selectedVariant?.stock ?? 0}</span>
+                    </div>
+                    <VariantSelectors
+                      product={{ ...product, sizes: productSizes }}
+                      selectedSize={selectedSize}
+                      selectedColor={selectedColor}
+                      onSizeChange={handleSizeChange}
+                      onColorChange={handleColorChange}
+                      errors={variantErrors}
+                    />
+                    {selectedSize && selectedColor ? (
+                      <p className="mt-3 text-xs text-gray-500">
+                        {selectedVariant?.stock ?? 0} in stock
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400">One size fits all</p>
+                )}
                 <div className="hidden flex-col gap-4">
                   {/* Size Row */}
                   <div>
@@ -573,26 +651,143 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <button
+            <div className="mb-10 flex flex-col gap-4 sm:flex-row">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
                 onClick={handleAddToCart}
-                disabled={!selectedVariant || selectedVariant.stock === 0}
-                className="flex-1 h-14 rounded-full bg-white/10 hover:bg-white/20 transition-colors uppercase tracking-widest text-sm font-bold disabled:opacity-50"
+                disabled={
+                  !hasVariants ||
+                  !selectedVariant ||
+                  selectedVariant.stock === 0
+                }
+                className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-full uppercase tracking-widest text-sm font-bold transition-colors disabled:opacity-50 ${
+                  cartAddedPulse
+                    ? "bg-emerald-600 text-white"
+                    : "bg-white/10 hover:bg-white/20"
+                }`}
               >
-                Add To Cart
-              </button>
-              <button
+                {cartAddedPulse ? (
+                  <>
+                    <Check className="h-5 w-5" /> Added
+                  </>
+                ) : (
+                  "Add To Cart"
+                )}
+              </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
                 onClick={handleBuyNow}
-                disabled={!selectedVariant || selectedVariant.stock === 0}
-                className="flex-1 h-14 rounded-full bg-[#D4AF37] hover:bg-[#F2CA50] text-black transition-colors uppercase tracking-widest text-sm font-bold disabled:opacity-50"
+                disabled={
+                  !hasVariants ||
+                  !selectedVariant ||
+                  selectedVariant.stock === 0
+                }
+                className="flex h-14 flex-1 items-center justify-center rounded-full bg-[#D4AF37] text-black transition-colors hover:bg-[#F2CA50] uppercase tracking-widest text-sm font-bold disabled:opacity-50"
               >
                 Buy Now
-              </button>
+              </motion.button>
             </div>
 
-            <p className="text-gray-400 leading-relaxed mb-10">
-              {product.description}
-            </p>
+            <div className="mb-10">
+              <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-800 pb-2">
+                {[
+                  { id: "description", label: "Description" },
+                  { id: "size", label: "Size Guide" },
+                  { id: "reviews", label: "Reviews" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setProductTab(tab.id)}
+                    className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
+                      productTab === tab.id
+                        ? "bg-[#D4AF37] text-black"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={productTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.22 }}
+                  className="min-h-[120px] text-gray-400 leading-relaxed"
+                >
+                  {productTab === "description" ? (
+                    <p>{product.description || "No description provided."}</p>
+                  ) : null}
+                  {productTab === "size" ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[280px] text-left text-sm text-on-surface dark:text-gray-300">
+                        <thead>
+                          <tr className="border-b border-gray-700">
+                            <th className="py-2 pr-4">Size</th>
+                            <th className="py-2 pr-4">Chest (cm)</th>
+                            <th className="py-2">Length (cm)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ["XS", "86–91", "66"],
+                            ["S", "91–96", "68"],
+                            ["M", "96–101", "70"],
+                            ["L", "101–106", "72"],
+                            ["XL", "106–111", "74"],
+                          ].map(([sz, c, l]) => (
+                            <tr key={sz} className="border-b border-gray-800/80">
+                              <td className="py-2 pr-4">{sz}</td>
+                              <td className="py-2 pr-4">{c}</td>
+                              <td className="py-2">{l}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="mt-3 text-xs text-gray-500">
+                        Generic Sri Lanka sizing — measurements are approximate.
+                      </p>
+                    </div>
+                  ) : null}
+                  {productTab === "reviews" ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <p className="text-sm">
+                          {reviewStats?.averageRating || 0} average ·{" "}
+                          {reviewStats?.totalReviews || 0} reviews
+                        </p>
+                        <Link
+                          to={`/product/${product._id}/reviews`}
+                          className="text-xs uppercase tracking-widest text-[#D4AF37] hover:underline"
+                        >
+                          See all reviews
+                        </Link>
+                      </div>
+                      {reviewLoading ? (
+                        <div className="space-y-4">
+                          {Array.from({ length: 2 }).map((_, index) => (
+                            <ReviewCardSkeleton key={index} />
+                          ))}
+                        </div>
+                      ) : reviewPreview.length === 0 ? (
+                        <p>No reviews yet. Be the first to review.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {reviewPreview.map((review) => (
+                            <ReviewCard key={review._id} review={review} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-gray-800/50">
               <div className="flex flex-col items-center text-center gap-2 text-gray-400">
@@ -617,47 +812,13 @@ const ProductDetails = () => {
           </div>
         </div>
 
-        <section className="mt-20 space-y-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
-                Reviews
-              </p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight">
-                What customers are saying
-              </h2>
-              <p className="mt-2 text-sm text-gray-400">
-                {reviewStats?.averageRating || 0} average rating · {reviewStats?.totalReviews || 0} reviews
-              </p>
-            </div>
-            <Link
-              to={`/product/${product._id}/reviews`}
-              className="text-sm uppercase tracking-widest text-gray-400 transition-colors hover:text-[#D4AF37]"
-            >
-              See all {reviewStats?.totalReviews || 0} reviews
-            </Link>
-          </div>
-
-          {reviewLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <ReviewCardSkeleton key={index} />
-              ))}
-            </div>
-          ) : reviewPreview.length === 0 ? (
-            <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-8 text-gray-400">
-              No reviews yet. Be the first to review this product!
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {reviewPreview.map((review) => (
-                <ReviewCard key={review._id} review={review} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="mt-24 grid gap-10">
+        <motion.section
+          className="mt-24 grid gap-10"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.45 }}
+        >
           <div>
             <div className="mb-6 flex items-end justify-between gap-4">
               <div>
@@ -712,7 +873,33 @@ const ProductDetails = () => {
               </div>
             )}
           </div>
-        </section>
+        </motion.section>
+
+        <AnimatePresence>
+          {lightboxOpen ? (
+            <motion.div
+              role="presentation"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setLightboxOpen(false)}
+            >
+              <motion.img
+                src={
+                  product.images?.[activeImageIndex]?.url || "/placeholder.jpg"
+                }
+                alt={product.name}
+                className="max-h-[90vh] max-w-full object-contain"
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
         {showBuyNowModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
