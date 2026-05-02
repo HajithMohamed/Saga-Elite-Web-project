@@ -15,6 +15,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   deleteAdminUser,
   fetchAdminUserDetail,
@@ -240,7 +241,11 @@ const UsersPage = () => {
     selectedUser._id !== currentUser?._id;
 
   return (
-    <div className="min-h-screen bg-[#070707] px-6 py-8 text-white lg:px-8">
+    <AdminPage
+      eyebrow="Admin User Management"
+      title="Users"
+      description="Review account health, activity, and customer relationship details."
+    >
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -751,7 +756,7 @@ const UsersPage = () => {
           </div>
         </section>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

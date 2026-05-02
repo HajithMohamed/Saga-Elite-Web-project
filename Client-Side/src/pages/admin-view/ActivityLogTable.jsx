@@ -4,35 +4,35 @@ import { useSelector } from "react-redux";
 const ActivityLogTable = () => {
   const { activityLogs, logsLoading } = useSelector((s) => s.superAdmin);
 
-  if (logsLoading) return <div className="text-center py-16 text-gray-400 text-sm animate-pulse">Loading logs…</div>;
-  if (!activityLogs.length) return <div className="text-center py-16 text-gray-400 text-sm">No activity logs found.</div>;
+  if (logsLoading) return <div className="py-16 text-center text-sm text-gray-400 animate-pulse">Loading logs…</div>;
+  if (!activityLogs.length) return <div className="py-16 text-center text-sm text-gray-400">No activity logs found.</div>;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100 mt-6">
+    <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Date</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Admin Email</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Action</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Method & Route</th>
+          <tr className="border-b border-white/10 bg-black/40">
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Date</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Admin Email</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Action</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Method & Route</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50 bg-white">
+        <tbody className="divide-y divide-white/5 bg-[#0b0b0b]">
           {activityLogs.map((log) => (
-            <tr key={log._id} className="hover:bg-gray-50/60 transition-colors">
-              <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
+            <tr key={log._id} className="transition-colors hover:bg-white/[0.02]">
+              <td className="whitespace-nowrap px-5 py-4 text-gray-400">
                 {new Date(log.createdAt).toLocaleString("en-GB")}
               </td>
-              <td className="px-5 py-4 font-medium text-gray-900">
+              <td className="px-5 py-4 font-medium text-white">
                 {log.adminId?.email || "Unknown Admin"}
               </td>
-              <td className="px-5 py-4 text-gray-700">{log.action}</td>
+              <td className="px-5 py-4 text-gray-300">{log.action}</td>
               <td className="px-5 py-4">
-                <span className="inline-flex px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs font-mono mr-2">
+                <span className="mr-2 inline-flex rounded bg-white/10 px-2 py-1 text-xs font-mono text-gray-200">
                   {log.method}
                 </span>
-                <span className="text-xs text-gray-400 font-mono">{log.route}</span>
+                <span className="text-xs font-mono text-gray-500">{log.route}</span>
               </td>
             </tr>
           ))}

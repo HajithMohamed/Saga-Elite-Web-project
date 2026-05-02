@@ -25,6 +25,7 @@ import {
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 // ── Shared helper components (matches Product page) ──────────────────────────
 
@@ -479,7 +480,12 @@ const Drops = () => {
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface">
+    <AdminPage
+      eyebrow="Drop management"
+      title="Drop Ledger"
+      description="Create, schedule, publish, archive, and monitor collection drops."
+    >
+    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10">
       {/* List Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
         <div className="flex items-center gap-8 w-full md:w-auto">
@@ -705,6 +711,7 @@ const Drops = () => {
         />
       )}
     </div>
+    </AdminPage>
   );
 };
 

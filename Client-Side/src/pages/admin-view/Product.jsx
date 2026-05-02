@@ -25,6 +25,7 @@ import {
   Package,
   Eye,
 } from "lucide-react";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 // Helper components for visual consistency
 const PulseDot = ({ active }) => (
@@ -517,7 +518,12 @@ const Product = () => {
 
   // ----- LEDGER LIST VIEW -----
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface">
+    <AdminPage
+      eyebrow="Catalog management"
+      title="Product Ledger"
+      description="Manage products, variants, stock, visibility, and gallery assets."
+    >
+    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10">
       {/* List Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
         <div className="flex items-center gap-8 w-full md:w-auto">
@@ -741,6 +747,7 @@ const Product = () => {
         />
       )}
     </div>
+    </AdminPage>
   );
 };
 export default Product;

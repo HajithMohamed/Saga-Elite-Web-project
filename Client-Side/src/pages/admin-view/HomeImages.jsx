@@ -6,6 +6,7 @@ import { RefreshCw, Star, Trash2, ArrowUpRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { compressImageFile } from "@/lib/image-compression";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const sectionConfig = [
   {
@@ -195,8 +196,12 @@ const AdminHomeImages = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#e2e2e2] pb-28 pt-8">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <AdminPage
+      eyebrow="Homepage media"
+      title="Home Images"
+      description="Manage hero, banner, logo, and category image assets with simple controls."
+    >
+      <div className="mx-auto w-full max-w-7xl px-0 sm:px-2 lg:px-2">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-black uppercase tracking-[0.35em] text-[#D4AF37]">
@@ -353,7 +358,7 @@ const AdminHomeImages = () => {
           })}
         </div>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

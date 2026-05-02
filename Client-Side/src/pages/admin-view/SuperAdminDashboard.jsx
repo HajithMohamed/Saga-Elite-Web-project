@@ -4,22 +4,13 @@ import { fetchAdmins, fetchActivityLogs } from "../../store/admin/super-admin-sl
 import AdminTable from "./AdminTable";
 import ActivityLogTable from "./ActivityLogTable";
 import CreateAdminModal from "./CreateAdminModal";
+import { AdminPage, AdminStatCard, AdminPanel } from "@/components/admin-components/AdminUI";
 
 const TAB = { ADMINS: "admins", LOGS: "logs" };
 
-const StatCard = ({ label, value, sub }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 p-5">
-    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
-      {label}
-    </p>
-    <p className="text-3xl font-semibold text-gray-900">{value}</p>
-    {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-  </div>
-);
-
 const SuperAdminDashboard = () => {
   const dispatch = useDispatch();
-  const { admins, adminsLoading, adminsError, activityLogs, logsLoading } =
+  const { admins, adminsLoading, adminsError, activityLogs } =
     useSelector((s) => s.superAdmin);
   const currentUser = useSelector((s) => s.auth?.user);
 
@@ -46,56 +37,26 @@ const SuperAdminDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col w-full">
-      {/* Top bar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              Super Admin Console
-            </h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Manage admin accounts and monitor system activity
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 hidden sm:block">
-              {currentUser?.name || currentUser?.email}
-            </span>
-            <span className="text-xs bg-gray-900 text-white px-2.5 py-1 rounded-full font-medium">
-              Super Admin
-            </span>
-          </div>
+    <AdminPage
+      eyebrow="Super Admin"
+      title="Super admin console"
+      description="Manage admin access and monitor privileged operations."
+      actions={
+        <div className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#D4AF37]">
+          {currentUser?.name || currentUser?.email}
         </div>
+      }
+    >
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <AdminStatCard label="Total Admins" value={admins.filter((a) => a.role !== "super_admin").length} />
+        <AdminStatCard label="Active" value={activeAdmins.length} hint="Can log in" />
+        <AdminStatCard label="Inactive" value={inactiveAdmins.length} hint="Access revoked" />
+        <AdminStatCard label="Log Entries" value={activityLogs.length} hint="Recent operations" />
       </div>
 
-      <div className="p-6 space-y-8 flex-1">
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Admins"
-            value={admins.filter((a) => a.role !== "super_admin").length}
-          />
-          <StatCard
-            label="Active"
-            value={activeAdmins.length}
-            sub="Can log in"
-          />
-          <StatCard
-            label="Inactive"
-            value={inactiveAdmins.length}
-            sub="Access revoked"
-          />
-          <StatCard
-            label="Log Entries"
-            value={activityLogs.length}
-            sub="Recent operations"
-          />
-        </div>
-
-        {/* Tabs + actions */}
+      <AdminPanel className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          <div className="flex gap-1 rounded-xl border border-white/10 bg-black p-1">
             {[
               { key: TAB.ADMINS, label: "Admin Accounts" },
               { key: TAB.LOGS, label: "Activity Log" },
@@ -106,8 +67,8 @@ const SuperAdminDashboard = () => {
                 className={`px-5 py-2 text-sm font-medium rounded-lg transition-all
                   ${
                     tab === key
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-[#D4AF37] text-black shadow-sm"
+                      : "text-gray-400 hover:text-white"
                   }`}
               >
                 {label}
@@ -122,13 +83,11 @@ const SuperAdminDashboard = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search admins…"
-                className="px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none
-                  focus:border-black bg-white w-48 transition-colors"
+                className="w-48 rounded-xl border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none transition-colors focus:border-[#D4AF37]"
               />
               <button
                 onClick={() => setCreateOpen(true)}
-                className="px-4 py-2 text-sm font-medium bg-black text-white rounded-xl
-                  hover:bg-gray-800 transition-colors"
+                className="rounded-xl bg-[#D4AF37] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#c99d2f]"
               >
                 + New Admin
               </button>
@@ -136,16 +95,15 @@ const SuperAdminDashboard = () => {
           )}
         </div>
 
-        {/* Content */}
         {tab === TAB.ADMINS && (
           <>
             {adminsLoading && (
-              <div className="text-center py-16 text-gray-400 text-sm animate-pulse">
+              <div className="py-16 text-center text-sm text-gray-400 animate-pulse">
                 Loading admins…
               </div>
             )}
             {adminsError && (
-              <div className="text-center py-10 text-red-500 text-sm">
+              <div className="py-10 text-center text-sm text-red-400">
                 {adminsError}
               </div>
             )}
@@ -159,14 +117,13 @@ const SuperAdminDashboard = () => {
         )}
 
         {tab === TAB.LOGS && <ActivityLogTable />}
-      </div>
+      </AdminPanel>
 
-      {/* Modal */}
       <CreateAdminModal
         isOpen={isCreateOpen}
         onClose={() => setCreateOpen(false)}
       />
-    </div>
+    </AdminPage>
   );
 };
 

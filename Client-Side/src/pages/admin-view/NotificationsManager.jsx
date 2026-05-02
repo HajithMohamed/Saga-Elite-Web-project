@@ -19,6 +19,7 @@ import {
   X,
   RefreshCcw,
 } from "lucide-react";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const notificationTypes = [
   "all",
@@ -242,8 +243,12 @@ const NotificationsManager = () => {
     );
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white py-10">
-      <div className="container mx-auto px-4">
+    <AdminPage
+      eyebrow="Notification control"
+      title="Admin Notifications"
+      description="Broadcast, filter, edit, and maintain notification history from one screen."
+    >
+      <div className="container mx-auto px-0">
         <section className="rounded-3xl border border-[#D4AF37]/20 bg-[#0b0b0b] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -570,7 +575,7 @@ const NotificationsManager = () => {
           )}
         </section>
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

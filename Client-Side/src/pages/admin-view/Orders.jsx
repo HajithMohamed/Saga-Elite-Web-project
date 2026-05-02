@@ -16,6 +16,7 @@ import { Loader2, RefreshCcw, LayoutGrid, Table2 } from "lucide-react";
 import { fetchAdminOrders, updateOrderStatus } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 import StatusBadge from "@/components/common-components/StatusBadge";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
@@ -292,8 +293,12 @@ const Orders = () => {
   const showKanban = !isNarrow && viewMode === "kanban";
 
   return (
-    <div className="min-h-screen bg-[#060606] py-10 text-white">
-      <div className="container mx-auto px-4 md:px-8">
+    <AdminPage
+      eyebrow="Order Operations"
+      title="Orders"
+      description="Monitor customer orders and update fulfillment status in board or table mode."
+    >
+      <div className="container mx-auto px-0 md:px-2">
         <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-widest text-white">Orders</h1>
@@ -436,7 +441,7 @@ const Orders = () => {
           </div>
         )}
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

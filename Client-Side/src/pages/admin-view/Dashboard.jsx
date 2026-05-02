@@ -17,6 +17,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { fetchDashboardStats } from "@/store/order-slice";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -201,8 +202,12 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-10">
+    <AdminPage
+      eyebrow="Admin Overview"
+      title="Command center"
+      description="Track sales, orders, customers, products, and drop performance in one place."
+    >
+      <div className="mx-auto max-w-[1600px]">
         <section className="overflow-hidden rounded-[36px] border border-white/10 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_28%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
           <div className="grid gap-8 xl:grid-cols-[1.25fr_0.95fr]">
             <div>
@@ -622,7 +627,7 @@ const Dashboard = () => {
           </div>
         ) : null}
       </div>
-    </div>
+    </AdminPage>
   );
 };
 

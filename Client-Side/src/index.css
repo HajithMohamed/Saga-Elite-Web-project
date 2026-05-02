@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .admin-page-shell {
+    @apply min-h-screen bg-[#050505] text-white px-4 py-6 sm:px-6 lg:px-8;
+  }
+  .admin-page-header {
+    @apply mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 lg:flex-row lg:items-end lg:justify-between;
+  }
+  .admin-page-eyebrow {
+    @apply text-xs uppercase tracking-[0.3em] text-[#D4AF37];
+  }
+  .admin-page-title {
+    @apply mt-2 text-3xl font-black tracking-tight text-white;
+  }
+  .admin-page-description {
+    @apply mt-3 max-w-3xl text-sm leading-6 text-gray-400;
+  }
+  .admin-panel {
+    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
+  }
+  .admin-panel-title {
+    @apply text-lg font-semibold text-white;
+  }
+  .admin-panel-description {
+    @apply mt-2 text-sm text-gray-400;
+  }
+  .admin-stat-card {
+    @apply rounded-3xl border border-white/10 bg-[#0d0d0d] p-5;
+  }
+  .admin-stat-label {
+    @apply text-[11px] uppercase tracking-[0.22em] text-gray-500;
+  }
+  .admin-stat-value {
+    @apply mt-2 text-3xl font-semibold tracking-tight text-white;
+  }
+  .admin-stat-hint {
+    @apply mt-2 text-xs text-gray-500;
+  }
+}
+
 @layer base {
   body {
     background-color: hsl(var(--background));

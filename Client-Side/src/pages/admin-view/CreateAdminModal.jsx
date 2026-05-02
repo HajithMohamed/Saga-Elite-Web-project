@@ -26,8 +26,6 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) {
       dispatch(clearCreateStatus());
-      setForm(INITIAL);
-      setTouched({});
     }
   }, [isOpen, dispatch]);
 
@@ -61,20 +59,20 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-white">
               Create New Admin
             </h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="mt-0.5 text-sm text-gray-400">
               New admin can manage drops, orders, and products.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
           >
             ✕
           </button>
@@ -82,14 +80,14 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
 
         {/* Success state */}
         {createSuccess && (
-          <div className="mx-6 mt-5 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2 text-green-700 text-sm font-medium">
+          <div className="mx-6 mt-5 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-200">
             <span>✓</span> Admin account created successfully!
           </div>
         )}
 
         {/* API error */}
         {createError && (
-          <div className="mx-6 mt-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="mx-6 mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
             {createError}
           </div>
         )}
@@ -97,7 +95,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-300">
               Full Name
             </label>
             <input
@@ -107,11 +105,11 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Admin full name"
-              className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+              className={`w-full rounded-lg border bg-black px-3 py-2 text-sm text-white outline-none transition-colors
                 ${
                   touched.name && errors.name
-                    ? "border-red-400 focus:border-red-500 bg-red-50"
-                    : "border-gray-200 focus:border-gray-900"
+                    ? "border-red-500/50 focus:border-red-500"
+                    : "border-white/10 focus:border-[#D4AF37]"
                 }`}
             />
             {touched.name && errors.name && (
@@ -121,7 +119,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-300">
               Email Address
             </label>
             <input
@@ -131,11 +129,11 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="admin@sagaelite.lk"
-              className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+              className={`w-full rounded-lg border bg-black px-3 py-2 text-sm text-white outline-none transition-colors
                 ${
                   touched.email && errors.email
-                    ? "border-red-400 focus:border-red-500 bg-red-50"
-                    : "border-gray-200 focus:border-gray-900"
+                    ? "border-red-500/50 focus:border-red-500"
+                    : "border-white/10 focus:border-[#D4AF37]"
                 }`}
             />
             {touched.email && errors.email && (
@@ -145,7 +143,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-300">
               Temporary Password
             </label>
             <input
@@ -155,11 +153,11 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Min. 8 characters"
-              className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-colors
+              className={`w-full rounded-lg border bg-black px-3 py-2 text-sm text-white outline-none transition-colors
                 ${
                   touched.password && errors.password
-                    ? "border-red-400 focus:border-red-500 bg-red-50"
-                    : "border-gray-200 focus:border-gray-900"
+                    ? "border-red-500/50 focus:border-red-500"
+                    : "border-white/10 focus:border-[#D4AF37]"
                 }`}
             />
             {touched.password && errors.password && (
@@ -172,14 +170,14 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="flex-1 rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-white/20"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createLoading || createSuccess}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#c99d2f] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {createLoading ? "Creating…" : "Create Admin"}
             </button>

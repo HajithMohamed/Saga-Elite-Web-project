@@ -9,6 +9,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import StarRating from "@/components/Review/StarRating";
 import { useSocketEvent } from "@/hooks/use-socket-events";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const statusTabs = ["pending", "approved", "rejected"];
 
@@ -129,8 +130,12 @@ const ReviewModerationPage = () => {
   const groupedReviews = useMemo(() => adminReviews || [], [adminReviews]);
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white py-10">
-      <div className="container mx-auto px-4 md:px-8">
+    <AdminPage
+      eyebrow="Review moderation"
+      title="Customer Reviews"
+      description="Approve or reject reviews quickly with bulk actions and detailed context."
+    >
+      <div className="container mx-auto px-0 md:px-2">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
@@ -339,7 +344,7 @@ const ReviewModerationPage = () => {
           </div>
         </div>
       )}
-    </div>
+    </AdminPage>
   );
 };
 

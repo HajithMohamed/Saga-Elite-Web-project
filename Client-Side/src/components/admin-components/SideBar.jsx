@@ -24,7 +24,7 @@ import axios from 'axios'
 import { useSocketEvent } from '@/hooks/use-socket-events'
 import { API_V1_URL } from '@/lib/api'
 
-const SideBar = () => {
+const SideBar = ({ mobileOpen = false, onClose }) => {
   const location = useLocation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -66,7 +66,7 @@ const SideBar = () => {
         )
       }
 
-    } catch (error) {
+    } catch {
       setPendingPaymentCount(0)
       setPendingReviewCount(0)
     }
@@ -229,7 +229,11 @@ const SideBar = () => {
   }
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-64 bg-black border-r border-gray-800 flex flex-col transform transition-transform duration-300 lg:translate-x-0">
+    <div
+      className={`fixed inset-y-0 left-0 z-50 w-64 bg-black border-r border-gray-800 flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
 
       <div className="p-8 border-b border-gray-800">
         <Link
@@ -251,6 +255,7 @@ const SideBar = () => {
           <Link
             key={item.path}
             to={item.path}
+            onClick={onClose}
             className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative
               ${location.pathname === item.path
                 ? 'bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/20 border border-[#D4AF37]'
@@ -291,6 +296,7 @@ const SideBar = () => {
 
         <Link
           to="/admin/account"
+          onClick={onClose}
           className={`flex w-full items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 group relative border
             ${
               location.pathname === '/admin/account'

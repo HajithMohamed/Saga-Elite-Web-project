@@ -28,26 +28,26 @@ const AdminTable = ({ admins = [], currentUserId }) => {
 
   if (!admins.length) {
     return (
-      <div className="text-center py-16 text-gray-400 text-sm">
+      <div className="py-16 text-center text-sm text-gray-400">
         No admin accounts found.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100">
+    <div className="overflow-x-auto rounded-2xl border border-white/10">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Admin</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Role</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Joined</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Last Active</th>
-            <th className="text-right px-5 py-3 font-medium text-gray-500">Actions</th>
-            <th className="text-right px-5 py-3 font-medium text-gray-500">Status</th>
+          <tr className="border-b border-white/10 bg-black/40">
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Admin</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Role</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Joined</th>
+            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Last Active</th>
+            <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Actions</th>
+            <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Status</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50 bg-white">
+        <tbody className="divide-y divide-white/5 bg-[#0b0b0b]">
           {admins.map((admin) => {
             const isSelf = admin._id === currentUserId;
             const isSuperAdmin = admin.role === "super_admin";
@@ -56,24 +56,24 @@ const AdminTable = ({ admins = [], currentUserId }) => {
             return (
               <tr
                 key={admin._id}
-                className="bg-white hover:bg-gray-50/60 transition-colors"
+                className="transition-colors hover:bg-white/[0.02]"
               >
                 {/* Admin info */}
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D4AF37] text-xs font-semibold text-black">
                       {getInitials(admin.name || admin.email)}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 leading-tight">
+                      <p className="font-medium leading-tight text-white">
                         {admin.name || "N/A"}
                         {isSelf && (
-                          <span className="ml-2 text-xs text-gray-400 font-normal">
+                          <span className="ml-2 text-xs font-normal text-gray-400">
                             (you)
                           </span>
                         )}
                       </p>
-                      <p className="text-gray-400 text-xs mt-0.5">
+                      <p className="mt-0.5 text-xs text-gray-400">
                         {admin.email}
                       </p>
                     </div>
@@ -85,34 +85,34 @@ const AdminTable = ({ admins = [], currentUserId }) => {
                     className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
                       ${
                         isSuperAdmin
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-600"
+                          ? "bg-[#D4AF37] text-black"
+                          : "bg-white/10 text-gray-200"
                       }`}
                   >
                     {getRoleLabel(admin.role)}
                   </span>
                 </td>
 
-                <td className="px-5 py-4 text-gray-500">
+                <td className="px-5 py-4 text-gray-400">
                   {formatDate(admin.createdAt)}
                 </td>
 
-                <td className="px-5 py-4 text-gray-500">
+                <td className="px-5 py-4 text-gray-400">
                   {admin.lastActiveAt
                     ? formatDate(admin.lastActiveAt)
                     : "Never"}
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <span className="text-gray-700 font-medium">
+                  <span className="font-medium text-white">
                     {admin.actionCount ?? 0}
                   </span>
-                  <span className="text-gray-400 text-xs ml-1">actions</span>
+                  <span className="ml-1 text-xs text-gray-500">actions</span>
                 </td>
 
                 <td className="px-5 py-4 text-right">
                   {isSelf || isSuperAdmin ? (
-                    <span className="text-gray-300 text-xs">—</span>
+                    <span className="text-xs text-gray-500">—</span>
                   ) : (
                     <button
                       onClick={() => dispatch(toggleAdminStatus(admin._id))}
@@ -120,8 +120,8 @@ const AdminTable = ({ admins = [], currentUserId }) => {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                         ${
                           admin.isActive
-                            ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                            : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
+                            ? "border border-red-500/30 bg-red-500/10 text-red-200 hover:bg-red-500/20"
+                            : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
                         }
                         disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
