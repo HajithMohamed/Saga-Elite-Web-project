@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Link,
   useLocation,
@@ -33,6 +33,7 @@ const ManualPaymentPage = () => {
   const location = useLocation();
   const { paymentSlug = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const contextRef = useRef(null);
 
   const {
     currentPayment,
@@ -43,16 +44,21 @@ const ManualPaymentPage = () => {
     error,
   } = useSelector((state) => state.manualPayment);
 
+  const orderIdParam = searchParams.get("orderId");
+  const amountParam = searchParams.get("amount");
+  const referenceParam = searchParams.get("referenceNumber");
+  const slugParam = searchParams.get("slug");
+
   const resolvedOrderId =
     location.state?.orderId ||
-    searchParams.get("orderId") ||
+    orderIdParam ||
     currentPayment?.orderId?._id ||
     currentPayment?.orderId ||
     paymentContext?.orderId ||
     "";
   const resolvedAmount = Number(
     location.state?.amount ||
-      searchParams.get("amount") ||
+      amountParam ||
       currentPayment?.amount ||
       paymentContext?.amount ||
       0
@@ -60,8 +66,8 @@ const ManualPaymentPage = () => {
   const resolvedReferenceNumber =
     paymentSlug ||
     location.state?.referenceNumber ||
-    searchParams.get("referenceNumber") ||
-    searchParams.get("slug") ||
+    referenceParam ||
+    slugParam ||
     currentPayment?.slug ||
     currentPayment?.referenceNumber ||
     paymentContext?.slug ||
@@ -73,14 +79,27 @@ const ManualPaymentPage = () => {
       return;
     }
 
-    dispatch(
-      storeManualPaymentContext({
-        orderId: resolvedOrderId || null,
-        amount: resolvedAmount || null,
-        slug: currentPayment?.slug || paymentSlug || searchParams.get("slug") || null,
-        referenceNumber: resolvedReferenceNumber || null,
-      })
-    );
+    const nextContext = {
+      orderId: resolvedOrderId || null,
+      amount: resolvedAmount || null,
+      slug: currentPayment?.slug || paymentSlug || slugParam || null,
+      referenceNumber: resolvedReferenceNumber || null,
+    };
+
+    const prevContext = contextRef.current;
+    const hasChanged =
+      !prevContext ||
+      prevContext.orderId !== nextContext.orderId ||
+      prevContext.amount !== nextContext.amount ||
+      prevContext.slug !== nextContext.slug ||
+      prevContext.referenceNumber !== nextContext.referenceNumber;
+
+    if (!hasChanged) {
+      return;
+    }
+
+    contextRef.current = nextContext;
+    dispatch(storeManualPaymentContext(nextContext));
   }, [
     currentPayment?.slug,
     dispatch,
@@ -88,7 +107,7 @@ const ManualPaymentPage = () => {
     resolvedAmount,
     resolvedOrderId,
     resolvedReferenceNumber,
-    searchParams,
+    slugParam,
   ]);
 
   useEffect(() => {

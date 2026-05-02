@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Filter, Landmark, Loader2, RefreshCcw, ShieldAlert, XCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link, useLocation } from "react-router-dom";
 
 import { toast } from "@/hooks/use-toast";
 import { fetchPendingManualPayments, verifyManualPayment } from "@/store/manualPaymentSlice";
@@ -89,7 +90,12 @@ const PendingPaymentsPage = () => {
     (state) => state.manualPayment,
   );
 
-  const [statusFilter, setStatusFilter] = useState("proof_submitted");
+  const location = useLocation();
+  const defaultStatusFilter = useMemo(
+    () => (location.pathname.includes("/admin/manual-payments") ? "all" : "proof_submitted"),
+    [location.pathname],
+  );
+  const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -116,6 +122,10 @@ const PendingPaymentsPage = () => {
   useEffect(() => {
     setPage(1);
   }, [statusFilter]);
+
+  useEffect(() => {
+    setStatusFilter(defaultStatusFilter);
+  }, [defaultStatusFilter]);
 
   useEffect(() => {
     loadQueue();
@@ -312,6 +322,12 @@ const PendingPaymentsPage = () => {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-wrap gap-2">
+                            <Link
+                              to={`/admin/manual-payments/${payment._id}`}
+                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-[#D4AF37]/40"
+                            >
+                              Details
+                            </Link>
                             <button
                               type="button"
                               onClick={() => openDecisionModal(payment, "verify")}

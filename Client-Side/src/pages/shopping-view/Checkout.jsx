@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link, useLocation } from "react-router-dom";
@@ -190,10 +190,15 @@ const Checkout = () => {
   const [variantErrorsByItem, setVariantErrorsByItem] = useState({});
   const [variantUpdateItemId, setVariantUpdateItemId] = useState(null);
 
-  const cartStateItems = Array.isArray(location.state?.cartItems)
-    ? location.state.cartItems
-    : null;
-  const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
+  const locationState = useMemo(() => location.state || {}, [location.key]);
+  const cartStateItems = useMemo(
+    () => (Array.isArray(locationState.cartItems) ? locationState.cartItems : null),
+    [locationState],
+  );
+  const routedBuyNowItem = useMemo(
+    () => normalizeBuyNowItem(locationState.buyNowItem),
+    [locationState],
+  );
 
   useEffect(() => {
     const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
@@ -235,7 +240,7 @@ const Checkout = () => {
     setIsBuyNow(false);
     setHasInitializedSource(true);
     dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, location.state, routedBuyNowItem]);
+  }, [cartStateItems, dispatch, routedBuyNowItem]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;
