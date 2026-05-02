@@ -3,12 +3,17 @@ const SERVER_URL = "http://localhost:5001";
 export const RETURN_WINDOW_DAYS = 30;
 
 export const CONTACT_INFO = {
-  email: "support@sagaelite.lk",
-  phone: "+94 77 123 4567",
-  whatsapp: "+94771234567",
+  email: "sagaaelite@gmail.com",
+  phone: "+94 77 070 4274",
+  whatsapp: "+94770704274",
   addressLine1: "123 Galle Road",
   addressLine2: "Colombo 03, Sri Lanka",
   hours: "Mon - Sat, 9:00 AM - 6:00 PM (Sri Lanka Time)",
+  socials: {
+    instagram: "https://www.instagram.com/sagaaelite",
+    facebook: "https://www.facebook.com/share/1aXufbN6EX/",
+    tiktok: "https://www.tiktok.com/@sagaa_elite"
+  }
 };
 
 export { SERVER_URL };

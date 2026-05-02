@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getAllDrops } from "@/store/admin/drop-slice";
+import { CONTACT_INFO } from "@/config";
 
 const computeCountdown = (targetDate) => {
   if (!targetDate) return { days: "00", hours: "00", minutes: "00", seconds: "00" };
@@ -98,7 +99,10 @@ const MainFooter = () => {
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Support</h3>
             <Link to="/contact" className="text-sm hover:text-[#D4AF37] transition-all">Contact Us</Link>
             <Link to="/about" className="text-sm hover:text-[#D4AF37] transition-all">About Us</Link>
-            <a href="https://wa.me/94770000000" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">WhatsApp Us</a>
+            <a href={`https://wa.me/${CONTACT_INFO.whatsapp.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">WhatsApp Us</a>
+            <a href={CONTACT_INFO.socials.instagram} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">Instagram</a>
+            <a href={CONTACT_INFO.socials.facebook} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">Facebook</a>
+            <a href={CONTACT_INFO.socials.tiktok} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">TikTok</a>
           </div>
 
           {/* Legal Column */}
