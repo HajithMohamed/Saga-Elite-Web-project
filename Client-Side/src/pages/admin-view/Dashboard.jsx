@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -18,6 +19,13 @@ import {
 } from "lucide-react";
 import { fetchDashboardStats } from "@/store/order-slice";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import {
+  pageVariants,
+  containerVariants,
+  itemVariants,
+} from "@/components/admin-components/_shared/animations";
+import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNumber";
+import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -98,32 +106,47 @@ const quickLinks = [
   },
 ];
 
-const MetricCard = ({ label, value, hint, icon, tone = "text-[#D4AF37]" }) => {
+const MetricCard = ({ label, hint, icon, tone = "text-[#D4AF37]", numericValue, formatter, displayValue }) => {
   const Icon = icon;
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+    <motion.div
+      variants={itemVariants}
+      whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.4)" }}
+      transition={{ duration: 0.2 }}
+      className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">{label}</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white">{value}</p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-white">
+            {numericValue != null && formatter ? (
+              <AnimatedNumber value={numericValue} formatter={formatter} />
+            ) : (
+              displayValue
+            )}
+          </p>
           <p className="mt-2 text-sm text-gray-400">{hint}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
           <Icon className={`h-6 w-6 ${tone}`} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 const HighlightCard = ({ eyebrow, title, value, meta, accent = "text-[#D4AF37]" }) => (
-  <div className="rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.16),transparent_45%),rgba(255,255,255,0.03)] p-6">
+  <motion.div
+    whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.4)" }}
+    transition={{ duration: 0.2 }}
+    className="rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.16),transparent_45%),rgba(255,255,255,0.03)] p-6"
+  >
     <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">{eyebrow}</p>
     <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
     <p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p>
     <p className="mt-3 text-sm leading-6 text-gray-400">{meta}</p>
-  </div>
+  </motion.div>
 );
 
 const Dashboard = () => {
@@ -149,42 +172,48 @@ const Dashboard = () => {
   const primaryMetrics = [
     {
       label: "Revenue",
-      value: formatCurrency(overview.totalRevenue),
+      numericValue: Number(overview.totalRevenue) || 0,
+      formatter: (v) => currencyFormatter.format(Math.round(v)),
       hint: `${formatCurrency(overview.averageOrderValue)} average order value`,
       icon: DollarSign,
       tone: "text-[#D4AF37]",
     },
     {
       label: "Active Orders",
-      value: formatNumber(overview.activeOrders),
+      numericValue: Number(overview.activeOrders) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
       hint: `${formatNumber(overview.pendingVerification)} waiting for admin verification`,
       icon: ShoppingBag,
       tone: "text-sky-400",
     },
     {
       label: "Customers",
-      value: formatNumber(overview.totalCustomers),
+      numericValue: Number(overview.totalCustomers) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
       hint: `${formatNumber(overview.totalOrders)} total orders placed`,
       icon: Users,
       tone: "text-violet-400",
     },
     {
       label: "Products",
-      value: formatNumber(overview.totalProducts),
+      numericValue: Number(overview.totalProducts) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
       hint: `${formatNumber(overview.totalSoldUnits)} units sold across all drops`,
       icon: Package,
       tone: "text-emerald-400",
     },
     {
       label: "Live Drops",
-      value: formatNumber(overview.liveDrops),
+      numericValue: Number(overview.liveDrops) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
       hint: `${formatNumber(overview.archivedDrops)} archived releases in the ledger`,
       icon: Layers3,
       tone: "text-pink-400",
     },
     {
       label: "Low Stock",
-      value: formatNumber(overview.lowStockProducts),
+      numericValue: Number(overview.lowStockProducts) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
       hint: `${formatNumber(overview.stockOnHand)} units currently on hand`,
       icon: ShieldAlert,
       tone: "text-amber-400",
@@ -207,7 +236,12 @@ const Dashboard = () => {
       title="Command center"
       description="Track sales, orders, customers, products, and drop performance in one place."
     >
-      <div className="mx-auto max-w-[1600px]">
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        className="mx-auto max-w-[1600px]"
+      >
         <section className="overflow-hidden rounded-[36px] border border-white/10 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_28%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
           <div className="grid gap-8 xl:grid-cols-[1.25fr_0.95fr]">
             <div>
@@ -242,16 +276,20 @@ const Dashboard = () => {
                   <Link
                     key={item.title}
                     to={item.to}
-                    className="group rounded-[28px] border border-white/10 bg-black/30 p-5 transition duration-200 hover:border-[#D4AF37]/40 hover:bg-black/40"
+                    className="group block rounded-[28px] border border-white/10 bg-black/30 p-5 transition duration-200 hover:border-[#D4AF37]/40 hover:bg-black/40"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                        <Icon className="h-5 w-5 text-[#D4AF37]" />
+                    <motion.div whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                          <Icon className="h-5 w-5 text-[#D4AF37]" />
+                        </div>
+                        <motion.span whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
+                          <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:text-white" />
+                        </motion.span>
                       </div>
-                      <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:translate-x-1 group-hover:text-white" />
-                    </div>
-                    <h2 className="mt-8 text-lg font-semibold text-white">{item.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-gray-400">{item.description}</p>
+                      <h2 className="mt-8 text-lg font-semibold text-white">{item.title}</h2>
+                      <p className="mt-2 text-sm leading-6 text-gray-400">{item.description}</p>
+                    </motion.div>
                   </Link>
                 );
               })}
@@ -265,18 +303,24 @@ const Dashboard = () => {
           </div>
         ) : null}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <motion.section
+          className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {primaryMetrics.map((item) => (
             <MetricCard
               key={item.label}
               label={item.label}
-              value={item.value}
+              numericValue={item.numericValue}
+              formatter={item.formatter}
               hint={item.hint}
               icon={item.icon}
               tone={item.tone}
             />
           ))}
-        </section>
+        </motion.section>
 
         <section className="mt-6 grid gap-4 xl:grid-cols-4">
           <HighlightCard
@@ -349,14 +393,18 @@ const Dashboard = () => {
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-6">
-              {salesTrend.map((entry) => (
+              {salesTrend.map((entry, barIdx) => (
                 <div key={entry.monthKey} className="flex flex-col items-center gap-3">
                   <div className="flex h-56 w-full items-end rounded-[24px] border border-white/10 bg-black/30 p-3">
-                    <div
-                      className="w-full rounded-[18px] bg-[linear-gradient(180deg,rgba(212,175,55,0.95),rgba(212,175,55,0.18))] shadow-[0_0_40px_rgba(212,175,55,0.22)]"
+                    <motion.div
+                      className="w-full origin-bottom rounded-[18px] bg-[linear-gradient(180deg,rgba(212,175,55,0.95),rgba(212,175,55,0.18))] shadow-[0_0_40px_rgba(212,175,55,0.22)]"
                       style={{
                         height: `${Math.max(14, Math.round((entry.revenue / maxRevenue) * 100))}%`,
+                        transformOrigin: "bottom",
                       }}
+                      initial={{ scaleY: 0 }}
+                      animate={{ scaleY: 1 }}
+                      transition={{ duration: 0.4, delay: barIdx * 0.06, ease: "easeOut" }}
                     />
                   </div>
                   <div className="text-center">
@@ -429,9 +477,11 @@ const Dashboard = () => {
                 <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Product Leaders</p>
                 <h2 className="mt-2 text-2xl font-bold text-white">Best-selling products</h2>
               </div>
-              <Link to="/admin/product" className="text-sm font-semibold text-[#D4AF37] transition hover:text-white">
-                Manage products
-              </Link>
+              <motion.span whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }} className="inline-block">
+                <Link to="/admin/product" className="text-sm font-semibold text-[#D4AF37] transition hover:text-white">
+                  Manage products
+                </Link>
+              </motion.span>
             </div>
 
             <div className="mt-6 space-y-3">
@@ -622,11 +672,11 @@ const Dashboard = () => {
         </section>
 
         {isLoading && !dashboardStats ? (
-          <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-gray-400">
-            Loading dashboard analytics...
+          <div className="mt-6">
+            <SkeletonGrid count={6} />
           </div>
         ) : null}
-      </div>
+      </motion.div>
     </AdminPage>
   );
 };

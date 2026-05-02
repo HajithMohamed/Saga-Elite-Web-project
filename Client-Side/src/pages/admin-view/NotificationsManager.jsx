@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+// eslint-disable-next-line no-unused-vars -- `motion.*` JSX is not counted by no-unused-vars in this toolchain
+import { AnimatePresence, motion } from "framer-motion";
 import {
   fetchAdminNotifications,
   sendAdminNotification,
@@ -18,8 +20,20 @@ import {
   Check,
   X,
   RefreshCcw,
+  Mail,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import {
+  pageVariants,
+  containerVariants,
+  itemVariants,
+  modalBackdropVariants,
+  modalCardVariants,
+  slideInPanelVariants,
+} from "@/components/admin-components/_shared/animations";
+import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
+import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 
 const notificationTypes = [
   "all",
@@ -62,6 +76,8 @@ const NotificationsManager = () => {
     type: "admin",
     isRead: false,
   });
+  const [sendFlash, setSendFlash] = useState(false);
+  const [broadcastOpen, setBroadcastOpen] = useState(true);
 
   const LIMIT = 10;
 
@@ -94,12 +110,25 @@ const NotificationsManager = () => {
   );
 
   useEffect(() => {
-    setCurrentPage(1);
+    queueMicrotask(() => setCurrentPage(1));
   }, [adminSearch, adminUser, adminType, adminStatus]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const sync = () => setBroadcastOpen(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const resetForm = () => {
     setTitle("");
     setMessage("");
+  };
+
+  const triggerSendFlash = () => {
+    setSendFlash(true);
+    window.setTimeout(() => setSendFlash(false), 2600);
   };
 
   const handleSubmit = async (e) => {
@@ -121,6 +150,7 @@ const NotificationsManager = () => {
         description: "Your notification has been sent to active users.",
         variant: "success",
       });
+      triggerSendFlash();
       resetForm();
       loadAdminNotifications();
     } catch (err) {
@@ -242,13 +272,82 @@ const NotificationsManager = () => {
       </span>
     );
 
+  const broadcastForm = (
+    <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6 h-full">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Broadcast notification</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Send a notification to all active users. Keep messages clear and targeted.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="xl:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400"
+          onClick={() => setBroadcastOpen(false)}
+          aria-label="Close broadcast panel"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <ToastFlash show={sendFlash} message="Broadcast delivered to active users." />
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <div>
+          <label className="mb-2 block text-sm text-gray-300">Title</label>
+          <input
+            value={title}
+            onChange={(e) => {
+              if (error) dispatch(resetNotificationError());
+              setTitle(e.target.value);
+            }}
+            className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+            placeholder="Notification title"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm text-gray-300">Message</label>
+          <textarea
+            value={message}
+            onChange={(e) => {
+              if (error) dispatch(resetNotificationError());
+              setMessage(e.target.value);
+            }}
+            className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+            placeholder="Notification message"
+            rows={6}
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <PrimaryButton
+          type="submit"
+          disabled={isLoading}
+          className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3"
+        >
+          {isLoading ? "Sending..." : "Send notification"}
+        </PrimaryButton>
+      </form>
+    </div>
+  );
+
   return (
     <AdminPage
       eyebrow="Notification control"
       title="Admin Notifications"
       description="Broadcast, filter, edit, and maintain notification history from one screen."
     >
-      <div className="container mx-auto px-0">
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        className="container mx-auto px-0"
+      >
         <section className="rounded-3xl border border-[#D4AF37]/20 bg-[#0b0b0b] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -257,14 +356,24 @@ const NotificationsManager = () => {
                 Manage notification broadcasts, review message history, and keep admin alerts under control.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={loadAdminNotifications}
-              className="inline-flex items-center gap-2 rounded-2xl border border-[#D4AF37]/30 bg-black px-4 py-2 text-sm text-white transition hover:border-[#D4AF37]"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setBroadcastOpen(true)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#D4AF37]/40 bg-black/80 px-4 py-2 text-sm text-[#D4AF37] transition hover:border-[#D4AF37] xl:hidden"
+              >
+                <Mail className="h-4 w-4" />
+                Broadcast
+              </button>
+              <button
+                type="button"
+                onClick={loadAdminNotifications}
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#D4AF37]/30 bg-black px-4 py-2 text-sm text-white transition hover:border-[#D4AF37]"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -345,13 +454,14 @@ const NotificationsManager = () => {
                         <th className="px-4 py-3">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <motion.tbody
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="divide-y divide-white/5"
+                    >
                       {adminIsLoading ? (
-                        <tr>
-                          <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
-                            Loading notifications…
-                          </td>
-                        </tr>
+                        Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} colSpan={6} />)
                       ) : adminItems.length === 0 ? (
                         <tr>
                           <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
@@ -360,7 +470,12 @@ const NotificationsManager = () => {
                         </tr>
                       ) : (
                         adminItems.map((notification) => (
-                          <tr key={notification._id} className="border-t border-white/10 hover:bg-white/5">
+                          <motion.tr
+                            key={notification._id}
+                            variants={itemVariants}
+                            layout
+                            className="border-t border-white/10 hover:bg-white/5"
+                          >
                             <td className="px-4 py-4 align-top">
                               <div className="font-semibold text-white">{notification.title}</div>
                               <div className="mt-1 text-xs text-gray-400 line-clamp-2">
@@ -379,36 +494,41 @@ const NotificationsManager = () => {
                             <td className="px-4 py-4 align-top text-sm text-gray-400">
                               {new Date(notification.createdAt).toLocaleString()}
                             </td>
-                            <td className="px-4 py-4 align-top space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => handleToggleRead(notification)}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black px-3 py-2 text-xs text-white transition hover:border-[#D4AF37]"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                                {notification.isRead ? "Mark unread" : "Mark read"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditClick(notification)}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black px-3 py-2 text-xs text-white transition hover:border-[#D4AF37]"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(notification._id)}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-red-600/10 px-3 py-2 text-xs text-red-200 transition hover:border-red-400"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </button>
+                            <td className="px-4 py-4 align-top">
+                              <div className="flex flex-wrap gap-2">
+                                <motion.button
+                                  type="button"
+                                  whileTap={{ scale: 0.92 }}
+                                  title={notification.isRead ? "Mark as unread" : "Mark as read"}
+                                  onClick={() => handleToggleRead(notification)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-black text-white transition hover:border-[#D4AF37]"
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </motion.button>
+                                <motion.button
+                                  type="button"
+                                  whileTap={{ scale: 0.92 }}
+                                  title="Edit notification"
+                                  onClick={() => handleEditClick(notification)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-black text-white transition hover:border-[#D4AF37]"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </motion.button>
+                                <motion.button
+                                  type="button"
+                                  whileTap={{ scale: 0.92 }}
+                                  title="Delete notification"
+                                  onClick={() => handleDelete(notification._id)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-red-600/10 text-red-200 transition hover:border-red-400"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </motion.button>
+                              </div>
                             </td>
-                          </tr>
+                          </motion.tr>
                         ))
                       )}
-                    </tbody>
+                    </motion.tbody>
                   </table>
                 </div>
 
@@ -417,156 +537,67 @@ const NotificationsManager = () => {
                     Page {currentPage} of {adminPagination.totalPages || 1}
                   </p>
                   <div className="flex items-center gap-2">
-                    <button
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.94 }}
                       onClick={() => handlePageChange("prev")}
                       disabled={currentPage <= 1}
                       className="rounded-2xl border border-white/10 bg-black px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.94 }}
                       onClick={() => handlePageChange("next")}
                       disabled={currentPage >= (adminPagination.totalPages || 1)}
                       className="rounded-2xl border border-white/10 bg-black px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <ChevronRight className="h-4 w-4" />
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6">
-                <h2 className="text-xl font-semibold text-white">Broadcast notification</h2>
-                <p className="mt-2 text-sm text-gray-400">
-                  Send a notification to all active users. Keep messages clear and targeted.
-                </p>
-
-                <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-                  <div>
-                    <label className="mb-2 block text-sm text-gray-300">Title</label>
-                    <input
-                      value={title}
-                      onChange={(e) => {
-                        if (error) dispatch(resetNotificationError());
-                        setTitle(e.target.value);
-                      }}
-                      className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
-                      placeholder="Notification title"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm text-gray-300">Message</label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => {
-                        if (error) dispatch(resetNotificationError());
-                        setMessage(e.target.value);
-                      }}
-                      className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
-                      placeholder="Notification message"
-                      rows={6}
-                    />
-                  </div>
-
-                  {error && <p className="text-sm text-red-400">{error}</p>}
-
-                  <button
-                    type="submit"
-                    className="inline-flex w-full items-center justify-center rounded-2xl bg-[#D4AF37] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#c99d2f]"
-                  >
-                    {isLoading ? "Sending..." : "Send notification"}
-                  </button>
-                </form>
-              </div>
-
-              {editingNotification && (
-                <div className="rounded-3xl border border-white/10 bg-[#0d0d0d] p-6">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-semibold text-white">Edit notification</h2>
-                      <p className="mt-2 text-sm text-gray-400">
-                        Update title, message, type, or read state.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleEditCancel}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/80 text-gray-400 transition hover:border-[#D4AF37]"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <label className="mb-2 block text-sm text-gray-300">Title</label>
-                      <input
-                        value={editForm.title}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
-                        className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-gray-300">Message</label>
-                      <textarea
-                        value={editForm.message}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, message: e.target.value }))}
-                        className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
-                        rows={5}
-                      />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="space-y-2 text-sm text-gray-300">
-                        Type
-                        <select
-                          value={editForm.type}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, type: e.target.value }))}
-                          className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
-                        >
-                          {notificationTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="flex items-center gap-3 text-sm text-gray-300">
-                        <input
-                          type="checkbox"
-                          checked={editForm.isRead}
-                          onChange={(e) => setEditForm((prev) => ({ ...prev, isRead: e.target.checked }))}
-                          className="h-4 w-4 rounded border-gray-600 bg-black text-[#D4AF37] focus:ring-[#D4AF37]"
-                        />
-                        Mark as read
-                      </label>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleSaveEdit}
-                        className="inline-flex items-center justify-center rounded-2xl bg-[#D4AF37] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#c99d2f]"
-                      >
-                        Save changes
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleEditCancel}
-                        className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-black px-5 py-3 text-sm text-white transition hover:border-[#D4AF37]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="hidden xl:block">
+              <motion.div
+                variants={slideInPanelVariants}
+                initial="hidden"
+                animate="visible"
+                className="sticky top-24 space-y-6"
+              >
+                {broadcastForm}
+              </motion.div>
             </div>
           </div>
+
+          <AnimatePresence>
+            {broadcastOpen ? (
+              <>
+                <motion.button
+                  type="button"
+                  aria-label="Close overlay"
+                  variants={modalBackdropVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden"
+                  onClick={() => setBroadcastOpen(false)}
+                />
+                <motion.div
+                  variants={slideInPanelVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                  className="fixed inset-y-0 right-0 z-50 w-full max-w-md overflow-y-auto border-l border-white/10 bg-[#0b0b0b] p-4 shadow-2xl xl:hidden"
+                >
+                  {broadcastForm}
+                </motion.div>
+              </>
+            ) : null}
+          </AnimatePresence>
 
           {adminError && (
             <div className="mt-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
@@ -574,7 +605,106 @@ const NotificationsManager = () => {
             </div>
           )}
         </section>
-      </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {editingNotification ? (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6"
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            onClick={handleEditCancel}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              variants={modalCardVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 shadow-2xl"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Edit notification</h2>
+                  <p className="mt-2 text-sm text-gray-400">
+                    Update title, message, type, or read state.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEditCancel}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/80 text-gray-400 transition hover:border-[#D4AF37]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm text-gray-300">Title</label>
+                  <input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm text-gray-300">Message</label>
+                  <textarea
+                    value={editForm.message}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, message: e.target.value }))}
+                    className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                    rows={5}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm text-gray-300">
+                    Type
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, type: e.target.value }))}
+                      className="w-full rounded-2xl border border-white/10 bg-black/80 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                    >
+                      {notificationTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isRead}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, isRead: e.target.checked }))}
+                      className="h-4 w-4 rounded border-gray-600 bg-black text-[#D4AF37] focus:ring-[#D4AF37]"
+                    />
+                    Mark as read
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <PrimaryButton type="button" onClick={handleSaveEdit} className="px-5 py-3">
+                    Save changes
+                  </PrimaryButton>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleEditCancel}
+                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-black px-5 py-3 text-sm text-white transition hover:border-[#D4AF37]"
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </AdminPage>
   );
 };

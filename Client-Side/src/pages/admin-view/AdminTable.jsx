@@ -1,6 +1,12 @@
 import React from "react";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleAdminStatus } from "../../store/admin/super-admin-slice";
+import { itemVariants, containerVariants } from "@/components/admin-components/_shared/animations";
+import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
+import { Users } from "lucide-react";
+import { DangerButton, SecondaryButton } from "@/components/admin-components/_shared/Buttons";
 
 const getRoleLabel = (role) =>
   role === "super_admin" ? "Super Admin" : "Admin";
@@ -28,115 +34,131 @@ const AdminTable = ({ admins = [], currentUserId }) => {
 
   if (!admins.length) {
     return (
-      <div className="py-16 text-center text-sm text-gray-400">
-        No admin accounts found.
-      </div>
+      <EmptyState
+        icon={Users}
+        title="No admin accounts found"
+        subtitle="Create a new admin to grant dashboard access."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/10">
+    <div className="overflow-x-auto rounded-[20px] border border-white/10">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 bg-black/40">
-            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Admin</th>
-            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Role</th>
-            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Joined</th>
-            <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Last Active</th>
-            <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Actions</th>
-            <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Status</th>
+          <tr className="border-b border-white/10 bg-white/5">
+            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Admin
+            </th>
+            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Role
+            </th>
+            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Joined
+            </th>
+            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Last Active
+            </th>
+            <th className="px-5 py-3 text-right text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Actions
+            </th>
+            <th className="px-5 py-3 text-right text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+              Status
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5 bg-[#0b0b0b]">
+        <motion.tbody
+          className="bg-transparent"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {admins.map((admin) => {
             const isSelf = admin._id === currentUserId;
             const isSuperAdmin = admin.role === "super_admin";
             const isToggling = toggleLoading === admin._id;
 
             return (
-              <tr
+              <motion.tr
                 key={admin._id}
-                className="transition-colors hover:bg-white/[0.02]"
+                variants={itemVariants}
+                className="border-t border-white/10 transition-colors hover:bg-white/[0.02]"
               >
-                {/* Admin info */}
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D4AF37] text-xs font-semibold text-black">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-semibold text-black">
                       {getInitials(admin.name || admin.email)}
                     </div>
                     <div>
                       <p className="font-medium leading-tight text-white">
                         {admin.name || "N/A"}
-                        {isSelf && (
-                          <span className="ml-2 text-xs font-normal text-gray-400">
-                            (you)
-                          </span>
-                        )}
+                        {isSelf ? (
+                          <span className="ml-2 text-xs font-normal text-gray-400">(you)</span>
+                        ) : null}
                       </p>
-                      <p className="mt-0.5 text-xs text-gray-400">
-                        {admin.email}
-                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">{admin.email}</p>
                     </div>
                   </div>
                 </td>
 
                 <td className="px-5 py-4">
                   <span
-                    className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${
-                        isSuperAdmin
-                          ? "bg-[#D4AF37] text-black"
-                          : "bg-white/10 text-gray-200"
-                      }`}
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      isSuperAdmin
+                        ? "bg-[#D4AF37] text-black"
+                        : "bg-white/10 text-gray-200"
+                    }`}
                   >
                     {getRoleLabel(admin.role)}
                   </span>
                 </td>
 
-                <td className="px-5 py-4 text-gray-400">
-                  {formatDate(admin.createdAt)}
-                </td>
+                <td className="px-5 py-4 text-gray-400">{formatDate(admin.createdAt)}</td>
 
                 <td className="px-5 py-4 text-gray-400">
-                  {admin.lastActiveAt
-                    ? formatDate(admin.lastActiveAt)
-                    : "Never"}
+                  {admin.lastActiveAt ? formatDate(admin.lastActiveAt) : "Never"}
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <span className="font-medium text-white">
-                    {admin.actionCount ?? 0}
-                  </span>
+                  <span className="font-medium text-white">{admin.actionCount ?? 0}</span>
                   <span className="ml-1 text-xs text-gray-500">actions</span>
                 </td>
 
                 <td className="px-5 py-4 text-right">
                   {isSelf || isSuperAdmin ? (
                     <span className="text-xs text-gray-500">—</span>
-                  ) : (
-                    <button
-                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                  ) : admin.isActive ? (
+                    <DangerButton
+                      type="button"
                       disabled={isToggling}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                        ${
-                          admin.isActive
-                            ? "border border-red-500/30 bg-red-500/10 text-red-200 hover:bg-red-500/20"
-                            : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                        }
-                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                      className="px-3 py-1.5 text-xs"
                     >
-                      {isToggling
-                        ? "…"
-                        : admin.isActive
-                        ? "Deactivate"
-                        : "Activate"}
-                    </button>
+                      {isToggling ? (
+                        <Loader2 className="inline h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Deactivate"
+                      )}
+                    </DangerButton>
+                  ) : (
+                    <SecondaryButton
+                      type="button"
+                      disabled={isToggling}
+                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                      className="px-3 py-1.5 text-xs"
+                    >
+                      {isToggling ? (
+                        <Loader2 className="inline h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Activate"
+                      )}
+                    </SecondaryButton>
                   )}
                 </td>
-              </tr>
+              </motion.tr>
             );
           })}
-        </tbody>
+        </motion.tbody>
       </table>
     </div>
   );

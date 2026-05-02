@@ -10,6 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import StarRating from "@/components/Review/StarRating";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import { pageVariants } from "@/components/admin-components/_shared/animations";
+import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 
 const statusTabs = ["pending", "approved", "rejected"];
 
@@ -26,6 +28,8 @@ const ReviewModerationPage = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
+  const [bulkRejectText, setBulkRejectText] = useState("Rejected by admin");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);
@@ -35,7 +39,12 @@ const ReviewModerationPage = () => {
   useEffect(() => {
     dispatch(fetchAdminReviews({ status: activeStatus, page: 1, search: debouncedSearch }));
     setSelectedIds([]);
+    setBulkRejectOpen(false);
   }, [dispatch, activeStatus, debouncedSearch]);
+
+  useEffect(() => {
+    if (selectedIds.length === 0) setBulkRejectOpen(false);
+  }, [selectedIds.length]);
 
   useSocketEvent(
     "review:refresh",
@@ -67,6 +76,7 @@ const ReviewModerationPage = () => {
       });
       dispatch(fetchAdminReviews({ status: activeStatus, page: 1, search: debouncedSearch }));
       setSelectedIds([]);
+      setBulkRejectOpen(false);
     } catch (error) {
       toast({
         title: "Bulk approve failed",
@@ -76,15 +86,18 @@ const ReviewModerationPage = () => {
     }
   };
 
-  const handleBulkReject = async () => {
+  const executeBulkReject = async () => {
     if (selectedIds.length === 0) return;
-    const reason = window.prompt("Reject reason (optional):", "Rejected by admin");
-    if (reason === null) return;
-
     try {
       await Promise.all(
         selectedIds.map((reviewId) =>
-          dispatch(moderateReview({ reviewId, action: "reject", rejectionReason: reason })).unwrap()
+          dispatch(
+            moderateReview({
+              reviewId,
+              action: "reject",
+              rejectionReason: bulkRejectText || "Rejected by admin",
+            })
+          ).unwrap()
         )
       );
       toast({
@@ -93,6 +106,7 @@ const ReviewModerationPage = () => {
       });
       dispatch(fetchAdminReviews({ status: activeStatus, page: 1, search: debouncedSearch }));
       setSelectedIds([]);
+      setBulkRejectOpen(false);
     } catch (error) {
       toast({
         title: "Bulk reject failed",
@@ -135,7 +149,12 @@ const ReviewModerationPage = () => {
       title="Customer Reviews"
       description="Approve or reject reviews quickly with bulk actions and detailed context."
     >
-      <div className="container mx-auto px-0 md:px-2">
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        className="container mx-auto px-0 md:px-2"
+      >
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
@@ -166,7 +185,7 @@ const ReviewModerationPage = () => {
               <button
                 type="button"
                 disabled={!hasSelected}
-                onClick={handleBulkReject}
+                onClick={() => setBulkRejectOpen(true)}
                 className="rounded-full bg-rose-500/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-rose-200 border border-transparent hover:border-rose-500/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Reject
@@ -175,29 +194,30 @@ const ReviewModerationPage = () => {
           </div>
         </div>
 
-        <div className="mb-8 flex flex-wrap gap-3">
+        <div className="mb-8 flex flex-wrap gap-3 border-b border-white/10 pb-4">
           {statusTabs.map((status) => (
             <button
               key={status}
               type="button"
               onClick={() => setActiveStatus(status)}
-              className={`rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${
-                activeStatus === status
-                  ? "bg-[#D4AF37] text-black"
-                  : "border border-white/10 text-white/60"
+              className={`relative pb-3 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
+                activeStatus === status ? "text-white" : "text-white/50 hover:text-white/80"
               }`}
             >
               {status} {activeStatus === status ? `(${totalCount})` : ""}
+              {activeStatus === status ? (
+                <motion.div
+                  layoutId="review-tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D4AF37]"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              ) : null}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-44 animate-pulse rounded-3xl bg-[#111]" />
-            ))}
-          </div>
+          <SkeletonGrid count={4} className="grid gap-4 md:grid-cols-2" />
         ) : groupedReviews.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-10 text-white/60">
             No reviews for this status.
@@ -308,7 +328,84 @@ const ReviewModerationPage = () => {
             </AnimatePresence>
           </div>
         )}
-      </div>
+        <AnimatePresence>
+          {bulkRejectOpen && hasSelected ? (
+            <motion.div
+              key="bulk-reject"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              className="fixed bottom-0 left-0 right-0 z-40 border-t border-rose-500/30 bg-[#0b0b0b]/95 p-4 backdrop-blur-md md:left-64"
+            >
+              <div className="mx-auto flex max-w-3xl flex-col gap-3 md:flex-row md:items-end">
+                <div className="flex-1">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-rose-300">Bulk reject reason</p>
+                  <textarea
+                    value={bulkRejectText}
+                    onChange={(e) => setBulkRejectText(e.target.value)}
+                    className="mt-2 min-h-[72px] w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkRejectOpen(false)}
+                    className="rounded-full border border-white/20 bg-white/5 px-5 py-2.5 text-xs font-semibold text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeBulkReject}
+                    className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2.5 text-xs font-bold text-rose-100"
+                  >
+                    Confirm reject ({selectedIds.length})
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {hasSelected && !bulkRejectOpen ? (
+            <motion.div
+              key="bulk-bar"
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 80 }}
+              className="fixed bottom-4 left-4 right-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#D4AF37]/30 bg-black/90 px-4 py-3 shadow-xl md:left-72 md:right-8"
+            >
+              <p className="text-sm text-white">
+                <span className="font-semibold text-[#D4AF37]">{selectedIds.length}</span> selected
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="rounded-full border border-white/20 px-4 py-2 text-xs text-white"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkApprove}
+                  className="rounded-full bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-200"
+                >
+                  Approve all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkRejectOpen(true)}
+                  className="rounded-full bg-rose-500/20 px-4 py-2 text-xs font-semibold text-rose-200"
+                >
+                  Reject all…
+                </button>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </motion.div>
 
       {rejecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">

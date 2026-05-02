@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+// eslint-disable-next-line no-unused-vars -- motion JSX
+import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,6 +15,9 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { fetchManualPaymentById, verifyManualPayment } from "@/store/manualPaymentSlice";
 import { useSocketEvent } from "@/hooks/use-socket-events";
+import { pageVariants, modalBackdropVariants, modalCardVariants } from "@/components/admin-components/_shared/animations";
+import { PrimaryButton, DangerButton } from "@/components/admin-components/_shared/Buttons";
+import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -35,13 +40,16 @@ const PaymentVerificationPage = () => {
   const { currentPayment, isAdminLoading, isVerifying } = useSelector((state) => state.manualPayment);
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  const [proofLightboxOpen, setProofLightboxOpen] = useState(false);
+  const [successFlash, setSuccessFlash] = useState(false);
 
   useEffect(() => {
-    if (paymentId) {
+    if (!paymentId) return;
+    queueMicrotask(() => {
       setRejectionReason("");
       setAdminNotes("");
-      dispatch(fetchManualPaymentById(paymentId));
-    }
+    });
+    dispatch(fetchManualPaymentById(paymentId));
   }, [dispatch, paymentId]);
 
   useSocketEvent(
@@ -55,6 +63,15 @@ const PaymentVerificationPage = () => {
     },
     [dispatch, paymentId]
   );
+
+  useEffect(() => {
+    if (!proofLightboxOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") setProofLightboxOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [proofLightboxOpen]);
 
   const handleDecision = async (action) => {
     if (!paymentId) return;
@@ -84,7 +101,8 @@ const PaymentVerificationPage = () => {
         variant: "success",
       });
 
-      navigate("/admin/payments/pending");
+      setSuccessFlash(true);
+      window.setTimeout(() => navigate("/admin/payments/pending"), 1100);
     } catch (error) {
       toast({
         title: "Action failed",
@@ -134,10 +152,17 @@ const PaymentVerificationPage = () => {
     expired: "text-gray-300 border-gray-500/20 bg-gray-500/10",
   };
 
+  const eyebrow = "text-[10px] font-semibold uppercase tracking-[0.28em] text-[#D4AF37]";
+
   return (
-    <div className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <div className="flex items-center justify-between rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] px-6 py-5">
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
+    >
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] px-6 py-5">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Payment verification</p>
             <h1 className="mt-2 text-2xl font-black text-white">Review receipt and customer details</h1>
@@ -148,6 +173,13 @@ const PaymentVerificationPage = () => {
           >
             <ArrowLeft className="h-4 w-4" /> Back to queue
           </Link>
+        </div>
+
+        <div className="max-w-xl">
+          <ToastFlash
+            show={successFlash}
+            message={successFlash ? "Saved — returning to queue…" : ""}
+          />
         </div>
 
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
@@ -163,26 +195,26 @@ const PaymentVerificationPage = () => {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Reference</p>
+                <p className={eyebrow}>Reference number</p>
                 <p className="mt-2 font-mono text-lg tracking-[0.2em] text-[#D4AF37]">{currentPayment.referenceNumber}</p>
               </div>
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Customer</p>
+                <p className={eyebrow}>Customer email</p>
                 <p className="mt-2 text-sm text-white">{customerEmail}</p>
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Order ID</p>
+                <p className={eyebrow}>Order ID</p>
                 <p className="mt-2 break-all text-sm text-white">{order._id}</p>
               </div>
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Submitted</p>
+                <p className={eyebrow}>Submitted at</p>
                 <p className="mt-2 text-sm text-white">{formatDateTime(currentPayment.proofSubmittedAt)}</p>
               </div>
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Expires</p>
+                <p className={eyebrow}>Proof expires</p>
                 <p className="mt-2 text-sm text-white">{formatDateTime(currentPayment.expiresAt)}</p>
               </div>
             </div>
@@ -201,9 +233,20 @@ const PaymentVerificationPage = () => {
                   </a>
                 </div>
               ) : (
-                <a href={currentPayment.proofUrl} target="_blank" rel="noreferrer" className="block">
-                  <img src={currentPayment.proofUrl} alt="Payment proof" className="max-h-[520px] w-full object-contain" />
-                </a>
+                <button
+                  type="button"
+                  onClick={() => setProofLightboxOpen(true)}
+                  className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+                >
+                  <img
+                    src={currentPayment.proofUrl}
+                    alt="Payment proof — tap to enlarge"
+                    className="max-h-[520px] w-full cursor-zoom-in object-contain transition group-hover:opacity-95"
+                  />
+                  <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                    View full size
+                  </span>
+                </button>
               ) : (
                 <div className="flex min-h-[360px] items-center justify-center text-sm text-gray-400">
                   No proof image stored.
@@ -214,21 +257,34 @@ const PaymentVerificationPage = () => {
 
           <aside className="space-y-6">
             <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
-                <Landmark className="h-4 w-4" /> Order summary
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <Landmark className="h-4 w-4 text-[#D4AF37]" /> Order summary
               </div>
               <div className="mt-4 space-y-3 text-sm text-gray-300">
-                <p><span className="text-gray-500">Order total:</span> LKR {formatCurrency(order.totalAmount || currentPayment.amount)}</p>
-                <p><span className="text-gray-500">Contact number:</span> {order.contactNumber || "—"}</p>
-                <p><span className="text-gray-500">Order status:</span> {order.status || "—"}</p>
-                <p><span className="text-gray-500">Payment method:</span> {order.paymentMethod || "—"}</p>
+                <p>
+                  <span className={eyebrow}>Order total</span>
+                  <span className="mt-1 block text-base text-white">LKR {formatCurrency(order.totalAmount || currentPayment.amount)}</span>
+                </p>
+                <p>
+                  <span className={eyebrow}>Contact number</span>
+                  <span className="mt-1 block text-white">{order.contactNumber || "—"}</span>
+                </p>
+                <p>
+                  <span className={eyebrow}>Order status</span>
+                  <span className="mt-1 block text-white">{order.status || "—"}</span>
+                </p>
+                <p>
+                  <span className={eyebrow}>Payment method</span>
+                  <span className="mt-1 block text-white">{order.paymentMethod || "—"}</span>
+                </p>
               </div>
             </div>
 
             <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
-                <MessageSquareText className="h-4 w-4" /> Admin notes
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <MessageSquareText className="h-4 w-4 text-[#D4AF37]" /> Admin notes
               </div>
+              <p className={`mt-2 ${eyebrow} text-gray-500`}>Internal only</p>
               <textarea
                 value={adminNotes}
                 onChange={(event) => setAdminNotes(event.target.value)}
@@ -238,40 +294,78 @@ const PaymentVerificationPage = () => {
             </div>
 
             <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
-                <ShieldAlert className="h-4 w-4" /> Decision reason
+              <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                <ShieldAlert className="h-4 w-4 text-[#D4AF37]" /> Rejection reason
               </div>
+              <p className={`mt-2 ${eyebrow} text-gray-500`}>Required to reject</p>
               <textarea
                 value={rejectionReason}
                 onChange={(event) => setRejectionReason(event.target.value)}
                 placeholder="Required if rejecting proof"
                 className="mt-4 min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
               />
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <button
+              <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-stretch">
+                <PrimaryButton
                   type="button"
                   onClick={() => handleDecision("approve")}
                   disabled={isVerifying}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-400 px-5 py-3 text-sm font-black uppercase tracking-[0.22em] text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex flex-1 items-center justify-center gap-2 !bg-emerald-400 !text-black hover:!bg-emerald-300 py-4 px-8 text-base font-black uppercase tracking-[0.18em]"
                 >
-                  {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Approve
-                </button>
-                <button
+                  {isVerifying ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                  Approve payment
+                </PrimaryButton>
+                <DangerButton
                   type="button"
                   onClick={() => handleDecision("reject")}
                   disabled={isVerifying}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-5 py-3 text-sm font-black uppercase tracking-[0.22em] text-rose-200 transition hover:border-rose-500/40 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex flex-1 items-center justify-center gap-2 py-4 px-8 text-base font-black uppercase tracking-[0.18em]"
                 >
-                  {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                  Reject
-                </button>
+                  {isVerifying ? <Loader2 className="h-5 w-5 animate-spin" /> : <XCircle className="h-5 w-5" />}
+                  Reject payment
+                </DangerButton>
               </div>
             </div>
           </aside>
         </div>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {proofLightboxOpen && currentPayment.proofUrl && !currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
+          <motion.div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-6"
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            onClick={() => setProofLightboxOpen(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              variants={modalCardVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-h-[92vh] max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b] p-3 shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => setProofLightboxOpen(false)}
+                className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white"
+              >
+                Close
+              </button>
+              <img
+                src={currentPayment.proofUrl}
+                alt="Payment proof enlarged"
+                className="max-h-[85vh] w-full object-contain"
+              />
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

@@ -1,11 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Filter, Landmark, Loader2, RefreshCcw, ShieldAlert, XCircle } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Landmark,
+  Loader2,
+  RefreshCcw,
+  ShieldAlert,
+  XCircle,
+} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 
 import { toast } from "@/hooks/use-toast";
+import { pageVariants } from "@/components/admin-components/_shared/animations";
+import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
 import { fetchPendingManualPayments, verifyManualPayment } from "@/store/manualPaymentSlice";
 import { useSocketEvent } from "@/hooks/use-socket-events";
+
+const MotionLink = motion(Link);
 
 const statusOptions = [
   { label: "All", value: "all" },
@@ -105,6 +118,7 @@ const PendingPaymentsPage = () => {
     action: null,
     notes: "",
   });
+  const [flashIds, setFlashIds] = useState(() => new Set());
 
   const requestParams = useMemo(
     () => ({
@@ -141,7 +155,18 @@ const PendingPaymentsPage = () => {
 
   useSocketEvent(
     "payment:new_pending",
-    () => {
+    (payload) => {
+      const id = payload?.paymentId || payload?._id || payload?.id;
+      if (id) {
+        setFlashIds((prev) => new Set(prev).add(String(id)));
+        window.setTimeout(() => {
+          setFlashIds((prev) => {
+            const next = new Set(prev);
+            next.delete(String(id));
+            return next;
+          });
+        }, 2400);
+      }
       loadQueue();
     },
     [loadQueue],
@@ -213,7 +238,12 @@ const PendingPaymentsPage = () => {
     statusMeta[status]?.className || "border-white/10 bg-white/5 text-gray-300";
 
   return (
-    <div className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8">
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
+    >
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -238,24 +268,31 @@ const PendingPaymentsPage = () => {
           </div>
         </section>
 
-        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
-          <label className="space-y-2 text-sm text-gray-300">
-            Status filter
-            <div className="relative">
-              <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="w-full appearance-none rounded-2xl border border-white/10 bg-black/80 py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+        <section className="grid gap-6 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Status filter</p>
+            <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatusFilter(option.value)}
+                  className={`relative rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
+                    statusFilter === option.value ? "text-black" : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {statusFilter === option.value ? (
+                    <motion.span
+                      layoutId="pending-payment-status-pill"
+                      className="absolute inset-0 -z-10 rounded-full bg-[#D4AF37]"
+                      transition={{ type: "spring", stiffness: 400, damping: 34 }}
+                    />
+                  ) : null}
+                  <span className="relative z-10">{option.label}</span>
+                </button>
+              ))}
             </div>
-          </label>
+          </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-400">
             <div className="flex items-center gap-2 text-[#D4AF37]">
@@ -269,8 +306,27 @@ const PendingPaymentsPage = () => {
         </section>
 
         {isAdminLoading ? (
-          <div className="flex items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] py-16 text-gray-400">
-            <Loader2 className="mr-3 h-5 w-5 animate-spin text-[#D4AF37]" /> Loading pending payments…
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b0b]">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-black/40 text-[10px] uppercase tracking-[0.24em] text-gray-400">
+                <tr>
+                  <th className="px-6 py-4">Reference</th>
+                  <th className="px-6 py-4">Customer</th>
+                  <th className="px-6 py-4">Amount</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonRow key={i} colSpan={5} />
+                ))}
+              </tbody>
+            </table>
+            <div className="flex items-center justify-center gap-2 border-t border-white/10 py-4 text-gray-400">
+              <Loader2 className="h-5 w-5 animate-spin text-[#D4AF37]" />
+              <span>Loading pending payments…</span>
+            </div>
           </div>
         ) : pendingPayments.length === 0 ? (
           <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-10 text-center text-sm text-gray-400">
@@ -302,9 +358,28 @@ const PendingPaymentsPage = () => {
                 <tbody className="divide-y divide-white/5">
                   {pendingPayments.map((payment) => {
                     const status = payment.status || "proof_submitted";
+                    const rowKey = String(payment._id || payment.referenceNumber);
+                    const flash = flashIds.has(rowKey);
 
                     return (
-                      <tr key={payment._id || payment.referenceNumber} className="align-top hover:bg-white/[0.02]">
+                      <motion.tr
+                        key={rowKey}
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          boxShadow: flash
+                            ? ["inset 5px 0 0 0 #D4AF37", "inset 5px 0 0 0 rgba(212,175,55,0)"]
+                            : "inset 0 0 0 0 transparent",
+                        }}
+                        transition={{
+                          layout: { type: "spring", stiffness: 300, damping: 30 },
+                          boxShadow: { duration: 1.8, ease: "easeOut" },
+                          default: { duration: 0.25 },
+                        }}
+                        className="align-top hover:bg-white/[0.02]"
+                      >
                         <td className="px-6 py-5 font-mono text-xs tracking-[0.2em] text-[#D4AF37]">
                           {payment.referenceNumber || "—"}
                         </td>
@@ -322,29 +397,32 @@ const PendingPaymentsPage = () => {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-wrap gap-2">
-                            <Link
+                            <MotionLink
                               to={`/admin/manual-payments/${payment._id}`}
+                              whileTap={{ scale: 0.96 }}
                               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-[#D4AF37]/40"
                             >
                               Details
-                            </Link>
-                            <button
+                            </MotionLink>
+                            <motion.button
                               type="button"
+                              whileTap={{ scale: 0.96 }}
                               onClick={() => openDecisionModal(payment, "verify")}
                               className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-emerald-200 transition hover:border-emerald-500/40 hover:bg-emerald-500/20"
                             >
                               Verify <CheckCircle2 className="h-4 w-4" />
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
                               type="button"
+                              whileTap={{ scale: 0.96 }}
                               onClick={() => openDecisionModal(payment, "reject")}
                               className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-200 transition hover:border-rose-500/40 hover:bg-rose-500/20"
                             >
                               Reject <XCircle className="h-4 w-4" />
-                            </button>
+                            </motion.button>
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     );
                   })}
                 </tbody>
@@ -358,22 +436,24 @@ const PendingPaymentsPage = () => {
             Page {pagination.page || page} of {pagination.totalPages || 0}
           </span>
           <div className="flex items-center gap-3">
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.94 }}
               disabled={page <= 1}
               onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
               className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.94 }}
               disabled={page >= (pagination.totalPages || 1)}
               onClick={() => setPage((currentPage) => currentPage + 1)}
-              className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Next
-            </button>
+              Next <ArrowRight className="h-4 w-4" />
+            </motion.button>
           </div>
         </div>
       </div>
@@ -436,7 +516,7 @@ const PendingPaymentsPage = () => {
           </div>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 };
 
