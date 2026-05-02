@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAdminOrders, updateOrderStatus } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import StatusBadge from "@/components/common-components/StatusBadge";
 
 const statusOptions = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 
@@ -68,9 +69,8 @@ const Orders = () => {
                       <span className="rounded-full bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-[#D4AF37]">
                         {order.paymentMethod}
                       </span>
-                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-gray-300">
-                        {order.paymentStatus}
-                      </span>
+                      <StatusBadge status={order.status} />
+                      <StatusBadge status={order.paymentStatus} />
                     </div>
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Order ID</p>
