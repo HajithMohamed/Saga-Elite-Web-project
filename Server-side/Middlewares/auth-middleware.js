@@ -24,7 +24,12 @@ const authMiddleware = catchAsync(async (req,res,next)=>{
         return next(new AppError("Session expired. Please login again", 401));
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    let decodedToken;
+    try {
+        decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return next(new AppError("Invalid or expired session. Please login again.", 401));
+    }
 
     const user = await User.findById(decodedToken.id);
 

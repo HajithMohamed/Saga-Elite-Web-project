@@ -12,6 +12,12 @@ services:
     volumes:
       - ./Server-side:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     networks:
       - saga_network
 
@@ -25,11 +31,19 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:5001/api/v1
+      - VITE_BACKEND_TARGET=http://backend:5001
     volumes:
       - ./Client-Side:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5173/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - saga_network
 

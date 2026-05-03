@@ -30,7 +30,7 @@ module.exports = (err, req, res, next) => {
         stack: err.stack,
         url: req.originalUrl,
         method: req.method,
-        ip: req.ip || req.connection.remoteAddress,
+        ip: req.ip || "unknown",
         userAgent: req.get('User-Agent'),
     });
 

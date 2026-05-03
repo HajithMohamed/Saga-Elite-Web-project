@@ -1,0 +1,283 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { logoutUserAction } from '@/store/auth-slice';
+import { toast } from '@/hooks/use-toast';
+import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
+
+const Header = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { currentPayment } = useSelector((state) => state.manualPayment || {});
+  const { user } = useSelector((state) => state.auth);
+  const { totalQuantity } = useSelector((state) => state.cart.cart || {});
+  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
+  const cartCount = totalQuantity || 0;
+  const wishlistCount = wishlistItems?.length || 0;
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const hasPendingPayment =
+    currentPayment?.status === 'pending_payment' || currentPayment?.status === 'proof_submitted';
+
+  const computeTimeLeft = () => {
+    if (!currentPayment?.expiresAt) return { hours: 0, minutes: 0 };
+    const diff = new Date(currentPayment.expiresAt) - new Date();
+    if (diff <= 0) return { hours: 0, minutes: 0 };
+    return {
+      hours: Math.floor(diff / (1000 * 60 * 60)),
+      minutes: Math.floor((diff / 1000 / 60) % 60),
+    };
+  };
+  const { hours, minutes } = hasPendingPayment ? computeTimeLeft() : { hours: 0, minutes: 0 };
+
+  const handleLogout = async () => {
+    setUserMenuOpen(false);
+    try {
+      await dispatch(logoutUserAction()).unwrap();
+      toast({
+        title: 'Signed out',
+        description: 'See you next time.',
+        variant: 'success',
+      });
+      navigate('/auth/login');
+    } catch (err) {
+      toast({
+        title: 'Logout failed',
+        description: err?.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <header className="sticky top-0 z-50 w-full bg-black text-white border-b border-[#D4AF37]/20 shadow-sm">
+      <div className="container mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
+
+        {/* Left: Mobile Menu */}
+        <div className="md:hidden flex items-center">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="text-[#D4AF37] hover:text-white transition-colors"
+          >
+            {menuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
+        </div>
+
+        {/* Logo */}
+        <Link to="/shopping/home" className="flex items-center gap-3">
+          <img
+            src="/LOGO.png"
+            alt="Saga Elite Logo"
+            className="h-12 w-12 object-cover rounded-md"
+          />
+          <span className="hidden md:block font-bold text-xl tracking-widest text-[#D4AF37] uppercase">
+            Saga Elite
+          </span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest">
+          <Link
+            to="/shopping/home"
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Home
+          </Link>
+          <Link
+            to="/shopping/product-list?category=drops"
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Latest Drop
+          </Link>
+          <Link
+            to="/shopping/product-list?category=unisex"
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Unisex
+          </Link>
+          <Link
+            to="/shopping/product-list?category=archive"
+            className="hover:text-[#D4AF37] transition-colors text-gray-500"
+          >
+            Archive
+          </Link>
+        </nav>
+
+        {/* Right: Icons */}
+        <div className="flex items-center gap-6">
+          <NotificationsDropdown />
+          <Link
+            to="/shopping/wishlist"
+            className="relative text-white hover:text-[#D4AF37] transition-colors"
+          >
+            <Heart className="w-6 h-6" />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/shopping/cart"
+            className="relative text-white hover:text-[#D4AF37] transition-colors"
+          >
+            <ShoppingCart className="w-6 h-6" />
+            <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+              {cartCount}
+            </span>
+          </Link>
+
+          {/* User dropdown */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="text-white hover:text-[#D4AF37] transition-colors focus:outline-none"
+            >
+              {user?.profilePicture ? (
+                <div className="relative">
+                  <img
+                    src={user.profilePicture}
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
+                  />
+                  {hasPendingPayment && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                  )}
+                </div>
+              ) : (
+                <div className="relative">
+                  <User className="w-6 h-6" />
+                  {hasPendingPayment && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
+                  )}
+                </div>
+              )}
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-3 w-64 bg-[#0a0a0a] border border-[#D4AF37]/20 rounded shadow-xl divide-y divide-[#D4AF37]/10">
+                <div className="px-4 py-3">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest">
+                    Signed in as
+                  </p>
+                  <p className="text-sm text-white font-medium truncate mt-0.5">
+                    {user?.email || 'Guest'}
+                  </p>
+                </div>
+                {hasPendingPayment && (
+                  <div className="px-4 py-3 bg-amber-500/10 border-l-2 border-amber-500">
+                    <p className="text-xs text-amber-500 font-medium mb-1">
+                      ⚠️ Pending payment — expires in {hours}h {minutes}m
+                    </p>
+                    <Link
+                      to={`/shopping/manual-payment/${encodeURIComponent(currentPayment?.slug || currentPayment?.referenceNumber || '')}`}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="text-[10px] uppercase font-bold text-amber-400 hover:text-amber-300 tracking-wider"
+                    >
+                      → Complete payment
+                    </Link>
+                  </div>
+                )}
+                <div className="py-1">
+                  <Link
+                    to="/shopping/account"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    My Account
+                  </Link>
+                  <Link
+                    to="/shopping/orders"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/account/my-reviews"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <Star className="w-4 h-4" />
+                    My Reviews
+                  </Link>
+                  <Link
+                    to="/account/payments"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Payment History
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile nav drawer */}
+      {menuOpen && (
+        <div className="md:hidden bg-[#0a0a0a] border-t border-[#D4AF37]/10 px-6 py-4 flex flex-col gap-4 text-sm font-medium uppercase tracking-widest">
+          <Link
+            to="/shopping/home"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Home
+          </Link>
+          <Link
+            to="/shopping/product-list?category=drops"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Latest Drop
+          </Link>
+          <Link
+            to="/shopping/product-list?category=unisex"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-[#D4AF37] transition-colors"
+          >
+            Unisex
+          </Link>
+          <Link
+            to="/shopping/product-list?category=archive"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-[#D4AF37] transition-colors text-gray-500"
+          >
+            Archive
+          </Link>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default Header;

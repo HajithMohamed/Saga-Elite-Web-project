@@ -169,7 +169,7 @@ const orderSchema = new mongoose.Schema(
 // TTL Index for auto-expiring pending orders
 orderSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-orderSchema.index({ user: 1 });
+// Single-field { user: 1 } index already declared via `index: true` on the field above.
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 
 orderSchema.pre("save", function (next) {

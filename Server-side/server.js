@@ -67,6 +67,11 @@ app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
 
+// Healthcheck — used by docker-compose healthcheck and orchestrators
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 /* ================== API ROUTES ================== */
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
 

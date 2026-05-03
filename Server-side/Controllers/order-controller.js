@@ -16,6 +16,8 @@ const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
 
+const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
+
 const escapeHtml = (str = "") =>
   String(str)
     .replace(/&/g, "&amp;")
@@ -95,7 +97,10 @@ const createOrder = catchAsync(async (req, res, next) => {
     guestEmail,
   } = req.body;
 
-  console.log("Order creation request:", req.body);
+  logger.debug("Order creation request received", {
+    paymentMethod: req.body?.paymentMethod,
+    itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
+  });
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return next(new AppError("Order items are required", 400));
@@ -242,7 +247,7 @@ const createOrder = catchAsync(async (req, res, next) => {
             : "confirmed",
         paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
         expiresAt: isLegacyManualPayment || paymentMethod === "cash"
-          ? new Date(Date.now() + 15 * 60000)
+          ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
           : undefined,
       };
 
@@ -305,7 +310,7 @@ const createOrder = catchAsync(async (req, res, next) => {
 
     orderNotifyPhones.forEach((to) => {
       sendWhatsAppMessage({ to, message: notifyBody }).catch((err) =>
-        console.error("[order-controller] WhatsApp order notify failed:", err.message)
+        logger.error("WhatsApp order notify failed", { error: err.message })
       );
     });
   }

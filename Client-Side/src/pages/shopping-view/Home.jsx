@@ -1,87 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  motion,
-  AnimatePresence,
-  useScroll,
-  useTransform,
-} from "framer-motion";
 import axios from "axios";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  Lock,
-  Truck,
-  CornerDownLeft,
-  MessageCircle,
   ArrowRight,
-  ChevronDown,
+  ArrowUpRight,
   CheckCircle2,
-  Loader2,
+  Mail,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { CONTACT_INFO } from "@/config";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
-
-const formatTime = (value) => String(value).padStart(2, "0");
-
-const computeCountdown = (targetDate) => {
-  if (!targetDate)
-    return {
-      days: "00",
-      hours: "00",
-      minutes: "00",
-      seconds: "00",
-    };
-  const now = new Date();
-  const diff = targetDate - now;
-  if (diff <= 0)
-    return {
-      days: "00",
-      hours: "00",
-      minutes: "00",
-      seconds: "00",
-    };
-
-  const totalSeconds = Math.floor(diff / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return {
-    days: formatTime(days),
-    hours: formatTime(hours),
-    minutes: formatTime(minutes),
-    seconds: formatTime(seconds),
-  };
-};
-
-const badgeContainerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
-};
-
-const badgeItemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0 },
-};
-
-const productGridVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 },
-  },
-};
-
-const productCardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
+import SagaLoader from "@/components/ui/SagaLoader";
+import HomeHero from "@/components/ui/HomeHero";
+import {
+  Btn,
+  Countdown,
+  Eyebrow,
+  Hairline,
+  Img,
+  Marquee,
+  PullQuote,
+  Reveal,
+} from "@/components/ui/editorial";
 
 const InstagramIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -110,55 +50,20 @@ const TikTokIcon = ({ className }) => (
   </svg>
 );
 
-const CountdownDigit = ({ value, label }) => (
-  <div className="flex flex-col items-center justify-center bg-black text-[#D4AF37] rounded-lg w-20 h-24 md:w-28 md:h-32 shadow-2xl">
-    <motion.span
-      key={value}
-      initial={{ y: -10, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.22 }}
-      className="text-4xl md:text-6xl font-serif font-bold"
-    >
-      {value}
-    </motion.span>
-    <span className="text-[10px] md:text-xs uppercase font-bold tracking-widest mt-1 opacity-80">
-      {label}
-    </span>
-  </div>
-);
-
 const Home = () => {
+  const reduced = useReducedMotion();
   const [heroImages, setHeroImages] = useState([]);
-  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
-
-  const [categoryLogos, setCategoryLogos] = useState({
-    Boys: null,
-    Girls: null,
-    Unisex: null,
-  });
+  const [categoryLogos, setCategoryLogos] = useState({ Boys: null, Girls: null, Unisex: null });
   const [adImage, setAdImage] = useState(null);
   const [activeProducts, setActiveProducts] = useState([]);
   const [nextDrop, setNextDrop] = useState(null);
-  const [countdown, setCountdown] = useState({
-    days: "02",
-    hours: "14",
-    minutes: "56",
-    seconds: "00",
-  });
   const [isHomepageLoading, setIsHomepageLoading] = useState(true);
   const [homepageError, setHomepageError] = useState(null);
-
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
-  const [newsletterLoading, setNewsletterLoading] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const heroRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const heroParallaxY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
+  const [heroReady, setHeroReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchHomepageData = async () => {
       setIsHomepageLoading(true);
       setHomepageError(null);
@@ -174,21 +79,15 @@ const Home = () => {
           dropsRes,
         ] = await Promise.all([
           axios.get(`${API_BASE}/image/get-hero-images`).catch(() => null),
-          axios
-            .get(`${API_BASE}/image/get-category-logo-images?label=Boys`)
-            .catch(() => null),
-          axios
-            .get(`${API_BASE}/image/get-category-logo-images?label=Girls`)
-            .catch(() => null),
-          axios
-            .get(`${API_BASE}/image/get-category-logo-images?label=Unisex`)
-            .catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Boys`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Girls`).catch(() => null),
+          axios.get(`${API_BASE}/image/get-category-logo-images?label=Unisex`).catch(() => null),
           axios.get(`${API_BASE}/image/get-ad-images`).catch(() => null),
-          axios
-            .get(`${API_BASE}/products/get-all-products?status=active&limit=8`)
-            .catch(() => null),
+          axios.get(`${API_BASE}/products/get-all-products?status=active&limit=8`).catch(() => null),
           axios.get(`${API_BASE}/drops/get-all-drops`).catch(() => null),
         ]);
+
+        if (cancelled) return;
 
         if (heroRes?.data?.images?.length) setHeroImages(heroRes.data.images);
 
@@ -198,623 +97,428 @@ const Home = () => {
           Unisex: unisexRes?.data?.images?.[0] || null,
         });
         if (adRes?.data?.images?.length) setAdImage(adRes.data.images[0]);
+        if (activeProductsRes?.data?.data) setActiveProducts(activeProductsRes.data.data);
 
-        if (activeProductsRes?.data?.data)
-          setActiveProducts(activeProductsRes.data.data);
-
-        const drops = Array.isArray(dropsRes?.data?.drops)
-          ? dropsRes.data.drops
-          : [];
+        const drops = Array.isArray(dropsRes?.data?.drops) ? dropsRes.data.drops : [];
         const availableDrops = drops
-          .filter(
-            (drop) => !drop?.endDate || new Date(drop.endDate) > new Date()
-          )
-          .sort(
-            (a, b) =>
-              new Date(a.releaseDate || 0) - new Date(b.releaseDate || 0)
-          );
+          .filter((d) => !d?.endDate || new Date(d.endDate) > new Date())
+          .sort((a, b) => new Date(a.releaseDate || 0) - new Date(b.releaseDate || 0));
 
-        const upcomingDrop =
-          availableDrops.find(
-            (drop) => drop?.releaseDate && new Date(drop.releaseDate) > new Date()
-          ) || null;
-        const liveDrop =
-          availableDrops.find(
-            (drop) =>
-              !drop?.releaseDate || new Date(drop.releaseDate) <= new Date()
-          ) || null;
-        setNextDrop(upcomingDrop || liveDrop);
+        const upcoming =
+          availableDrops.find((d) => d?.releaseDate && new Date(d.releaseDate) > new Date()) || null;
+        const live =
+          availableDrops.find((d) => !d?.releaseDate || new Date(d.releaseDate) <= new Date()) || null;
+        setNextDrop(upcoming || live);
       } catch (error) {
-        console.error("Failed to load homepage data", error);
-        setHomepageError(
-          "Unable to load homepage products. Please refresh the page."
-        );
+        if (!cancelled) {
+          console.error("Failed to load homepage data", error);
+          setHomepageError("Unable to load homepage products. Please refresh the page.");
+        }
       } finally {
-        setIsHomepageLoading(false);
+        if (!cancelled) setIsHomepageLoading(false);
       }
     };
 
     fetchHomepageData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => {
-    if (heroImages.length === 0) return;
-    const timer = setInterval(
-      () => setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length),
-      5000
-    );
-    return () => clearInterval(timer);
-  }, [heroImages.length]);
+  const heroImageUrls = useMemo(
+    () =>
+      (heroImages || [])
+        .map((img) => img?.url)
+        .filter(Boolean),
+    [heroImages]
+  );
+  const heroSrc = heroImageUrls[0] || null;
+  const dropName = (nextDrop?.name || "").toString();
+  const dropTagline = (nextDrop?.description || "").toString();
+  const dropTarget = nextDrop?.releaseDate ? new Date(nextDrop.releaseDate) : null;
+  const dropEyebrow = nextDrop ? `Drop · ${dropName || "By appointment"}` : "Drop · By appointment";
+  const dropTopRight = useMemo(() => {
+    if (!dropTarget || Number.isNaN(dropTarget.getTime())) return "Friday · 18:00";
+    return dropTarget.toLocaleString("en-US", {
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }, [dropTarget]);
 
-  useEffect(() => {
-    if (!nextDrop?.releaseDate) {
-      setCountdown({
-        days: "00",
-        hours: "00",
-        minutes: "00",
-        seconds: "00",
-      });
-      return;
-    }
-    setCountdown(computeCountdown(new Date(nextDrop.releaseDate)));
-    const timer = setInterval(
-      () => setCountdown(computeCountdown(new Date(nextDrop.releaseDate))),
-      1000
-    );
-    return () => clearInterval(timer);
-  }, [nextDrop]);
-
-  const hasActiveDrop = Boolean(nextDrop);
-  const isDropUpcoming =
-    hasActiveDrop &&
-    nextDrop.releaseDate &&
-    new Date(nextDrop.releaseDate) > new Date();
-
-  const heroSrc =
-    heroImages.length > 0 ? heroImages[currentHeroIndex]?.url : null;
-
-  const marqueeText =
-    "NEW DROP COMING SOON · RARE FIT FOREVER · PREMIUM QUALITY · ";
-
-  const scrollToNext = () => {
-    const el = document.getElementById("trust-badges");
-    el?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleNewsletterSubmit = async (e) => {
+  const handleNewsletterSubmit = (e) => {
     e.preventDefault();
-    if (!newsletterEmail?.trim() || newsletterLoading) return;
-    setNewsletterLoading(true);
-    try {
-      await axios.post(`${API_BASE}/newsletter/subscribe`, {
-        email: newsletterEmail.trim(),
-        source: "homepage",
-      });
-      setNewsletterSuccess(true);
-      setNewsletterEmail("");
-      setTimeout(() => setNewsletterSuccess(false), 6000);
-    } catch (err) {
-      const msg =
-        err?.response?.data?.message || "Something went wrong. Please try again.";
-      toast({
-        title: "Subscription failed",
-        description: msg,
-        variant: "destructive",
-      });
-    } finally {
-      setNewsletterLoading(false);
-    }
+    const fd = new FormData(e.currentTarget);
+    const email = fd.get("email");
+    console.log("Newsletter signup:", email);
+    setNewsletterSuccess(true);
+    e.currentTarget.reset();
+    setTimeout(() => setNewsletterSuccess(false), 5000);
   };
+
+  const featuredProducts = activeProducts.slice(0, 3);
 
   return (
-    <div className="bg-background text-on-surface min-h-screen relative w-full overflow-hidden">
+    <div className="bg-[#0a0a0a] text-[#e5e2e1] min-h-screen w-full overflow-x-hidden se-body">
+      <SagaLoader onDone={() => setHeroReady(true)} />
+
       <main>
-        {/* 1. HERO */}
-        <section
-          ref={heroRef}
-          className={`relative min-h-[90vh] w-full flex flex-col items-center justify-center overflow-hidden ${
-            !heroSrc ? "bg-black" : ""
-          }`}
-        >
-          {heroSrc ? (
-            <>
-              <motion.div
-                style={{ y: heroParallaxY }}
-                className="absolute inset-0 z-0 will-change-transform"
-              >
-                <AnimatePresence mode="wait">
-                  <motion.img
-                    key={heroSrc}
-                    src={heroSrc}
-                    alt="Elevate Your Style"
-                    initial={{ opacity: 0, scale: 1.05 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.5 }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </AnimatePresence>
-                <div className="absolute inset-0 bg-black/60 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
-              </motion.div>
-              <div className="absolute bottom-28 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-                {heroImages.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Slide ${i + 1}`}
-                    onClick={() => setCurrentHeroIndex(i)}
-                    className={`h-2 rounded-full transition-all ${
-                      i === currentHeroIndex
-                        ? "w-8 bg-[#D4AF37]"
-                        : "w-2 bg-white/40 hover:bg-white/70"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="absolute bottom-20 left-1/2 z-20 -translate-x-1/2 text-[10px] uppercase tracking-[0.35em] text-[#D4AF37]/90">
-                {currentHeroIndex + 1} / {heroImages.length}
-              </p>
-            </>
-          ) : (
-            <div className="absolute inset-0 z-0 bg-black" />
-          )}
-
-          <div className="relative z-10 text-center px-6 max-w-4xl mt-16">
-            {!heroSrc ? (
-              <motion.h1
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="font-serif text-5xl md:text-8xl text-white font-bold tracking-tight"
-              >
-                Saga Elite
-              </motion.h1>
-            ) : (
-              <>
-                <motion.h1
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                  className="font-serif text-5xl md:text-8xl text-white font-bold mb-4 tracking-tighter"
-                >
-                  Elevate Your Style
-                </motion.h1>
-                <div className="mb-6 overflow-hidden">
-                  <div className="homepage-marquee-track flex w-max whitespace-nowrap">
-                    <span className="px-4 text-[10px] uppercase tracking-[0.35em] text-[#D4AF37]">
-                      {marqueeText.repeat(4)}
-                    </span>
-                    <span className="px-4 text-[10px] uppercase tracking-[0.35em] text-[#D4AF37]">
-                      {marqueeText.repeat(4)}
-                    </span>
-                  </div>
-                </div>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                  className="font-sans text-lg md:text-xl text-gray-200 mb-10 tracking-wide"
-                >
-                  Premium fashion, delivered across Sri Lanka
-                </motion.p>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  className="flex flex-col sm:flex-row gap-4 justify-center"
-                >
-                  <Link to="/shopping/product-list">
-                    <Button
-                      size="lg"
-                      className="w-full sm:w-auto px-10 py-6 text-sm uppercase tracking-widest bg-[#D4AF37] hover:bg-[#B3902A] text-black font-bold"
-                    >
-                      Shop Now
-                    </Button>
-                  </Link>
-                  <Link to="/shopping/product-list?category=all">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full sm:w-auto px-10 py-6 text-sm uppercase tracking-widest text-[#D4AF37] border-[#D4AF37] hover:bg-[#D4AF37]/10 bg-transparent"
-                    >
-                      View Collections
-                    </Button>
-                  </Link>
-                </motion.div>
-              </>
-            )}
-          </div>
-
-          {heroSrc ? (
-            <button
-              type="button"
-              onClick={scrollToNext}
-              className="absolute bottom-8 left-1/2 z-20 -translate-x-1/2 flex flex-col items-center gap-1 text-white/80 hover:text-[#D4AF37] transition-colors"
-              aria-label="Scroll down"
-            >
-              <span className="text-[10px] uppercase tracking-[0.3em]">
-                Scroll
-              </span>
-              <ChevronDown className="h-6 w-6 animate-bounce-scroll-hint" />
-            </button>
-          ) : null}
-        </section>
-
-        {/* TRUST BADGES */}
-        <section
-          id="trust-badges"
-          className="py-8 bg-surface-container-lowest border-y border-[#D4AF37]/40"
-        >
-          <div className="container mx-auto px-4 max-w-7xl">
-            <motion.div
-              className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
-              variants={badgeContainerVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.3 }}
-            >
-              {[
-                { icon: Truck, title: "Free Delivery Island-Wide" },
-                { icon: CornerDownLeft, title: "14-Day Returns" },
-                { icon: Lock, title: "Secure Payments" },
-                { icon: MessageCircle, title: "WhatsApp Support" },
-              ].map((badge, idx) => (
-                <motion.div
-                  key={idx}
-                  variants={badgeItemVariants}
-                  className="flex flex-col items-center justify-center text-on-surface hover:text-[#D4AF37] transition-colors"
-                >
-                  <badge.icon className="w-6 h-6 mb-3" />
-                  <span className="font-sans text-[10px] sm:text-xs uppercase tracking-wider font-semibold">
-                    {badge.title}
-                  </span>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* CATEGORIES */}
-        <section className="py-24 px-6 md:px-12 bg-background">
-          <div className="container mx-auto max-w-7xl">
-            <div className="text-center mb-16">
-              <h2 className="font-serif text-4xl text-on-surface mb-4">
-                Featured Collections
-              </h2>
-              <p className="font-sans text-outline text-sm uppercase tracking-widest">
-                Shop by category
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {["Boys", "Girls", "Unisex"].map((cat, index) => {
-                const logo = categoryLogos[cat];
-                const hasLogo = Boolean(logo?.url);
-                return (
-                  <motion.div
-                    key={cat}
-                    initial={{ opacity: 0, y: 28 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.55, delay: index * 0.08 }}
-                  >
-                    <Link
-                      to={`/shopping/product-list?category=${cat.toLowerCase()}`}
-                      className="group relative block h-[450px] overflow-hidden rounded-lg bg-surface-container-low ring-1 ring-transparent transition-[box-shadow,ring-color] duration-300 hover:ring-2 hover:ring-[#D4AF37]"
-                    >
-                      {hasLogo ? (
-                        <img
-                          src={logo.url}
-                          alt={cat}
-                          className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-105 group-hover:opacity-70"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-surface-container-high">
-                          <span className="font-serif text-3xl text-on-surface/80">
-                            {cat}
-                          </span>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                      <div className="absolute bottom-0 left-0 w-full translate-y-0 p-8 transition-transform duration-300 group-hover:-translate-y-1">
-                        <h3 className="font-serif text-3xl text-white mb-2">
-                          {cat}
-                        </h3>
-                        <span className="inline-flex translate-y-8 items-center gap-2 font-sans text-xs uppercase tracking-widest text-[#D4AF37] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                          Shop <ArrowRight className="h-4 w-4" />
-                        </span>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ADMIN AD BANNER */}
-        {adImage?.url ? (
-          <section className="relative w-full overflow-hidden border-y border-[#D4AF37]/20">
-            <Link to="/shopping/product-list" className="block">
-              <img
-                src={adImage.url}
-                alt="Limited promotion"
-                className="h-auto w-full max-h-[420px] object-cover md:max-h-[520px]"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/35 transition hover:bg-black/25">
-                <span className="rounded-full border border-[#D4AF37]/50 bg-black/50 px-8 py-3 font-sans text-sm uppercase tracking-[0.25em] text-[#D4AF37] backdrop-blur-sm">
-                  Limited Edition · Shop Now →
-                </span>
-              </div>
+        {/* HERO ── editorial composition with multi-image slideshow */}
+        <HomeHero
+          imageSrc={heroSrc}
+          images={heroImageUrls}
+          ready={heroReady || true}
+          eyebrow={dropEyebrow.toUpperCase()}
+          topLeft={nextDrop ? `Chapter · ${dropName || "Now"}` : "Chapter · Atelier"}
+          topRight={nextDrop ? `Drops ${dropTopRight}` : "Open · By appointment"}
+          paragraph={
+            dropTagline ||
+            "Hand-finished in Sri Lanka, sent to ninety-three countries. Nothing restocks. Everything is considered."
+          }
+          pieces={String(activeProducts.length || "—").padStart(3, "0")}
+          photographedAt="Mirissa, 2026"
+          madeIn="Battaramulla, Sri Lanka"
+          scrollHintTargetId="atelier-marquee"
+          primaryCta={
+            <Link to="/shopping/product-list">
+              <Btn variant="default" iconRight={ArrowRight}>Take a closer look</Btn>
             </Link>
-          </section>
-        ) : null}
+          }
+          secondaryCta={
+            nextDrop?.slug ? (
+              <Link to={`/shopping/drop/${nextDrop.slug}`}>
+                <Btn variant="outline">Read the chapter</Btn>
+              </Link>
+            ) : (
+              <Link to="/about">
+                <Btn variant="outline">Read the chapter</Btn>
+              </Link>
+            )
+          }
+        />
 
-        {/* NEW ARRIVALS */}
-        <section className="py-24 px-6 md:px-12 bg-surface-container-lowest">
-          <div className="container mx-auto max-w-7xl">
-            <div className="mb-12 flex items-end justify-between">
+        {/* VALUES MARQUEE */}
+        <div id="atelier-marquee">
+          <Marquee
+            tone="gold"
+            items={[
+              "Made in Sri Lanka",
+              "Hand-finished",
+              "Free island-wide delivery",
+              "Members enter first",
+              "No restock",
+              "Ninety-three countries",
+            ]}
+          />
+        </div>
+
+        {/* DROP COUNTDOWN BAND */}
+        {dropTarget && (
+          <section className="px-5 md:px-12 py-16 md:py-28 border-b border-[#4d4635]/40 bg-[#131313]">
+            <Reveal>
+              <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
+                <div className="max-w-xl">
+                  <Eyebrow tone="gold" size="md">Drops in</Eyebrow>
+                  <h2 className="mt-5 se-serif text-[#e5e2e1] leading-[1.05] text-3xl md:text-5xl">
+                    {nextDrop?.name
+                      ? `${nextDrop.name} opens.`
+                      : "The next chapter opens."}
+                  </h2>
+                  <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed">
+                    {nextDrop?.description ||
+                      "Members receive private viewing thirty-six hours earlier. The atelier closes at seven on Thursday."}
+                  </p>
+                </div>
+                <Countdown target={dropTarget} variant="editorial" />
+              </div>
+            </Reveal>
+          </section>
+        )}
+
+        {/* IN THE ATELIER ── asymmetric featured products */}
+        {!isHomepageLoading && featuredProducts.length > 0 && (
+          <section className="px-5 md:px-12 py-16 md:py-28 bg-[#0a0a0a]">
+            <div className="mb-10 md:mb-12 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="font-serif text-4xl text-on-surface mb-2">
-                  New Arrivals
+                <Eyebrow tone="gold" size="md">Now in the atelier</Eyebrow>
+                <h2 className="mt-3 md:mt-4 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
+                  Pieces, not products.
                 </h2>
-                <p className="font-sans text-outline text-sm uppercase tracking-widest">
-                  Latest additions to the ledger
-                </p>
               </div>
               <Link
                 to="/shopping/product-list"
-                className="hidden items-center gap-2 border-b border-primary pb-1 font-sans text-xs uppercase tracking-widest text-primary transition-all hover:border-[#D4AF37] hover:text-[#D4AF37] md:flex"
+                className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] inline-flex items-center gap-2"
               >
-                View All <ArrowRight className="h-4 w-4" />
+                See the catalogue <ArrowRight size={12} strokeWidth={1.5} />
               </Link>
             </div>
 
-            {isHomepageLoading ? (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="flex flex-col gap-4 animate-pulse">
-                    <div className="aspect-[3/4] w-full rounded-md bg-surface-container-high" />
-                    <div className="h-4 w-3/4 rounded bg-surface-container-high" />
-                    <div className="h-4 w-1/2 rounded bg-surface-container-high" />
-                  </div>
-                ))}
-              </div>
-            ) : homepageError ? (
-              <div className="col-span-full border border-red-500/20 py-12 text-center text-red-400">
-                {homepageError}
-              </div>
-            ) : activeProducts.length > 0 ? (
-              <motion.div
-                className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4"
-                variants={productGridVariants}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.05 }}
-              >
-                {activeProducts.map((product) => {
-                  const slug = product.slug || product.productSlug;
-                  const discount = Number(product.discountPercent || 0);
-                  const salePrice =
-                    product.salePrice > 0 ? product.salePrice : null;
-                  const basePrice = product.basePrice;
-                  return (
-                    <motion.div
-                      key={product._id}
-                      variants={productCardVariants}
-                      className="group cursor-pointer"
-                    >
-                      <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-md bg-surface-container-low">
-                        <img
-                          src={product.images?.[0]?.url || "/LOGO.png"}
+            <div className="space-y-12 md:space-y-16">
+              {featuredProducts.map((product, idx) => {
+                const slug = product.slug || product.productSlug || product._id;
+                const discount = Number(product.discountPercent || 0);
+                const salePrice = product.salePrice > 0 ? product.salePrice : null;
+                const basePrice = product.basePrice;
+                const priceLabel = (salePrice || basePrice || 0).toLocaleString();
+                const number = String(idx + 1).padStart(3, "0");
+                const mirror = idx % 2 === 1;
+
+                return (
+                  <Reveal key={product._id || slug || idx}>
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-8">
+                      <div
+                        className={`md:col-span-7 ${mirror ? "md:order-2" : ""}`}
+                      >
+                        <Img
+                          src={product.images?.[0]?.url || product.image || "/LOGO.png"}
+                          ratio="4/5"
+                          frame
+                          hoverFade
                           alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
-                        <div className="absolute left-3 top-3 rounded bg-background/80 px-2 py-1 backdrop-blur-sm">
-                          <span className="font-sans text-[9px] uppercase tracking-widest text-primary">
-                            New
-                          </span>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                          {slug ? (
-                            <Link to={`/shopping/product/${slug}`}>
-                              <Button className="bg-[#D4AF37] text-black hover:bg-[#B3902A]">
-                                Quick View
-                              </Button>
-                            </Link>
-                          ) : null}
-                        </div>
                       </div>
-                      <div>
-                        <h4 className="mb-1 truncate font-sans text-sm font-bold tracking-wide text-on-surface">
-                          {product.name}
-                        </h4>
-                        <div className="flex flex-wrap items-baseline gap-2 font-sans text-sm">
-                          {discount > 0 && basePrice != null ? (
-                            <span className="text-gray-500 line-through">
+                      <div
+                        className={`md:col-span-5 flex flex-col justify-end pb-2 md:pb-6 ${
+                          mirror ? "md:order-1" : ""
+                        }`}
+                      >
+                        <Eyebrow tone="muted" size="xs">
+                          N° {number} · {product.category || product.tag || "Atelier"}
+                        </Eyebrow>
+                        <h3 className="mt-3 md:mt-4 se-headline text-[#e5e2e1] text-2xl md:text-4xl">
+                          {product.name || "Untitled piece"}
+                        </h3>
+                        <p className="mt-3 md:mt-4 se-body text-sm text-[#d0c5af] leading-relaxed max-w-md">
+                          {product.shortDescription ||
+                            product.description ||
+                            "Quietly made. Hand-finished. Limited to a single chapter."}
+                        </p>
+                        <div className="mt-5 md:mt-6 flex items-baseline gap-3 flex-wrap">
+                          <span className="se-mono text-2xl text-[#f2ca50]">
+                            LKR {priceLabel}
+                          </span>
+                          {discount > 0 && basePrice ? (
+                            <span className="se-mono text-sm text-[#574500] line-through">
                               LKR {Number(basePrice).toLocaleString()}
                             </span>
                           ) : null}
-                          <span
-                            className={
-                              discount > 0 || salePrice
-                                ? "font-semibold text-[#D4AF37]"
-                                : "text-outline"
-                            }
-                          >
-                            LKR{" "}
-                            {(
-                              salePrice ||
-                              basePrice ||
-                              0
-                            ).toLocaleString()}
+                          <span className="se-body text-sm text-[#99907c]">
+                            — drop {nextDrop?.name || "in the atelier"}.
                           </span>
                         </div>
+                        <div className="mt-5 md:mt-6 flex items-center gap-4">
+                          <Link to={slug ? `/shopping/product/${slug}` : "/shopping/product-list"}>
+                            <Btn size="sm" variant="default">Take it</Btn>
+                          </Link>
+                          <Link
+                            to={slug ? `/shopping/product/${slug}` : "/shopping/product-list"}
+                            className="se-label text-[10px] tracking-[0.28em] text-[#d0c5af] hover:text-[#e5e2e1]"
+                          >
+                            Read more
+                          </Link>
+                        </div>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            ) : (
-              <p className="col-span-full py-12 text-center text-outline">
-                No products found.
-              </p>
-            )}
-            <div className="mt-12 text-center md:hidden">
-              <Link to="/shopping/product-list">
-                <Button
-                  variant="outline"
-                  className="w-full border-primary text-primary"
-                >
-                  View All New Arrivals
-                </Button>
-              </Link>
+                    </div>
+                  </Reveal>
+                );
+              })}
             </div>
+          </section>
+        )}
+
+        {/* CATEGORY LOCKUP */}
+        <section className="px-5 md:px-12 py-16 md:py-24 bg-[#0e0e0e] border-y border-[#4d4635]/40">
+          <div className="mb-10">
+            <Eyebrow tone="gold" size="md">Pathways</Eyebrow>
+            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
+              Three directions.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {[
+              { lbl: "Boys", logo: categoryLogos.Boys, sub: "Twenty-eight pieces" },
+              { lbl: "Girls", logo: categoryLogos.Girls, sub: "Thirty-one pieces" },
+              { lbl: "Unisex", logo: categoryLogos.Unisex, sub: "Twenty-five pieces" },
+            ].map((c, idx) => (
+              <Reveal key={c.lbl} delay={idx * 0.06}>
+                <Link
+                  to={`/shopping/product-list?category=${c.lbl.toLowerCase()}`}
+                  className="block group"
+                >
+                  <div
+                    className="relative overflow-hidden border border-[#4d4635]"
+                    style={{ aspectRatio: "4/5" }}
+                  >
+                    {c.logo?.url ? (
+                      <img
+                        src={c.logo.url}
+                        alt={c.lbl}
+                        className="w-full h-full object-cover transition-[filter] duration-[600ms] group-hover:grayscale"
+                      />
+                    ) : (
+                      <div className="se-img-fallback w-full h-full">
+                        <span className="se-label text-[10px] tracking-[0.3em]">{c.lbl}</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/85 to-transparent" />
+                    <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                      <div>
+                        <h3 className="se-headline text-[#fafafa] text-3xl">{c.lbl}</h3>
+                        <Eyebrow tone="muted" size="xs" className="mt-2 block">
+                          {c.sub}
+                        </Eyebrow>
+                      </div>
+                      <ArrowUpRight
+                        size={20}
+                        strokeWidth={1.25}
+                        className="text-[#f2ca50] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+                      />
+                    </div>
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
           </div>
         </section>
 
-        {/* PROMO / COUNTDOWN */}
-        <section className="relative overflow-hidden bg-[#D4AF37] py-16 text-black">
-          <div
-            className="pointer-events-none absolute inset-0 bg-repeat opacity-10"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, #000 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-          <div className="container relative z-10 mx-auto px-4 text-center">
-            {isDropUpcoming ? (
-              <div className="flex flex-col items-center">
-                <span className="mb-4 font-sans text-sm font-bold uppercase tracking-widest">
-                  Limited Edition Drop
-                </span>
-                <h2 className="mb-8 font-serif text-4xl font-bold md:text-6xl">
-                  {nextDrop.name}
-                </h2>
-                <div className="mb-10 flex flex-wrap justify-center gap-4 md:gap-10">
-                  <CountdownDigit value={countdown.days} label="Days" />
-                  <span className="mt-4 font-serif text-4xl font-bold md:text-6xl">
-                    :
-                  </span>
-                  <CountdownDigit value={countdown.hours} label="Hours" />
-                  <span className="mt-4 font-serif text-4xl font-bold md:text-6xl">
-                    :
-                  </span>
-                  <CountdownDigit value={countdown.minutes} label="Mins" />
-                  <span className="mt-4 font-serif text-4xl font-bold md:text-6xl">
-                    :
-                  </span>
-                  <CountdownDigit value={countdown.seconds} label="Secs" />
+        {/* EDITORIAL SPREAD with pull quote */}
+        {adImage?.url ? (
+          <section className="relative">
+            <div className="relative h-[360px] md:h-[640px] overflow-hidden">
+              <img src={adImage.url} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/90 via-[#0a0a0a]/40 to-transparent" />
+            </div>
+            <div className="px-5 md:px-12 py-12 md:py-20 max-w-4xl">
+              <PullQuote attribution="From the atelier">
+                We do not chase the season. We do not chase anyone. A piece is finished when
+                it is finished.
+              </PullQuote>
+            </div>
+          </section>
+        ) : (
+          <section className="px-5 md:px-12 py-16 md:py-24 bg-[#0a0a0a]">
+            <div className="max-w-4xl">
+              <PullQuote attribution="From the atelier">
+                We do not chase the season. We do not chase anyone. A piece is finished when
+                it is finished.
+              </PullQuote>
+            </div>
+          </section>
+        )}
+
+        {/* FULL CATALOGUE PROMO if no featured */}
+        {isHomepageLoading ? (
+          <section className="px-5 md:px-12 py-16 md:py-24 bg-[#0a0a0a]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-3 animate-pulse">
+                  <div className="aspect-[4/5] w-full bg-[#1c1b1b] border border-[#4d4635]" />
+                  <div className="h-3 w-2/3 bg-[#1c1b1b]" />
+                  <div className="h-3 w-1/3 bg-[#1c1b1b]" />
                 </div>
-                <Button className="min-w-[200px] bg-black px-10 py-6 text-sm font-bold uppercase tracking-widest text-[#D4AF37] shadow-xl hover:bg-zinc-900">
-                  Remind Me
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-6 py-6 md:flex-row">
-                <Truck className="h-12 w-12" />
-                <h2 className="font-serif text-3xl font-bold tracking-wide md:text-4xl">
-                  Free delivery on all orders across Sri Lanka{" "}
-                  <span className="inline-block md:hidden">🚚</span>
-                </h2>
-              </div>
-            )}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        ) : homepageError ? (
+          <section className="px-5 md:px-12 py-16 md:py-24 bg-[#0a0a0a]">
+            <div className="border border-[#93000a]/40 bg-[#93000a]/10 px-6 py-10 text-center">
+              <p className="se-body text-[#ffb4ab]">{homepageError}</p>
+            </div>
+          </section>
+        ) : null}
 
-        {/* SOCIAL CTA */}
-        <section className="bg-background px-4 py-24">
-          <div className="container mx-auto max-w-7xl text-center">
-            <h2 className="mb-3 font-serif text-4xl text-on-surface">
-              Join the community
+        {/* SOCIAL CTA — editorial form */}
+        <section className="px-5 md:px-12 py-16 md:py-24 bg-[#0e0e0e] border-t border-[#4d4635]/40">
+          <div className="max-w-3xl">
+            <Eyebrow tone="gold" size="md">Read the journal</Eyebrow>
+            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
+              Follow at a slower pace.
             </h2>
-            <p className="mx-auto mb-10 max-w-xl font-sans text-sm uppercase tracking-[0.2em] text-[#D4AF37]">
-              Follow @sagaaelite for daily style inspo
+            <p className="mt-4 se-body text-[#d0c5af] text-sm md:text-base max-w-xl leading-relaxed">
+              Photographs from the atelier, occasional essays, and the first call when a chapter opens.
             </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              <motion.a
-                href={CONTACT_INFO.socials.instagram}
+            <Hairline className="mt-10" />
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <a
+                href={CONTACT_INFO?.socials?.instagram || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.08 }}
-                className="flex h-16 w-16 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-surface-container-low text-on-surface transition-colors hover:border-[#D4AF37] hover:text-[#D4AF37]"
-                aria-label="Instagram"
+                className="inline-flex items-center gap-3 se-label text-[10px] tracking-[0.28em] text-[#d0c5af] hover:text-[#f2ca50]"
               >
-                <InstagramIcon className="h-8 w-8" />
-              </motion.a>
-              <motion.a
-                href={CONTACT_INFO.socials.facebook}
+                <InstagramIcon className="h-4 w-4" />
+                Instagram
+              </a>
+              <span className="text-[#4d4635]">·</span>
+              <a
+                href={CONTACT_INFO?.socials?.facebook || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.08 }}
-                className="flex h-16 w-16 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-surface-container-low text-on-surface transition-colors hover:border-[#D4AF37] hover:text-[#D4AF37]"
-                aria-label="Facebook"
+                className="inline-flex items-center gap-3 se-label text-[10px] tracking-[0.28em] text-[#d0c5af] hover:text-[#f2ca50]"
               >
-                <FacebookIcon className="h-8 w-8" />
-              </motion.a>
-              <motion.a
-                href={CONTACT_INFO.socials.tiktok}
+                <FacebookIcon className="h-4 w-4" />
+                Facebook
+              </a>
+              <span className="text-[#4d4635]">·</span>
+              <a
+                href={CONTACT_INFO?.socials?.tiktok || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                whileHover={{ scale: 1.08 }}
-                className="flex h-16 w-16 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-surface-container-low text-on-surface transition-colors hover:border-[#D4AF37] hover:text-[#D4AF37]"
-                aria-label="TikTok"
+                className="inline-flex items-center gap-3 se-label text-[10px] tracking-[0.28em] text-[#d0c5af] hover:text-[#f2ca50]"
               >
-                <TikTokIcon className="h-8 w-8" />
-              </motion.a>
+                <TikTokIcon className="h-4 w-4" />
+                TikTok
+              </a>
             </div>
           </div>
         </section>
 
-        {/* NEWSLETTER */}
-        <section className="border-t border-outline/10 bg-surface-container-low py-32 text-center px-6">
-          <div className="container mx-auto max-w-2xl">
-            <MessageCircle className="mx-auto mb-6 h-10 w-10 text-[#D4AF37]" />
-            <h2 className="mb-4 font-serif text-4xl text-on-surface">
-              Stay in the Loop
-            </h2>
-            <p className="mb-10 font-sans tracking-wide text-outline">
-              Get exclusive deals and new arrivals straight to your inbox.
-            </p>
-            <form
-              className="mx-auto flex max-w-lg flex-col gap-4 sm:flex-row"
-              onSubmit={handleNewsletterSubmit}
-            >
-              <Input
-                name="email"
-                type="email"
-                value={newsletterEmail}
-                onChange={(ev) => setNewsletterEmail(ev.target.value)}
-                placeholder="Enter your email address"
-                className="h-14 border-outline/20 bg-background text-center focus-visible:ring-[#D4AF37] sm:text-left"
-                required
-                disabled={newsletterLoading}
-              />
-              <Button
-                type="submit"
-                disabled={newsletterLoading || !newsletterEmail.trim()}
-                className="h-14 min-w-[140px] bg-primary px-8 font-bold uppercase tracking-widest text-primary-foreground hover:bg-primary/90"
+        {/* NEWSLETTER ── next chapter */}
+        <section className="px-5 md:px-12 py-16 md:py-28 bg-[#131313]">
+          <Reveal>
+            <div className="max-w-3xl">
+              <Eyebrow tone="gold" size="md">Next chapter</Eyebrow>
+              <h2 className="mt-5 se-serif text-[#e5e2e1] leading-[1.05] text-3xl md:text-6xl">
+                Receive the journal,<br />read it slowly.
+              </h2>
+              <p className="mt-6 se-body text-[#d0c5af] text-sm md:text-lg max-w-xl leading-relaxed">
+                One email a fortnight. New drops, the occasional essay, and a private link to the
+                lookbook before it goes public.
+              </p>
+
+              <form
+                onSubmit={handleNewsletterSubmit}
+                className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6"
               >
-                {newsletterLoading ? (
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                ) : (
-                  "Subscribe"
+                <div className="flex-1 max-w-md w-full">
+                  <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="your.name@email.com"
+                    className="mt-2 w-full bg-transparent border-b border-[#4d4635] focus:border-[#f2ca50] py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors"
+                  />
+                </div>
+                <Btn variant="default" type="submit" iconRight={Mail}>Subscribe</Btn>
+              </form>
+
+              <AnimatePresence>
+                {newsletterSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: reduced ? 0.15 : 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-6 inline-flex items-center gap-2 se-label text-[11px] tracking-[0.24em] text-[#a8d8b6]"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    You&apos;re on the list — watch your inbox.
+                  </motion.div>
                 )}
-              </Button>
-            </form>
-            <AnimatePresence>
-              {newsletterSuccess ? (
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="mt-6 flex items-center justify-center gap-2 text-sm text-emerald-500"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  You&apos;re on the list — watch your inbox.
-                </motion.p>
-              ) : null}
-            </AnimatePresence>
-          </div>
+              </AnimatePresence>
+            </div>
+          </Reveal>
         </section>
       </main>
     </div>

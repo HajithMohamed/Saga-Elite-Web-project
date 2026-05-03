@@ -9,7 +9,6 @@ import {
   Package,
   CheckCircle2,
   Clock3,
-  Clock,
   Heart,
   Mail,
   ShoppingBag,
@@ -18,7 +17,6 @@ import {
 import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
 import { fetchWishlistAction } from "@/store/cart-slice";
 import { fetchUserOrders } from "@/store/order-slice";
-import { fetchMyPendingManualPayments } from "@/store/manualPaymentSlice";
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
@@ -29,7 +27,6 @@ const Account = () => {
   const { user } = useSelector((state) => state.auth);
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const { userOrders } = useSelector((state) => state.order);
-  const myPendingPayments = useSelector((state) => state.manualPayment?.myPendingPayments ?? []);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -65,7 +62,6 @@ const Account = () => {
   useEffect(() => {
     dispatch(fetchWishlistAction());
     dispatch(fetchUserOrders());
-    dispatch(fetchMyPendingManualPayments());
   }, [dispatch]);
 
   useEffect(() => {
@@ -306,51 +302,6 @@ const Account = () => {
                 </motion.div>
               ))}
             </div>
-
-            {myPendingPayments?.length > 0 ? (
-              <section className="mt-8 rounded-xl border border-amber-400/20 bg-amber-400/5 p-6 dark:bg-[#090909]/80">
-                <h2 className="mb-4 flex items-center gap-2 font-semibold text-amber-500 dark:text-amber-400">
-                  <Clock className="h-5 w-5" /> Pending bank payments
-                </h2>
-                <div className="space-y-0">
-                  {myPendingPayments.map((payment) => {
-                    const orderId =
-                      payment.orderId && typeof payment.orderId === "object"
-                        ? payment.orderId._id
-                        : payment.orderId;
-                    const href =
-                      payment.slug != null && String(payment.slug).trim() !== ""
-                        ? `/shopping/manual-payment/${encodeURIComponent(payment.slug)}`
-                        : `/shopping/manual-payment?orderId=${orderId}`;
-                    return (
-                      <div
-                        key={payment._id}
-                        className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 py-3 last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            Ref: {payment.referenceNumber}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Amount: {payment.currency || "LKR"}{" "}
-                            {(payment.amount ?? 0).toLocaleString()}
-                            {payment.expiresAt
-                              ? ` · Expires: ${new Date(payment.expiresAt).toLocaleString()}`
-                              : ""}
-                          </p>
-                        </div>
-                        <Link
-                          to={href}
-                          className="rounded-full bg-amber-400 px-4 py-2 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-300"
-                        >
-                          Submit proof →
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : null}
 
             <div className="flex items-center justify-between rounded-2xl border border-[#D4AF37]/10 bg-surface-container-low p-6 dark:bg-[#090909]">
               <div>

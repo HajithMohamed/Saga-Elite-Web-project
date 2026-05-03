@@ -113,15 +113,11 @@ export const fetchDashboardStats = createAsyncThunk(
 
 export const updateOrderStatus = createAsyncThunk(
   "/order/updateOrderStatus",
-  async ({ orderId, status, cancellationReason }, thunkAPI) => {
+  async ({ orderId, status }, thunkAPI) => {
     try {
-      const payload = { status };
-      if (cancellationReason !== undefined && cancellationReason !== null) {
-        payload.cancellationReason = cancellationReason;
-      }
       const response = await axios.put(
         `${ORDER_API_BASE}/${orderId}/status`,
-        payload,
+        { status },
         {
           withCredentials: true,
           headers: {

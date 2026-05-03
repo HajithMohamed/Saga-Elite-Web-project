@@ -2,8 +2,8 @@ import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
-import { Loader2 } from "lucide-react";
 import usePageMeta from "./hooks/use-page-meta";
+import AppLoader from "@/components/ui/AppLoader";
 
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
@@ -135,11 +135,7 @@ function App() {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
-      </div>
-    );
+    return <AppLoader message="Opening the atelier" />;
   }
 
   return (
@@ -211,7 +207,6 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="home-images" element={<AdminHomeImages />} />
             <Route path="feature" element={<AdminFeatures />} />
-            <Route path="about-content" element={<AboutSiteConfig />} />
             <Route path="order" element={<AdminOrders />} />
             <Route path="product" element={<AdminProduct />} />
             <Route path="users" element={<AdminUsers />} />
@@ -221,6 +216,7 @@ function App() {
             <Route path="manual-payments" element={<PendingPaymentsPage />} />
             <Route path="manual-payments/:paymentId" element={<PaymentVerificationPage />} />
             <Route path="reviews" element={<ReviewModerationPage />} />
+            <Route path="about-content" element={<AboutSiteConfig />} />
             <Route path="account" element={<Account />} />
             <Route path="drop" element={<AdminDrops />} />
           </Route>

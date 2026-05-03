@@ -3,6 +3,40 @@
 @tailwind utilities;
 
 @layer components {
+  /* ── Editorial type tiers — JetBrains Mono primary ─────────── */
+  .se-serif      { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: -0.04em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-headline   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 700; letter-spacing: -0.03em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-display    { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-instrument { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.01em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-wordmark   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-body       { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 400; letter-spacing: -0.005em; }
+  .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  .se-label      { font-family: 'JetBrains Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 500; }
+  /* Override stray italic utilities on editorial classes — directive: no italics. */
+  .se-serif.italic, .se-headline.italic, .se-display.italic,
+  .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
+
+  /* ── Hairline system ──────────────────────────────────────── */
+  .se-hairline { border-color: #4d4635; }
+  .se-hairline-soft { border-color: rgba(255,255,255,0.08); }
+  .se-divider-h { height: 1px; background: #4d4635; }
+  .se-divider-soft-h { height: 1px; background: rgba(255,255,255,0.08); }
+
+  /* ── Image fallback frame ─────────────────────────────────── */
+  .se-img-fallback {
+    background: #1c1b1b;
+    border: 1px solid #4d4635;
+    display: flex; align-items: center; justify-content: center;
+    color: #d0c5af;
+  }
+
+  /* ── Editorial focus ring ─────────────────────────────────── */
+  .se-focus:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #131313, 0 0 0 4px #f2ca50;
+  }
+
+
   .admin-page-shell {
     @apply min-h-screen bg-[#050505] text-white px-4 py-6 sm:px-6 lg:px-8;
   }
@@ -45,7 +79,9 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'Manrope', sans-serif;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
   }
   .grain {
       position: fixed;

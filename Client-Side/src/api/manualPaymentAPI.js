@@ -46,13 +46,6 @@ export const submitManualPaymentProof = async ({ referenceNumber, proofUrl }) =>
   return response.data;
 };
 
-export const fetchMyPendingManualPayments = async () => {
-  const response = await axios.get(`${API_BASE}/payments/my-pending`, {
-    withCredentials: true,
-  });
-  return response.data?.data?.payments ?? response.data?.payments ?? [];
-};
-
 export const fetchMyManualPaymentStatus = async (paymentIdentifier) => {
   const response = await axios.get(
     `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,

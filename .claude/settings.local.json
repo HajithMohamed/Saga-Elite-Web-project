@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:/Fullstack development course/Saga-Elite-Web-Project\" status --short)",
+      "Bash(git -C \"c:/Fullstack development course/Saga-Elite-Web-Project\" log --oneline -5)",
+      "Bash(git -C \"c:/Fullstack development course/Saga-Elite-Web-Project\" stash push -m \"pre-zip-replace\" -- .env.example Client-Side/src/index.css Client-Side/src/lib/socket.js Client-Side/src/pages/admin/PendingPaymentsPage.jsx Client-Side/vite.config.js)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"require\\('./Controllers/auth-controller.js'\\); require\\('./Controllers/google-auth-controller.js'\\); require\\('./Controllers/whatsapp-webhook-controller.js'\\); require\\('./Controllers/order-controller.js'\\); require\\('./Controllers/errorController.js'\\); require\\('./Middlewares/auth-middleware.js'\\); require\\('./Middlewares/optional-auth-middleware.js'\\); require\\('./Config/cors-config.js'\\); require\\('./Utils/create-send-token.js'\\); console.log\\('OK'\\);\")",
+      "Bash(node -e \"require\\('./server.js'\\); setTimeout\\(\\(\\) => process.exit\\(0\\), 1500\\);\")",
+      "Bash(node --check server.js)",
+      "Bash(node --check Controllers/auth-controller.js)",
+      "Bash(node --check Controllers/google-auth-controller.js)",
+      "Bash(node --check Controllers/whatsapp-webhook-controller.js)",
+      "Bash(node --check Controllers/order-controller.js)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5001 -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID = $_.OwningProcess; Process = $proc.ProcessName; State = $_.State; StartTime = $proc.StartTime } } | Format-Table)"
+    ]
+  }
+}

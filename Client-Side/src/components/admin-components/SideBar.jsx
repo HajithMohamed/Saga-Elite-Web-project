@@ -15,7 +15,6 @@ import {
   CreditCard,
   StarHalf,
   Landmark,
-  BookOpen,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -167,11 +166,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Features",
       path: "/admin/feature",
       icon: <Star className="h-5 w-5" />,
-    },
-    {
-      label: "About page",
-      path: "/admin/about-content",
-      icon: <BookOpen className="h-5 w-5" />,
     },
     {
       label: "Drops",
