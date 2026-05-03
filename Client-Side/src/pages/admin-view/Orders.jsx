@@ -107,9 +107,10 @@ const getColumnIdForStatus = (status) => {
 };
 
 function KanbanOrderCard({ order, disabled }) {
+  const frozen = ["cancelled", "delivered"].includes(order.status);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: order._id,
-    disabled,
+    disabled: disabled || frozen,
     data: { order },
   });
 
@@ -196,6 +197,8 @@ const Orders = () => {
   const [orderStatusDraft, setOrderStatusDraft] = useState({});
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [successFlashId, setSuccessFlashId] = useState(null);
+  const [cancelModalOrderId, setCancelModalOrderId] = useState(null);
+  const [cancelReasonDraft, setCancelReasonDraft] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
@@ -276,15 +279,21 @@ const Orders = () => {
     return map;
   }, [filteredOrders]);
 
-  const handleStatusChange = useCallback(
-    async (orderId, status) => {
+  const commitStatusChange = useCallback(
+    async (orderId, status, cancellationReason) => {
       if (!orderId || !status) {
         return;
       }
 
       try {
         setUpdatingOrderId(orderId);
-        await dispatch(updateOrderStatus({ orderId, status })).unwrap();
+        await dispatch(
+          updateOrderStatus({
+            orderId,
+            status,
+            ...(status === "cancelled" ? { cancellationReason } : {}),
+          })
+        ).unwrap();
         toast({
           title: "Order updated",
           description: `Status changed to ${status.replace(/_/g, " ")}.`,
@@ -304,6 +313,16 @@ const Orders = () => {
     },
     [dispatch]
   );
+
+  const requestStatusChange = useCallback((orderId, status) => {
+    if (!orderId || !status) return;
+    if (status === "cancelled") {
+      setCancelModalOrderId(orderId);
+      setCancelReasonDraft("");
+      return;
+    }
+    void commitStatusChange(orderId, status);
+  }, [commitStatusChange]);
 
   const handleDragStart = (event) => {
     const order = filteredOrders.find((o) => o._id === event.active.id);
@@ -328,7 +347,7 @@ const Orders = () => {
 
     if (column.targetStatus === order.status) return;
 
-    await handleStatusChange(orderId, column.targetStatus);
+    await requestStatusChange(orderId, column.targetStatus);
   };
 
   const showLoading = isLoading && !hasLoaded;
@@ -347,7 +366,27 @@ const Orders = () => {
       });
       return;
     }
-    await handleStatusChange(orderId, next);
+    await requestStatusChange(orderId, next);
+  };
+
+  const closeCancelModal = () => {
+    setCancelModalOrderId(null);
+    setCancelReasonDraft("");
+  };
+
+  const confirmCancellation = async () => {
+    if (!cancelModalOrderId) return;
+    const reason = cancelReasonDraft.trim();
+    if (!reason) {
+      toast({
+        title: "Reason required",
+        description: "Please explain why this order is being cancelled.",
+        variant: "destructive",
+      });
+      return;
+    }
+    await commitStatusChange(cancelModalOrderId, "cancelled", reason);
+    closeCancelModal();
   };
 
   return (
@@ -622,6 +661,43 @@ const Orders = () => {
           </motion.div>
         )}
       </motion.div>
+
+      {cancelModalOrderId ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0b0b0b] p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">Cancel order</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Customer notifications will include this explanation. Provide a concise reason shown to the customer (max 500 characters).
+            </p>
+            <textarea
+              value={cancelReasonDraft}
+              onChange={(e) => setCancelReasonDraft(e.target.value.slice(0, 500))}
+              rows={4}
+              placeholder="e.g. Out of stock, payment not received…"
+              className="mt-4 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  closeCancelModal();
+                  void loadOrders();
+                }}
+                className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-white/5"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmCancellation()}
+                className="rounded-full bg-red-600 px-5 py-2 text-sm font-bold text-white hover:bg-red-700"
+              >
+                Confirm cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AdminPage>
   );
 };

@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
   fetchManualPaymentById as fetchManualPaymentByIdApi,
   fetchMyManualPaymentStatus as fetchMyManualPaymentStatusApi,
+  fetchMyPendingManualPayments as fetchMyPendingManualPaymentsApi,
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
   submitManualPaymentProof as submitManualPaymentProofApi,
@@ -75,6 +76,7 @@ const initialState = {
   isAdminLoading: false,
   isVerifying: false,
   error: null,
+  myPendingPayments: [],
 };
 
 const getErrorMessage = (error, fallback) =>
@@ -84,7 +86,17 @@ export const generateManualPaymentReference = createAsyncThunk(
   "manualPayment/generateReference",
   async ({ orderId, amount }, thunkAPI) => {
     try {
-      return await generateManualPaymentReferenceApi({ orderId, amount });
+      const res = await generateManualPaymentReferenceApi({ orderId, amount });
+      const inner = res?.data || {};
+      const mp = inner.manualPayment || {};
+      return {
+        ...res,
+        referenceNumber: res?.referenceNumber ?? mp.referenceNumber,
+        slug: inner.slug ?? mp.slug ?? res?.slug,
+        orderId: res?.orderId ?? inner.orderId ?? mp.orderId ?? orderId,
+        amount: res?.amount ?? inner.amount ?? mp.amount ?? amount,
+        expiresAt: inner.expiresAt ?? mp.expiresAt ?? res?.expiresAt,
+      };
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to generate payment reference"));
     }
@@ -109,6 +121,17 @@ export const fetchMyManualPaymentStatus = createAsyncThunk(
       return await fetchMyManualPaymentStatusApi(referenceNumber);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to fetch payment status"));
+    }
+  },
+);
+
+export const fetchMyPendingManualPayments = createAsyncThunk(
+  "manualPayment/fetchMyPending",
+  async (_arg, thunkAPI) => {
+    try {
+      return await fetchMyPendingManualPaymentsApi();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load pending payments"));
     }
   },
 );
@@ -259,6 +282,12 @@ const manualPaymentSlice = createSlice({
       .addCase(fetchMyManualPaymentStatus.rejected, (state, action) => {
         state.isFetching = false;
         state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchMyPendingManualPayments.fulfilled, (state, action) => {
+        state.myPendingPayments = Array.isArray(action.payload) ? action.payload : [];
+      })
+      .addCase(fetchMyPendingManualPayments.rejected, (state) => {
+        state.myPendingPayments = [];
       })
       .addCase(fetchPendingManualPayments.pending, (state) => {
         state.isAdminLoading = true;

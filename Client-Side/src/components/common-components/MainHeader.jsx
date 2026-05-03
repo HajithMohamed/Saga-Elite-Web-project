@@ -10,10 +10,12 @@ import {
   Heart,
   Shield,
   Package,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUserAction } from "@/store/auth-slice";
+import { fetchMyPendingManualPayments } from "@/store/manualPaymentSlice";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { toast } from "@/hooks/use-toast";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
@@ -53,6 +55,42 @@ const InstagramGlyph = ({ className }) => (
     />
   </svg>
 );
+
+const PendingPaymentsMenuLink = ({ onNavigate }) => {
+  const dispatch = useDispatch();
+  const myPendingPayments = useSelector((s) => s.manualPayment?.myPendingPayments ?? []);
+
+  useEffect(() => {
+    dispatch(fetchMyPendingManualPayments());
+  }, [dispatch]);
+
+  if (!myPendingPayments.length) {
+    return null;
+  }
+
+  const payment = myPendingPayments[0];
+  const orderIdRaw = payment.orderId;
+  const orderId =
+    orderIdRaw && typeof orderIdRaw === "object" ? orderIdRaw._id : orderIdRaw;
+  const href =
+    payment.slug != null && String(payment.slug).trim() !== ""
+      ? `/shopping/manual-payment/${encodeURIComponent(payment.slug)}`
+      : `/shopping/manual-payment?orderId=${orderId}`;
+
+  return (
+    <Link
+      to={href}
+      onClick={onNavigate}
+      className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-400 hover:bg-white/5 hover:text-amber-300"
+    >
+      <Clock className="h-4 w-4 shrink-0" />
+      <span className="font-medium">Pending payment</span>
+      <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-black">
+        {myPendingPayments.length}
+      </span>
+    </Link>
+  );
+};
 
 const MainHeader = () => {
   const location = useLocation();
@@ -333,61 +371,96 @@ const MainHeader = () => {
               </span>
             </Link>
 
-            <Link
-              to="/shopping/account"
-              className="inline-flex md:hidden"
-              aria-label="Account"
-            >
-              <User className="h-6 w-6" />
-            </Link>
-
-            <div className="relative hidden md:block" ref={userMenuRef}>
-              <button
-                type="button"
-                aria-label="Account menu"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
+            {!user ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/auth/login"
+                  className="inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-600 hover:text-[#D4AF37] dark:text-gray-300 dark:hover:text-white md:hidden"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/auth/register"
+                  className="inline-flex items-center rounded-full bg-[#D4AF37] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-black hover:bg-[#B3902A] md:hidden"
+                >
+                  Sign up
+                </Link>
+              </div>
+            ) : (
+              <Link
+                to="/shopping/account"
+                className="inline-flex md:hidden"
+                aria-label="Account"
               >
                 <User className="h-6 w-6" />
-              </button>
-              {userMenuOpen ? (
-                <div className="absolute right-0 mt-3 w-52 rounded border border-[#D4AF37]/20 bg-[#0a0a0a] shadow-xl dark:bg-[#0a0a0a]">
-                  {user?.role === "admin" ? (
+              </Link>
+            )}
+
+            {!user ? (
+              <div className="hidden items-center gap-2 md:flex">
+                <Link
+                  to="/auth/login"
+                  className="hidden px-3 py-2 text-xs uppercase tracking-widest text-gray-600 transition-colors hover:text-[#D4AF37] sm:inline-block dark:text-gray-300 dark:hover:text-white"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/auth/register"
+                  className="inline-flex items-center gap-1 rounded-full bg-[#D4AF37] px-4 py-2 text-xs font-bold uppercase tracking-widest text-black transition-colors hover:bg-[#B3902A]"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            ) : (
+              <div className="relative hidden md:block" ref={userMenuRef}>
+                <button
+                  type="button"
+                  aria-label="Account menu"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                >
+                  <User className="h-6 w-6" />
+                </button>
+                {userMenuOpen ? (
+                  <div className="absolute right-0 mt-3 w-52 rounded border border-[#D4AF37]/20 bg-[#0a0a0a] shadow-xl dark:bg-[#0a0a0a]">
+                    <PendingPaymentsMenuLink onNavigate={() => setUserMenuOpen(false)} />
+                    {user?.role === "admin" ? (
+                      <Link
+                        to="/admin/dashboard"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    ) : null}
                     <Link
-                      to="/admin/dashboard"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
+                      to="/shopping/account"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <Shield className="h-4 w-4" />
-                      Admin Panel
+                      <Settings className="h-4 w-4" />
+                      My Account
                     </Link>
-                  ) : null}
-                  <Link
-                    to="/shopping/account"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Settings className="h-4 w-4" />
-                    My Account
-                  </Link>
-                  <Link
-                    to="/shopping/orders"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Package className="h-4 w-4" />
-                    Order History
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-red-400"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
-                </div>
-              ) : null}
-            </div>
+                    <Link
+                      to="/shopping/orders"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-[#D4AF37]"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <Package className="h-4 w-4" />
+                      Order History
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-red-400"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
         </header>
@@ -458,13 +531,32 @@ const MainHeader = () => {
                 >
                   Wishlist
                 </Link>
-                <Link
-                  to="/shopping/account"
-                  className="rounded-lg px-3 py-3 hover:bg-white/5"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Account
-                </Link>
+                {!user ? (
+                  <>
+                    <Link
+                      to="/auth/login"
+                      className="block rounded-lg border-b border-white/10 px-3 py-3 text-gray-300 hover:bg-white/5"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Log In
+                    </Link>
+                    <Link
+                      to="/auth/register"
+                      className="mx-3 mt-2 block rounded-full bg-[#D4AF37] py-3 text-center text-sm font-bold uppercase tracking-widest text-black hover:bg-[#B3902A]"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Sign Up Free
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    to="/shopping/account"
+                    className="rounded-lg px-3 py-3 hover:bg-white/5"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Account
+                  </Link>
+                )}
               </nav>
               <div className="border-t border-white/10 p-4">
                 <p className="mb-3 text-[10px] uppercase tracking-widest text-gray-500">

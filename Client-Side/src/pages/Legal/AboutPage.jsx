@@ -56,6 +56,60 @@ const TikTokIcon = () => (
   </svg>
 );
 
+const FALLBACK_BRAND_PARAS = [
+  "Welcome to Saga Elite — a proudly Sri Lankan fashion and lifestyle brand born from a love for modern style and premium craftsmanship.",
+  "We started with a simple belief: that everyone deserves access to high-quality, contemporary fashion without exclusive price tags. Rooted in local culture but inspired by global trends, Saga Elite is more than clothing — it's a community of people who express themselves boldly every day.",
+  "Our pieces are designed with premium materials so every drop looks incredible and feels made for you — from our roots to your wardrobe.",
+];
+
+const FALLBACK_STATS = [
+  { number: 100, suffix: "+", label: "Products launched" },
+  { number: 15, suffix: "", label: "Days delivery island-wide" },
+  { number: "LK", suffix: "", label: "Proudly Sri Lankan" },
+];
+
+const FALLBACK_VALUES = [
+  {
+    icon: "ShieldCheck",
+    title: "Premium Quality",
+    desc: "Materials and construction chosen for longevity and comfort.",
+  },
+  {
+    icon: "Users",
+    title: "Community First",
+    desc: "Built with Sri Lankan youth and diaspora at the centre.",
+  },
+  {
+    icon: "Zap",
+    title: "Drop Culture",
+    desc: "Limited releases — rare fit, forever mindset.",
+  },
+];
+
+const ICON_BY_NAME = { ShieldCheck, Users, Zap };
+
+const NumericAnimatedStatCard = ({ number, suffix, label, bordered }) => {
+  const { ref, display } = useAnimatedStat(number, suffix ?? "");
+  return (
+    <div
+      ref={ref}
+      className={`space-y-2 ${bordered ? "border-t border-[#D4AF37]/20 pt-8" : ""}`}
+    >
+      <p className="font-serif text-6xl font-bold text-[#D4AF37] md:text-7xl">{display}</p>
+      <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
+    </div>
+  );
+};
+
+const StaticStatCard = ({ number, suffix, label, bordered }) => (
+  <div className={`space-y-2 ${bordered ? "border-t border-[#D4AF37]/20 pt-8" : ""}`}>
+    <p className="font-serif text-6xl font-bold text-[#D4AF37] md:text-7xl">
+      {`${number ?? ""}${suffix ?? ""}`}
+    </p>
+    <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">{label}</p>
+  </div>
+);
+
 const AboutPage = () => {
   usePageMeta({
     title: "About Us",
@@ -64,8 +118,7 @@ const AboutPage = () => {
   });
 
   const [logoUrl, setLogoUrl] = useState(null);
-  const statProducts = useAnimatedStat(100, "+");
-  const statDelivery = useAnimatedStat(15, "");
+  const [aboutData, setAboutData] = useState(null);
 
   useEffect(() => {
     axios
@@ -77,23 +130,32 @@ const AboutPage = () => {
       .catch(() => {});
   }, []);
 
-  const values = [
-    {
-      icon: ShieldCheck,
-      title: "Premium Quality",
-      desc: "Materials and construction chosen for longevity and comfort.",
-    },
-    {
-      icon: Users,
-      title: "Community First",
-      desc: "Built with Sri Lankan youth and diaspora at the centre.",
-    },
-    {
-      icon: Zap,
-      title: "Drop Culture",
-      desc: "Limited releases — rare fit, forever mindset.",
-    },
-  ];
+  useEffect(() => {
+    axios
+      .get(`${API_BASE}/site-config/about`)
+      .then((res) => {
+        if (res?.data?.success && res.data.data) setAboutData(res.data.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const brandParagraphs = Array.isArray(aboutData?.about_brand_story)
+    ? aboutData.about_brand_story.filter(Boolean)
+    : FALLBACK_BRAND_PARAS;
+
+  const statsRows = Array.isArray(aboutData?.about_stats) ? aboutData.about_stats : FALLBACK_STATS;
+
+  const valuesList = Array.isArray(aboutData?.about_values) ? aboutData.about_values : FALLBACK_VALUES;
+
+  const teamHeading =
+    typeof aboutData?.about_team_heading === "string" && aboutData.about_team_heading.trim()
+      ? aboutData.about_team_heading
+      : "Our Story, In Your Hands";
+
+  const teamSubtext =
+    typeof aboutData?.about_team_subtext === "string" && aboutData.about_team_subtext.trim()
+      ? aboutData.about_team_subtext
+      : "Team imagery coming soon — the spotlight is on you.";
 
   return (
     <div className="min-h-screen bg-background text-on-surface">
@@ -124,51 +186,34 @@ const AboutPage = () => {
         <div className="container mx-auto max-w-7xl px-4 md:px-6">
           <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
             <div className="space-y-10">
-              <div ref={statProducts.ref} className="space-y-2">
-                <p className="font-serif text-6xl font-bold text-[#D4AF37] md:text-7xl">
-                  {statProducts.display}
-                </p>
-                <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">
-                  Products launched
-                </p>
-              </div>
-              <div
-                ref={statDelivery.ref}
-                className="space-y-2 border-t border-[#D4AF37]/20 pt-8"
-              >
-                <p className="font-serif text-6xl font-bold text-[#D4AF37] md:text-7xl">
-                  {statDelivery.display}
-                </p>
-                <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">
-                  Days delivery island-wide
-                </p>
-              </div>
-              <div className="space-y-2 border-t border-[#D4AF37]/20 pt-8">
-                <p className="font-serif text-6xl font-bold text-[#D4AF37] md:text-7xl">
-                  LK
-                </p>
-                <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">
-                  Proudly Sri Lankan
-                </p>
-              </div>
+              {statsRows.map((stat, idx) => {
+                const bordered = idx > 0;
+                if (typeof stat?.number === "number") {
+                  return (
+                    <NumericAnimatedStatCard
+                      key={stat.label ?? idx}
+                      number={stat.number}
+                      suffix={stat.suffix}
+                      label={stat.label}
+                      bordered={bordered}
+                    />
+                  );
+                }
+                return (
+                  <StaticStatCard
+                    key={stat.label ?? idx}
+                    number={stat.number}
+                    suffix={stat.suffix}
+                    label={stat.label}
+                    bordered={bordered}
+                  />
+                );
+              })}
             </div>
             <div className="space-y-6 leading-relaxed text-on-surface/90 md:text-lg md:leading-8">
-              <p>
-                Welcome to Saga Elite — a proudly Sri Lankan fashion and lifestyle
-                brand born from a love for modern style and premium craftsmanship.
-              </p>
-              <p>
-                We started with a simple belief: that everyone deserves access to
-                high-quality, contemporary fashion without exclusive price tags.
-                Rooted in local culture but inspired by global trends, Saga Elite
-                is more than clothing — it&apos;s a community of people who express
-                themselves boldly every day.
-              </p>
-              <p>
-                Our pieces are designed with premium materials so every drop looks
-                incredible and feels made for you — from our roots to your
-                wardrobe.
-              </p>
+              {brandParagraphs.map((para, idx) => (
+                <p key={idx}>{para}</p>
+              ))}
             </div>
           </div>
         </div>
@@ -180,20 +225,24 @@ const AboutPage = () => {
             Our values
           </h2>
           <div className="grid gap-8 md:grid-cols-3">
-            {values.map((v, i) => (
-              <motion.div
-                key={v.title}
-                initial={{ opacity: 0, y: 36 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="rounded-2xl border border-[#D4AF37]/15 bg-background p-8 shadow-sm dark:bg-surface-container-low"
-              >
-                <v.icon className="mb-4 h-10 w-10 text-[#D4AF37]" />
-                <h3 className="font-serif text-xl font-semibold">{v.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{v.desc}</p>
-              </motion.div>
-            ))}
+            {valuesList.map((v, i) => {
+              const IconComp =
+                ICON_BY_NAME[v.icon] || ICON_BY_NAME.ShieldCheck || ShieldCheck;
+              return (
+                <motion.div
+                  key={`${v.title}-${i}`}
+                  initial={{ opacity: 0, y: 36 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  className="rounded-2xl border border-[#D4AF37]/15 bg-background p-8 shadow-sm dark:bg-surface-container-low"
+                >
+                  <IconComp className="mb-4 h-10 w-10 text-[#D4AF37]" />
+                  <h3 className="font-serif text-xl font-semibold">{v.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{v.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -201,12 +250,8 @@ const AboutPage = () => {
       <section className="py-20">
         <div className="container mx-auto max-w-7xl px-4 md:px-6">
           <div className="about-team-shimmer relative flex min-h-[280px] flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#D4AF37]/50 bg-muted/30 px-6 dark:bg-black/40">
-            <p className="font-serif text-2xl text-[#D4AF37] md:text-3xl">
-              Our Story, In Your Hands
-            </p>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-              Team imagery coming soon — the spotlight is on you.
-            </p>
+            <p className="font-serif text-2xl text-[#D4AF37] md:text-3xl">{teamHeading}</p>
+            <p className="mt-2 text-center text-sm text-muted-foreground">{teamSubtext}</p>
           </div>
         </div>
       </section>

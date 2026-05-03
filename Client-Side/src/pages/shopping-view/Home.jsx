@@ -15,11 +15,13 @@ import {
   ArrowRight,
   ChevronDown,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { CONTACT_INFO } from "@/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
 
 const formatTime = (value) => String(value).padStart(2, "0");
 
@@ -147,6 +149,8 @@ const Home = () => {
   const [homepageError, setHomepageError] = useState(null);
 
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -277,14 +281,29 @@ const Home = () => {
     el?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleNewsletterSubmit = (e) => {
+  const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = fd.get("email");
-    console.log("Newsletter signup:", email);
-    setNewsletterSuccess(true);
-    e.currentTarget.reset();
-    setTimeout(() => setNewsletterSuccess(false), 5000);
+    if (!newsletterEmail?.trim() || newsletterLoading) return;
+    setNewsletterLoading(true);
+    try {
+      await axios.post(`${API_BASE}/newsletter/subscribe`, {
+        email: newsletterEmail.trim(),
+        source: "homepage",
+      });
+      setNewsletterSuccess(true);
+      setNewsletterEmail("");
+      setTimeout(() => setNewsletterSuccess(false), 6000);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || "Something went wrong. Please try again.";
+      toast({
+        title: "Subscription failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setNewsletterLoading(false);
+    }
   };
 
   return (
@@ -763,15 +782,23 @@ const Home = () => {
               <Input
                 name="email"
                 type="email"
+                value={newsletterEmail}
+                onChange={(ev) => setNewsletterEmail(ev.target.value)}
                 placeholder="Enter your email address"
                 className="h-14 border-outline/20 bg-background text-center focus-visible:ring-[#D4AF37] sm:text-left"
                 required
+                disabled={newsletterLoading}
               />
               <Button
                 type="submit"
-                className="h-14 bg-primary px-8 font-bold uppercase tracking-widest text-primary-foreground hover:bg-primary/90"
+                disabled={newsletterLoading || !newsletterEmail.trim()}
+                className="h-14 min-w-[140px] bg-primary px-8 font-bold uppercase tracking-widest text-primary-foreground hover:bg-primary/90"
               >
-                Subscribe
+                {newsletterLoading ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Subscribe"
+                )}
               </Button>
             </form>
             <AnimatePresence>

@@ -35,11 +35,6 @@ const MANUAL_BANK_DETAILS = {
   deadline: "Pay within 24 hours to confirm your order.",
 };
 
-const buildManualPaymentPath = (paymentSlug) =>
-  paymentSlug
-    ? `/shopping/manual-payment/${encodeURIComponent(paymentSlug)}`
-    : "/shopping/manual-payment";
-
 const getErrorMessage = (error, fallback) =>
   typeof error === "string" ? error : error?.message || fallback;
 
@@ -678,14 +673,33 @@ const Checkout = () => {
       persistBuyNowItem(null);
 
       if (formData.paymentMethod === "manual_bank_transfer") {
-        const paymentReferenceResponse = await dispatch(
-          generateManualPaymentReference({
-            orderId: createdOrderId,
-            amount: resolvedTotal,
-          })
-        ).unwrap();
+        let paymentReferenceResponse;
+        try {
+          paymentReferenceResponse = await dispatch(
+            generateManualPaymentReference({
+              orderId: createdOrderId,
+              amount: resolvedTotal,
+            }),
+          ).unwrap();
+        } catch {
+          toast({
+            title: "Reference issue",
+            description:
+              "Order placed but reference generation had an issue. You can continue from Pending Payment or contact support.",
+            variant: "destructive",
+          });
+          navigate(
+            `/shopping/manual-payment?orderId=${encodeURIComponent(String(createdOrderId))}&amount=${encodeURIComponent(String(resolvedTotal))}`,
+          );
+          return;
+        }
 
         const manualPaymentData = paymentReferenceResponse?.data || {};
+        const slug =
+          paymentReferenceResponse?.slug ||
+          manualPaymentData.slug ||
+          manualPaymentData.manualPayment?.slug ||
+          null;
         const manualReference =
           paymentReferenceResponse?.referenceNumber ||
           manualPaymentData.referenceNumber ||
@@ -704,34 +718,28 @@ const Checkout = () => {
           storeManualPaymentContext({
             orderId: manualOrderId,
             amount: manualAmount,
-            slug:
-              paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug ||
-              null,
+            slug,
             referenceNumber: manualReference,
-          })
+          }),
         );
 
-        navigate(
-          buildManualPaymentPath(
-            paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug
-          ),
-          {
-            state: {
-              orderId: manualOrderId,
-              amount: manualAmount,
-              slug:
-                paymentReferenceResponse?.slug ||
-                manualPaymentData.slug ||
-                manualPaymentData.manualPayment?.slug ||
-                null,
-              referenceNumber: manualReference,
-            },
-          },
-        );
+        const navState = {
+          orderId: manualOrderId,
+          amount: manualAmount,
+          slug,
+          referenceNumber: manualReference,
+        };
+
+        if (slug) {
+          navigate(`/shopping/manual-payment/${encodeURIComponent(slug)}`, { state: navState });
+        } else {
+          const q = new URLSearchParams({
+            orderId: String(manualOrderId),
+            amount: String(manualAmount),
+          });
+          if (manualReference) q.set("referenceNumber", String(manualReference));
+          navigate(`/shopping/manual-payment?${q.toString()}`, { state: navState });
+        }
         return;
       }
 

@@ -12,6 +12,7 @@ const {
   generateReference,
   submitProof,
   getMyPaymentStatus,
+  getMyPendingPayments,
   getPendingPayments,
   getPaymentById,
   verifyPayment,
@@ -21,6 +22,7 @@ const router = express.Router();
 
 router.post("/manual-payment/generate", authMiddleware, validateManualPaymentReference, generateReference);
 router.post("/payments/generate-reference", authMiddleware, validateManualPaymentReference, generateReference);
+router.get("/payments/my-pending", authMiddleware, getMyPendingPayments);
 router.post("/manual-payment/submit-proof", authMiddleware, validateManualPaymentProof, submitProof);
 router.get("/manual-payment/status/:paymentIdentifier", authMiddleware, getMyPaymentStatus);
 router.get("/admin/manual-payments", authMiddleware, requireAdmin, getPendingPayments);

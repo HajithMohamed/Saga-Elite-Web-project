@@ -39,6 +39,7 @@ import PaymentVerificationPage from "./pages/admin/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
+import AboutSiteConfig from "./pages/admin-view/AboutSiteConfig";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -210,6 +211,7 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="home-images" element={<AdminHomeImages />} />
             <Route path="feature" element={<AdminFeatures />} />
+            <Route path="about-content" element={<AboutSiteConfig />} />
             <Route path="order" element={<AdminOrders />} />
             <Route path="product" element={<AdminProduct />} />
             <Route path="users" element={<AdminUsers />} />

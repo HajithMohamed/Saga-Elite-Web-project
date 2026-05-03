@@ -44,6 +44,9 @@ const notificationRoutes = require("./Routes/notification-routes");
 const contactRoutes = require("./Routes/contactRoutes");
 const reviewRoutes = require("./Routes/reviewRoutes");
 const superAdminRoutes = require("./Routes/super-admin-routes");
+const newsletterRoutes = require("./Routes/newsletterRoutes");
+const siteConfigRoutes = require("./Routes/siteConfigRoutes");
+const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 
 app.use(
   helmet({
@@ -81,6 +84,8 @@ app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/reviews", reviewRoutes.userRouter);
 app.use("/api/v1/admin/reviews", reviewRoutes.adminRouter);
 app.use("/api/v1/super-admin", superAdminRoutes);
+app.use("/api/v1/newsletter", newsletterRoutes);
+app.use("/api/v1/site-config", siteConfigRoutes);
 
 app.use(globalErrorController);
 
@@ -155,6 +160,7 @@ io.on("connection", (socket) => {
 const startServer = async () => {
   try {
     await connectToDB();
+    await seedAboutSiteDefaults();
     startManualPaymentCleanupJob();
 
     server.listen(PORT, () => {
