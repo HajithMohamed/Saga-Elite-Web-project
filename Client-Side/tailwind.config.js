@@ -8,11 +8,13 @@ export default {
   theme: {
   	extend: {
 fontFamily: {
+		display: ['Cinzel', 'serif'],
 		serif: ['Playfair Display', 'serif'],
-		sans: ['Inter', 'sans-serif'],
-        headline: ["Noto Serif"],
-        body: ["Manrope"],
-        label: ["Manrope"]
+		sans: ['Inter', 'system-ui', 'sans-serif'],
+		mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+		headline: ['Playfair Display', 'serif'],
+		body: ['Inter', 'system-ui', 'sans-serif'],
+		label: ['Inter', 'system-ui', 'sans-serif'],
 	},
 borderRadius: {
   			lg: 'var(--radius)',

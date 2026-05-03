@@ -177,4 +177,49 @@ const startServer = async () => {
   }
 };
 
+// ── process-level safety nets ────────────────────────────────────
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception — shutting down", {
+    message: err.message,
+    stack: err.stack,
+  });
+  // Crash hard so the orchestrator restarts the process clean.
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection — shutting down", {
+    reason: reason instanceof Error ? reason.stack : String(reason),
+  });
+  server.close(() => process.exit(1));
+});
+
+// ── graceful shutdown (SIGTERM from Docker/K8s, SIGINT from Ctrl+C) ─
+let shuttingDown = false;
+const gracefulShutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info("Shutdown signal received — closing connections", { signal });
+
+  // Stop accepting new connections; drain in-flight requests.
+  server.close((err) => {
+    if (err) {
+      logger.error("Error closing HTTP server", { error: err.message });
+      process.exit(1);
+    }
+    io.close(() => {
+      logger.info("Sockets closed; bye.");
+      process.exit(0);
+    });
+  });
+
+  // Hard-kill safety net if drain stalls (10s).
+  setTimeout(() => {
+    logger.error("Forced shutdown after 10s timeout");
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+["SIGTERM", "SIGINT"].forEach((sig) => process.on(sig, () => gracefulShutdown(sig)));
+
 startServer();

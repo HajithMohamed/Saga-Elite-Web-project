@@ -1,9 +1,8 @@
 {
   "name": "saga-elite-web-project",
   "version": "1.0.0",
-  "description": "_Unisex | Youth-Driven | Statement Style_  \r **Tagline:** Rare Fit Forever",
+  "description": "Saga Elite — Sri Lankan luxury fashion e-commerce. Tagline: Rare Fit Forever.",
   "private": true,
-  "main": "index.js",
   "type": "commonjs",
   "workspaces": [
     "Server-side",
@@ -16,7 +15,8 @@
     "start": "node Server-side/server.js",
     "build": "npm --prefix Client-Side run build",
     "lint": "npm --prefix Server-side run lint && npm --prefix Client-Side run lint",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "audit": "npm --prefix Server-side audit && npm --prefix Client-Side audit",
+    "test": "npm --prefix Server-side test && npm --prefix Client-Side test"
   },
   "repository": {
     "type": "git",

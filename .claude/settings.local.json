@@ -13,7 +13,10 @@
       "Bash(node --check Controllers/google-auth-controller.js)",
       "Bash(node --check Controllers/whatsapp-webhook-controller.js)",
       "Bash(node --check Controllers/order-controller.js)",
-      "PowerShell(Get-NetTCPConnection -LocalPort 5001 -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID = $_.OwningProcess; Process = $proc.ProcessName; State = $_.State; StartTime = $proc.StartTime } } | Format-Table)"
+      "PowerShell(Get-NetTCPConnection -LocalPort 5001 -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID = $_.OwningProcess; Process = $proc.ProcessName; State = $_.State; StartTime = $proc.StartTime } } | Format-Table)",
+      "Bash(npm audit *)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"['./Controllers/auth-controller','./Controllers/google-auth-controller','./Controllers/order-controller','./Controllers/whatsapp-webhook-controller','./Middlewares/auth-middleware','./Utils/create-send-token','./Config/cors-config'].forEach\\(m => require\\(m\\)\\); console.log\\('all modules load OK'\\);\")"
     ]
   }
 }

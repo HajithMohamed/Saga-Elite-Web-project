@@ -3,15 +3,19 @@
 @tailwind utilities;
 
 @layer components {
-  /* ── Editorial type tiers — JetBrains Mono primary ─────────── */
-  .se-serif      { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: -0.04em; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-headline   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 700; letter-spacing: -0.03em; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-display    { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-instrument { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; letter-spacing: -0.01em; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-wordmark   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-body       { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 400; letter-spacing: -0.005em; }
+  /* ── Editorial type tiers — luxury Sri Lankan e-commerce stack ─
+     Display: Cinzel (Roman caps, campaign poster).
+     Headlines / pull-quotes: Playfair Display (timeless serif).
+     Body / labels / instruments: Inter (modern sans).
+     Numerics only: JetBrains Mono (SKUs, refs, countdowns). */
+  .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
+  .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
+  .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
+  .se-instrument { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.005em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
+  .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
   .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
-  .se-label      { font-family: 'JetBrains Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 500; }
+  .se-label      { font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
   /* Override stray italic utilities on editorial classes — directive: no italics. */
   .se-serif.italic, .se-headline.italic, .se-display.italic,
   .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
