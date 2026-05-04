@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: ./Server-side
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Server-side/Dockerfile
     container_name: saga_backend
     restart: unless-stopped
     ports:
@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./Server-side:/app
-      - /app/node_modules
+      - ./Server-side:/workspace/Server-side
+      - /workspace/node_modules
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5001/health"]
       interval: 30s
@@ -23,8 +23,8 @@ services:
 
   frontend:
     build:
-      context: ./Client-Side
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Client-Side/Dockerfile
     container_name: saga_frontend
     restart: unless-stopped
     ports:
@@ -33,8 +33,8 @@ services:
       - VITE_API_URL=http://localhost:5001/api/v1
       - VITE_BACKEND_TARGET=http://backend:5001
     volumes:
-      - ./Client-Side:/app
-      - /app/node_modules
+      - ./Client-Side:/workspace/Client-Side
+      - /workspace/node_modules
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5173/"]
       interval: 30s

@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: ./Server-side
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: Server-side/Dockerfile.prod
     container_name: saga_backend_prod
     restart: always
     expose:
@@ -45,8 +45,8 @@ services:
 
   frontend:
     build:
-      context: ./Client-Side
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: Client-Side/Dockerfile.prod
       args:
         # Default to relative /api/v1 — nginx proxies to backend, so no public backend URL leaks into the bundle.
         - VITE_API_URL=${VITE_API_URL:-/api/v1}
