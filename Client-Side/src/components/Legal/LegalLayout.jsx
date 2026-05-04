@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const RELATED_POLICIES = [
   { label: "Privacy Policy", to: "/legal/privacy-policy" },
@@ -62,22 +63,33 @@ const LegalLayout = ({ title, lastUpdated, children }) => {
   }, [children]);
 
   return (
-    <div className="w-full bg-black text-white">
-      <div className="container mx-auto px-4 md:px-8 py-10">
-        <div className="flex flex-col gap-4 mb-8">
-          <Link
-            to="/"
-            className="text-sm text-[#D4AF37] hover:text-white transition-colors"
+    <div className="w-full min-h-screen bg-background text-on-surface">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="flex flex-col gap-4 mb-8"
+        >
+          <nav
+            className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground"
+            aria-label="Breadcrumb"
           >
-            Back to home
-          </Link>
+            <Link to="/" className="text-[#D4AF37] hover:underline">
+              Home
+            </Link>
+            <span aria-hidden="true">→</span>
+            <span className="text-muted-foreground">Legal</span>
+            <span aria-hidden="true">→</span>
+            <span className="text-on-surface font-medium">{title}</span>
+          </nav>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-semibold text-white">
+              <h1 className="text-3xl sm:text-4xl font-semibold text-on-surface">
                 {title}
               </h1>
               {lastUpdated && (
-                <p className="mt-2 text-sm text-white/60">
+                <p className="mt-2 text-sm text-gray-500 dark:text-white/60">
                   Last updated: {lastUpdated}
                 </p>
               )}
@@ -85,24 +97,24 @@ const LegalLayout = ({ title, lastUpdated, children }) => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center justify-center rounded border border-[#D4AF37]/40 px-4 py-2 text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors"
+              className="inline-flex items-center justify-center rounded border border-[#D4AF37]/40 px-4 py-2 text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors shrink-0"
             >
-              Print
+              Print this page
             </button>
           </div>
-        </div>
+        </motion.div>
 
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_260px] gap-10">
           <div className="space-y-10">
             <article
               ref={contentRef}
-              className="space-y-10 text-sm sm:text-base text-white/80"
+              className="space-y-10 text-sm sm:text-base text-on-surface/90 dark:text-white/80"
             >
               {children}
             </article>
 
-            <section className="rounded border border-white/10 bg-[#0f0f0f] px-6 py-6">
-              <h3 className="text-sm uppercase tracking-[0.2em] text-white">
+            <section className="rounded border border-border bg-muted/30 dark:bg-[#0f0f0f] dark:border-white/10 px-6 py-6">
+              <h3 className="text-sm uppercase tracking-[0.2em] text-on-surface">
                 Related policies
               </h3>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -110,7 +122,7 @@ const LegalLayout = ({ title, lastUpdated, children }) => {
                   <Link
                     key={policy.to}
                     to={policy.to}
-                    className="text-sm text-[#D4AF37] hover:text-white transition-colors"
+                    className="text-sm text-[#D4AF37] hover:underline transition-colors"
                   >
                     {policy.label}
                   </Link>
@@ -121,8 +133,8 @@ const LegalLayout = ({ title, lastUpdated, children }) => {
 
           <aside className="hidden lg:block">
             <div className="lg:sticky lg:top-24">
-              <div className="rounded border border-white/10 bg-[#0f0f0f] px-5 py-6">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+              <div className="rounded border border-border bg-muted/30 dark:bg-[#0f0f0f] dark:border-white/10 px-5 py-6">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                   On this page
                 </p>
                 <nav className="mt-4" aria-label="Table of contents">
@@ -134,7 +146,7 @@ const LegalLayout = ({ title, lastUpdated, children }) => {
                           className={`block transition-colors ${
                             activeId === item.id
                               ? "text-[#D4AF37]"
-                              : "text-white/70 hover:text-white"
+                              : "text-muted-foreground hover:text-on-surface dark:hover:text-white"
                           }`}
                         >
                           {item.text}

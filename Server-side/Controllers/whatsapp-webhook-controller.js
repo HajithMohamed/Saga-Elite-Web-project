@@ -1,5 +1,6 @@
 const AppError = require("../Utils/appError");
 const catchAsync = require("../Utils/catchAsync");
+const logger = require("../Utils/logger");
 const {
   sendWhatsAppMessage,
   cleanPhoneNumber,
@@ -14,9 +15,14 @@ exports.verifyWebhook = catchAsync(async (req, res, next) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
+  if (!verifyToken) {
+    logger.error("WHATSAPP_VERIFY_TOKEN env var is not set; rejecting verification");
+    return res.sendStatus(500);
+  }
+
   if (mode && token) {
     if (mode === "subscribe" && token === verifyToken) {
-      console.log("WEBHOOK_VERIFIED");
+      logger.info("WhatsApp webhook verified");
       return res.status(200).send(challenge);
     } else {
       return res.sendStatus(403);
@@ -31,6 +37,11 @@ exports.verifyWebhook = catchAsync(async (req, res, next) => {
 ========================= */
 exports.handleIncomingMessage = catchAsync(async (req, res, next) => {
   const body = req.body;
+
+  logger.info("WhatsApp webhook POST received", {
+    object: body?.object,
+    entries: Array.isArray(body?.entry) ? body.entry.length : 0,
+  });
 
   // Always respond immediately to avoid retries from Meta
   if (body.object === "whatsapp_business_account") {
@@ -80,10 +91,9 @@ exports.handleIncomingMessage = catchAsync(async (req, res, next) => {
                     message: replyText,
                   });
                 } catch (err) {
-                  console.error(
-                    "Failed to auto-reply to webhook message",
-                    err
-                  );
+                  logger.error("Failed to auto-reply to webhook message", {
+                    error: err.message,
+                  });
                 }
               }
             }

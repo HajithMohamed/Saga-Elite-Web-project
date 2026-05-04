@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const slugify = require("slugify");
 
 const userSchema = new mongoose.Schema(
   {
@@ -51,6 +52,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true,
+      lowercase: true,
     },
 
     profilePicture: String,
@@ -117,6 +127,15 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.pre("save", function (next) {
+  if (!this.slug || this.isModified("email")) {
+    const local = (this.email || "user").split("@")[0] || "user";
+    const tail = String(this._id || "").slice(-6) || Math.random().toString(36).slice(2, 8);
+    this.slug = slugify(`${local}-${tail}`, { lower: true, strict: true });
+  }
+  next();
+});
 
 // ── Fixed pre-save hook (Mongoose 9.x style) ──
 userSchema.pre("save", async function () {

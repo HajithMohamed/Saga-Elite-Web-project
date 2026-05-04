@@ -24,7 +24,8 @@ const buildWhatsAppMessagesUrl = () => {
 };
 
 const sendWhatsAppMessage = async ({ to, message }) => {
-  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+  const accessToken =
+    process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const url = buildWhatsAppMessagesUrl();
   const recipient = cleanPhoneNumber(to);
 

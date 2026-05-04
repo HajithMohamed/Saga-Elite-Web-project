@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 export const fetchProductReviewsApi = ({ productId, rating, sort, page, limit }) =>
   axios.get(`${API_BASE}/reviews/product/${productId}`, {

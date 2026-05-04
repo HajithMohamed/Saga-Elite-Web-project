@@ -9,6 +9,8 @@ import {
 } from "@/api/manualPaymentAPI";
 
 const MANUAL_PAYMENT_STORAGE_KEY = "saga_manual_payment_context";
+/** Plain reference fallback (master spec) when reading outside Redux */
+const MANUAL_PAYMENT_REF_FALLBACK_KEY = "saga_manual_payment_ref";
 
 const loadPersistedManualPayment = () => {
   if (typeof window === "undefined") {
@@ -16,7 +18,7 @@ const loadPersistedManualPayment = () => {
   }
 
   try {
-    const raw = window.localStorage.getItem(MANUAL_PAYMENT_STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(MANUAL_PAYMENT_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -34,7 +36,15 @@ const persistManualPayment = (state) => {
     paymentContext: state.paymentContext || null,
   };
 
-  window.localStorage.setItem(MANUAL_PAYMENT_STORAGE_KEY, JSON.stringify(payload));
+  window.sessionStorage.setItem(MANUAL_PAYMENT_STORAGE_KEY, JSON.stringify(payload));
+  const ref =
+    state.paymentContext?.referenceNumber ||
+    state.lastGeneratedReference ||
+    state.currentPayment?.referenceNumber ||
+    "";
+  if (ref) {
+    window.sessionStorage.setItem(MANUAL_PAYMENT_REF_FALLBACK_KEY, String(ref));
+  }
 };
 
 const clearPersistedManualPayment = () => {
@@ -42,7 +52,8 @@ const clearPersistedManualPayment = () => {
     return;
   }
 
-  window.localStorage.removeItem(MANUAL_PAYMENT_STORAGE_KEY);
+  window.sessionStorage.removeItem(MANUAL_PAYMENT_STORAGE_KEY);
+  window.sessionStorage.removeItem(MANUAL_PAYMENT_REF_FALLBACK_KEY);
 };
 
 const persistedManualPayment = loadPersistedManualPayment();

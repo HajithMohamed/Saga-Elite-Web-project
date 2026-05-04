@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllProducts,
@@ -25,6 +26,16 @@ import {
   Package,
   Eye,
 } from "lucide-react";
+import { AdminPage } from "@/components/admin-components/AdminUI";
+import {
+  pageVariants,
+  containerVariants,
+  itemVariants,
+  slideInPanelVariants,
+} from "@/components/admin-components/_shared/animations";
+import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
+import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
+import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 
 // Helper components for visual consistency
 const PulseDot = ({ active }) => (
@@ -74,12 +85,15 @@ const Product = () => {
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryTitle, setGalleryTitle] = useState("");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
+  const [showProductSaved, setShowProductSaved] = useState(false);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
   const { toast } = useToast();
 
   const productList = useSelector((state) => state.product.productList || []);
+  const isLoading = useSelector((state) => state.product.isLoading);
   const pagination = useSelector((state) => state.product.pagination || {});
   const { drops = [] } = useSelector((state) => state.drop) || {};
 
@@ -196,6 +210,7 @@ const Product = () => {
         title: selectedProductSlug ? "Product updated successfully" : "Product created successfully",
         className: "bg-surface border border-primary-container text-saga-primary",
       });
+      setShowProductSaved(true);
       resetForm();
       fetchProducts();
     } catch (e) {
@@ -203,11 +218,11 @@ const Product = () => {
     }
   };
 
-  const handleDelete = (slug) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      dispatch(deleteProduct(slug)).then(() => fetchProducts());
-    }
-  };
+  useEffect(() => {
+    if (!showProductSaved) return undefined;
+    const t = setTimeout(() => setShowProductSaved(false), 2800);
+    return () => clearTimeout(t);
+  }, [showProductSaved]);
 
   const handleVariantChange = (index, field, value) => {
     const updatedVariants = [...formData.variants];
@@ -224,10 +239,17 @@ const Product = () => {
     setFormData({ ...formData, variants: updatedVariants });
   };
 
-  // ----- ATELIER FORM CANVAS RENDER -----
-  if (showForm) {
-    return (
-      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden !w-full fixed inset-0 z-50">
+  // ----- ATELIER FORM (slide-in panel 2I) -----
+  const atelierForm = (
+      <motion.div
+        key="product-atelier"
+        variants={slideInPanelVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        className="fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto bg-[#050505]"
+      >
+      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden w-full">
         <main className="flex-1 w-full flex flex-col overflow-y-auto">
           {/* Header */}
           <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
@@ -459,8 +481,17 @@ const Product = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/10">
+                      <AnimatePresence initial={false}>
                       {formData.variants.map((v, i) => (
-                        <tr key={i} className="hover:bg-surface-bright/10 transition-colors">
+                        <motion.tr
+                          key={`variant-row-${i}`}
+                          layout
+                          initial={{ opacity: 0, y: -14 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.28, ease: "easeOut" }}
+                          className="hover:bg-surface-bright/10 transition-colors"
+                        >
                           <td className="py-4 pr-4">
                             <input
                               type="text" value={v.sku} onChange={(e) => handleVariantChange(i, 'sku', e.target.value)}
@@ -501,8 +532,9 @@ const Product = () => {
                               </button>
                             )}
                           </td>
-                        </tr>
+                        </motion.tr>
                       ))}
+                      </AnimatePresence>
                     </tbody>
                   </table>
                 </div>
@@ -512,23 +544,37 @@ const Product = () => {
           </div>
         </main>
       </div>
-    );
-  }
+      </motion.div>
+  );
 
   // ----- LEDGER LIST VIEW -----
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface">
+    <Fragment>
+    <AdminPage
+      eyebrow="Catalog management"
+      title="Product Ledger"
+      description="Manage products, variants, stock, visibility, and gallery assets."
+    >
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
+    >
+      <div className="border-b border-white/10 px-6 py-3">
+        <ToastFlash show={showProductSaved} message="Product saved" />
+      </div>
       {/* List Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
         <div className="flex items-center gap-8 w-full md:w-auto">
-          <div className="relative flex items-center bg-surface-container-highest px-4 py-2 w-full md:w-96 group border border-outline-variant/10">
-            <Search className="w-4 h-4 text-outline-variant mr-3 group-focus-within:text-saga-primary transition-colors" />
+          <div className="relative w-full md:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none focus:ring-0 text-on-surface text-sm w-full placeholder:text-outline-variant"
-              placeholder="Search the collection..."
-              type="text"
+              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37] placeholder:text-gray-500"
+              placeholder="Search the collection…"
+              type="search"
             />
           </div>
         </div>
@@ -544,6 +590,10 @@ const Product = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+        {isLoading ? (
+          <SkeletonGrid count={6} />
+        ) : (
+        <>
         <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
           <div className="max-w-2xl">
             <span className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold" style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}>Inventory Registry</span>
@@ -597,12 +647,23 @@ const Product = () => {
         </div>
 
         {/* Product Rows */}
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {productList.map((product) => {
             const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
             return (
-              <div key={product._id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-surface-container/30 hover:bg-surface-bright transition-all duration-300 group p-6 relative border border-outline-variant/5">
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-saga-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
+              <motion.div
+                key={product._id}
+                variants={itemVariants}
+                whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
+                transition={{ duration: 0.2 }}
+                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
 
                 <div className="col-span-1 md:col-span-5 flex items-center gap-6">
                   <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
@@ -641,18 +702,35 @@ const Product = () => {
                   </div>
                 </div>
 
-                <div className="col-span-1 md:col-span-1 flex justify-end gap-4 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
-                  <button onClick={() => openProductGallery(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="View images">
+                <div className="col-span-1 flex flex-wrap justify-end gap-3 md:col-span-1">
+                  <button type="button" onClick={() => openProductGallery(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="View images">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button onClick={() => beginEdit(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2">
+                  <button type="button" onClick={() => beginEdit(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="Edit product">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(product.slug)} className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
+                    className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
+                    title="Delete product"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
+                <div className="col-span-1 md:col-span-12">
+                  <ConfirmInline
+                    show={deleteConfirmSlug === product.slug}
+                    message="Delete this product permanently?"
+                    onCancel={() => setDeleteConfirmSlug(null)}
+                    onConfirm={() => {
+                      const slug = product.slug;
+                      setDeleteConfirmSlug(null);
+                      dispatch(deleteProduct(slug)).then(() => fetchProducts());
+                    }}
+                  />
+                </div>
+              </motion.div>
             );
           })}
 
@@ -662,7 +740,7 @@ const Product = () => {
               <p>No products found in the ledger.</p>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Pagination */}
         {productList.length > 0 && pagination.totalPages > 1 && (
@@ -701,46 +779,21 @@ const Product = () => {
             </div>
           </div>
         )}
+        </>
+        )}
       </main>
-      {isGalleryOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-w-5xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl">
-            <div className="flex items-center justify-between border-b border-outline-variant/20 p-6">
-              <div>
-                <h2 className="text-2xl font-bold">{galleryTitle}</h2>
-                <p className="text-sm text-on-surface-variant">{galleryImages.length} image(s) available</p>
-              </div>
-              <button
-                type="button"
-                onClick={closeGallery}
-                className="rounded-full border border-on-surface/10 px-4 py-2 text-sm text-on-surface hover:bg-on-surface/5"
-              >
-                Close
-              </button>
-            </div>
-            <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
-              {galleryImages.map((image, index) => (
-                <div key={index} className="overflow-hidden rounded-3xl bg-[#111]">
-                  <img
-                    src={image.url}
-                    alt={`${galleryTitle} ${index + 1}`}
-                    className="h-48 w-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {isGalleryOpen && (
+      {isGalleryOpen ? (
         <ImageGalleryModal
           title={galleryTitle}
           images={galleryImages}
           onClose={closeGallery}
           onImagesUpdate={handleGalleryImagesUpdate}
         />
-      )}
-    </div>
+      ) : null}
+    </motion.div>
+    </AdminPage>
+    <AnimatePresence mode="wait">{showForm ? atelierForm : null}</AnimatePresence>
+    </Fragment>
   );
 };
 export default Product;

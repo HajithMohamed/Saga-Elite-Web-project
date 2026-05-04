@@ -480,8 +480,13 @@ const validateOrderCreate = createValidationMiddleware((req) => {
 });
 
 const validateOrderStatusUpdate = createValidationMiddleware((req) => {
+  const status = sanitizeEnum(req.body.status, ORDER_STATUSES, "status", { required: true });
+  const cancellationReason = sanitizeOptionalPlainText(req.body.cancellationReason, "cancellationReason", {
+    maxLength: 500,
+  });
   req.body = {
-    status: sanitizeEnum(req.body.status, ORDER_STATUSES, "status", { required: true }),
+    status,
+    cancellationReason,
   };
 });
 

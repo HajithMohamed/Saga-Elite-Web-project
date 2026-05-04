@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import {
   Clock3,
   Copy,
@@ -17,6 +18,11 @@ const formatDateTime = (value) => {
     dateStyle: "medium",
     timeStyle: "short",
   });
+};
+
+const toWhatsAppDigits = (raw) => {
+  if (!raw) return "";
+  return String(raw).replace(/\D/g, "");
 };
 
 const DetailRow = ({ label, value, isMono = false }) => (
@@ -42,10 +48,11 @@ const ManualPaymentInstructions = ({
   status,
   onCopyReference,
 }) => {
+  const hasReference = Boolean(referenceNumber);
   const steps = [
     "Transfer the exact total to the account below.",
-    "Include the reference number in your bank transfer note.",
-    "Send the proof after the transfer is complete.",
+    "Include the reference number in your bank transfer note / description.",
+    "Send the proof after the transfer is complete (upload on this page or via WhatsApp).",
   ];
 
   const handleCopyReference = async () => {
@@ -59,27 +66,61 @@ const ManualPaymentInstructions = ({
     }
   };
 
+  const waDigits = toWhatsAppDigits(
+    bankDetails.supportWhatsapp || "+94770704274"
+  );
+  const waMessage = hasReference
+    ? `Hi Saga Elite — I have made a bank transfer. My payment reference is: ${referenceNumber}. Please confirm.`
+    : "Hi Saga Elite — I need help with my bank transfer reference.";
+  const waHref =
+    waDigits.length >= 8
+      ? `https://wa.me/${waDigits}?text=${encodeURIComponent(waMessage)}`
+      : null;
+
   return (
-    <section className="rounded-[30px] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.08),rgba(255,255,255,0.02)_45%,rgba(255,255,255,0.03)_100%)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-8">
-      <div className="mb-8 rounded-[26px] border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-5 shadow-[0_18px_60px_rgba(212,175,55,0.12)]">
+    <section className="rounded-[30px] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.08),rgba(255,255,255,0.02)_45%,rgba(255,255,255,0.03)_100%)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-8 dark:text-white">
+      {!hasReference ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+        >
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+          <p>
+            <span className="font-semibold text-amber-200">
+              Reference not loaded yet.
+            </span>{" "}
+            Wait a moment while we prepare your payment, or open this page from
+            your order confirmation. If you placed an order, check{" "}
+            <strong className="text-white">Orders</strong> and use the payment
+            link again.
+          </p>
+        </motion.div>
+      ) : null}
+
+      <div className="mb-8 rounded-[26px] border border-[#D4AF37]/30 bg-[#D4AF37]/10 p-6 shadow-[0_18px_60px_rgba(212,175,55,0.12)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#f4d57a]">
-              Your Payment Reference: {referenceNumber || "Generating..."}
+              Your payment reference
             </p>
-            <p className="mt-3 text-sm leading-6 text-white">
-              Include this reference in your bank transfer description/memo.
+            <p className="mt-3 break-all font-mono text-2xl font-bold tracking-[0.12em] text-white sm:text-3xl">
+              {hasReference ? referenceNumber : "—"}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-gray-200">
+              Include this reference exactly in your bank transfer
+              description/memo so we can match your payment.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleCopyReference}
-            disabled={!referenceNumber}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-black/30 px-5 text-sm font-semibold text-white transition hover:border-[#D4AF37] hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!hasReference}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-black/30 px-5 text-sm font-semibold text-white transition hover:border-[#D4AF37] hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Copy className="h-4 w-4" />
-            Copy Reference
+            Copy reference
           </button>
         </div>
       </div>
@@ -120,15 +161,18 @@ const ManualPaymentInstructions = ({
           </div>
           <div className="mt-4 space-y-3">
             {steps.map((step, index) => (
-              <div
+              <motion.div
                 key={step}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.08 }}
                 className="flex gap-3 rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-3"
               >
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 text-xs font-bold text-[#D4AF37]">
                   {String(index + 1).padStart(2, "0")}
                 </div>
                 <p className="text-sm leading-6 text-gray-300">{step}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -180,6 +224,20 @@ const ManualPaymentInstructions = ({
                 "Use the reference exactly as shown."}
             </p>
           </div>
+
+          {waHref ? (
+            <motion.a
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-600/20 py-3 text-sm font-bold text-emerald-100 transition hover:bg-emerald-600/30"
+            >
+              <MessageSquareText className="h-4 w-4" />
+              Message on WhatsApp
+            </motion.a>
+          ) : null}
 
           <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
             <span className="font-semibold text-amber-200">

@@ -44,6 +44,9 @@ const notificationRoutes = require("./Routes/notification-routes");
 const contactRoutes = require("./Routes/contactRoutes");
 const reviewRoutes = require("./Routes/reviewRoutes");
 const superAdminRoutes = require("./Routes/super-admin-routes");
+const newsletterRoutes = require("./Routes/newsletterRoutes");
+const siteConfigRoutes = require("./Routes/siteConfigRoutes");
+const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 
 app.use(
   helmet({
@@ -64,6 +67,11 @@ app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
 
+// Healthcheck — used by docker-compose healthcheck and orchestrators
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 /* ================== API ROUTES ================== */
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
 
@@ -81,6 +89,8 @@ app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/reviews", reviewRoutes.userRouter);
 app.use("/api/v1/admin/reviews", reviewRoutes.adminRouter);
 app.use("/api/v1/super-admin", superAdminRoutes);
+app.use("/api/v1/newsletter", newsletterRoutes);
+app.use("/api/v1/site-config", siteConfigRoutes);
 
 app.use(globalErrorController);
 
@@ -155,6 +165,7 @@ io.on("connection", (socket) => {
 const startServer = async () => {
   try {
     await connectToDB();
+    await seedAboutSiteDefaults();
     startManualPaymentCleanupJob();
 
     server.listen(PORT, () => {
@@ -165,5 +176,50 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// ── process-level safety nets ────────────────────────────────────
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception — shutting down", {
+    message: err.message,
+    stack: err.stack,
+  });
+  // Crash hard so the orchestrator restarts the process clean.
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection — shutting down", {
+    reason: reason instanceof Error ? reason.stack : String(reason),
+  });
+  server.close(() => process.exit(1));
+});
+
+// ── graceful shutdown (SIGTERM from Docker/K8s, SIGINT from Ctrl+C) ─
+let shuttingDown = false;
+const gracefulShutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info("Shutdown signal received — closing connections", { signal });
+
+  // Stop accepting new connections; drain in-flight requests.
+  server.close((err) => {
+    if (err) {
+      logger.error("Error closing HTTP server", { error: err.message });
+      process.exit(1);
+    }
+    io.close(() => {
+      logger.info("Sockets closed; bye.");
+      process.exit(0);
+    });
+  });
+
+  // Hard-kill safety net if drain stalls (10s).
+  setTimeout(() => {
+    logger.error("Forced shutdown after 10s timeout");
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+["SIGTERM", "SIGINT"].forEach((sig) => process.on(sig, () => gracefulShutdown(sig)));
 
 startServer();

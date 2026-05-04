@@ -1,1 +1,10 @@
-node_modules\nnpm-debug.log\ndist\n.env\n.env.local\n.git\n.gitignore\n*.md
+node_modules
+npm-debug.log
+dist
+.env
+.env.local
+.git
+.gitignore
+*.md
+coverage
+*.log

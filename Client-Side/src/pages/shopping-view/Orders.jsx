@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { ChevronRight, Package, ArrowRight } from "lucide-react";
 
 import { fetchUserOrders } from "@/store/order-slice";
@@ -13,27 +14,60 @@ const formatCurrency = (amount = 0) =>
   });
 
 const getOrderPreviewImage = (order) =>
-  order.items?.find((item) => item.product?.images?.[0]?.url)?.product?.images?.[0]?.url ||
-  order.items?.find((item) => item.product?.primaryImage)?.product?.primaryImage ||
+  order.items?.find((item) => item.product?.images?.[0]?.url)?.product
+    ?.images?.[0]?.url ||
+  order.items?.find((item) => item.product?.primaryImage)?.product
+    ?.primaryImage ||
   "/LOGO.png";
+
+const FILTER_TABS = [
+  { id: "all", label: "All" },
+  { id: "pending", label: "Pending" },
+  { id: "processing", label: "Processing" },
+  { id: "shipped", label: "Shipped" },
+  { id: "delivered", label: "Delivered" },
+  { id: "cancelled", label: "Cancelled" },
+];
+
+const matchesFilter = (status, filterId) => {
+  const s = String(status || "").toLowerCase();
+  if (filterId === "all") return true;
+  if (filterId === "pending") {
+    return s === "pending" || s === "pending_payment";
+  }
+  if (filterId === "processing") {
+    return (
+      s === "processing" ||
+      s === "verification_pending" ||
+      s === "confirmed" ||
+      s === "proof_submitted"
+    );
+  }
+  if (filterId === "shipped") return s === "shipped";
+  if (filterId === "delivered") return s === "delivered";
+  if (filterId === "cancelled") return s === "cancelled";
+  return true;
+};
 
 const Orders = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { userOrders, isLoading } = useSelector((state) => state.order);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     dispatch(fetchUserOrders());
   }, [dispatch]);
 
-  const handleOpenOrder = (orderId) => {
-    navigate(`/shopping/order-tracking?orderId=${orderId}`);
-  };
+  const filteredOrders = useMemo(
+    () =>
+      userOrders.filter((order) => matchesFilter(order.status, filter)),
+    [userOrders, filter]
+  );
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white">
-      <div className="container mx-auto max-w-6xl px-4 py-10">
-        <nav className="mb-8 flex gap-2 text-xs uppercase text-gray-500">
+    <div className="min-h-screen bg-background text-on-surface">
+      <div className="container mx-auto max-w-7xl px-4 py-10 md:px-6">
+        <nav className="mb-8 flex gap-2 text-xs uppercase text-muted-foreground">
           <Link to="/shopping/home">Home</Link>
           <ChevronRight className="h-3 w-3" />
           <Link to="/shopping/account">Account</Link>
@@ -46,49 +80,93 @@ const Orders = () => {
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#D4AF37]">
               Order History
             </p>
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-white">
+            <h1 className="mt-2 text-4xl font-bold tracking-tight">
               All Your Orders
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-gray-400">
-              Open any order below to go directly to its tracking page with the latest database data.
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Filter by status or open tracking for live updates.
             </p>
           </div>
           <Link
             to="/shopping/account"
-            className="inline-flex items-center gap-2 rounded-full bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#D4AF37] hover:text-black"
+            className="inline-flex items-center gap-2 rounded-full bg-muted px-5 py-3 text-sm font-semibold transition-colors hover:bg-[#D4AF37] hover:text-black dark:bg-white/5 dark:text-white"
           >
             Account Summary <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
 
+        <div className="mb-8 flex flex-wrap gap-2">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilter(tab.id)}
+              className={`relative rounded-full px-4 py-2 text-[11px] uppercase tracking-widest transition-colors ${
+                filter === tab.id
+                  ? "text-black"
+                  : "border border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37]/10"
+              }`}
+            >
+              {filter === tab.id ? (
+                <motion.span
+                  layoutId="orders-status-pill"
+                  className="absolute inset-0 rounded-full bg-[#D4AF37]"
+                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                />
+              ) : null}
+              <span className="relative z-10">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="grid gap-6 md:grid-cols-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-52 animate-pulse rounded-3xl bg-[#111111]" />
+              <div
+                key={index}
+                className="h-52 animate-pulse rounded-3xl bg-muted dark:bg-[#111111]"
+              />
             ))}
           </div>
         ) : userOrders.length === 0 ? (
-          <div className="rounded-3xl border border-[#D4AF37]/10 bg-[#090909] p-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-3xl border border-[#D4AF37]/10 bg-surface-container-low p-10 text-center dark:bg-[#090909]"
+          >
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">
               <Package className="h-6 w-6" />
             </div>
-            <p className="text-lg font-semibold text-white">No orders yet</p>
-            <p className="mt-2 text-sm text-gray-400">
+            <p className="text-lg font-semibold">No orders yet</p>
+            <p className="mt-2 text-sm text-muted-foreground">
               Once you place an order, it will appear here.
             </p>
-          </div>
+          </motion.div>
+        ) : filteredOrders.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-3xl border border-border p-10 text-center text-muted-foreground"
+          >
+            No orders in this category.
+          </motion.div>
         ) : (
           <div className="space-y-6">
-            {userOrders.map((order) => (
-              <button
+            {filteredOrders.map((order, index) => (
+              <motion.div
                 key={order._id}
-                type="button"
-                onClick={() => handleOpenOrder(order._id)}
-                className="w-full rounded-3xl border border-[#D4AF37]/10 bg-[#090909] p-6 text-left transition-all hover:border-[#D4AF37]/30 hover:bg-[#0d0d0d]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(index * 0.05, 0.4) }}
+                whileHover={{
+                  y: -2,
+                  boxShadow: "0 12px 40px rgba(212, 175, 55, 0.12)",
+                }}
+                className="rounded-3xl border border-[#D4AF37]/10 bg-surface-container-low p-6 dark:bg-[#090909]"
               >
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                    <div className="h-28 w-24 overflow-hidden rounded-2xl border border-white/5 bg-[#111]">
+                    <div className="h-28 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/5 bg-muted dark:bg-[#111]">
                       <img
                         src={getOrderPreviewImage(order)}
                         alt={order.items?.[0]?.productName || "Order item"}
@@ -102,44 +180,64 @@ const Orders = () => {
                         <StatusBadge status={order.paymentStatus} />
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Order ID</p>
-                        <p className="mt-1 break-all text-sm text-white">{order._id}</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                          Order ID
+                        </p>
+                        <p className="mt-1 break-all text-sm">{order._id}</p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Items Preview</p>
-                        <p className="mt-1 text-sm text-white">
+                        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                          Items
+                        </p>
+                        <p className="mt-1 text-sm">
                           {order.items?.[0]?.productName || "Order item"}
-                          {order.items.length > 1 ? ` + ${order.items.length - 1} more` : ""}
+                          {order.items.length > 1
+                            ? ` + ${order.items.length - 1} more`
+                            : ""}
                         </p>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Placed On</p>
-                          <p className="mt-1 text-sm text-white">
-                            {new Date(order.createdAt).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                            Placed On
+                          </p>
+                          <p className="mt-1 text-sm">
+                            {new Date(order.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              }
+                            )}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Items</p>
-                          <p className="mt-1 text-sm text-white">{order.items.length}</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                            Items count
+                          </p>
+                          <p className="mt-1 text-sm">{order.items.length}</p>
                         </div>
                         <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Total</p>
-                          <p className="mt-1 text-sm text-white">LKR {formatCurrency(order.totalAmount)}</p>
+                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                            Total
+                          </p>
+                          <p className="mt-1 text-sm">
+                            LKR {formatCurrency(order.totalAmount)}
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-[#D4AF37]">
+                  <Link
+                    to={`/shopping/order-tracking?orderId=${order._id}`}
+                    className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-[#D4AF37] hover:underline"
+                  >
                     Track Order <ArrowRight className="h-4 w-4" />
-                  </div>
+                  </Link>
                 </div>
-              </button>
+              </motion.div>
             ))}
           </div>
         )}

@@ -99,10 +99,14 @@ const dropSlice = createSlice({
   initialState,
   reducers: {
     updateDropInStore: (state, action) => {
-      const { dropId, drop } = action.payload;
-      const idx = state.drops.findIndex(d => d._id === dropId);
+      const { dropId, drop } = action.payload || {};
+      if (!drop) return;
+      const id = dropId ?? drop._id;
+      const idx = state.drops.findIndex((d) => String(d._id) === String(id));
       if (idx !== -1) {
         state.drops[idx] = drop;
+      } else {
+        state.drops.push(drop);
       }
     },
   },

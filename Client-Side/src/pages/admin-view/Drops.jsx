@@ -1,4 +1,5 @@
 import React, { Fragment, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import ImageUpload from "@/components/admin-components/ImageUpload";
@@ -25,16 +26,51 @@ import {
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+import { AdminPage } from "@/components/admin-components/AdminUI";
+import {
+  pageVariants,
+  containerVariants,
+  itemVariants,
+  slideInPanelVariants,
+} from "@/components/admin-components/_shared/animations";
+import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
+import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
+import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 
 // ── Shared helper components (matches Product page) ──────────────────────────
 
-const PulseDot = ({ active }) => (
-  <span
-    className={`w-2 h-2 shrink-0 ${
-      active ? "bg-saga-primary animate-pulse" : "bg-outline-variant"
-    }`}
-  />
-);
+const PulseDot = ({ active }) =>
+  active ? (
+    <motion.span
+      key="live"
+      layout
+      className="block h-2 w-2 shrink-0 rounded-full bg-saga-primary"
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 420, damping: 16 }}
+    />
+  ) : (
+    <motion.span
+      key="draft"
+      layout
+      className="block h-2 w-2 shrink-0 rounded-full bg-outline-variant"
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 420, damping: 16 }}
+    />
+  );
+
+function daysUntilRelease(releaseDateStr) {
+  if (!releaseDateStr) return null;
+  const target = new Date(releaseDateStr);
+  if (Number.isNaN(target.getTime())) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((target - now) / 86400000);
+  if (diff > 0 && diff <= 999) return diff;
+  return null;
+}
 
 const ToggleSwitch = ({
   checked,
@@ -76,6 +112,8 @@ const Drops = () => {
   const [dropGalleryImages, setDropGalleryImages] = useState([]);
   const [dropGalleryTitle, setDropGalleryTitle] = useState("");
   const [isDropGalleryOpen, setIsDropGalleryOpen] = useState(false);
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
+  const [showDropSaved, setShowDropSaved] = useState(false);
 
   const dispatch = useDispatch();
   const { drops = [], isLoading = false } =
@@ -85,6 +123,12 @@ const Drops = () => {
   useEffect(() => {
     dispatch(getAllDrops());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!showDropSaved) return undefined;
+    const t = setTimeout(() => setShowDropSaved(false), 2800);
+    return () => clearTimeout(t);
+  }, [showDropSaved]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -199,33 +243,13 @@ const Drops = () => {
         className:
           "bg-surface border border-primary-container text-saga-primary",
       });
+      setShowDropSaved(true);
       resetForm();
     } catch (e) {
       toast({
         title: "Failed to save drop",
         description: e?.message,
         variant: "destructive",
-      });
-    }
-  }
-
-  function handleDelete(slug) {
-    if (window.confirm("Are you sure you want to delete this Drop?")) {
-      dispatch(deleteDrop(slug)).then((data) => {
-        if (data.meta.requestStatus === "fulfilled") {
-          dispatch(getAllDrops());
-          toast({
-            title: "Drop deleted successfully",
-            className:
-              "bg-surface border border-primary-container text-saga-primary",
-          });
-        } else {
-          toast({
-            title: "Failed to delete Drop",
-            description: data?.payload?.message,
-            variant: "destructive",
-          });
-        }
       });
     }
   }
@@ -248,11 +272,18 @@ const Drops = () => {
     });
   }
 
-  // ── FORM VIEW ──────────────────────────────────────────────────────────────
+  // ── FORM VIEW (slide-in panel) ─────────────────────────────────────────────
 
-  if (showForm) {
-    return (
-      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden !w-full fixed inset-0 z-50">
+  const dropFormPanel = (
+      <motion.div
+        key="drop-atelier"
+        variants={slideInPanelVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        className="fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto bg-[#050505]"
+      >
+      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden w-full">
         <main className="flex-1 w-full flex flex-col overflow-y-auto">
           {/* Header */}
           <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
@@ -473,13 +504,27 @@ const Drops = () => {
           </div>
         </main>
       </div>
-    );
-  }
+      </motion.div>
+  );
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface">
+    <Fragment>
+    <AdminPage
+      eyebrow="Drop management"
+      title="Drop Ledger"
+      description="Create, schedule, publish, archive, and monitor collection drops."
+    >
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
+    >
+      <div className="border-b border-white/10 px-6 py-3">
+        <ToastFlash show={showDropSaved} message="Drop saved" />
+      </div>
       {/* List Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
         <div className="flex items-center gap-8 w-full md:w-auto">
@@ -539,21 +584,27 @@ const Drops = () => {
         </div>
 
         {/* Drop Rows */}
-        <div className="space-y-3">
-          {isLoading && (
-            <div className="py-20 text-center text-on-surface-variant font-sans text-sm tracking-widest uppercase">
-              Loading drops…
-            </div>
-          )}
+        <motion.div
+          className="space-y-3"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {isLoading ? <SkeletonGrid count={5} /> : null}
 
           {!isLoading &&
-            drops.map((drop) => (
-              <div
+            drops.map((drop) => {
+              const daysAway = daysUntilRelease(drop.releaseDate);
+              return (
+              <motion.div
                 key={drop._id}
-                className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-surface-container/30 hover:bg-surface-bright transition-all duration-300 group p-6 relative border border-outline-variant/5"
+                variants={itemVariants}
+                whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
+                transition={{ duration: 0.2 }}
+                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
               >
                 {/* Left accent bar */}
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-saga-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top" />
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
 
                 {/* Drop image + name */}
                 <div className="col-span-1 md:col-span-4 flex items-center gap-6">
@@ -588,11 +639,16 @@ const Drops = () => {
                 {/* Schedule */}
                 <div className="col-span-1 md:col-span-2">
                   <div className="flex flex-col gap-1 text-xs text-on-surface-variant font-mono">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-3 h-3 text-saga-primary shrink-0" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Calendar className="w-3 h-3 shrink-0 text-saga-primary" />
                       <span>
                         {new Date(drop.releaseDate).toLocaleDateString()}
                       </span>
+                      {daysAway != null ? (
+                        <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">
+                          {daysAway} day{daysAway === 1 ? "" : "s"} away
+                        </span>
+                      ) : null}
                     </div>
                     {drop.endDate && (
                       <div className="flex items-center gap-2">
@@ -629,8 +685,9 @@ const Drops = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-1 md:col-span-1 flex justify-end gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
+                <div className="col-span-1 flex flex-wrap justify-end gap-3 md:col-span-1">
                   <button
+                    type="button"
                     onClick={() => openDropGallery(drop)}
                     className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
                     title="View images"
@@ -638,6 +695,7 @@ const Drops = () => {
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       setCurrentEditedId(drop._id);
                       setCurrentEditedSlug(drop.slug);
@@ -660,6 +718,7 @@ const Drops = () => {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleArchive(drop.slug, drop.isArchived)}
                     className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
                     title="Toggle Archive"
@@ -667,21 +726,53 @@ const Drops = () => {
                     <Archive className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(drop.slug)}
+                    type="button"
+                    onClick={() =>
+                      setDeleteConfirmSlug((s) => (s === drop.slug ? null : drop.slug))
+                    }
                     className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            ))}
+                <div className="col-span-1 md:col-span-12">
+                  <ConfirmInline
+                    show={deleteConfirmSlug === drop.slug}
+                    message="Delete this drop permanently?"
+                    onCancel={() => setDeleteConfirmSlug(null)}
+                    onConfirm={() => {
+                      const slug = drop.slug;
+                      setDeleteConfirmSlug(null);
+                      dispatch(deleteDrop(slug)).then((data) => {
+                        if (data.meta.requestStatus === "fulfilled") {
+                          dispatch(getAllDrops());
+                          toast({
+                            title: "Drop deleted successfully",
+                            className:
+                              "bg-surface border border-primary-container text-saga-primary",
+                          });
+                        } else {
+                          toast({
+                            title: "Failed to delete Drop",
+                            description: data?.payload?.message,
+                            variant: "destructive",
+                          });
+                        }
+                      });
+                    }}
+                  />
+                </div>
+              </motion.div>
+            );
+            })}
 
           {!isLoading && drops.length === 0 && (
             <div className="py-20 text-center border border-dashed border-outline-variant/30 text-on-surface-variant font-sans">
               <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No drops found in the ledger.</p>
               <button
+                type="button"
                 onClick={() => {
                   resetForm();
                   setShowForm(true);
@@ -692,19 +783,22 @@ const Drops = () => {
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       </main>
 
       {/* Gallery Modal */}
-      {isDropGalleryOpen && (
+      {isDropGalleryOpen ? (
         <ImageGalleryModal
           title={dropGalleryTitle}
           images={dropGalleryImages}
           onClose={closeDropGallery}
           onImagesUpdate={handleDropGalleryImagesUpdate}
         />
-      )}
-    </div>
+      ) : null}
+    </motion.div>
+    </AdminPage>
+    <AnimatePresence mode="wait">{showForm ? dropFormPanel : null}</AnimatePresence>
+    </Fragment>
   );
 };
 

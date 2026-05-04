@@ -57,11 +57,9 @@ const SocketBridge = () => {
   useSocketEvent(
     "drop:updated",
     (payload = {}) => {
-      if (!isAdmin) return;
-
       dispatch(updateDropInStore(payload));
     },
-    [dispatch, isAdmin],
+    [dispatch],
   );
 
   useSocketEvent(

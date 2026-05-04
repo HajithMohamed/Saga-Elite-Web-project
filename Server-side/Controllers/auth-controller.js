@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const sendMail = require("../Utils/send-mail");
@@ -235,7 +236,7 @@ const login = catchAsync(async (req, res, next) => {
 
 const logout = catchAsync(async (req, res, next) => {
     res.cookie("token", "loggedout", {
-        expires: new Date(Date.now() + 10 * 100),
+        expires: new Date(0),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -445,7 +446,7 @@ const resetPassword = catchAsync(async(req, res, next)=>{
     if(user.resetPasswordOtp.toString()!== otp.toString()){
         return next(new AppError("Invalid reset code",400));
     }
-    if(user.resetPasswordOtpExpires && user.resetPasswordOtpExpires<Date.now()){
+    if(user.resetPasswordOtpExpires && new Date(user.resetPasswordOtpExpires).getTime() < Date.now()){
         return next(new AppError("Code is expired",400));
     }
 
@@ -514,8 +515,8 @@ const registerGuest = catchAsync(async (req, res, next) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return next(new AppError("User already exists", 400));
 
-    // Generate random 10-char password
-    const temporaryPassword = Math.random().toString(36).slice(-10) + "S1!";
+    // Cryptographically random temp password (16 base64url chars + complexity suffix)
+    const temporaryPassword = crypto.randomBytes(12).toString("base64url") + "S1!";
 
     const newUser = await User.create({
         email,

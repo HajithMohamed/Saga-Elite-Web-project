@@ -4,17 +4,20 @@ export const RETURN_WINDOW_DAYS = 30;
 
 /* ================== CONTACT INFO ================== */
 export const CONTACT_INFO = {
-  email: "support@sagaelite.lk",
-  phone: "+94 77 123 4567",
-  whatsapp: "+94771234567",
-  addressLine1: "123 Galle Road",
-  addressLine2: "Colombo 03, Sri Lanka",
-  hours: "Mon - Sat, 9:00 AM - 6:00 PM (Sri Lanka Time)",
+  email: "sagaaelite@gmail.com",
+  phone: "+94 77 070 4274",
+  whatsapp: "+94770704274",
+  addressLine1: "Hatton",
+  addressLine2: "Sri Lanka",
+  hours:
+    "Mon–Fri, 9:00 AM – 6:00 PM | Sat, 10:00 AM – 4:00 PM (LKT)",
   socials: {
-    instagram: "https://www.instagram.com/sagaaelite",
+    instagram:
+      "https://www.instagram.com/sagaaelite?igsh=YmRuc3V6dGloZWZ2",
     facebook: "https://www.facebook.com/share/1aXufbN6EX/",
-    tiktok: "https://www.tiktok.com/@sagaa_elite"
-  }
+    tiktok:
+      "https://www.tiktok.com/@sagaa_elite?_r=1&_t=ZS-95kNEJkUjS6",
+  },
 };
 
 export { SERVER_URL };

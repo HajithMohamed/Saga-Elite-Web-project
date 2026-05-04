@@ -4,8 +4,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import StarRating from "./StarRating";
 import { toast } from "@/hooks/use-toast";
 import { compressImageFile } from "@/lib/image-compression";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const ReviewForm = ({ productId, orderId, onSubmit, onCancel, initialValues }) => {
   const fileInputRef = useRef(null);

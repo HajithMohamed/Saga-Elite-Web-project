@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../Models/User");
+const logger = require("../Utils/logger");
 
 const optionalAuthMiddleware = async (req, res, next) => {
     let token;
@@ -20,8 +21,9 @@ const optionalAuthMiddleware = async (req, res, next) => {
         if (user && user.isActive) {
             req.userInfo = user;
         }
-    } catch (_) {
-        // Invalid token — treat as unauthenticated, don't block
+    } catch (err) {
+        // Invalid token — treat as unauthenticated, don't block. Log so we don't lose visibility.
+        logger.debug("optional-auth: invalid token", { message: err.message });
     }
 
     next();

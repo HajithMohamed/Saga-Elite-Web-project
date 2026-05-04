@@ -747,10 +747,27 @@ const verifyPayment = catchAsync(async (req, res, next) => {
   });
 });
 
+const getMyPendingPayments = catchAsync(async (req, res) => {
+  const userId = req.userInfo._id;
+  const payments = await ManualPayment.find({
+    userId,
+    status: { $in: ["pending_payment", "proof_submitted"] },
+  })
+    .populate("orderId", "totalAmount items status createdAt paymentMethod")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: { payments },
+  });
+});
+
 module.exports = {
   generateReference,
   submitProof,
   getMyPaymentStatus,
+  getMyPendingPayments,
   getPendingPayments,
   getPaymentById,
   verifyPayment,

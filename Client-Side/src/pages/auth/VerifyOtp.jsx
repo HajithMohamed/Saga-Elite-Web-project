@@ -1,132 +1,163 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
-import CommonForm from "@/components/common-components/CommonForm";
-import { verifyOtpFormControls } from "@/config";
 import { useDispatch, useSelector } from "react-redux";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
+import { toast } from "@/hooks/use-toast";
+import OtpCells from "@/components/auth-components/OtpCells";
+import { Btn, Eyebrow } from "@/components/ui/editorial";
 
 const VerifyOtp = () => {
-  const { user, isLoading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({ 
-    otp: "",
-    userId: ''
-  });
-
-  useEffect(() => {
-    if (user && user._id) {
-      setFormData((prev) => ({ ...prev, userId: user._id }));
-    }
-  }, [user]);
+  const { user, isLoading } = useSelector((state) => state.auth);
+  const [otp, setOtp] = useState("");
+  const [resending, setResending] = useState(false);
+  const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
-    if (user && user.isVerified) {
+    if (user?.isVerified) {
       toast({
         title: "Verified",
-        description: "Your account is successfully verified.",
+        description: "Welcome to the atelier.",
         variant: "success",
       });
-      setTimeout(() => {
+      const t = setTimeout(() => {
         navigate(user.role === "admin" ? "/admin/dashboard" : "/shopping/home");
-      }, 1000); 
+      }, 800);
+      return () => clearTimeout(t);
     }
-  }, [navigate, user]);
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const id = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [seconds]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const otpString = formData.otp;
-
-    if (!otpString || otpString.length < 4) {
+    if (otp.length < 4) {
       toast({
-        title: "Incomplete Code",
-        description: "Please enter all 4 digits of your OTP.",
+        title: "Incomplete code",
+        description: "Enter all four digits to verify.",
         variant: "destructive",
       });
       return;
     }
-
-    if (!formData.userId) {
+    if (!user?._id) {
       toast({
-        title: "Error",
-        description: "User ID is missing. Please try registering again.",
+        title: "Session expired",
+        description: "Please register again to receive a fresh code.",
         variant: "destructive",
       });
       return;
     }
-
-    dispatch(verifyOtpAction(formData)).unwrap().catch((error) => {
-      toast({
-        title: "Verification Failed",
-        description: error,
-        variant: "destructive",
+    dispatch(verifyOtpAction({ otp, userId: user._id }))
+      .unwrap()
+      .catch((err) => {
+        toast({
+          title: "Verification failed",
+          description: err || "That code didn't match.",
+          variant: "destructive",
+        });
       });
-    });
   };
-  
-  const handleResend = () => {
-    if (!user || !user.email) {
+
+  const handleResend = async () => {
+    if (!user?.email) {
       toast({
-        title: "Error",
-        description: "User email is missing.",
+        title: "Missing email",
+        description: "We don't know where to send the code.",
         variant: "destructive",
       });
       return;
     }
-
-    dispatch(resendOtpAction({ email: user.email })).unwrap().then(() => {
+    setResending(true);
+    try {
+      await dispatch(resendOtpAction({ email: user.email })).unwrap();
       toast({
-        title: "OTP Resent",
-        description: "A fresh verification code has been sent to your email.",
+        title: "Code resent",
+        description: "A fresh four-digit code is on its way.",
+        variant: "success",
       });
-    }).catch((error) => {
+      setSeconds(45);
+    } catch (err) {
       toast({
-        title: "Resend Failed",
-        description: error,
+        title: "Couldn't resend",
+        description: err || "Try again in a moment.",
         variant: "destructive",
       });
-    });
-  }
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const masked = (() => {
+    const e = user?.email || "";
+    if (!e.includes("@")) return e;
+    const [name, domain] = e.split("@");
+    if (name.length <= 2) return `${name[0]}***@${domain}`;
+    return `${name[0]}${name[1]}***${name[name.length - 1]}@${domain}`;
+  })();
 
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Verify OTP</h1>
-        <p className="text-gray-400">
-          Please enter the 4-digit code sent to your email
-        </p>
-      </div>
+    <div>
+      <Eyebrow tone="gold" size="md">One last step</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Confirm<br />your email.
+      </h1>
+      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+        We sent a four-digit code to{" "}
+        <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>. Enter it below.
+      </p>
 
-      <div className="mt-8">
-        <CommonForm
-          formControls={verifyOtpFormControls}
-          formData={formData}
-          setFormData={setFormData}
-          onSubmit={handleSubmit}
-          buttonText="Verify OTP"
-          isLoading={isLoading}
-          buttonClass="bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow w-full mt-8 disabled:opacity-50"
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="mt-10 md:mt-12">
+        <div className="flex justify-center">
+          <OtpCells
+            length={4}
+            value={otp}
+            onChange={setOtp}
+            disabled={isLoading}
+          />
+        </div>
 
-      <p className="text-sm text-center mt-6 text-gray-400">
-        Didn't receive code?{" "}
-        <button 
-           type="button"
-           onClick={handleResend}
-           className="text-[#D4AF37] hover:underline bg-transparent border-none cursor-pointer p-0 ml-1"
+        <Btn
+          variant="default"
+          size="lg"
+          className="w-full mt-10"
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading || otp.length < 4}
         >
-          Resend OTP
-        </button>
-      </p>
+          {isLoading ? "Verifying" : "Verify code"}
+        </Btn>
+      </form>
 
-      <p className="text-sm text-center mt-4">
-        <Link to="/auth/login" className="text-[#D4AF37] hover:underline">
-          Back to Login
-        </Link>
-      </p>
+      <div className="mt-8 text-center">
+        {seconds > 0 ? (
+          <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+            Resend in {seconds}s
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {resending ? "Sending" : "Resend the code"}
+          </button>
+        )}
+      </div>
+
+      <Link
+        to="/auth/login"
+        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+      >
+        <ArrowLeft size={12} strokeWidth={1.5} />
+        Back to sign in
+      </Link>
     </div>
   );
 };

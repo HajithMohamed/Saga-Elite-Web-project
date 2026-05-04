@@ -1,11 +1,29 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { toast } from "@/hooks/use-toast";
-import CommonForm from "@/components/common-components/CommonForm";
-import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { setPasswordFormControls } from "@/config";
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { resetPasswordAction } from "@/store/auth-slice";
+import { toast } from "@/hooks/use-toast";
+import { firstPasswordError } from "@/lib/password-strength";
+import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
+import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+
+const validateReset = (data, touched = {}) => {
+  const errs = {};
+  const pwd = data.newPassword;
+  if (touched.newPassword && !pwd) {
+    errs.newPassword = "Choose a new password.";
+  } else if (pwd) {
+    const pwdError = firstPasswordError(pwd);
+    if (pwdError) errs.newPassword = pwdError;
+  }
+  if (touched.confirmPassword && !data.confirmPassword) {
+    errs.confirmPassword = "Confirm your new password.";
+  } else if (data.confirmPassword && pwd && pwd !== data.confirmPassword) {
+    errs.confirmPassword = "Passwords do not match.";
+  }
+  return errs;
+};
 
 const SetNewPassword = () => {
   const location = useLocation();
@@ -13,52 +31,31 @@ const SetNewPassword = () => {
   const dispatch = useDispatch();
   const { email, otp } = location.state || {};
 
-  const [formData, setFormData] = useState({
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [formData, setFormData] = useState({ newPassword: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // validate form data whenever it changes
   useEffect(() => {
-    const newErrors = {};
-    const pwd = formData.newPassword;
-
-    // complexity: min 8, uppercase, lowercase, number, symbol — matches server Mongoose validator
-    if (pwd) {
-      if (
-        pwd.length < 8 ||
-        !/[A-Z]/.test(pwd) ||
-        !/[a-z]/.test(pwd) ||
-        !/\d/.test(pwd) ||
-        !/[@$!%*?&]/.test(pwd)
-      ) {
-        newErrors.newPassword =
-          "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character (@$!%*?&).";
-      }
-    }
-
-    if (
-      formData.confirmPassword &&
-      pwd &&
-      pwd !== formData.confirmPassword
-    ) {
-      newErrors.confirmPassword = "Passwords do not match.";
-    }
-
-    setErrors(newErrors);
-  }, [formData]);
+    setErrors(validateReset(formData, touched));
+  }, [formData, touched]);
 
   if (!email || !otp) {
     return (
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4 text-[#D4AF37]">Invalid Session</h2>
-        <p className="text-gray-400 mb-6">Please start the forgot password process again.</p>
-        <Link to="/auth/forgot-password">
-          <button className="bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 px-6 rounded shadow">
-            Go Back
-          </button>
+      <div>
+        <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
+        <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
+          Start again,<br />gently.
+        </h1>
+        <p className="mt-5 se-body text-sm text-[#d0c5af] leading-relaxed">
+          The reset session has expired. Please request a new code.
+        </p>
+        <Link to="/auth/forgot-password" className="mt-8 inline-block">
+          <Btn variant="default" size="lg" iconRight={ArrowRight}>
+            Back to forgot password
+          </Btn>
         </Link>
       </div>
     );
@@ -66,39 +63,31 @@ const SetNewPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // abort if any validation errors detected
-    if (Object.keys(errors).length > 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please resolve the form errors before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    const allTouched = { newPassword: true, confirmPassword: true };
+    setTouched(allTouched);
+    const fresh = validateReset(formData, allTouched);
+    setErrors(fresh);
+    if (Object.keys(fresh).length > 0) return;
     setIsLoading(true);
     try {
-      await dispatch(resetPasswordAction({
-        email,
-        otp,
-        newPassword: formData.newPassword,
-        confirmPassword: formData.confirmPassword
-      })).unwrap();
-
+      await dispatch(
+        resetPasswordAction({
+          email,
+          otp,
+          newPassword: formData.newPassword,
+          confirmPassword: formData.confirmPassword,
+        })
+      ).unwrap();
       toast({
-        title: "Success",
-        description: "Your password has been reset successfully. Please login.",
+        title: "Password updated",
+        description: "Sign in with your new password.",
         variant: "success",
       });
-      
-      setTimeout(() => {
-        navigate("/auth/login");
-      }, 2000);
-    } catch (error) {
+      setTimeout(() => navigate("/auth/login"), 1200);
+    } catch (err) {
       toast({
-        title: "Reset Failed",
-        description: error || "Something went wrong while resetting your password.",
+        title: "Reset failed",
+        description: err || "Couldn't reset your password.",
         variant: "destructive",
       });
     } finally {
@@ -106,39 +95,107 @@ const SetNewPassword = () => {
     }
   };
 
-  const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans";
-  const labelClasses = "text-white";
-  const buttonClasses = "bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow w-full";
+  const inputBase =
+    "w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";
+  const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
+  const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
 
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-8 text-center text-white">
-        <h1 className="text-3xl font-bold mb-2 text-[#D4AF37]">Set New Password</h1>
-        <p className="text-gray-400">
-          Create a strong password for <span className="text-white font-medium">{email}</span>
-        </p>
-      </div>
+    <div>
+      <Eyebrow tone="gold" size="md">Reset · step three</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Choose a new<br />password.
+      </h1>
+      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+        Eight characters, with at least one uppercase letter, one number, and one symbol from{" "}
+        <span className="se-mono text-[#e5e2e1]">@$!%*?&</span>.
+      </p>
 
-      <CommonForm
-        formControls={setPasswordFormControls}
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleSubmit}
-        buttonText="Update Password"
-        isLoading={isLoading}
-        inputClass={inputClasses}
-        labelClass={labelClasses}
-        buttonClass={buttonClasses}
-      />
+      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+        <div>
+          <Eyebrow tone="muted" size="xs">New password</Eyebrow>
+          <div className="relative mt-2">
+            <input
+              type={showNew ? "text" : "password"}
+              autoComplete="new-password"
+              value={formData.newPassword}
+              onChange={(e) => setFormData((p) => ({ ...p, newPassword: e.target.value }))}
+              onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
+              placeholder="Choose with care"
+              aria-invalid={Boolean(touched.newPassword && errors.newPassword)}
+              className={`${inputBase} ${
+                touched.newPassword && errors.newPassword ? inputErr : inputOk
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowNew((v) => !v)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              aria-label={showNew ? "Hide password" : "Show password"}
+            >
+              {showNew ? (
+                <EyeOff size={16} strokeWidth={1.5} />
+              ) : (
+                <Eye size={16} strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+          <FieldError>{touched.newPassword ? errors.newPassword : null}</FieldError>
+          <PasswordStrengthMeter password={formData.newPassword} />
+        </div>
 
-      {/* password strength meter */}
-      <PasswordStrengthMeter password={formData.newPassword} />
+        <div>
+          <Eyebrow tone="muted" size="xs">Confirm password</Eyebrow>
+          <div className="relative mt-2">
+            <input
+              type={showConfirm ? "text" : "password"}
+              autoComplete="new-password"
+              value={formData.confirmPassword}
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, confirmPassword: e.target.value }))
+              }
+              onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
+              placeholder="Once more"
+              aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
+              className={`${inputBase} ${
+                touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              aria-label={showConfirm ? "Hide password" : "Show password"}
+            >
+              {showConfirm ? (
+                <EyeOff size={16} strokeWidth={1.5} />
+              ) : (
+                <Eye size={16} strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+          <FieldError>{touched.confirmPassword ? errors.confirmPassword : null}</FieldError>
+        </div>
 
-      <div className="mt-6 text-center text-white text-sm">
-        <Link to="/auth/login" className="text-gray-400 hover:text-[#D4AF37] transition-colors">
-          Cancel and return to Login
-        </Link>
-      </div>
+        <Btn
+          variant="default"
+          size="lg"
+          className="w-full"
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Updating" : "Update password"}
+        </Btn>
+      </form>
+
+      <Link
+        to="/auth/login"
+        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+      >
+        <ArrowLeft size={12} strokeWidth={1.5} />
+        Cancel and return to sign in
+      </Link>
     </div>
   );
 };

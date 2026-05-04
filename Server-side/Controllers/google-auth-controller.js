@@ -13,7 +13,8 @@ const verifyGoogleToken = async (accessToken, next) => {
     }
 
     const googleRes = await fetch(
-        `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
     if (!googleRes.ok) {

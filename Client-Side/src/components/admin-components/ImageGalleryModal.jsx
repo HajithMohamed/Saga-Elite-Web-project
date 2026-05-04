@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import { Star, Trash2, Upload, ChevronUp, ChevronDown, X } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { compressImageFile } from "@/lib/image-compression";
+import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
+import { modalBackdropVariants, modalCardVariants } from "@/components/admin-components/_shared/animations";
 
 const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
   const [localImages, setLocalImages] = useState(images);
   const [loadingId, setLoadingId] = useState(null);
   const [error, setError] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   useEffect(() => {
     setLocalImages(images);
@@ -79,12 +83,10 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
     }
   };
 
-  const handleDelete = async (imageId) => {
+  const performDelete = async (imageId) => {
     const image = localImages.find((img) => img._id === imageId);
     if (!image) return;
-
-    if (!window.confirm("Delete this image?")) return;
-
+    setDeleteConfirmId(null);
     try {
       setLoadingId(imageId);
       await axios.delete(`${API_BASE}/image/delete-image/${imageId}`, {
@@ -142,8 +144,22 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-w-6xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl">
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+        variants={modalBackdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+      >
+      <motion.div
+        className="max-w-7xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl"
+        variants={modalCardVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-5 bg-surface-container-low">
           <div>
             <h2 className="text-xl font-bold">{title}</h2>
@@ -214,12 +230,21 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                     <button
                       type="button"
                       disabled={!image._id || loadingId === image._id}
-                      onClick={() => handleDelete(image._id)}
+                      onClick={() =>
+                        setDeleteConfirmId((id) => (id === image._id ? null : image._id))
+                      }
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-600 bg-red-600/10 px-3 py-2 text-sm text-red-200 transition hover:bg-red-600/20 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Trash2 className="h-4 w-4" />
                       Delete
                     </button>
+
+                    <ConfirmInline
+                      show={!!image._id && deleteConfirmId === image._id}
+                      message="Delete this image?"
+                      onCancel={() => setDeleteConfirmId(null)}
+                      onConfirm={() => performDelete(image._id)}
+                    />
 
                     <div className="flex gap-2">
                       <button
@@ -247,8 +272,9 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

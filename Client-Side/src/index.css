@@ -2,11 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* ── Editorial type tiers — luxury Sri Lankan e-commerce stack ─
+     Display: Cinzel (Roman caps, campaign poster).
+     Headlines / pull-quotes: Playfair Display (timeless serif).
+     Body / labels / instruments: Inter (modern sans).
+     Numerics only: JetBrains Mono (SKUs, refs, countdowns). */
+  .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
+  .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
+  .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
+  .se-instrument { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.005em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
+  .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
+  .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  .se-label      { font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
+  /* Override stray italic utilities on editorial classes — directive: no italics. */
+  .se-serif.italic, .se-headline.italic, .se-display.italic,
+  .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
+
+  /* ── Hairline system ──────────────────────────────────────── */
+  .se-hairline { border-color: #4d4635; }
+  .se-hairline-soft { border-color: rgba(255,255,255,0.08); }
+  .se-divider-h { height: 1px; background: #4d4635; }
+  .se-divider-soft-h { height: 1px; background: rgba(255,255,255,0.08); }
+
+  /* ── Image fallback frame ─────────────────────────────────── */
+  .se-img-fallback {
+    background: #1c1b1b;
+    border: 1px solid #4d4635;
+    display: flex; align-items: center; justify-content: center;
+    color: #d0c5af;
+  }
+
+  /* ── Editorial focus ring ─────────────────────────────────── */
+  .se-focus:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #131313, 0 0 0 4px #f2ca50;
+  }
+
+
+  .admin-page-shell {
+    @apply min-h-screen bg-[#050505] text-white px-4 py-6 sm:px-6 lg:px-8;
+  }
+  .admin-page-header {
+    @apply mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 lg:flex-row lg:items-end lg:justify-between;
+  }
+  .admin-page-eyebrow {
+    @apply text-xs uppercase tracking-[0.3em] text-[#D4AF37];
+  }
+  .admin-page-title {
+    @apply mt-2 text-3xl font-black tracking-tight text-white;
+  }
+  .admin-page-description {
+    @apply mt-3 max-w-3xl text-sm leading-6 text-gray-400;
+  }
+  .admin-panel {
+    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
+  }
+  .admin-panel-title {
+    @apply text-lg font-semibold text-white;
+  }
+  .admin-panel-description {
+    @apply mt-2 text-sm text-gray-400;
+  }
+  .admin-stat-card {
+    @apply rounded-3xl border border-white/10 bg-[#0d0d0d] p-5;
+  }
+  .admin-stat-label {
+    @apply text-[11px] uppercase tracking-[0.22em] text-gray-500;
+  }
+  .admin-stat-value {
+    @apply mt-2 text-3xl font-semibold tracking-tight text-white;
+  }
+  .admin-stat-hint {
+    @apply mt-2 text-xs text-gray-500;
+  }
+}
+
 @layer base {
   body {
-    background-color: #131313;
-    color: #e5e2e1;
-    font-family: 'Manrope', sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
   }
   .grain {
       position: fixed;
@@ -21,8 +100,8 @@
   }
   
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
@@ -48,8 +127,8 @@
     --radius: 0.5rem
   }
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 7.5%;
+    --foreground: 0 0% 89.8%;
     --card: 224 71.4% 4.1%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71.4% 4.1%;
@@ -87,4 +166,45 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #353535;
+}
+
+@keyframes homepage-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.homepage-marquee-track {
+  animation: homepage-marquee 28s linear infinite;
+}
+
+@keyframes bounce-scroll-hint {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.5;
+  }
+}
+
+.animate-bounce-scroll-hint {
+  animation: bounce-scroll-hint 1.6s ease-in-out infinite;
+}
+
+@keyframes header-marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.header-marquee-track {
+  animation: header-marquee-scroll 45s linear infinite;
 }
