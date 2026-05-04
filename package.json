@@ -9,7 +9,7 @@
     "Client-Side"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail -n BACKEND,FRONTEND -c blue,green \"npm --prefix Server-side run dev\" \"npm --prefix Client-Side run dev\"",
+    "dev": "node scripts/dev.cjs",
     "dev:backend": "npm --prefix Server-side run dev",
     "dev:frontend": "npm --prefix Client-Side run dev",
     "start": "node Server-side/server.js",
@@ -40,7 +40,6 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "concurrently": "^9.0.1",
     "tailwindcss": "^3.4.19"
   }
 }
