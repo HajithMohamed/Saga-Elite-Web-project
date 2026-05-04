@@ -8,6 +8,8 @@ import {
   removeFromWishlistAction,
   fetchCartAction,
 } from "@/store/cart-slice";
+import useLiveProductUpdates from "@/hooks/use-live-product-updates";
+import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { toast } from "@/hooks/use-toast";
 import { Heart, ShoppingBag, ArrowRight } from "lucide-react";
 
@@ -34,8 +36,14 @@ const ProductListing = () => {
 
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const cartItems = useSelector((state) => state.cart.cart?.items ?? []);
+  const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
   const isDropListing = categoryParam === "drops";
+
+  useLiveProductUpdates(
+    (payload = {}) =>
+      products.some((product) => String(product._id) === String(payload.productId || ""))
+  );
 
   useEffect(() => {
     dispatch(fetchCartAction());
@@ -90,6 +98,29 @@ const ProductListing = () => {
 
     fetchListingData();
   }, [categoryParam, isDropListing]);
+
+  useEffect(() => {
+    if (!products.length) return;
+
+    setProducts((currentProducts) => {
+      let hasChanges = false;
+
+      const nextProducts = currentProducts.map((product) => {
+        const patchedProduct = applyLiveProductUpdate(
+          product,
+          liveProductUpdates[String(product._id)]
+        );
+
+        if (patchedProduct !== product) {
+          hasChanges = true;
+        }
+
+        return patchedProduct;
+      });
+
+      return hasChanges ? nextProducts : currentProducts;
+    });
+  }, [liveProductUpdates, products]);
 
   const handleVariantChange = (productId, sku) => {
     setSelectedVariants((prev) => ({

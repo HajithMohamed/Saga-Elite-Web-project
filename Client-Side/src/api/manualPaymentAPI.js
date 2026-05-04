@@ -1,8 +1,5 @@
 import axios from "axios";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const withAuth = {
   withCredentials: true,
@@ -31,7 +28,7 @@ export const uploadManualPaymentProof = async (file) => {
 
 export const generateManualPaymentReference = async ({ orderId, amount }) => {
   const response = await axios.post(
-    `${API_BASE}/manual-payment/generate`,
+    `${API_BASE}/payments/generate-reference`,
     { orderId, amount },
     withAuth,
   );
@@ -49,9 +46,9 @@ export const submitManualPaymentProof = async ({ referenceNumber, proofUrl }) =>
   return response.data;
 };
 
-export const fetchMyManualPaymentStatus = async (referenceNumber) => {
+export const fetchMyManualPaymentStatus = async (paymentIdentifier) => {
   const response = await axios.get(
-    `${API_BASE}/manual-payment/status/${referenceNumber}`,
+    `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,
     {
       withCredentials: true,
     },

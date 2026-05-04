@@ -6,6 +6,7 @@ const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -145,6 +146,22 @@ const createReview = catchAsync(async (req, res, next) => {
     status: "pending",
   });
 
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    userId,
+    reviewId: review._id,
+    status: review.status,
+    productId,
+    source: "review-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    userId,
+    reviewId: review._id,
+    status: review.status,
+    productId,
+    source: "review-submitted",
+  });
+
   res.status(201).json({
     success: true,
     message: "Review submitted for approval",
@@ -225,6 +242,28 @@ const getUserReviews = catchAsync(async (req, res, next) => {
   });
 });
 
+const getFeaturedReviews = catchAsync(async (req, res, next) => {
+  const limit = Math.max(1, normalizeNumber(req.query.limit, 4));
+  const featuredReviews = await Review.find({ status: "approved" })
+    .sort({ helpfulCount: -1, approvedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .populate("userId", "email firstName lastName profilePicture")
+    .populate("productId", "name slug")
+    .lean();
+
+  const reviews = featuredReviews.map((review) => ({
+    ...review,
+    user: review.userId || null,
+    product: review.productId || null,
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: "Featured reviews fetched successfully",
+    data: reviews,
+  });
+});
+
 const voteHelpful = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
   const userId = req.userInfo?._id;
@@ -261,6 +300,34 @@ const voteHelpful = catchAsync(async (req, res, next) => {
     success: true,
     helpful: !hasVoted,
     count: review.helpfulCount,
+  });
+});
+
+const flagReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { reason } = req.body;
+  const userId = req.userInfo?._id;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (review.userId.toString() === userId.toString()) {
+    return next(new AppError("You cannot flag your own review", 400));
+  }
+
+  review.isFlagged = true;
+  review.flagReason = reason || "Inappropriate content";
+  await review.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Review flagged successfully",
   });
 });
 
@@ -354,15 +421,39 @@ const updateReview = catchAsync(async (req, res, next) => {
 
 const getAllReviews = catchAsync(async (req, res, next) => {
   const status = req.query.status || "pending";
+  const search = req.query.search || "";
+  const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
   const filter = status ? { status } : {};
 
+  if (search) {
+    const products = await Product.find({ name: { $regex: search, $options: "i" } }).select("_id");
+    const users = await User.find({ email: { $regex: search, $options: "i" } }).select("_id");
+
+    filter.$or = [
+      { productId: { $in: products.map((p) => p._id) } },
+      { userId: { $in: users.map((u) => u._id) } },
+    ];
+  }
+
+  if (countOnly) {
+    const totalReviews = await Review.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: "Reviews count fetched successfully",
+      data: {
+        count: totalReviews,
+      },
+    });
+  }
+
   const [reviews, totalReviews] = await Promise.all([
     Review.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ isFlagged: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("productId", "name slug")
@@ -420,6 +511,22 @@ const moderateReview = catchAsync(async (req, res, next) => {
     message: "Review moderation updated",
     review,
   });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    userId: review.userId,
+    reviewId: review._id,
+    status: review.status,
+    productId: review.productId,
+    source: "review-moderated",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    userId: review.userId,
+    reviewId: review._id,
+    status: review.status,
+    productId: review.productId,
+    source: "review-moderated",
+  });
 });
 
 const uploadReviewImages = catchAsync(async (req, res, next) => {
@@ -453,6 +560,7 @@ const uploadReviewImages = catchAsync(async (req, res, next) => {
 
 module.exports = {
   createReview,
+  getFeaturedReviews,
   getProductReviews,
   getUserReviews,
   voteHelpful,
@@ -461,6 +569,7 @@ module.exports = {
   moderateReview,
   uploadReviewImages,
   updateReview,
+  flagReview,
   recalculateProductRating,
   getRatingStats,
 };

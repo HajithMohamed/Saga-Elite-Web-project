@@ -12,28 +12,34 @@ const {
   changePassword,
   checkAuth,
   checkGuest,
-  registerGuest
+  registerGuest,
 } = require("../Controllers/auth-controller");
-
-const authMiddleware = require("../Middlewares/auth-middleware")
+const authMiddleware = require("../Middlewares/auth-middleware");
+const { loginLimiter } = require("../Middlewares/rateLimitinMiddleware");
+const {
+  validateAuthRegister,
+  validateAuthLogin,
+  validateOtpVerify,
+  validateEmailOnly,
+  validateChangePassword,
+  validateVerifyResetOtp,
+  validateResetPassword,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
 router.get("/check-auth", authMiddleware, checkAuth);
-router.post("/register", registerUser);
-router.post('/login', login);
-router.post('/logout', authMiddleware, logout);
-router.post('/otp-verify', otpVerify);
-router.post('/resend-otp', resendOTP);
-router.post('/change-password', authMiddleware, changePassword);
-router.post('/forgot-password', forgotPassword);
-router.post('/verify-reset-otp', verifyResetOtp);
-router.post('/reset-password', resetPassword);
-router.post('/resend-reset-otp', resendResetPasswordOtp);
+router.post("/register", validateAuthRegister, registerUser);
+router.post("/login", loginLimiter, validateAuthLogin, login);
+router.post("/logout", authMiddleware, logout);
+router.post("/otp-verify", validateOtpVerify, otpVerify);
+router.post("/resend-otp", validateEmailOnly, resendOTP);
+router.post("/change-password", authMiddleware, validateChangePassword, changePassword);
+router.post("/forgot-password", validateEmailOnly, forgotPassword);
+router.post("/verify-reset-otp", validateVerifyResetOtp, verifyResetOtp);
+router.post("/reset-password", validateResetPassword, resetPassword);
+router.post("/resend-reset-otp", validateEmailOnly, resendResetPasswordOtp);
+router.post("/check-guest", validateEmailOnly, checkGuest);
+router.post("/register-guest", validateEmailOnly, registerGuest);
 
-router.post('/check-guest', checkGuest);
-router.post('/register-guest', registerGuest);
-
-
-
-module.exports = router
+module.exports = router;

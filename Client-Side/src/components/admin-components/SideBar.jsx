@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -21,6 +21,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
 import axios from 'axios'
+import { useSocketEvent } from '@/hooks/use-socket-events'
+import { API_V1_URL } from '@/lib/api'
 
 const SideBar = () => {
   const location = useLocation()
@@ -36,52 +38,84 @@ const SideBar = () => {
   const [pendingReviewCount, setPendingReviewCount] =
     useState(0)
 
-  useEffect(() => {
+  const fetchCounts = useCallback(async () => {
+    try {
 
-    const fetchCounts = async () => {
-      try {
+      const [paymentRes, reviewRes] =
+        await Promise.all([
+          axios.get(
+            `${API_V1_URL}/admin/manual-payments?status=proof_submitted&countOnly=true`,
+            { withCredentials: true }
+          ),
 
-        const [paymentRes, reviewRes] =
-          await Promise.all([
-            axios.get(
-              '/api/v1/admin/manual-payments?status=proof_submitted&countOnly=true',
-              { withCredentials: true }
-            ),
-
-            axios.get(
-              '/api/v1/admin/reviews?status=pending&countOnly=true',
-              { withCredentials: true }
-            )
-          ])
-
-        if (paymentRes.data?.success) {
-          setPendingPaymentCount(
-            paymentRes.data.data?.count || 0
+          axios.get(
+            `${API_V1_URL}/admin/reviews?status=pending&countOnly=true`,
+            { withCredentials: true }
           )
-        }
+        ])
 
-        if (reviewRes.data?.success) {
-          setPendingReviewCount(
-            reviewRes.data.data?.count || 0
-          )
-        }
-
-      } catch (error) {
-        console.error(
-          'Failed to fetch admin badge counts',
-          error
+      if (paymentRes.data?.success) {
+        setPendingPaymentCount(
+          paymentRes.data.data?.count || 0
         )
       }
-    }
 
+      if (reviewRes.data?.success) {
+        setPendingReviewCount(
+          reviewRes.data.data?.count || 0
+        )
+      }
+
+    } catch (error) {
+      setPendingPaymentCount(0)
+      setPendingReviewCount(0)
+    }
+  }, [])
+
+  useEffect(() => {
     fetchCounts()
 
-    const interval =
-      setInterval(fetchCounts, 60000)
+  }, [fetchCounts])
 
-    return () => clearInterval(interval)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchCounts()
+    }, 30000)
 
-  }, [])
+    return () => clearInterval(intervalId)
+  }, [fetchCounts])
+
+  useSocketEvent(
+    'payment:new_pending',
+    () => {
+      fetchCounts()
+    },
+    [fetchCounts]
+  )
+
+  useSocketEvent(
+    'admin:refresh',
+    () => {
+      fetchCounts()
+    },
+    [fetchCounts]
+  )
+
+  useSocketEvent(
+    'payment:refresh',
+    () => {
+      fetchCounts()
+    },
+    [fetchCounts]
+  )
+
+  useSocketEvent(
+    'review:refresh',
+    () => {
+      fetchCounts()
+    },
+    [fetchCounts]
+  )
 
   const menuItems = [
     {

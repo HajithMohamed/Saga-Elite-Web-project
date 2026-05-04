@@ -57,11 +57,21 @@ export const addToCartAction = createAsyncThunk(
 
 export const updateCartItemAction = createAsyncThunk(
   "cart/updateCartItem",
-  async ({ itemId, quantity }, thunkAPI) => {
+  async ({ itemId, quantity, variantId }, thunkAPI) => {
     try {
+      const payload = {};
+
+      if (quantity != null) {
+        payload.quantity = quantity;
+      }
+
+      if (variantId) {
+        payload.variantId = variantId;
+      }
+
       const response = await axios.patch(
         `${API_BASE}/user/cart/${itemId}`,
-        { quantity },
+        payload,
         {
           withCredentials: true,
         }

@@ -1,47 +1,178 @@
-import React, { useEffect } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, CheckCircle2, Clock3, Loader2, RotateCcw, ShieldAlert } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  RotateCcw,
+  ShieldAlert,
+} from "lucide-react";
+
 import { toast } from "@/hooks/use-toast";
 import {
-  clearCurrentPayment,
   fetchMyManualPaymentStatus,
   generateManualPaymentReference,
+  storeManualPaymentContext,
   submitManualPaymentProof,
 } from "@/store/manualPaymentSlice";
 import { uploadManualPaymentProof } from "@/api/manualPaymentAPI";
 import ManualPaymentInstructions from "@/components/Payment/ManualPaymentInstructions";
-import PaymentReference from "@/components/Payment/PaymentReference";
 import ProofSubmission from "@/components/Payment/ProofSubmission";
 
 const ManualPaymentPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { paymentSlug = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const contextRef = useRef(null);
 
-  const { currentPayment, isGenerating, isSubmitting, isFetching, error } = useSelector(
-    (state) => state.manualPayment,
+  const {
+    currentPayment,
+    paymentContext,
+    isGenerating,
+    isSubmitting,
+    isFetching,
+    error,
+  } = useSelector((state) => state.manualPayment);
+
+  const orderIdParam = searchParams.get("orderId");
+  const amountParam = searchParams.get("amount");
+  const referenceParam = searchParams.get("referenceNumber");
+  const slugParam = searchParams.get("slug");
+
+  const resolvedOrderId =
+    location.state?.orderId ||
+    orderIdParam ||
+    currentPayment?.orderId?._id ||
+    currentPayment?.orderId ||
+    paymentContext?.orderId ||
+    "";
+  const resolvedAmount = Number(
+    location.state?.amount ||
+      amountParam ||
+      currentPayment?.amount ||
+      paymentContext?.amount ||
+      0
   );
-
-  const orderId = location.state?.orderId || searchParams.get("orderId");
-  const amount = Number(location.state?.amount || searchParams.get("amount") || 0);
-  const referenceNumber = location.state?.referenceNumber || searchParams.get("referenceNumber");
+  const resolvedReferenceNumber =
+    paymentSlug ||
+    location.state?.referenceNumber ||
+    referenceParam ||
+    slugParam ||
+    currentPayment?.slug ||
+    currentPayment?.referenceNumber ||
+    paymentContext?.slug ||
+    paymentContext?.referenceNumber ||
+    "";
 
   useEffect(() => {
-    if (referenceNumber) {
-      dispatch(fetchMyManualPaymentStatus(referenceNumber));
+    if (!resolvedOrderId && !resolvedReferenceNumber) {
       return;
     }
 
-    if (orderId) {
-      dispatch(generateManualPaymentReference({ orderId, amount: amount || undefined }));
-    }
-  }, [dispatch, orderId, amount, referenceNumber]);
+    const nextContext = {
+      orderId: resolvedOrderId || null,
+      amount: resolvedAmount || null,
+      slug: currentPayment?.slug || paymentSlug || slugParam || null,
+      referenceNumber: resolvedReferenceNumber || null,
+    };
 
-  useEffect(() => () => {
-    dispatch(clearCurrentPayment());
-  }, [dispatch]);
+    const prevContext = contextRef.current;
+    const hasChanged =
+      !prevContext ||
+      prevContext.orderId !== nextContext.orderId ||
+      prevContext.amount !== nextContext.amount ||
+      prevContext.slug !== nextContext.slug ||
+      prevContext.referenceNumber !== nextContext.referenceNumber;
+
+    if (!hasChanged) {
+      return;
+    }
+
+    contextRef.current = nextContext;
+    dispatch(storeManualPaymentContext(nextContext));
+  }, [
+    currentPayment?.slug,
+    dispatch,
+    paymentSlug,
+    resolvedAmount,
+    resolvedOrderId,
+    resolvedReferenceNumber,
+    slugParam,
+  ]);
+
+  useEffect(() => {
+    if (resolvedReferenceNumber) {
+      dispatch(fetchMyManualPaymentStatus(resolvedReferenceNumber));
+      return;
+    }
+
+    if (resolvedOrderId) {
+      dispatch(
+        generateManualPaymentReference({
+          orderId: resolvedOrderId,
+          amount: resolvedAmount || undefined,
+        })
+      );
+    }
+  }, [dispatch, resolvedAmount, resolvedOrderId, resolvedReferenceNumber]);
+
+  useEffect(() => {
+    const activeSlug = currentPayment?.slug;
+    if (!activeSlug || paymentSlug === activeSlug) {
+      return;
+    }
+
+    navigate(`/shopping/manual-payment/${activeSlug}`, {
+      replace: true,
+      state: {
+        orderId:
+          currentPayment?.orderId?._id ||
+          currentPayment?.orderId ||
+          resolvedOrderId ||
+          null,
+        amount: currentPayment?.amount || resolvedAmount || null,
+        referenceNumber: currentPayment?.referenceNumber || resolvedReferenceNumber || null,
+        slug: activeSlug,
+      },
+    });
+  }, [
+    currentPayment?.amount,
+    currentPayment?.orderId,
+    currentPayment?.referenceNumber,
+    currentPayment?.slug,
+    navigate,
+    paymentSlug,
+    resolvedAmount,
+    resolvedOrderId,
+    resolvedReferenceNumber,
+  ]);
+
+  const handleCopyReference = (copyError) => {
+    if (copyError) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy the reference number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Copied",
+      description: "Reference number copied to clipboard.",
+      variant: "success",
+    });
+  };
 
   const handleSubmitProof = async (file) => {
     if (!currentPayment?.referenceNumber) {
@@ -57,7 +188,7 @@ const ManualPaymentPage = () => {
       submitManualPaymentProof({
         referenceNumber: currentPayment.referenceNumber,
         proofUrl,
-      }),
+      })
     ).unwrap();
 
     toast({
@@ -68,10 +199,39 @@ const ManualPaymentPage = () => {
   };
 
   const handleGenerateAgain = async () => {
-    if (!orderId) return;
+    if (!resolvedOrderId) return;
 
     try {
-      await dispatch(generateManualPaymentReference({ orderId, amount: amount || undefined })).unwrap();
+      const generatedPayment = await dispatch(
+        generateManualPaymentReference({
+          orderId: resolvedOrderId,
+          amount: resolvedAmount || undefined,
+        })
+      ).unwrap();
+
+      dispatch(
+        storeManualPaymentContext({
+          orderId:
+            generatedPayment?.orderId ||
+            generatedPayment?.data?.orderId ||
+            resolvedOrderId,
+          amount:
+            generatedPayment?.amount ||
+            generatedPayment?.data?.amount ||
+            resolvedAmount,
+          slug:
+            generatedPayment?.slug ||
+            generatedPayment?.data?.slug ||
+            generatedPayment?.data?.manualPayment?.slug ||
+            null,
+          referenceNumber:
+            generatedPayment?.referenceNumber ||
+            generatedPayment?.data?.referenceNumber ||
+            generatedPayment?.data?.manualPayment?.referenceNumber ||
+            null,
+        })
+      );
+
       toast({
         title: "Reference regenerated",
         description: "A fresh payment reference is now available.",
@@ -86,20 +246,42 @@ const ManualPaymentPage = () => {
     }
   };
 
-  const bankDetails = currentPayment?.bankDetails || {};
+  const bankDetails = currentPayment?.bankDetails || {
+    bankName: "Sampath Bank",
+    branch: "Hatton",
+    accountName: "N.Gayathree",
+    accountNumber: "108052612262",
+    supportWhatsapp: "+94 77 070 4274",
+  };
   const paymentStatus = currentPayment?.status || "pending_payment";
-  const expiresAtTime = currentPayment?.expiresAt ? new Date(currentPayment.expiresAt).getTime() : null;
-  const isExpired = paymentStatus === "expired" || (expiresAtTime ? expiresAtTime <= Date.now() && paymentStatus === "pending_payment" : false);
+  const activePaymentSlug =
+    currentPayment?.slug || paymentContext?.slug || paymentSlug || "";
+  const activeReferenceNumber =
+    currentPayment?.referenceNumber || resolvedReferenceNumber;
+  const activeOrderId =
+    currentPayment?.orderId?._id || currentPayment?.orderId || resolvedOrderId;
+  const activeAmount = currentPayment?.amount || resolvedAmount;
+  const expiresAtTime = currentPayment?.expiresAt
+    ? new Date(currentPayment.expiresAt).getTime()
+    : null;
+  const isExpired =
+    paymentStatus === "expired" ||
+    (expiresAtTime
+      ? expiresAtTime <= Date.now() && paymentStatus === "pending_payment"
+      : false);
   const isVerified = paymentStatus === "verified";
 
-  if (!orderId && !referenceNumber) {
+  if (!resolvedOrderId && !resolvedReferenceNumber && !currentPayment?.referenceNumber) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
         <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#0b0b0b] p-8 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37]">Manual Payment</p>
+          <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37]">
+            Manual Payment
+          </p>
           <h1 className="mt-4 text-3xl font-black">No order context found</h1>
           <p className="mt-3 text-sm leading-6 text-gray-400">
-            Return to your orders or checkout flow so we can generate the correct bank-transfer reference.
+            Return to your orders or checkout flow so we can generate the correct
+            bank-transfer reference.
           </p>
           <Link
             to="/shopping/orders"
@@ -112,12 +294,14 @@ const ManualPaymentPage = () => {
     );
   }
 
-  if ((isGenerating || isFetching) && !currentPayment) {
+  if ((isGenerating || isFetching) && !currentPayment && !activeReferenceNumber) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-[#D4AF37]" />
-          <p className="text-xs uppercase tracking-[0.32em] text-[#D4AF37]">Preparing payment reference</p>
+          <p className="text-xs uppercase tracking-[0.32em] text-[#D4AF37]">
+            Preparing payment reference
+          </p>
         </div>
       </div>
     );
@@ -132,11 +316,12 @@ const ManualPaymentPage = () => {
           </div>
           <h1 className="mt-5 text-3xl font-black">Payment verified</h1>
           <p className="mt-3 text-sm leading-6 text-gray-400">
-            Your bank transfer has been verified. You can now track the order and continue with the delivery journey.
+            Your bank transfer has been verified. You can now track the order and
+            continue with the delivery journey.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
-              to={`/shopping/order-tracking?orderId=${currentPayment?.orderId?._id || currentPayment?.orderId || orderId}`}
+              to={`/shopping/order-tracking?orderId=${activeOrderId}`}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
             >
               Track order <ArrowRight className="h-4 w-4" />
@@ -164,35 +349,15 @@ const ManualPaymentPage = () => {
 
         <ManualPaymentInstructions
           bankDetails={bankDetails}
-          referenceNumber={currentPayment?.referenceNumber || referenceNumber}
-          amount={currentPayment?.amount || amount}
+          referenceNumber={activeReferenceNumber}
+          amount={activeAmount}
           expiresAt={currentPayment?.expiresAt}
           status={paymentStatus}
+          onCopyReference={handleCopyReference}
         />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-6">
-            <PaymentReference
-              referenceNumber={currentPayment?.referenceNumber || referenceNumber}
-              expiresAt={currentPayment?.expiresAt}
-              onCopy={(copyError) => {
-                if (copyError) {
-                  toast({
-                    title: "Copy failed",
-                    description: "Could not copy the reference number.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-
-                toast({
-                  title: "Copied",
-                  description: "Reference number copied to clipboard.",
-                  variant: "success",
-                });
-              }}
-            />
-
             <div className="rounded-[26px] border border-white/10 bg-[#0b0b0b] p-6">
               <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
                 <Clock3 className="h-4 w-4" />
@@ -200,19 +365,41 @@ const ManualPaymentPage = () => {
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Status</p>
-                  <p className="mt-2 text-sm font-semibold text-white">{paymentStatus}</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Amount</p>
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                    Status
+                  </p>
                   <p className="mt-2 text-sm font-semibold text-white">
-                    LKR {Number(currentPayment?.amount || amount || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {paymentStatus}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Reference</p>
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                    Amount
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">
+                    LKR{" "}
+                    {Number(activeAmount || 0).toLocaleString("en-LK", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                    Reference
+                  </p>
                   <p className="mt-2 font-mono text-sm tracking-[0.2em] text-[#D4AF37]">
-                    {currentPayment?.referenceNumber || referenceNumber || "—"}
+                    {activeReferenceNumber || "-"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:col-span-3">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                    Payment link
+                  </p>
+                  <p className="mt-2 break-all font-mono text-xs text-gray-300">
+                    {activePaymentSlug
+                      ? `/shopping/manual-payment/${activePaymentSlug}`
+                      : "-"}
                   </p>
                 </div>
               </div>
@@ -221,7 +408,8 @@ const ManualPaymentPage = () => {
                 <div className="mt-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">
                   <p className="font-semibold text-rose-200">Proof rejected</p>
                   <p className="mt-2 leading-6">
-                    {currentPayment?.rejectionReason || "The uploaded proof was rejected by the admin team. Please submit a clearer receipt."}
+                    {currentPayment?.rejectionReason ||
+                      "The uploaded proof was rejected by the admin team. Please submit a clearer receipt."}
                   </p>
                 </div>
               ) : null}
@@ -233,7 +421,8 @@ const ManualPaymentPage = () => {
                     Reference expired
                   </div>
                   <p className="mt-2 leading-6 text-amber-50/90">
-                    This transfer window has expired. Generate a fresh reference to continue with the same order.
+                    This transfer window has expired. Generate a fresh reference
+                    to continue with the same order.
                   </p>
                   <button
                     type="button"
@@ -253,7 +442,8 @@ const ManualPaymentPage = () => {
               <div className="rounded-[26px] border border-amber-500/20 bg-amber-500/10 p-6 text-sm text-amber-100">
                 <p className="font-semibold text-amber-200">Proof window closed</p>
                 <p className="mt-2 leading-6">
-                  This transfer reference has expired. Regenerate a new reference to submit a valid receipt.
+                  This transfer reference has expired. Regenerate a new reference
+                  to submit a valid receipt.
                 </p>
               </div>
             ) : (
@@ -268,11 +458,13 @@ const ManualPaymentPage = () => {
             <div className="rounded-[26px] border border-white/10 bg-[#0b0b0b] p-6">
               <h2 className="text-lg font-bold text-white">Need help?</h2>
               <p className="mt-3 text-sm leading-6 text-gray-400">
-                If you already submitted proof and the order still shows pending verification, allow a short window for admin review. If the proof was rejected, upload a clearer copy using the same reference.
+                Send your proof on WhatsApp to {bankDetails.supportWhatsapp || "+94 77 070 4274"} if
+                you need help matching the transfer. If your proof was rejected,
+                upload a clearer copy using the same reference.
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  to={`/shopping/order-tracking?orderId=${currentPayment?.orderId?._id || currentPayment?.orderId || orderId}`}
+                  to={`/shopping/order-tracking?orderId=${activeOrderId}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
                 >
                   View tracking <ArrowRight className="h-4 w-4" />

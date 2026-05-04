@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderById } from "@/store/order-slice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const TRACKING_STEPS = [
   { key: "pending_payment", label: "Awaiting Transfer" },
@@ -44,6 +45,18 @@ const OrderTracking = () => {
       dispatch(fetchOrderById(orderId));
     }
   }, [dispatch, orderId]);
+
+  useSocketEvent(
+    "order:refresh",
+    (payload) => {
+      if (!orderId) return;
+
+      if (!payload?.orderId || String(payload.orderId) === String(orderId)) {
+        dispatch(fetchOrderById(orderId));
+      }
+    },
+    [dispatch, orderId]
+  );
 
   if (!orderId) {
     return (

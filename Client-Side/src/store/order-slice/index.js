@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE, ORDERS_API_URL as ORDER_API_BASE } from "@/lib/api";
 
 const loadCartFromStorage = () => {
   if (typeof window === "undefined") return [];
@@ -116,8 +115,8 @@ export const updateOrderStatus = createAsyncThunk(
   "/order/updateOrderStatus",
   async ({ orderId, status }, thunkAPI) => {
     try {
-      const response = await axios.patch(
-        `${API_BASE}/orders/update-order-status/${orderId}`,
+      const response = await axios.put(
+        `${ORDER_API_BASE}/${orderId}/status`,
         { status },
         {
           withCredentials: true,

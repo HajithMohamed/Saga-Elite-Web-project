@@ -3,9 +3,11 @@ const AppError = require("../Utils/appError");
 const sendMail = require("../Utils/send-mail");
 const generateOtp = require("../Utils/generate-otp");
 const User = require("../Models/User");
+const Guest = require("../Models/Guest");
 const filterObj = require("../Utils/filter-object");
 const createSendToken = require("../Utils/create-send-token");
 const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 
 // how long (in minutes) our one‑time codes stay valid. defaults to 10.
 const otpExpiryMinutes = () => Number(process.env.OTP_EXPIRES_IN || 10);
@@ -85,7 +87,7 @@ const registerUser = catchAsync(async (req, res, next) => {
         });
     } catch (err) {
         // log for debugging, but do not crash the whole request
-        console.error("[registerUser] mail send failed", err);
+        logger.error("Registration verification email failed", { error: err });
         mailError = err;
     }
 
@@ -545,7 +547,7 @@ const registerGuest = catchAsync(async (req, res, next) => {
             html: buildEmailTemplate("Account Created", registrationBody),
         });
     } catch (err) {
-        console.error("Mail failed", err);
+        logger.error("Guest registration email failed", { error: err });
     }
 
     createSendToken(newUser, 201, res, "Registration successful. Check your email for password.");

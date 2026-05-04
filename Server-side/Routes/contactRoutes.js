@@ -4,6 +4,11 @@ const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware"
 const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
 const { contactLimiter } = require("../Middlewares/rateLimitinMiddleware");
 const {
+  validateContactSubmission,
+  validateContactUpdate,
+  validateObjectIdParam,
+} = require("../Middlewares/request-validation");
+const {
   submitContactInquiry,
   getContactInquiries,
   updateContactInquiry,
@@ -11,9 +16,15 @@ const {
 
 const router = express.Router();
 
-router.post("/", contactLimiter, optionalAuthMiddleware, submitContactInquiry);
-
+router.post("/", contactLimiter, optionalAuthMiddleware, validateContactSubmission, submitContactInquiry);
 router.get("/admin", authMiddleware, adminMiddleware, getContactInquiries);
-router.patch("/admin/:id", authMiddleware, adminMiddleware, updateContactInquiry);
+router.patch(
+  "/admin/:id",
+  authMiddleware,
+  adminMiddleware,
+  validateObjectIdParam("id", "contact inquiry id"),
+  validateContactUpdate,
+  updateContactInquiry
+);
 
 module.exports = router;

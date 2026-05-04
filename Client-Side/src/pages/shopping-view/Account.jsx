@@ -9,14 +9,8 @@ import { fetchUserOrders } from "@/store/order-slice";
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
+import StatusBadge from "@/components/common-components/StatusBadge";
 import { toast } from "@/hooks/use-toast";
-
-const formatStatus = (status = "") =>
-  status
-    .split("_")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 
 const Account = () => {
   const { user } = useSelector((state) => state.auth);
@@ -249,7 +243,7 @@ const Account = () => {
                     <div>
                       <p className="font-medium text-white break-all">{latestOrder._id}</p>
                       <p className="mt-1 text-sm text-gray-400">
-                        Status: {formatStatus(latestOrder.status)}
+                        Status: <StatusBadge status={latestOrder.status} />
                       </p>
                     </div>
                     <Link

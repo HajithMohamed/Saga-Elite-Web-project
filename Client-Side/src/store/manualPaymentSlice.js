@@ -8,8 +8,47 @@ import {
   verifyManualPayment as verifyManualPaymentApi,
 } from "@/api/manualPaymentAPI";
 
+const MANUAL_PAYMENT_STORAGE_KEY = "saga_manual_payment_context";
+
+const loadPersistedManualPayment = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(MANUAL_PAYMENT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistManualPayment = (state) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const payload = {
+    currentPayment: state.currentPayment || null,
+    lastGeneratedReference: state.lastGeneratedReference || null,
+    paymentContext: state.paymentContext || null,
+  };
+
+  window.localStorage.setItem(MANUAL_PAYMENT_STORAGE_KEY, JSON.stringify(payload));
+};
+
+const clearPersistedManualPayment = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(MANUAL_PAYMENT_STORAGE_KEY);
+};
+
+const persistedManualPayment = loadPersistedManualPayment();
+
 const initialState = {
-  currentPayment: null,
+  currentPayment: persistedManualPayment?.currentPayment || null,
   pendingPayments: [],
   pagination: {
     page: 1,
@@ -17,7 +56,8 @@ const initialState = {
     totalCount: 0,
     totalPages: 0,
   },
-  lastGeneratedReference: null,
+  lastGeneratedReference: persistedManualPayment?.lastGeneratedReference || null,
+  paymentContext: persistedManualPayment?.paymentContext || null,
   isGenerating: false,
   isSubmitting: false,
   isFetching: false,
@@ -103,9 +143,16 @@ const manualPaymentSlice = createSlice({
   reducers: {
     clearCurrentPayment: (state) => {
       state.currentPayment = null;
+      state.paymentContext = null;
+      state.lastGeneratedReference = null;
+      clearPersistedManualPayment();
     },
     resetManualPaymentError: (state) => {
       state.error = null;
+    },
+    storeManualPaymentContext: (state, action) => {
+      state.paymentContext = action.payload || null;
+      persistManualPayment(state);
     },
   },
   extraReducers: (builder) => {
@@ -121,7 +168,26 @@ const manualPaymentSlice = createSlice({
           ...(payload.manualPayment || payload),
           bankDetails: payload.bankDetails || payload.manualPayment?.bankDetails || null,
         };
-        state.lastGeneratedReference = payload.referenceNumber || payload.manualPayment?.referenceNumber || null;
+        state.lastGeneratedReference =
+          action.payload?.referenceNumber ||
+          payload.referenceNumber ||
+          payload.manualPayment?.referenceNumber ||
+          null;
+        state.paymentContext = {
+          orderId: action.payload?.orderId || payload.orderId || payload.manualPayment?.orderId || null,
+          amount: action.payload?.amount || payload.amount || payload.manualPayment?.amount || null,
+          slug:
+            action.payload?.slug ||
+            payload.slug ||
+            payload.manualPayment?.slug ||
+            null,
+          referenceNumber:
+            action.payload?.referenceNumber ||
+            payload.referenceNumber ||
+            payload.manualPayment?.referenceNumber ||
+            null,
+        };
+        persistManualPayment(state);
       })
       .addCase(generateManualPaymentReference.rejected, (state, action) => {
         state.isGenerating = false;
@@ -134,6 +200,22 @@ const manualPaymentSlice = createSlice({
       .addCase(submitManualPaymentProof.fulfilled, (state, action) => {
         state.isSubmitting = false;
         state.currentPayment = action.payload?.data || state.currentPayment;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+        };
+        persistManualPayment(state);
       })
       .addCase(submitManualPaymentProof.rejected, (state, action) => {
         state.isSubmitting = false;
@@ -146,6 +228,22 @@ const manualPaymentSlice = createSlice({
       .addCase(fetchMyManualPaymentStatus.fulfilled, (state, action) => {
         state.isFetching = false;
         state.currentPayment = action.payload?.data || null;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+        };
+        persistManualPayment(state);
       })
       .addCase(fetchMyManualPaymentStatus.rejected, (state, action) => {
         state.isFetching = false;
@@ -171,6 +269,20 @@ const manualPaymentSlice = createSlice({
       .addCase(fetchManualPaymentById.fulfilled, (state, action) => {
         state.isAdminLoading = false;
         state.currentPayment = action.payload?.data || null;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+        };
+        persistManualPayment(state);
       })
       .addCase(fetchManualPaymentById.rejected, (state, action) => {
         state.isAdminLoading = false;
@@ -187,6 +299,22 @@ const manualPaymentSlice = createSlice({
         if (updatedPayment) {
           state.currentPayment = updatedPayment;
           state.pendingPayments = removePaymentFromQueue(state.pendingPayments, updatedPayment._id);
+          state.lastGeneratedReference =
+            updatedPayment.referenceNumber || state.lastGeneratedReference;
+          state.paymentContext = {
+            orderId:
+              updatedPayment.orderId?._id ||
+              updatedPayment.orderId ||
+              state.paymentContext?.orderId ||
+              null,
+            amount: updatedPayment.amount || state.paymentContext?.amount || null,
+            slug: updatedPayment.slug || state.paymentContext?.slug || null,
+            referenceNumber:
+              updatedPayment.referenceNumber ||
+              state.lastGeneratedReference ||
+              null,
+          };
+          persistManualPayment(state);
         }
       })
       .addCase(verifyManualPayment.rejected, (state, action) => {
@@ -196,6 +324,7 @@ const manualPaymentSlice = createSlice({
   },
 });
 
-export const { clearCurrentPayment, resetManualPaymentError } = manualPaymentSlice.actions;
+export const { clearCurrentPayment, resetManualPaymentError, storeManualPaymentContext } =
+  manualPaymentSlice.actions;
 
 export default manualPaymentSlice.reducer;

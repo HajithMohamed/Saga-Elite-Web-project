@@ -162,8 +162,11 @@ exports.getSystemStats = catchAsync(async (req, res, next) => {
 
 // Deactivates/reactivates an existing admin
 exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
-  
-  if (typeof isActive !== "boolean") {
+  const { id } = req.params;
+  const { isActive } = req.body;
+  const desiredIsActive = typeof isActive === "string" ? isActive === "true" : isActive;
+
+  if (typeof desiredIsActive !== "boolean") {
     return next(new AppError("Please provide isActive status (boolean)", 400));
   }
 
@@ -179,10 +182,10 @@ exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
   }
 
   // Change status
-  adminToUpdate.isActive = isActive;
+  adminToUpdate.isActive = desiredIsActive;
   await adminToUpdate.save({ validateBeforeSave: false });
 
-  req.adminAction = `${isActive ? 'Reactivated' : 'Deactivated'} admin ${adminToUpdate.email}`;
+  req.adminAction = `${desiredIsActive ? 'Reactivated' : 'Deactivated'} admin ${adminToUpdate.email}`;
   req.adminResourceId = adminToUpdate._id;
 
   res.status(200).json({

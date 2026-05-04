@@ -6,9 +6,11 @@ const ManualPayment = require("../Models/ManualPayment");
 const User = require("../Models/User");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("../Utils/whatsapp-service");
+const logger = require("../Utils/logger");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
 const ADMIN_ROLES = ["admin", "super_admin", "superadmin"];
@@ -20,21 +22,16 @@ const formatCurrency = (amount) =>
   });
 
 const getBankDetails = () => ({
-  bankName: process.env.MANUAL_PAYMENT_BANK_NAME || process.env.BANK_NAME || "",
-  accountName:
-    process.env.MANUAL_PAYMENT_ACCOUNT_NAME || process.env.BANK_ACCOUNT_NAME || "",
-  accountNumber:
-    process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER || process.env.BANK_ACCOUNT_NUMBER || "",
-  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || process.env.BANK_BRANCH || "",
-  swiftCode: process.env.MANUAL_PAYMENT_SWIFT_CODE || process.env.BANK_SWIFT_CODE || "",
-  transferNote:
-    process.env.MANUAL_PAYMENT_TRANSFER_NOTE ||
-    "Use the reference number exactly as shown when making your transfer.",
-  supportEmail:
-    process.env.MANUAL_PAYMENT_SUPPORT_EMAIL || process.env.BANK_SUPPORT_EMAIL || process.env.EMAIL || "",
-  supportWhatsapp:
-    process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || process.env.BANK_SUPPORT_WHATSAPP || "",
+  bankName: process.env.MANUAL_PAYMENT_BANK_NAME || "Sampath Bank",
+  accountName: process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "N.Gayathree",
+  accountNumber: process.env.MANUAL_PAYMENT_ACCOUNT_NUMBER || "108052612262",
+  branch: process.env.MANUAL_PAYMENT_BANK_BRANCH || "Hatton",
+  swiftCode: process.env.MANUAL_PAYMENT_SWIFT_CODE || "BSAMLKLX",
   currency: process.env.MANUAL_PAYMENT_CURRENCY || "LKR",
+  transferNote: process.env.MANUAL_PAYMENT_TRANSFER_NOTE ||
+    "Include your reference number exactly as shown in the transfer note/remarks field.",
+  supportEmail: process.env.MANUAL_PAYMENT_SUPPORT_EMAIL || "sagaaelite@gmail.com",
+  supportWhatsapp: process.env.MANUAL_PAYMENT_SUPPORT_WHATSAPP || "+94 77 070 4274",
 });
 
 const getAdminEmails = async () => {
@@ -85,7 +82,7 @@ const sendAdminWhatsAppAlert = async (message) => {
     try {
       await sendWhatsAppMessage({ to: recipient, message });
     } catch (error) {
-      console.error("Failed to send admin WhatsApp alert:", error);
+      logger.error("Failed to send admin WhatsApp alert", { error, recipient });
     }
   }
 };
@@ -123,6 +120,7 @@ const syncOrderWithPayment = async (order, payment, { status, paymentStatus, cle
 
 const buildManualPaymentSummary = (payment) => ({
   _id: payment._id,
+  slug: payment.slug,
   referenceNumber: payment.referenceNumber,
   orderId: payment.orderId,
   userId: payment.userId,
@@ -140,6 +138,16 @@ const buildManualPaymentSummary = (payment) => ({
   adminNotes: payment.adminNotes,
   createdAt: payment.createdAt,
   updatedAt: payment.updatedAt,
+});
+
+const buildManualPaymentResponse = (manualPayment, bankDetails) => ({
+  slug: manualPayment.slug,
+  referenceNumber: manualPayment.referenceNumber,
+  amount: manualPayment.amount,
+  orderId: manualPayment.orderId,
+  expiresAt: manualPayment.expiresAt,
+  bankDetails,
+  manualPayment: buildManualPaymentSummary(manualPayment),
 });
 
 const generateReference = catchAsync(async (req, res, next) => {
@@ -202,14 +210,10 @@ const generateReference = catchAsync(async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Active payment reference already exists for this order",
-      data: {
-        manualPayment: buildManualPaymentSummary(activePayment),
-        referenceNumber: activePayment.referenceNumber,
-        amount: activePayment.amount,
-        expiresAt: activePayment.expiresAt,
-        bankDetails,
-        orderId: order._id,
-      },
+      referenceNumber: activePayment.referenceNumber,
+      amount: activePayment.amount,
+      orderId: order._id,
+      data: buildManualPaymentResponse(activePayment, bankDetails),
     });
   }
 
@@ -236,14 +240,10 @@ const generateReference = catchAsync(async (req, res, next) => {
   return res.status(201).json({
     success: true,
     message: "Manual payment reference generated successfully",
-    data: {
-      manualPayment: buildManualPaymentSummary(manualPayment),
-      referenceNumber,
-      amount: manualPayment.amount,
-      expiresAt: manualPayment.expiresAt,
-      bankDetails,
-      orderId: order._id,
-    },
+    referenceNumber,
+    amount: manualPayment.amount,
+    orderId: order._id,
+    data: buildManualPaymentResponse(manualPayment, bankDetails),
   });
 });
 
@@ -339,6 +339,31 @@ const submitProof = catchAsync(async (req, res, next) => {
     },
   });
 
+  emitToUser(payment.userId?._id || payment.userId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: payment.userId?._id || payment.userId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-proof-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: payment.userId?._id || payment.userId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-proof-submitted",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "payment-proof-submitted",
+    paymentId: payment._id,
+    orderId,
+    userId: payment.userId?._id || payment.userId,
+  });
+
   const proofEmail = buildEmailTemplate(
     "Payment proof submitted",
     `<p>We received your proof for reference <strong>${payment.referenceNumber}</strong>.</p>
@@ -353,7 +378,7 @@ const submitProof = catchAsync(async (req, res, next) => {
         html: proofEmail,
       });
     } catch (emailError) {
-      console.error("Failed to send proof submission email to customer:", emailError);
+      logger.error("Failed to send proof submission email to customer", { emailError });
     }
   }
 
@@ -361,7 +386,7 @@ const submitProof = catchAsync(async (req, res, next) => {
   try {
     await sendAdminEmailAlert("New payment proof submitted", adminEmailBody);
   } catch (emailError) {
-    console.error("Failed to send admin payment proof email:", emailError);
+    logger.error("Failed to send admin payment proof email", { emailError });
   }
 
   await sendAdminWhatsAppAlert(
@@ -379,9 +404,12 @@ const submitProof = catchAsync(async (req, res, next) => {
 });
 
 const getMyPaymentStatus = catchAsync(async (req, res, next) => {
-  const { referenceNumber } = req.params;
+  const { paymentIdentifier } = req.params;
 
-  const payment = await ManualPayment.findOne({ referenceNumber })
+  const identifier = String(paymentIdentifier || "").trim();
+  const payment = await ManualPayment.findOne({
+    $or: [{ slug: identifier }, { referenceNumber: identifier }],
+  })
     .populate({
       path: "orderId",
       populate: {
@@ -411,6 +439,7 @@ const getMyPaymentStatus = catchAsync(async (req, res, next) => {
 
 const getPendingPayments = catchAsync(async (req, res, next) => {
   const status = String(req.query.status || "proof_submitted").trim();
+  const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
   const limit = Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20);
   const skip = (page - 1) * limit;
@@ -418,6 +447,18 @@ const getPendingPayments = catchAsync(async (req, res, next) => {
   const filter = {};
   if (status) {
     filter.status = status;
+  }
+
+  if (countOnly) {
+    const totalCount = await ManualPayment.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: "Manual payment count fetched successfully",
+      data: {
+        count: totalCount,
+      },
+    });
   }
 
   const [totalCount, payments] = await Promise.all([
@@ -553,7 +594,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
           html: buildDecisionEmail("Payment verified", order, payment),
         });
       } catch (emailError) {
-        console.error("Failed to send verification email to customer:", emailError);
+        logger.error("Failed to send verification email to customer", { emailError });
       }
     }
 
@@ -564,9 +605,42 @@ const verifyPayment = catchAsync(async (req, res, next) => {
           message: `Saga Elite: your payment for order ${orderId} has been verified successfully. Thank you for your purchase.`,
         });
       } catch (whatsAppError) {
-        console.error("Failed to send payment verification WhatsApp message:", whatsAppError);
+        logger.error("Failed to send payment verification WhatsApp message", { whatsAppError });
       }
     }
+
+    emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+      userId: customerUserId,
+      paymentId: payment._id,
+      orderId,
+      referenceNumber: payment.referenceNumber,
+      status: payment.status,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+      userId: customerUserId,
+      paymentId: payment._id,
+      orderId,
+      referenceNumber: payment.referenceNumber,
+      status: payment.status,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+      userId: customerUserId,
+      orderId,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      source: "payment-verified",
+    });
+
+    emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+      source: "payment-verified",
+      paymentId: payment._id,
+      orderId,
+      userId: customerUserId,
+    });
 
     return res.status(200).json({
       success: true,
@@ -615,7 +689,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
         html: buildDecisionEmail("Payment proof rejected", order, payment, payment.rejectionReason),
       });
     } catch (emailError) {
-      console.error("Failed to send rejection email to customer:", emailError);
+      logger.error("Failed to send rejection email to customer", { emailError });
     }
   }
 
@@ -626,9 +700,42 @@ const verifyPayment = catchAsync(async (req, res, next) => {
         message: `Saga Elite: your payment proof for order ${orderId} was rejected. ${payment.rejectionReason} Please submit an updated receipt within 24 hours to avoid cancellation.`,
       });
     } catch (whatsAppError) {
-      console.error("Failed to send payment rejection WhatsApp message:", whatsAppError);
+      logger.error("Failed to send payment rejection WhatsApp message", { whatsAppError });
     }
   }
+
+  emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+    userId: customerUserId,
+    orderId,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    source: "payment-rejected",
+  });
+
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "payment-rejected",
+    paymentId: payment._id,
+    orderId,
+    userId: customerUserId,
+  });
 
   return res.status(200).json({
     success: true,

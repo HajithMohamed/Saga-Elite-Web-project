@@ -4,13 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronRight, Package, ArrowRight } from "lucide-react";
 
 import { fetchUserOrders } from "@/store/order-slice";
-
-const formatStatus = (status = "") =>
-  status
-    .split("_")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+import StatusBadge from "@/components/common-components/StatusBadge";
 
 const formatCurrency = (amount = 0) =>
   Number(amount).toLocaleString("en-LK", {
@@ -104,12 +98,8 @@ const Orders = () => {
 
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="rounded-full bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-[#D4AF37]">
-                          {formatStatus(order.status)}
-                        </span>
-                        <span className="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.25em] text-gray-300">
-                          {formatStatus(order.paymentStatus)}
-                        </span>
+                        <StatusBadge status={order.status} />
+                        <StatusBadge status={order.paymentStatus} />
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Order ID</p>

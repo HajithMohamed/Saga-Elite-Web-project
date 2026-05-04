@@ -1,5 +1,7 @@
 const Notification = require("../Models/Notification");
 const User = require("../Models/User");
+const SOCKET_EVENTS = require("./socket-events");
+const { emitToAll, emitToUser, emitToAdmins } = require("./socket-service");
 
 const createNotification = async ({
   userId,
@@ -14,7 +16,7 @@ const createNotification = async ({
     throw new Error("Missing notification parameters");
   }
 
-  return Notification.create({
+  const notification = await Notification.create({
     user: userId,
     type,
     title,
@@ -24,6 +26,30 @@ const createNotification = async ({
     isRead: false,
     meta,
   });
+
+  emitToUser(userId, SOCKET_EVENTS.NOTIFICATION_REFRESH, {
+    scope: "user",
+    userId,
+    notificationId: notification._id,
+    type,
+  });
+
+  if (["admin", "super_admin", "superadmin"].includes(String(type).toLowerCase())) {
+    emitToAdmins(SOCKET_EVENTS.NOTIFICATION_REFRESH, {
+      scope: "admin",
+      notificationId: notification._id,
+      type,
+    });
+  }
+
+  emitToAll(SOCKET_EVENTS.NOTIFICATION_REFRESH, {
+    scope: "user",
+    userId,
+    notificationId: notification._id,
+    type,
+  });
+
+  return notification;
 };
 
 const broadcastNotification = async ({
@@ -55,7 +81,23 @@ const broadcastNotification = async ({
     meta,
   }));
 
-  return Notification.insertMany(docs);
+  const notifications = await Notification.insertMany(docs);
+
+  emitToAdmins(SOCKET_EVENTS.NOTIFICATION_REFRESH, {
+    scope: "admin",
+    audience: "broadcast",
+    count: notifications.length,
+    type,
+  });
+
+  emitToAll(SOCKET_EVENTS.NOTIFICATION_REFRESH, {
+    scope: "admin",
+    audience: "broadcast",
+    count: notifications.length,
+    type,
+  });
+
+  return notifications;
 };
 
 module.exports = {

@@ -9,6 +9,7 @@ import notificationReducer from "./notification-slice";
 import manualPaymentReducer from "./manualPaymentSlice";
 import superAdminReducer from "./admin/super-admin-slice";
 import reviewReducer from "./reviewSlice";
+import liveProductReducer from "./live-product-slice";
 
 const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ const store = configureStore({
     manualPayment: manualPaymentReducer,
     superAdmin: superAdminReducer,
     review: reviewReducer,
+    liveProduct: liveProductReducer,
   },
 });
 

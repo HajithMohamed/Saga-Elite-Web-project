@@ -8,6 +8,7 @@ import {
   resetNotificationError,
 } from "@/store/notification-slice";
 import { toast } from "@/hooks/use-toast";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
   Search,
   Edit2,
@@ -82,6 +83,14 @@ const NotificationsManager = () => {
   useEffect(() => {
     loadAdminNotifications();
   }, [loadAdminNotifications]);
+
+  useSocketEvent(
+    "notification:refresh",
+    () => {
+      loadAdminNotifications();
+    },
+    [loadAdminNotifications]
+  );
 
   useEffect(() => {
     setCurrentPage(1);

@@ -3,6 +3,12 @@ const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin } = require("../Middlewares/admin-middleware");
 const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
+  validateObjectIdParam,
+  validateManualPaymentReference,
+  validateManualPaymentProof,
+  validateManualPaymentDecision,
+} = require("../Middlewares/request-validation");
+const {
   generateReference,
   submitProof,
   getMyPaymentStatus,
@@ -13,18 +19,20 @@ const {
 
 const router = express.Router();
 
-router.post("/manual-payment/generate", authMiddleware, generateReference);
-router.post("/manual-payment/submit-proof", authMiddleware, submitProof);
-router.get("/manual-payment/status/:referenceNumber", authMiddleware, getMyPaymentStatus);
-
+router.post("/manual-payment/generate", authMiddleware, validateManualPaymentReference, generateReference);
+router.post("/payments/generate-reference", authMiddleware, validateManualPaymentReference, generateReference);
+router.post("/manual-payment/submit-proof", authMiddleware, validateManualPaymentProof, submitProof);
+router.get("/manual-payment/status/:paymentIdentifier", authMiddleware, getMyPaymentStatus);
 router.get("/admin/manual-payments", authMiddleware, requireAdmin, getPendingPayments);
-router.get("/admin/manual-payments/:id", authMiddleware, requireAdmin, getPaymentById);
+router.get("/admin/manual-payments/:id", authMiddleware, requireAdmin, validateObjectIdParam("id", "payment id"), getPaymentById);
 router.put(
   "/admin/manual-payments/:id/verify",
   authMiddleware,
   requireAdmin,
+  validateObjectIdParam("id", "payment id"),
+  validateManualPaymentDecision,
   adminLogMiddleware,
-  verifyPayment,
+  verifyPayment
 );
 
 module.exports = router;

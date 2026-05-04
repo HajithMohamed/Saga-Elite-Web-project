@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 const manualPaymentSchema = new mongoose.Schema(
   {
@@ -7,6 +8,13 @@ const manualPaymentSchema = new mongoose.Schema(
       required: true,
       unique: true,
       index: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
+      sparse: true,
       trim: true,
     },
     orderId: {
@@ -85,13 +93,18 @@ const manualPaymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-manualPaymentSchema.pre("save", function setExpiry(next) {
+manualPaymentSchema.pre("save", function setExpiry() {
+  if (!this.slug || this.isModified("referenceNumber")) {
+    this.slug = slugify(String(this.referenceNumber || ""), {
+      lower: true,
+      strict: true,
+    });
+  }
+
   if (!this.expiresAt) {
     const generatedAt = this.generatedAt ? new Date(this.generatedAt) : new Date();
     this.expiresAt = new Date(generatedAt.getTime() + 24 * 60 * 60 * 1000);
   }
-
-  next();
 });
 
 manualPaymentSchema.index({ status: 1, createdAt: -1 });

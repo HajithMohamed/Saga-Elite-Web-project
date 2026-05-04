@@ -47,6 +47,13 @@ computer, make sure these values are set correctly:
 If MongoDB is running on your computer and the backend runs in Docker, use
 `host.docker.internal` instead of `localhost` in `MONGO_DB_URI`.
 
+Optional (helpful for local development):
+
+- `VITE_SOCKET_URL` to force the Socket.IO base URL (defaults to API host or window origin).
+- `RATE_LIMIT_DEV_MULTIPLIER` to loosen rate limits in non-production (defaults to 10x).
+- `RATE_LIMIT_*_MAX` and `RATE_LIMIT_*_WINDOW_MS` to override specific limiter values
+  (`LOGIN`, `AUTH`, `GENERAL`, `CONTACT`).
+
 The preferred pattern is to maintain a single `.env` file at the workspace root
 which contains **all** the variables needed by both backend and frontend.
 The backend code will automatically load the root `.env` (even when run from

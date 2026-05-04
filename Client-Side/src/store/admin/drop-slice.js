@@ -1,9 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const initialState = {
   drops: [],
@@ -100,7 +97,15 @@ export const deleteDrop = createAsyncThunk(
 const dropSlice = createSlice({
   name: "drop",
   initialState,
-  reducers: {},
+  reducers: {
+    updateDropInStore: (state, action) => {
+      const { dropId, drop } = action.payload;
+      const idx = state.drops.findIndex(d => d._id === dropId);
+      if (idx !== -1) {
+        state.drops[idx] = drop;
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getAllDrops.pending, (state) => {
@@ -154,5 +159,7 @@ const dropSlice = createSlice({
       });
   },
 });
+
+export const { updateDropInStore } = dropSlice.actions;
 
 export default dropSlice.reducer;

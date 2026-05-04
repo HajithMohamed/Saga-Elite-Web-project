@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getAllDrops } from "@/store/admin/drop-slice";
+import { CONTACT_INFO } from "@/config";
 
 const computeCountdown = (targetDate) => {
   if (!targetDate) return { days: "00", hours: "00", minutes: "00", seconds: "00" };
@@ -98,16 +99,18 @@ const MainFooter = () => {
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Support</h3>
             <Link to="/contact" className="text-sm hover:text-[#D4AF37] transition-all">Contact Us</Link>
             <Link to="/about" className="text-sm hover:text-[#D4AF37] transition-all">About Us</Link>
-            <a href="https://wa.me/94770000000" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">WhatsApp Us</a>
+            <a href={`https://wa.me/${CONTACT_INFO.whatsapp.replace(/\+/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">WhatsApp Us</a>
+            <a href={CONTACT_INFO.socials.instagram} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">Instagram</a>
+            <a href={CONTACT_INFO.socials.facebook} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">Facebook</a>
+            <a href={CONTACT_INFO.socials.tiktok} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-[#D4AF37] transition-all">TikTok</a>
           </div>
 
           {/* Legal Column */}
           <div className="flex flex-col gap-3">
             <h3 className="font-bold text-sm tracking-[0.2em] text-white uppercase mb-2">Legal</h3>
             <Link to="/legal/privacy-policy" className="text-sm hover:text-[#D4AF37] transition-all">Privacy Policy</Link>
-            <Link to="/legal/terms-and-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
+            <Link to="/legal/terms-conditions" className="text-sm hover:text-[#D4AF37] transition-all">Terms & Conditions</Link>
             <Link to="/legal/refund-policy" className="text-sm hover:text-[#D4AF37] transition-all">Refund Policy</Link>
-            <Link to="/legal/delivery-policy" className="text-sm hover:text-[#D4AF37] transition-all">Delivery Policy</Link>
           </div>
         </div>
 
@@ -128,9 +131,11 @@ const MainFooter = () => {
             <div className="flex items-center gap-4">
               <Link to="/legal/privacy-policy" className="hover:text-white transition-all">Privacy Policy</Link>
               <span>&middot;</span>
-              <Link to="/legal/terms-and-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
+              <Link to="/legal/terms-conditions" className="hover:text-white transition-all">Terms & Conditions</Link>
               <span>&middot;</span>
               <Link to="/legal/refund-policy" className="hover:text-white transition-all">Refund Policy</Link>
+              <span>&middot;</span>
+              <Link to="/legal/delivery-policy" className="hover:text-white transition-all">Delivery Policy</Link>
             </div>
           </div>
         </div>

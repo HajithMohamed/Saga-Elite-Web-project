@@ -9,6 +9,7 @@ const {
   createNotification,
   broadcastNotification,
 } = require("../Utils/notification-service");
+const logger = require("../Utils/logger");
 
 const escapeRegExp = (value) =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -23,7 +24,7 @@ const getNotifications = catchAsync(async (req, res, next) => {
   try {
     await generateUpcomingRemindersForUser(userId);
   } catch (error) {
-    console.error("Failed to generate upcoming reminders:", error);
+    logger.error("Failed to generate upcoming reminders", { error });
   }
 
   const notifications = await Notification.find({ user: userId })

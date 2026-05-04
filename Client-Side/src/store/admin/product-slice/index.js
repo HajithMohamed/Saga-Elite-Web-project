@@ -1,9 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const initialState = {
   productList: [],
@@ -18,6 +15,52 @@ const initialState = {
   isLoading: false,
   isSubmitting: false,
   error: null,
+};
+
+const normalizeRealtimeProductPayload = (payload = {}) => {
+  const productId = payload.productId || payload._id || payload.id;
+
+  if (!productId) {
+    return null;
+  }
+
+  const changes = payload.changes || {};
+
+  return {
+    productId: String(productId),
+    changes: {
+      ...(changes.basePrice != null || payload.basePrice != null || payload.price != null
+        ? {
+            basePrice:
+              changes.basePrice ??
+              payload.basePrice ??
+              payload.price,
+          }
+        : {}),
+      ...(changes.discountPercent != null ||
+      payload.discountPercent != null ||
+      payload.discount != null
+        ? {
+            discountPercent:
+              changes.discountPercent ??
+              payload.discountPercent ??
+              payload.discount,
+          }
+        : {}),
+      ...(changes.variants || payload.variants
+        ? {
+            variants: changes.variants || payload.variants,
+          }
+        : {}),
+      ...(changes.drop !== undefined || payload.drop !== undefined
+        ? {
+            drop:
+              changes.drop !== undefined ? changes.drop : payload.drop,
+          }
+        : {}),
+      ...(payload.slug ? { slug: payload.slug } : {}),
+    },
+  };
 };
 
 export const getAllProducts = createAsyncThunk(
@@ -129,7 +172,20 @@ export const deleteProduct = createAsyncThunk(
 const productSlice = createSlice({
   name: "product",
   initialState,
-  reducers: {},
+  reducers: {
+    updateProductInStore: (state, action) => {
+      const normalizedPayload = normalizeRealtimeProductPayload(action.payload);
+      if (!normalizedPayload) {
+        return;
+      }
+
+      const { productId, changes } = normalizedPayload;
+      const idx = state.productList.findIndex((p) => String(p._id) === productId);
+      if (idx !== -1) {
+        state.productList[idx] = { ...state.productList[idx], ...changes };
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       // GET ALL
@@ -201,5 +257,7 @@ const productSlice = createSlice({
       });
   },
 });
+
+export const { updateProductInStore } = productSlice.actions;
 
 export default productSlice.reducer;
