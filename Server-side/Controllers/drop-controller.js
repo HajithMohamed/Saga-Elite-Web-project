@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const validator = require("validator");
+const { isAdminRole } = require("../Utils/admin-roles");
 const { broadcastNotification } = require("../Utils/notification-service");
 
 
@@ -83,7 +84,7 @@ const getAllDrops = catchAsync(async (req, res, next) => {
     const filter = {};
 
     // Admin can see all; public sees only published & non-archived
-    if (!req.userInfo || req.userInfo.role !== "admin") { 
+    if (!req.userInfo || !isAdminRole(req.userInfo.role)) { 
         filter.isPublished = true;
         filter.isArchived = false;
     }

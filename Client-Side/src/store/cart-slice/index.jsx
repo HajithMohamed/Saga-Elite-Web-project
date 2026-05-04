@@ -177,7 +177,7 @@ const cartSlice = createSlice({
           0
         );
         state.cart.totalPrice = action.payload.data.cart.reduce(
-          (sum, item) => sum + item.subTotal,
+          (sum, item) => sum + (item.subTotal || 0),
           0
         );
       })
@@ -197,7 +197,7 @@ const cartSlice = createSlice({
           0
         );
         state.cart.totalPrice = action.payload.data.cart.reduce(
-          (sum, item) => sum + item.subTotal,
+          (sum, item) => sum + (item.subTotal || 0),
           0
         );
       })
@@ -217,7 +217,7 @@ const cartSlice = createSlice({
           0
         );
         state.cart.totalPrice = action.payload.data.cart.reduce(
-          (sum, item) => sum + item.subTotal,
+          (sum, item) => sum + (item.subTotal || 0),
           0
         );
       })

@@ -6,6 +6,7 @@ const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 
 const normalizeNumber = (value, fallback) => {
@@ -344,9 +345,7 @@ const deleteReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  const isAdmin = ["admin", "super_admin", "superadmin"].includes(
-    req.userInfo?.role
-  );
+  const isAdmin = isAdminRole(req.userInfo?.role);
 
   if (!isAdmin && review.userId.toString() !== userId.toString()) {
     return next(new AppError("You do not have permission to delete this review", 403));
@@ -506,12 +505,6 @@ const moderateReview = catchAsync(async (req, res, next) => {
     await review.save({ validateBeforeSave: false });
   }
 
-  res.status(200).json({
-    success: true,
-    message: "Review moderation updated",
-    review,
-  });
-
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId: review.userId,
     reviewId: review._id,
@@ -526,6 +519,12 @@ const moderateReview = catchAsync(async (req, res, next) => {
     status: review.status,
     productId: review.productId,
     source: "review-moderated",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Review moderation updated",
+    review,
   });
 });
 

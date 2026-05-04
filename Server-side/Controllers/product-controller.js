@@ -81,16 +81,18 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
-    // Validate Drop ID format and existence
-    if (productData.drop) {
-        if (!mongoose.isValidObjectId(productData.drop)) {
-            return next(new AppError("Invalid drop id", 400));
-        }
+    // Validate Drop ID — required by schema
+    if (!productData.drop) {
+        return next(new AppError("Drop is required", 400));
+    }
 
-        const dropExists = await Drop.exists({ _id: productData.drop });
-        if (!dropExists) {
-            return next(new AppError("Drop not found", 404));
-        }
+    if (!mongoose.isValidObjectId(productData.drop)) {
+        return next(new AppError("Invalid drop id", 400));
+    }
+
+    const dropExists = await Drop.exists({ _id: productData.drop });
+    if (!dropExists) {
+        return next(new AppError("Drop not found", 404));
     }
 
     const existingProduct = await Product.findOne({ artNo: productData.artNo });

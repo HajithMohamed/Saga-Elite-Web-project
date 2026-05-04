@@ -5,6 +5,7 @@ const Order = require("../Models/Order");
 const ManualPayment = require("../Models/ManualPayment");
 const User = require("../Models/User");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
+const { ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
 const sendEmail = require("../Utils/send-mail");
@@ -13,7 +14,6 @@ const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("../Ut
 const logger = require("../Utils/logger");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
-const ADMIN_ROLES = ["admin", "super_admin", "superadmin"];
 
 const formatCurrency = (amount) =>
   Number(amount || 0).toLocaleString("en-LK", {

@@ -44,7 +44,7 @@ const mergePopularProducts = (mostWished = [], bestSellers = [], currentSlug) =>
     };
 
     existing.popularityScore += (item.soldCount || 0) + (item.wishCount || 0);
-    productMap.set(item._id, { ...existing, ...item });
+    productMap.set(item._id, { ...existing, ...item, popularityScore: existing.popularityScore });
   });
 
   return [...productMap.values()]
@@ -231,14 +231,6 @@ const ProductDetails = () => {
   const productDropName = product.drop?.name || FALLBACK_DROP_NAME;
   const productSizes = getProductSizes(product);
   const colorsForSelectedSize = getColorsForSize(product, selectedSize);
-  const uniqueSizes = productSizes;
-  const colorsForSize = (product.variants || [])
-    .filter((variant) => variant.size === selectedSize)
-    .map((variant) => ({
-      color: variant.color,
-      sku: variant.sku,
-      stock: variant.stock,
-    }));
 
   const validateVariantSelection = () => {
     if (!hasVariants) {
@@ -564,63 +556,7 @@ const ProductDetails = () => {
                 ) : (
                   <p className="text-sm text-gray-400">One size fits all</p>
                 )}
-                <div className="hidden flex-col gap-4">
-                  {/* Size Row */}
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Size</p>
-                    <div className="flex flex-wrap gap-2">
-                      {uniqueSizes.map(size => {
-                        const allOOS = product.variants
-                          .filter(v => v.size === size)
-                          .every(v => v.stock === 0);
-                        return (
-                          <button
-                            key={size}
-                            onClick={() => { setSelectedSize(size); setSelectedColor(null); }}
-                            disabled={allOOS}
-                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all
-                              ${allOOS ? "opacity-30 cursor-not-allowed border-gray-700 text-gray-600" :
-                                selectedSize === size
-                                  ? "bg-[#D4AF37] border-[#D4AF37] text-black"
-                                  : "border-gray-600 text-white hover:border-[#D4AF37]"}`}
-                          >
-                            {size}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {/* Color Row — only shows after size is selected */}
-                  {selectedSize && (
-                    <div>
-                      <p className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Color</p>
-                      <div className="flex flex-wrap gap-2">
-                        {colorsForSize.map(({ color, sku, stock }) => (
-                          <button
-                            key={sku}
-                            onClick={() => { setSelectedColor(color); setSelectedVariantSku(sku); }}
-                            disabled={stock === 0}
-                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all
-                              ${stock === 0 ? "opacity-30 cursor-not-allowed border-gray-700 text-gray-600" :
-                                selectedColor === color
-                                  ? "bg-[#D4AF37] border-[#D4AF37] text-black"
-                                  : "border-gray-600 text-white hover:border-[#D4AF37]"}`}
-                          >
-                            {color} {stock === 0 ? "(OOS)" : ""}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Stock count for selected combo */}
-                  {selectedSize && selectedColor && (
-                    <p className="text-xs text-gray-500">
-                      {colorsForSize.find(c => c.color === selectedColor)?.stock ?? 0} in stock
-                    </p>
-                  )}
-                </div>
               </div>
 
               <div>

@@ -6,6 +6,7 @@ const Order = require("../Models/Order");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
+const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const {
   sendWhatsAppMessage,
@@ -375,7 +376,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
   const orderOwnerId = order.user?._id || order.user;
   const isOwner = String(orderOwnerId) === String(req.userInfo._id);
-  const isAdmin = ["admin", "superadmin"].includes(req.userInfo.role);
+  const isAdmin = isAdminRole(req.userInfo.role);
 
   if (!isOwner && !isAdmin) {
     return next(new AppError("You are not authorized to view this order", 403));
@@ -423,6 +424,28 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     order.cancellationReason = reason;
     order.cancelledAt = new Date();
     order.cancelledBy = req.userInfo._id;
+
+    // Restore stock for each order item
+    for (const item of order.items) {
+      try {
+        const product = await Product.findById(item.product);
+        if (product) {
+          const variant = product.variants.find((v) => v.sku === item.variantSku);
+          if (variant) {
+            variant.stock += item.quantity;
+          }
+          product.soldCount = Math.max(0, (product.soldCount || 0) - item.quantity);
+          await product.save({ validateModifiedOnly: true });
+        }
+      } catch (stockErr) {
+        logger.error("Failed to restore stock for cancelled order item", {
+          orderId: order._id,
+          productId: item.product,
+          variantSku: item.variantSku,
+          error: stockErr.message,
+        });
+      }
+    }
   }
 
   order.status = status;

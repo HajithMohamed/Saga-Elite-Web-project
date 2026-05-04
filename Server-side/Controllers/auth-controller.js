@@ -100,7 +100,11 @@ const registerUser = catchAsync(async (req, res, next) => {
     res.status(201).json({
         status: "success",
         message: responseMessage,
-        data: newUser,
+        data: {
+            _id: newUser._id,
+            email: newUser.email,
+            isVerified: newUser.isVerified,
+        },
         mailError: mailError ? mailError.message : undefined,
     });
 });
@@ -140,11 +144,15 @@ const otpVerify = catchAsync(async(req, res, next)=>{
                 <p>Happy shopping!<br/>The Saga Elite Team</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Welcome to Saga Elite 🎉",
-        html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Welcome to Saga Elite 🎉",
+            html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
+        });
+    } catch (err) {
+        logger.error("Welcome email failed after OTP verification", { error: err });
+    }
     createSendToken(user, 200, res, "Email has been verified.");
 });
 
@@ -297,11 +305,15 @@ const changePassword = catchAsync(async (req, res, next) => {
                 <p>If this wasn't you, please contact support immediately.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Updated",
-        html: buildEmailTemplate("Password Updated", passwordChangedBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Updated",
+            html: buildEmailTemplate("Password Updated", passwordChangedBody),
+        });
+    } catch (err) {
+        logger.error("Password change confirmation email failed", { error: err });
+    }
 
     res.status(200).json({
         status: "success",
@@ -338,7 +350,7 @@ const forgotPassword = catchAsync(async(req, res, next)=>{
                             ${otp}
                         </span>
                     </div>
-                    <p>This code is valid for <strong>15 minutes</strong>.</p>
+                    <p>This code is valid for <strong>${otpExpiryMinutes()} minutes</strong>.</p>
                     <p>If you didn't request this, please ignore this email.</p>
                 `;
 
@@ -390,11 +402,18 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
                 <p>If you didn't request this, please ignore this email.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Reset Code",
-        html: buildEmailTemplate("Password Reset Request", resetBody2),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Reset Code",
+            html: buildEmailTemplate("Password Reset Request", resetBody2),
+        });
+    } catch (err) {
+        user.resetPasswordOtp = undefined;
+        user.resetPasswordOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("Failed to send email. Try again later.", 500));
+    }
 
     res.status(200).json({
         status: "success",

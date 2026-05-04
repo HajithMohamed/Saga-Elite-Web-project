@@ -43,7 +43,7 @@ const configureCors = () => {
             ) {
                 callBack(null, true);
             } else {
-                callBack(new Error("Not allowed cors"));
+                callBack(new Error("Not allowed by CORS"));
             }
         },
 

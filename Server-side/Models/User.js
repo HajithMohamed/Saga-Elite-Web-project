@@ -122,7 +122,7 @@ const userSchema = new mongoose.Schema(
     ],
     savedPaymentMethod: {
       type: String,
-      enum: ["payhere", "gpay", "manual", "card", "lankapay", "cash"],
+      enum: ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"],
     }
   },
   { timestamps: true }

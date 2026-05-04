@@ -69,20 +69,6 @@ import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
 import WhatsAppFloatingButton from "./components/common-components/WhatsAppFloatingButton";
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user } = useSelector((state) => state.auth);
-  const location = useLocation();
-
-  const isAdminLike = ["admin", "super_admin", "superadmin"].includes(
-    String(user?.role || "").toLowerCase()
-  );
-
-  if (adminOnly && !isAdminLike) {
-    return <Navigate to="/un-auth-page" replace state={{ from: location }} />;
-  }
-
-  return children;
-};
 
 const ROUTE_META = [
   { match: /^\/$/, title: "Home" },
@@ -114,10 +100,12 @@ function App() {
   );
   const dispatch = useDispatch();
 
-  const defaultAuthenticatedRoute =
-    user?.role === "admin"
-      ? "/admin/dashboard"
-      : "/shopping/home";
+  const ADMIN_ROLES = ["admin", "super_admin", "superadmin"];
+  const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
+    String(user?.role || "").toLowerCase()
+  )
+    ? "/admin/dashboard"
+    : "/shopping/home";
 
   useEffect(() => {
     dispatch(checkAuthAction());
