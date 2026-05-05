@@ -8,8 +8,19 @@ import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 import { Users } from "lucide-react";
 import { DangerButton, SecondaryButton } from "@/components/admin-components/_shared/Buttons";
 
-const getRoleLabel = (role) =>
-  role === "super_admin" ? "Super Admin" : "Admin";
+const SUB_ROLE_LABELS = {
+  order_manager: "Order Manager",
+  product_manager: "Product Manager",
+  marketing_manager: "Marketing",
+  support_admin: "Support",
+  inventory_manager: "Inventory",
+};
+
+const getRoleLabel = (admin) => {
+  if (admin.role === "super_admin" || admin.role === "superadmin") return "Super Admin";
+  if (admin.role === "sub_admin") return SUB_ROLE_LABELS[admin.subRole] || "Sub Admin";
+  return "Full Admin";
+};
 
 const getInitials = (name = "") =>
   name
@@ -75,7 +86,7 @@ const AdminTable = ({ admins = [], currentUserId }) => {
         >
           {admins.map((admin) => {
             const isSelf = admin._id === currentUserId;
-            const isSuperAdmin = admin.role === "super_admin";
+            const isSuperAdmin = admin.role === "super_admin" || admin.role === "superadmin";
             const isToggling = toggleLoading === admin._id;
 
             return (
@@ -109,7 +120,7 @@ const AdminTable = ({ admins = [], currentUserId }) => {
                         : "bg-[#4d4635] text-[#e5e2e1]"
                     }`}
                   >
-                    {getRoleLabel(admin.role)}
+                    {getRoleLabel(admin)}
                   </span>
                 </td>
 

@@ -16,7 +16,8 @@
     "build": "npm --prefix Client-Side run build",
     "lint": "npm --prefix Server-side run lint && npm --prefix Client-Side run lint",
     "audit": "npm --prefix Server-side audit && npm --prefix Client-Side audit",
-    "test": "npm --prefix Server-side test && npm --prefix Client-Side test"
+    "test": "npm --prefix Server-side test && npm --prefix Client-Side test",
+    "seed:demo-admins": "npm --prefix Server-side run seed:demo-admins"
   },
   "repository": {
     "type": "git",

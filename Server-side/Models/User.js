@@ -14,6 +14,12 @@ const userSchema = new mongoose.Schema(
       validate: [validator.isEmail, "Provide a valid email address"],
     },
 
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+    },
+
     password: {
       type: String,
       minlength: 8,

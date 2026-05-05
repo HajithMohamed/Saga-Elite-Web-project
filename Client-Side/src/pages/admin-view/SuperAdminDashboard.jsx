@@ -16,6 +16,7 @@ import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNu
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 
 const TAB = { ADMINS: "admins", LOGS: "logs" };
+const isSuperAdminRole = (role) => role === "super_admin" || role === "superadmin";
 
 const SuperAdminDashboard = () => {
   const dispatch = useDispatch();
@@ -33,19 +34,21 @@ const SuperAdminDashboard = () => {
   }, [dispatch]);
 
   const activeAdmins = admins.filter(
-    (a) => a.isActive && a.role !== "super_admin"
+    (a) => a.isActive && !isSuperAdminRole(a.role)
   );
   const inactiveAdmins = admins.filter(
-    (a) => !a.isActive && a.role !== "super_admin"
+    (a) => !a.isActive && !isSuperAdminRole(a.role)
   );
 
   const filteredAdmins = admins.filter(
     (a) =>
       a.name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.email?.toLowerCase().includes(search.toLowerCase())
+      a.email?.toLowerCase().includes(search.toLowerCase()) ||
+      a.role?.toLowerCase().includes(search.toLowerCase()) ||
+      a.subRole?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalAdmins = admins.filter((a) => a.role !== "super_admin").length;
+  const totalAdmins = admins.filter((a) => !isSuperAdminRole(a.role)).length;
 
   return (
     <motion.div

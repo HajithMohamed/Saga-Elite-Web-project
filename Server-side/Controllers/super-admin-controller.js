@@ -1,7 +1,11 @@
 const User = require("../Models/User");
 const AdminLog = require("../Models/AdminLog");
+const crypto = require("crypto");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 const {
   ADMIN_ROLES,
   isSuperAdmin,
@@ -12,11 +16,61 @@ const {
 } = require("../Utils/admin-roles");
 
 // ── Create Admin or Sub-Admin ───────────────────────────────────────
+const generateTemporaryPassword = () => {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const special = "@$!%*?&";
+  const all = `${upper}${lower}${digits}${special}`;
+  const pick = (chars) => chars[crypto.randomInt(0, chars.length)];
+
+  const required = [pick(upper), pick(lower), pick(digits), pick(special)];
+  const rest = Array.from({ length: 10 }, () => pick(all));
+
+  return [...required, ...rest]
+    .sort(() => crypto.randomInt(0, 3) - 1)
+    .join("");
+};
+
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sendAdminWelcomeEmail = async ({ admin, temporaryPassword, createdBy }) => {
+  const roleLabel = admin.role === "sub_admin"
+    ? SUB_ROLE_LABELS[admin.subRole] || admin.subRole
+    : "Full Admin";
+
+  const body = `
+    <p>Hello ${escapeHtml(admin.name || admin.email)},</p>
+    <p>Your Saga Elite admin account has been created by ${escapeHtml(createdBy?.email || "a super admin")}.</p>
+    <div class="otp-box">
+      <p style="margin:0 0 8px 0;"><strong>Admin email</strong></p>
+      <p style="margin:0 0 16px 0;">${escapeHtml(admin.email)}</p>
+      <p style="margin:0 0 8px 0;"><strong>Temporary password</strong></p>
+      <p class="otp-code" style="font-size:20px;letter-spacing:2px;">${escapeHtml(temporaryPassword)}</p>
+    </div>
+    <p><strong>Assigned role:</strong> ${escapeHtml(roleLabel)}</p>
+    <p>Please sign in and change this temporary password immediately.</p>
+  `;
+
+  await sendEmail({
+    email: admin.email,
+    subject: "Saga Elite admin access created",
+    html: buildEmailTemplate("Admin Access Created", body),
+    text: `Your Saga Elite admin account was created.\nEmail: ${admin.email}\nTemporary password: ${temporaryPassword}\nRole: ${roleLabel}\nPlease change this password after signing in.`,
+  });
+};
+
 exports.createAdmin = catchAsync(async (req, res, next) => {
   const { email, password, name, role = "admin", subRole, permissions } = req.body;
 
-  if (!email || !password) {
-    return next(new AppError("Please provide an email and password", 400));
+  if (!email) {
+    return next(new AppError("Please provide an email", 400));
   }
 
   const existingUser = await User.findOne({ email });
@@ -44,9 +98,12 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
     finalPermissions = buildDefaultPermissions(false);
   }
 
+  const temporaryPassword = password || generateTemporaryPassword();
+  const passwordWasGenerated = !password;
+
   const newAdmin = await User.create({
     email,
-    password,
+    password: temporaryPassword,
     name: name || undefined,
     role,
     subRole: role === "sub_admin" ? subRole : null,
@@ -60,8 +117,23 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
   req.adminResourceId = newAdmin._id;
   req.adminCategory = "admin";
 
+  let mailError = null;
+  try {
+    await sendAdminWelcomeEmail({
+      admin: newAdmin,
+      temporaryPassword,
+      createdBy: req.userInfo,
+    });
+  } catch (error) {
+    mailError = error;
+    logger.error("Admin welcome email failed", { email, error: error.message });
+  }
+
   res.status(201).json({
     status: "success",
+    message: mailError
+      ? "Admin account created, but the welcome email could not be sent."
+      : "Admin account created and welcome email sent.",
     data: {
       admin: {
         _id: newAdmin._id,
@@ -74,6 +146,9 @@ exports.createAdmin = catchAsync(async (req, res, next) => {
         createdBy: req.userInfo._id,
         createdAt: newAdmin.createdAt,
       },
+      mailSent: !mailError,
+      passwordWasGenerated,
+      mailError: mailError ? mailError.message : undefined,
     },
   });
 });

@@ -59,6 +59,7 @@ const superAdminSlice = createSlice({
     createLoading: false,
     createError: null,
     createSuccess: false,
+    lastCreatedMailSent: null,
     toggleLoading: null,
     toggleError: null,
     activityLogs: [],
@@ -69,6 +70,7 @@ const superAdminSlice = createSlice({
     clearCreateStatus(state) {
       state.createSuccess = false;
       state.createError = null;
+      state.lastCreatedMailSent = null;
     },
   },
   extraReducers: (builder) => {
@@ -86,11 +88,17 @@ const superAdminSlice = createSlice({
 
     // createAdmin
     builder
-      .addCase(createAdmin.pending, (state) => { state.createLoading = true; state.createError = null; state.createSuccess = false; })
+      .addCase(createAdmin.pending, (state) => {
+        state.createLoading = true;
+        state.createError = null;
+        state.createSuccess = false;
+        state.lastCreatedMailSent = null;
+      })
       .addCase(createAdmin.fulfilled, (state, action) => {
         state.createLoading = false;
         state.createSuccess = true;
         state.admins.unshift(action.payload.admin || action.payload);
+        state.lastCreatedMailSent = action.payload.mailSent ?? null;
       })
       .addCase(createAdmin.rejected, (state, action) => {
         state.createLoading = false;

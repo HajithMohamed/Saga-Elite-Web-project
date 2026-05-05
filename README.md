@@ -185,6 +185,7 @@ All of these may be executed from the **workspace root**; the root `package.json
 - `npm run build` – build the frontend for production
 - `npm run lint` – run ESLint across the entire repository (JS/JSX/TS/TSX)
 - `npm start` – start the backend in production mode
+- `npm run seed:demo-admins` – create/update demo admin users for every admin role
 
 You can also execute the equivalent commands inside `Server-side` or `Client-Side` if you prefer working in isolated terminals.
 
@@ -378,6 +379,26 @@ Admin routes can require one or more of these permissions:
 - Sub-admins must have the required permission flag for each protected route.
 - Customers/users are blocked from admin routes even if they are authenticated.
 - Admin and super-admin users are blocked from Google customer sign-in flow.
+
+### Demo admin accounts
+
+Run this command after configuring `.env` and connecting MongoDB to create or update demo admins for every role:
+
+```bash
+npm run seed:demo-admins
+```
+
+| Demo user | Email | Password | Role |
+|-----------|-------|----------|------|
+| Saga Super Admin | `superadmin@sagaelite.com` | `SuperSecret123!` | `super_admin` |
+| Saga Operations Admin | `admin@sagaelite.com` | `AdminSecret123!` | `admin` |
+| Order Manager Demo | `orders.admin@sagaelite.com` | `OrderAdmin123!` | `sub_admin` / `order_manager` |
+| Product Manager Demo | `products.admin@sagaelite.com` | `ProductAdmin123!` | `sub_admin` / `product_manager` |
+| Marketing Manager Demo | `marketing.admin@sagaelite.com` | `MarketingAdmin123!` | `sub_admin` / `marketing_manager` |
+| Support Admin Demo | `support.admin@sagaelite.com` | `SupportAdmin123!` | `sub_admin` / `support_admin` |
+| Inventory Manager Demo | `inventory.admin@sagaelite.com` | `InventoryAdmin123!` | `sub_admin` / `inventory_manager` |
+
+These are demo credentials for development and presentation only. Change or remove them before production deployment.
 
 ---
 

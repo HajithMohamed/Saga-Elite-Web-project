@@ -639,12 +639,13 @@ const validateWishlistAdd = createValidationMiddleware((req) => {
 });
 
 const validateSuperAdminCreate = createValidationMiddleware((req) => {
+  const role = sanitizeEnum(req.body.role || "admin", ADMIN_ROLE_VALUES, "role");
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: false, minLength: 2, maxLength: 120 }),
     email: sanitizeEmail(req.body.email),
-    password: sanitizePassword(req.body.password),
-    role: sanitizeEnum(req.body.role || "admin", ADMIN_ROLE_VALUES, "role"),
-    subRole: req.body.role === "sub_admin"
+    password: sanitizePassword(req.body.password, "password", { required: false }),
+    role,
+    subRole: role === "sub_admin"
       ? sanitizeEnum(req.body.subRole, SUB_ROLE_VALUES, "subRole", { required: true })
       : undefined,
     permissions: sanitizePermissions(req.body.permissions),

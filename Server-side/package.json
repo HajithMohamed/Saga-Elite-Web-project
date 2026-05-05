@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "seed:demo-admins": "node scripts/seed-demo-admins.js",
     "lint": "eslint . --ext .js --ignore-path ../.gitignore",
     "test": "echo \"No tests implemented yet\" && exit 0"
   },
