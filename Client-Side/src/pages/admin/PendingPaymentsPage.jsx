@@ -18,7 +18,7 @@ import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard"
 import { fetchPendingManualPayments, verifyManualPayment } from "@/store/manualPaymentSlice";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 
-const MotionLink = motion(Link);
+const MotionLink = motion.create(Link);
 
 const statusOptions = [
   { label: "All", value: "all" },

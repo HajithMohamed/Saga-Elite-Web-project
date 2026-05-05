@@ -32,6 +32,11 @@ import VariantSelectors, {
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
 
+const formatLKR = (value = 0) =>
+  `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
+    maximumFractionDigits: 0,
+  })}`;
+
 const mergePopularProducts = (mostWished = [], bestSellers = [], currentSlug) => {
   const productMap = new Map();
 

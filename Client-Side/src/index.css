@@ -4,18 +4,18 @@
 
 @layer components {
   /* ── Editorial type tiers — luxury Sri Lankan e-commerce stack ─
-     Display: Cinzel (Roman caps, campaign poster).
-     Headlines / pull-quotes: Playfair Display (timeless serif).
-     Body / labels / instruments: Inter (modern sans).
-     Numerics only: JetBrains Mono (SKUs, refs, countdowns). */
-  .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
-  .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
-  .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
-  .se-instrument { font-family: 'Instrument Sans', system-ui, sans-serif; font-weight: 600; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
-  .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
-  .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
-  .se-label      { font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
+     Display/Logo: Cormorant Garamond (editorial, elegant).
+     Headlines: DM Serif Display (fashion-forward weight).
+     Body / UI: Jost / DM Sans (modern, readable).
+     Price/Numbers: Playfair Display (premium feel). */
+  .se-serif      { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; font-style: normal !important; }
+  .se-headline   { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; font-style: normal !important; }
+  .se-display    { font-family: 'Cormorant Garamond', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-style: normal !important; }
+  .se-instrument { font-family: 'Playfair Display', serif; font-weight: 600; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-wordmark   { font-family: 'Cormorant Garamond', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-style: normal !important; }
+  .se-body       { font-family: 'Jost', system-ui, sans-serif; font-weight: 400; letter-spacing: 0; line-height: 1.6; }
+  .se-mono       { font-family: 'Playfair Display', serif; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  .se-label      { font-family: 'DM Sans', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
   /* Override stray italic utilities on editorial classes — directive: no italics. */
   .se-serif.italic, .se-headline.italic, .se-display.italic,
   .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
@@ -100,57 +100,57 @@
   }
   
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 220.9 39.3% 11%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
+    --background: 60 20% 98%; /* #FAFAF8 Warm white */
+    --foreground: 0 0% 5%;    /* #0D0D0D Near black */
+    --card: 60 20% 98%;
+    --card-foreground: 0 0% 5%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 240 28% 14%;   /* #1A1A2E Deep navy */
+    --primary-foreground: 60 20% 98%;
+    --secondary: 40 33% 94%;  /* #F3F0EA Cream */
+    --secondary-foreground: 240 28% 14%;
+    --muted: 40 33% 94%;
+    --muted-foreground: 0 0% 42%; /* #6B6B6B Medium gray */
+    --accent: 44 55% 54%;     /* #C9A84C Warm gold */
+    --accent-foreground: 60 20% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 71.4% 4.1%;
+    --border: 40 20% 88%;     /* #E8E4DC Soft warm border */
+    --input: 40 20% 88%;
+    --ring: 240 28% 14%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --radius: 0.25rem;        /* 4px card radius */
   }
   .dark {
-    --background: 0 0% 7.5%;
-    --foreground: 0 0% 89.8%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
+    --background: 240 28% 14%; /* #1A1A2E Deep navy */
+    --foreground: 60 20% 98%;  /* #FAFAF8 Warm white */
+    --card: 240 28% 14%;
+    --card-foreground: 60 20% 98%;
+    --popover: 240 28% 14%;
+    --popover-foreground: 60 20% 98%;
+    --primary: 44 55% 54%;     /* #C9A84C Warm gold */
+    --primary-foreground: 240 28% 14%;
+    --secondary: 240 20% 20%;  /* Slightly lighter navy */
+    --secondary-foreground: 60 20% 98%;
+    --muted: 240 20% 20%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 44 55% 54%;
+    --accent-foreground: 240 28% 14%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 216 12.2% 83.9%;
+    --border: 240 20% 24%;     /* Dark navy border */
+    --input: 240 20% 24%;
+    --ring: 44 55% 54%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
+    --chart-5: 340 75% 55%;
   }
 }
 /* Custom Drop Layout Overrides */
