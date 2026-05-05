@@ -269,7 +269,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-4 px-4 py-8">
+        <nav className="flex-1 space-y-4 px-4 py-8 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -279,8 +279,8 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
                 onClick={onClose}
                 className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
                   isActive
-                    ? "border-[#D4AF37]/40 bg-[#D4AF37]/15 text-white shadow-lg shadow-[#D4AF37]/10"
-                    : "border-transparent text-gray-400 hover:border-gray-800 hover:bg-gray-900"
+                    ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)]"
+                    : "border-transparent text-gray-400 hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
                 }`}
               >
                 {isActive ? (

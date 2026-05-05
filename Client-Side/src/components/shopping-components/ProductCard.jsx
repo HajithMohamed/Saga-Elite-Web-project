@@ -87,7 +87,7 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
       )}
     >
       {/* Image Container */}
-      <Link to={productHref} className="relative aspect-[4/5] overflow-hidden bg-[#131313] block">
+      <Link to={productHref} className="relative aspect-[4/5] overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
         <img
           src={product?.images?.[0]?.url || "/LOGO.png"}
           alt={product?.name || "Piece"}
@@ -140,17 +140,17 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
       </Link>
 
       {/* Metadata */}
-      <Link to={productHref} className="block transition-colors group-hover:bg-[#131313] p-1 rounded-sm -mx-1">
+      <Link to={productHref} className="block transition-colors p-2 rounded-sm mt-1">
         <div className="flex justify-between items-start">
-          <h3 className="text-[#e5e2e1] se-body max-w-[70%] leading-tight truncate">
+          <h3 className="text-[#e5e2e1] se-body max-w-[70%] leading-tight font-medium line-clamp-2">
             {product?.name || "Untitled piece"}
           </h3>
-          <div className="flex flex-col items-end">
-            <p className="text-[#d0c5af] se-instrument text-right tabular-nums">
+          <div className="flex flex-col items-end shrink-0 pl-2">
+            <p className="text-[#D4AF37] se-instrument text-right tabular-nums font-semibold">
               {formatLKR(price)}
             </p>
             {discountPct > 0 && basePrice > 0 && (
-              <span className="se-instrument text-[10px] text-[#574500] line-through tabular-nums text-right">
+              <span className="se-instrument text-[10px] text-gray-500 line-through tabular-nums text-right mt-0.5">
                 {formatLKR(basePrice)}
               </span>
             )}
