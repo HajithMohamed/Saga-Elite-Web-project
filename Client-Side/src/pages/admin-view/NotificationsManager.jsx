@@ -346,7 +346,7 @@ const NotificationsManager = () => {
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="container mx-auto px-0"
+        className="w-full px-0"
       >
         <section className="rounded-3xl border border-[#D4AF37]/20 bg-[#0b0b0b] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">

@@ -161,7 +161,7 @@ const PaymentVerificationPage = () => {
       animate="visible"
       className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] px-6 py-5">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Payment verification</p>

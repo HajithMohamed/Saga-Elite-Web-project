@@ -354,13 +354,13 @@ const Orders = () => {
     <AdminPage
       eyebrow="Order Operations"
       title="Orders"
-      description="Monitor customer orders and update fulfillment status in board or table mode."
+description="Monitor customer orders and update fulfillment status in board or table mode."
     >
       <motion.div
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="container mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10"
+        className="w-full"
       >
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>

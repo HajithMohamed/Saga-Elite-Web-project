@@ -244,7 +244,7 @@ const PendingPaymentsPage = () => {
       animate="visible"
       className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">

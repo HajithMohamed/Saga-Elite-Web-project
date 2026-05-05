@@ -42,7 +42,7 @@
 
 
   .admin-page-shell {
-    @apply min-h-screen bg-[#050505] text-white px-4 py-6 sm:px-6 lg:px-8;
+    @apply min-h-screen w-full bg-[#050505] text-white p-4 md:p-6;
   }
   .admin-page-header {
     @apply mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 lg:flex-row lg:items-end lg:justify-between;

@@ -247,7 +247,7 @@ const AdminHomeImages = () => {
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="mx-auto w-full max-w-7xl px-0 sm:px-2 lg:px-2"
+        className="w-full px-0 sm:px-2 lg:px-2"
       >
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

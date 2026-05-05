@@ -254,7 +254,7 @@ const Dashboard = () => {
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="mx-auto max-w-[1600px]"
+        className="w-full"
       >
         <section className="overflow-hidden rounded-[36px] border border-white/10 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_28%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
           <div className="grid gap-8 xl:grid-cols-[1.25fr_0.95fr]">

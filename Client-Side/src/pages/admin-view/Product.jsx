@@ -267,7 +267,7 @@ const Product = () => {
             </div>
           </header>
 
-          <div className="max-w-7xl mx-auto w-full px-8 md:px-16 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
+          <div className="w-full px-0 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
 
             {/* Left Column: Media & Visuals */}
             <div className="col-span-1 md:col-span-4 space-y-12">

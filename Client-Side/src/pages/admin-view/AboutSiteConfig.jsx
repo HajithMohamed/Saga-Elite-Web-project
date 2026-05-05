@@ -124,7 +124,7 @@ const AboutSiteConfig = () => {
       title="About page"
       description="Edit brand story blocks, headline stats, value cards, and team section shown on /about."
     >
-      <div className="mx-auto max-w-3xl space-y-8 pb-24">
+      <div className="w-full space-y-8 pb-24">
         {loading ? (
           <div className="flex justify-center py-16 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
