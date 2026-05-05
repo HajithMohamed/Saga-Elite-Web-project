@@ -9,7 +9,9 @@ const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "syst
 const IMAGE_REF_MODELS = ["Product", "Drop", "System", "Review"];
 const IMAGE_SYSTEM_TYPES = ["hero", "ad", "logo", "category-logo"];
 const CONTACT_STATUSES = ["new", "read", "resolved"];
-const ADMIN_PERMISSION_KEYS = ["products", "orders", "users", "notifications", "drops"];
+const ADMIN_PERMISSION_KEYS = ["products", "orders", "users", "notifications", "drops", "verifyPayments", "manageReviews", "viewAnalytics", "sendCampaigns", "manageInventory", "manageAdmins"];
+const ADMIN_ROLE_VALUES = ["admin", "sub_admin"];
+const SUB_ROLE_VALUES = ["order_manager", "product_manager", "marketing_manager", "support_admin", "inventory_manager"];
 
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 
@@ -638,8 +640,13 @@ const validateWishlistAdd = createValidationMiddleware((req) => {
 
 const validateSuperAdminCreate = createValidationMiddleware((req) => {
   req.body = {
+    name: sanitizeString(req.body.name, "name", { required: false, minLength: 2, maxLength: 120 }),
     email: sanitizeEmail(req.body.email),
     password: sanitizePassword(req.body.password),
+    role: sanitizeEnum(req.body.role || "admin", ADMIN_ROLE_VALUES, "role"),
+    subRole: req.body.role === "sub_admin"
+      ? sanitizeEnum(req.body.subRole, SUB_ROLE_VALUES, "subRole", { required: true })
+      : undefined,
     permissions: sanitizePermissions(req.body.permissions),
   };
 });

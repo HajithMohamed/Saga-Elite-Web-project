@@ -2,165 +2,181 @@ const User = require("../Models/User");
 const AdminLog = require("../Models/AdminLog");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
+const {
+  ADMIN_ROLES,
+  isSuperAdmin,
+  SUB_ROLE_LABELS,
+  SUB_ROLE_PERMISSION_PRESETS,
+  FULL_ADMIN_PERMISSIONS,
+  buildDefaultPermissions,
+} = require("../Utils/admin-roles");
 
-// Creates a new regular admin account
+// ── Create Admin or Sub-Admin ───────────────────────────────────────
 exports.createAdmin = catchAsync(async (req, res, next) => {
-  const { email, password, permissions } = req.body;
+  const { email, password, name, role = "admin", subRole, permissions } = req.body;
 
   if (!email || !password) {
     return next(new AppError("Please provide an email and password", 400));
   }
 
-  // Check if user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return next(new AppError("An account with this email already exists", 400));
   }
 
-  // Default permissions if not provided
-  const defaultPermissions = {
-    products: true,
-    orders: true,
-    users: false,
-    notifications: false,
-    drops: false,
-  };
+  // Resolve permissions based on role type
+  let finalPermissions;
+  if (role === "admin") {
+    // Full admin gets all permissions by default
+    finalPermissions = permissions
+      ? { ...FULL_ADMIN_PERMISSIONS, ...permissions }
+      : { ...FULL_ADMIN_PERMISSIONS };
+  } else if (role === "sub_admin") {
+    if (!subRole) {
+      return next(new AppError("subRole is required when creating a sub_admin", 400));
+    }
+    // Start with preset, then overlay any explicit overrides
+    const preset = SUB_ROLE_PERMISSION_PRESETS[subRole] || buildDefaultPermissions(false);
+    finalPermissions = permissions
+      ? { ...preset, ...permissions }
+      : { ...preset };
+  } else {
+    finalPermissions = buildDefaultPermissions(false);
+  }
 
-  const adminPermissions = permissions ? { ...defaultPermissions, ...permissions } : defaultPermissions;
-
-  // Automatically mark as verified because a super admin created it
   const newAdmin = await User.create({
     email,
     password,
-    role: "admin",
-    permissions: adminPermissions,
+    name: name || undefined,
+    role,
+    subRole: role === "sub_admin" ? subRole : null,
+    permissions: finalPermissions,
+    createdBy: req.userInfo._id,
     isVerified: true,
     isActive: true,
   });
 
-  // Manually attach resource info for the auto-logger to pick up
-  req.adminAction = `Created admin ${email}`;
+  req.adminAction = `Created ${role === "sub_admin" ? `sub-admin (${SUB_ROLE_LABELS[subRole] || subRole})` : "admin"}: ${email}`;
   req.adminResourceId = newAdmin._id;
+  req.adminCategory = "admin";
 
   res.status(201).json({
     status: "success",
     data: {
       admin: {
-        id: newAdmin._id,
+        _id: newAdmin._id,
         email: newAdmin.email,
+        name: newAdmin.name,
         role: newAdmin.role,
+        subRole: newAdmin.subRole,
         permissions: newAdmin.permissions,
-        isActive: newAdmin.isActive
+        isActive: newAdmin.isActive,
+        createdBy: req.userInfo._id,
+        createdAt: newAdmin.createdAt,
       },
     },
   });
 });
 
-// Updates permissions for an existing admin
+// ── Update Admin Permissions ────────────────────────────────────────
 exports.updateAdminPermissions = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { permissions } = req.body;
 
-  if (!permissions || typeof permissions !== 'object') {
+  if (!permissions || typeof permissions !== "object") {
     return next(new AppError("Please provide permissions object", 400));
   }
 
   const adminToUpdate = await User.findById(id);
-
   if (!adminToUpdate) {
     return next(new AppError("No admin found with that ID", 404));
   }
 
-  if (!["admin"].includes(adminToUpdate.role)) {
-    return next(new AppError("Can only update permissions for regular admin accounts.", 403));
+  if (isSuperAdmin(adminToUpdate.role)) {
+    return next(new AppError("Cannot modify super admin permissions.", 403));
   }
 
-  // Update permissions
+  if (!["admin", "sub_admin"].includes(adminToUpdate.role)) {
+    return next(new AppError("Can only update permissions for admin or sub_admin accounts.", 403));
+  }
+
   adminToUpdate.permissions = { ...adminToUpdate.permissions, ...permissions };
   await adminToUpdate.save({ validateBeforeSave: false });
 
-  req.adminAction = `Updated permissions for admin ${adminToUpdate.email}`;
+  req.adminAction = `Updated permissions for ${adminToUpdate.email}`;
   req.adminResourceId = adminToUpdate._id;
+  req.adminCategory = "admin";
 
   res.status(200).json({
     status: "success",
     data: {
       admin: {
-        id: adminToUpdate._id,
+        _id: adminToUpdate._id,
         email: adminToUpdate.email,
+        name: adminToUpdate.name,
         role: adminToUpdate.role,
+        subRole: adminToUpdate.subRole,
         permissions: adminToUpdate.permissions,
-        isActive: adminToUpdate.isActive
+        isActive: adminToUpdate.isActive,
       },
     },
   });
 });
 
-// Lists all admins and super_admins
-exports.listAdmins = catchAsync(async (req, res, next) => {
-  const admins = await User.find({
-    role: { $in: ["admin", "super_admin", "superadmin"] }
-  }).select('email role permissions isActive createdAt updatedAt');
+// ── Update Admin Role / Sub-Role ────────────────────────────────────
+exports.updateAdminRole = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { role, subRole } = req.body;
 
-  res.status(200).json({
-    status: "success",
-    results: admins.length,
-    data: {
-      admins,
-    },
-  });
-});
+  const adminToUpdate = await User.findById(id);
+  if (!adminToUpdate) {
+    return next(new AppError("No admin found with that ID", 404));
+  }
 
-// Get admin logs
-exports.getActivityLogs = catchAsync(async (req, res, next) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 50;
-  const skip = (page - 1) * limit;
+  if (isSuperAdmin(adminToUpdate.role)) {
+    return next(new AppError("Cannot modify super admin role.", 403));
+  }
 
-  const logs = await AdminLog.find()
-    .populate("adminId", "email role")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  if (role && !["admin", "sub_admin"].includes(role)) {
+    return next(new AppError("Role must be admin or sub_admin", 400));
+  }
 
-  const totalLogs = await AdminLog.countDocuments();
+  if (role) adminToUpdate.role = role;
 
-  res.status(200).json({
-    status: "success",
-    results: logs.length,
-    pagination: {
-      total: totalLogs,
-      page,
-      pages: Math.ceil(totalLogs / limit),
-      limit,
-    },
-    data: {
-      logs,
-    },
-  });
-});
+  if (role === "sub_admin" || (!role && adminToUpdate.role === "sub_admin")) {
+    if (subRole) {
+      adminToUpdate.subRole = subRole;
+      // Apply preset permissions for the new sub-role
+      const preset = SUB_ROLE_PERMISSION_PRESETS[subRole] || {};
+      adminToUpdate.permissions = { ...adminToUpdate.permissions, ...preset };
+    }
+  } else {
+    adminToUpdate.subRole = null;
+  }
 
-// Get system stats
-exports.getSystemStats = catchAsync(async (req, res, next) => {
-  const totalUsers = await User.countDocuments({ role: 'customer' });
-  const totalAdmins = await User.countDocuments({ role: { $in: ['admin', 'super_admin', 'superadmin'] } });
-  const totalProducts = await require('../Models/Product').countDocuments();
-  const totalOrders = await require('../Models/Order').countDocuments();
+  await adminToUpdate.save({ validateBeforeSave: false });
+
+  req.adminAction = `Changed role for ${adminToUpdate.email} to ${adminToUpdate.role}${adminToUpdate.subRole ? ` (${SUB_ROLE_LABELS[adminToUpdate.subRole]})` : ""}`;
+  req.adminResourceId = adminToUpdate._id;
+  req.adminCategory = "admin";
 
   res.status(200).json({
     status: "success",
     data: {
-      stats: {
-        totalUsers,
-        totalAdmins,
-        totalProducts,
-        totalOrders,
+      admin: {
+        _id: adminToUpdate._id,
+        email: adminToUpdate.email,
+        name: adminToUpdate.name,
+        role: adminToUpdate.role,
+        subRole: adminToUpdate.subRole,
+        permissions: adminToUpdate.permissions,
+        isActive: adminToUpdate.isActive,
       },
     },
   });
 });
 
-// Deactivates/reactivates an existing admin
+// ── Toggle Admin Active Status ──────────────────────────────────────
 exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { isActive } = req.body;
@@ -171,41 +187,45 @@ exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
   }
 
   const adminToUpdate = await User.findById(id);
-
   if (!adminToUpdate) {
     return next(new AppError("No admin found with that ID", 404));
   }
 
-  // Prevent superadmins from targeting themselves or other superadmins via this route
-  if (["super_admin", "superadmin"].includes(adminToUpdate.role)) {
+  if (isSuperAdmin(adminToUpdate.role)) {
     return next(new AppError("Cannot modify another super admin account.", 403));
   }
 
-  // Change status
   adminToUpdate.isActive = desiredIsActive;
   await adminToUpdate.save({ validateBeforeSave: false });
 
-  req.adminAction = `${desiredIsActive ? 'Reactivated' : 'Deactivated'} admin ${adminToUpdate.email}`;
+  req.adminAction = `${desiredIsActive ? "Reactivated" : "Deactivated"} admin ${adminToUpdate.email}`;
   req.adminResourceId = adminToUpdate._id;
+  req.adminCategory = "admin";
 
   res.status(200).json({
     status: "success",
     data: {
-      admin: adminToUpdate,
+      admin: {
+        _id: adminToUpdate._id,
+        email: adminToUpdate.email,
+        name: adminToUpdate.name,
+        role: adminToUpdate.role,
+        subRole: adminToUpdate.subRole,
+        permissions: adminToUpdate.permissions,
+        isActive: adminToUpdate.isActive,
+      },
     },
   });
 });
 
-// Lists all admins and super_admins with aggregation of their logs
+// ── List All Admins (aggregated with logs) ──────────────────────────
 exports.listAdmins = catchAsync(async (req, res, next) => {
   const admins = await User.aggregate([
-    // Only find admins and superadmins
     {
       $match: {
-        role: { $in: ["admin", "super_admin", "superadmin"] },
+        role: { $in: ["admin", "super_admin", "superadmin", "sub_admin"] },
       },
     },
-    // Left outer join on the AdminLog collection
     {
       $lookup: {
         from: "adminlogs",
@@ -214,19 +234,20 @@ exports.listAdmins = catchAsync(async (req, res, next) => {
         as: "logs",
       },
     },
-    // Extract metadata
     {
       $project: {
         _id: 1,
         email: 1,
+        name: 1,
         role: 1,
+        subRole: 1,
+        permissions: 1,
         isActive: 1,
+        createdBy: 1,
         createdAt: 1,
         updatedAt: 1,
         actionCount: { $size: "$logs" },
-        lastActiveAt: {
-          $max: "$logs.createdAt", // find the most recent log date
-        },
+        lastActiveAt: { $max: "$logs.createdAt" },
       },
     },
     { $sort: { role: -1, createdAt: 1 } },
@@ -235,31 +256,28 @@ exports.listAdmins = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     results: admins.length,
-    data: {
-      admins,
-    },
+    data: { admins },
   });
 });
 
-// Global paginated log of all admin actions
+// ── Get Activity Logs (paginated) ───────────────────────────────────
 exports.getActivityLogs = catchAsync(async (req, res, next) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 100;
   const skip = (page - 1) * limit;
 
-  // Filter conditionally by a specific admin if requested
   const filter = {};
-  if (req.query.adminId) {
-    filter.adminId = req.query.adminId;
-  }
+  if (req.query.adminId) filter.adminId = req.query.adminId;
+  if (req.query.category) filter.category = req.query.category;
 
-  const logs = await AdminLog.find(filter)
-    .populate("adminId", "email role")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-
-  const totalLogs = await AdminLog.countDocuments(filter);
+  const [logs, totalLogs] = await Promise.all([
+    AdminLog.find(filter)
+      .populate("adminId", "email role name subRole")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    AdminLog.countDocuments(filter),
+  ]);
 
   res.status(200).json({
     status: "success",
@@ -270,8 +288,95 @@ exports.getActivityLogs = catchAsync(async (req, res, next) => {
       pages: Math.ceil(totalLogs / limit),
       limit,
     },
+    data: { logs },
+  });
+});
+
+// ── Get Admin-Specific Logs ─────────────────────────────────────────
+exports.getAdminLogs = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
+  const skip = (page - 1) * limit;
+
+  const [logs, totalLogs] = await Promise.all([
+    AdminLog.find({ adminId: id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    AdminLog.countDocuments({ adminId: id }),
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    results: logs.length,
+    pagination: {
+      total: totalLogs,
+      page,
+      pages: Math.ceil(totalLogs / limit),
+      limit,
+    },
+    data: { logs },
+  });
+});
+
+// ── System Stats ────────────────────────────────────────────────────
+exports.getSystemStats = catchAsync(async (req, res, next) => {
+  const Product = require("../Models/Product");
+  const Order = require("../Models/Order");
+
+  const [totalCustomers, adminCounts, totalProducts, totalOrders, roleDistribution] =
+    await Promise.all([
+      User.countDocuments({ role: { $in: ["customer", "user"] } }),
+      User.countDocuments({ role: { $in: ADMIN_ROLES } }),
+      Product.countDocuments(),
+      Order.countDocuments(),
+      User.aggregate([
+        { $match: { role: { $in: ["admin", "sub_admin", "super_admin", "superadmin"] } } },
+        {
+          $group: {
+            _id: {
+              role: "$role",
+              subRole: "$subRole",
+            },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+  // Format role distribution
+  const roleSummary = {};
+  roleDistribution.forEach(({ _id, count }) => {
+    const key = _id.subRole ? `${_id.role}:${_id.subRole}` : _id.role;
+    roleSummary[key] = count;
+  });
+
+  // Recent admin activity (last 24h)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentActivityCount = await AdminLog.countDocuments({
+    createdAt: { $gte: oneDayAgo },
+  });
+
+  // Category breakdown of recent logs
+  const categoryBreakdown = await AdminLog.aggregate([
+    { $match: { createdAt: { $gte: oneDayAgo } } },
+    { $group: { _id: "$category", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+  ]);
+
+  res.status(200).json({
+    status: "success",
     data: {
-      logs,
+      stats: {
+        totalCustomers,
+        totalAdmins: adminCounts,
+        totalProducts,
+        totalOrders,
+        roleSummary,
+        recentActivityCount,
+        categoryBreakdown,
+      },
     },
   });
 });

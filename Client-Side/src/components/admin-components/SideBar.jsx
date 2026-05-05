@@ -112,11 +112,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   useSocketEvent("payment:refresh", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("review:refresh", () => fetchCounts(), [fetchCounts]);
 
-  const menuItems = [
+  const isSuperAdminUser = user?.role === "super_admin" || user?.role === "superadmin";
+  const userPerms = user?.permissions || {};
+
+  const allMenuItems = [
     {
       label: "Dashboard",
       path: "/admin/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
+      permission: null, // everyone sees this
     },
     {
       label: "Pending Payments",
@@ -124,26 +128,31 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <CreditCard className="h-5 w-5" />,
       badge: pendingPaymentCount,
       bounceKey: paymentBounce,
+      permission: "verifyPayments",
     },
     {
       label: "Manual Payments",
       path: "/admin/manual-payments",
       icon: <Landmark className="h-5 w-5" />,
+      permission: "verifyPayments",
     },
     {
       label: "Home Images",
       path: "/admin/home-images",
       icon: <ImagePlus className="h-5 w-5" />,
+      permission: "products",
     },
     {
       label: "Products",
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
+      permission: "products",
     },
     {
       label: "Orders",
       path: "/admin/order",
       icon: <ShoppingCart className="h-5 w-5" />,
+      permission: "orders",
     },
     {
       label: "Review Moderation",
@@ -151,30 +160,40 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <StarHalf className="h-5 w-5" />,
       badge: pendingReviewCount,
       bounceKey: reviewBounce,
+      permission: "manageReviews",
     },
     {
       label: "Users",
       path: "/admin/users",
       icon: <Users className="h-5 w-5" />,
+      permission: "users",
     },
     {
       label: "Notifications",
       path: "/admin/notifications",
       icon: <MessageSquare className="h-5 w-5" />,
+      permission: "notifications",
     },
     {
       label: "Features",
       path: "/admin/feature",
       icon: <Star className="h-5 w-5" />,
+      permission: "products",
     },
     {
       label: "Drops",
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
+      permission: "drops",
     },
   ];
 
-  if (user?.role === "super_admin" || user?.role === "superadmin") {
+  // Super admins see everything; others filtered by their permissions
+  const menuItems = isSuperAdminUser
+    ? allMenuItems
+    : allMenuItems.filter((item) => !item.permission || userPerms[item.permission]);
+
+  if (isSuperAdminUser) {
     menuItems.push({
       label: "Super Admins",
       path: "/admin/super-admin",

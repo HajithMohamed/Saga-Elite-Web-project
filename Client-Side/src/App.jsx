@@ -100,7 +100,7 @@ function App() {
   );
   const dispatch = useDispatch();
 
-  const ADMIN_ROLES = ["admin", "super_admin", "superadmin"];
+  const ADMIN_ROLES = ["admin", "super_admin", "superadmin", "sub_admin"];
   const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
     String(user?.role || "").toLowerCase()
   )

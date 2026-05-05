@@ -30,16 +30,35 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["admin", "superadmin", "super_admin", "user", "customer"],
+      enum: ["admin", "superadmin", "super_admin", "sub_admin", "user", "customer"],
       default: "customer",
     },
 
+    subRole: {
+      type: String,
+      enum: ["order_manager", "product_manager", "marketing_manager",
+             "support_admin", "inventory_manager", null],
+      default: null,
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     permissions: {
-      products: { type: Boolean, default: false },
-      orders: { type: Boolean, default: false },
-      users: { type: Boolean, default: false },
-      notifications: { type: Boolean, default: false },
-      drops: { type: Boolean, default: false },
+      products:        { type: Boolean, default: false },
+      orders:          { type: Boolean, default: false },
+      users:           { type: Boolean, default: false },
+      notifications:   { type: Boolean, default: false },
+      drops:           { type: Boolean, default: false },
+      verifyPayments:  { type: Boolean, default: false },
+      manageReviews:   { type: Boolean, default: false },
+      viewAnalytics:   { type: Boolean, default: false },
+      sendCampaigns:   { type: Boolean, default: false },
+      manageInventory: { type: Boolean, default: false },
+      manageAdmins:    { type: Boolean, default: false },
     },
 
     provider: {
