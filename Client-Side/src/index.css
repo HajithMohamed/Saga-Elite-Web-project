@@ -106,7 +106,7 @@
     --card-foreground: 0 0% 5%;
     --popover: 60 20% 98%;
     --popover-foreground: 0 0% 5%;
-    --primary: 240 28% 14%;   /* #1A1A2E Deep navy */
+    --primary: 348 61% 26%;   /* #6B1A2A Deep jewel red */
     --primary-foreground: 60 20% 98%;
     --secondary: 40 33% 94%;  /* #F3F0EA Cream */
     --secondary-foreground: 240 28% 14%;
@@ -133,8 +133,8 @@
     --card-foreground: 60 20% 98%;
     --popover: 240 28% 14%;
     --popover-foreground: 60 20% 98%;
-    --primary: 44 55% 54%;     /* #C9A84C Warm gold */
-    --primary-foreground: 240 28% 14%;
+    --primary: 348 61% 26%;   /* #6B1A2A Deep jewel red */
+    --primary-foreground: 60 20% 98%;
     --secondary: 240 20% 20%;  /* Slightly lighter navy */
     --secondary-foreground: 60 20% 98%;
     --muted: 240 20% 20%;

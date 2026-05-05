@@ -8,13 +8,13 @@ export default {
   theme: {
   	extend: {
 fontFamily: {
-		display: ['Cormorant Garamond', 'serif'],
-		serif: ['DM Serif Display', 'serif'],
-		sans: ['Jost', 'system-ui', 'sans-serif'],
-		mono: ['Playfair Display', 'serif'],
-		headline: ['DM Serif Display', 'serif'],
-		body: ['Jost', 'system-ui', 'sans-serif'],
-		label: ['DM Sans', 'system-ui', 'sans-serif'],
+		display: ['Playfair Display', 'serif'],
+		serif: ['Playfair Display', 'serif'],
+		sans: ['DM Sans', 'sans-serif'],
+		mono: ['DM Mono', 'monospace'],
+		headline: ['Playfair Display', 'serif'],
+		body: ['DM Sans', 'sans-serif'],
+		label: ['DM Sans', 'sans-serif'],
 	},
 borderRadius: {
   			lg: 'var(--radius)',
