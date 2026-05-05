@@ -18,6 +18,8 @@ import {
   FileText,
   Inbox,
   Newspaper,
+  Settings,
+  BarChart3,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -146,6 +148,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "products",
     },
     {
+      label: "Site Config",
+      path: "/admin/site-config",
+      icon: <Settings className="h-5 w-5" />,
+      permission: null,
+    },
+    {
       label: "Products",
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
@@ -188,6 +196,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
       permission: "drops",
+    },
+    {
+      label: "Analytics",
+      path: "/admin/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+      permission: null,
     },
     {
       label: "About Content",
@@ -254,18 +268,17 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
         initial={false}
         animate={{ x: isLg ? 0 : drawerX }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-800 bg-black"
+        className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#4d4635]/60 bg-[#0a0a0a]"
         style={{ willChange: "transform" }}
       >
-        <div className="border-b border-gray-800 p-8">
-          <Link to="/admin/dashboard" className="group block text-center" onClick={onClose}>
-            <h1 className="font-serif text-2xl font-black uppercase tracking-tight text-[#D4AF37] transition-opacity group-hover:opacity-80">
-              Saga <span className="text-white">Elite</span>
-            </h1>
-
-            <p className="mt-1 font-sans text-[10px] uppercase tracking-[0.2em] text-gray-400">
-              Rare Fit Forever
-            </p>
+        <div className="border-b border-[#4d4635]/60 p-8">
+          <Link to="/admin/dashboard" className="flex items-center gap-3" onClick={onClose}>
+            <img src="/LOGO.png" alt="" className="h-8 w-8 object-contain"
+                 onError={(e) => e.currentTarget.style.display='none'} />
+            <div>
+              <div className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">SAGA ELITE</div>
+              <div className="se-body text-xs text-[#99907c] mt-0.5">Admin Panel</div>
+            </div>
           </Link>
         </div>
 
@@ -280,7 +293,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
                 className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
                   isActive
                     ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.15)]"
-                    : "border-transparent text-gray-400 hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
+                    : "border-transparent text-[#99907c] hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
                 }`}
               >
                 {isActive ? (
@@ -331,14 +344,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           })}
         </nav>
 
-        <div className="space-y-3 border-t border-gray-800 p-6">
+        <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
           <Link
             to="/admin/account"
             onClick={onClose}
             className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
               location.pathname === "/admin/account"
                 ? "border-[#D4AF37]/40 bg-[#D4AF37]/15 text-white"
-                : "border-transparent text-gray-400 hover:border-gray-800 hover:bg-gray-900"
+                : "border-transparent text-[#99907c] hover:border-[#4d4635]/60 hover:bg-[#131313]"
             }`}
           >
             {location.pathname === "/admin/account" ? (
@@ -366,8 +379,8 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             disabled={isLoading}
             className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${
               isLoading
-                ? "cursor-not-allowed bg-gray-700 text-gray-400"
-                : "text-gray-500 hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+                ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
+                : "text-[#99907c] hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
             }`}
           >
             <LogOut className="h-5 w-5" />

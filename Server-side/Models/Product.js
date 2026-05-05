@@ -82,7 +82,7 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Women", "Men", "Kids"],
+      enum: ["Ladies", "Gents", "Unisex", "Women", "Men", "Kids"], // Kept legacy strings temporarily to avoid breaking existing DB docs
       required: true,
     },
 

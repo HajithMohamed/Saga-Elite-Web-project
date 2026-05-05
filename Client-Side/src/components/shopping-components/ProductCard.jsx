@@ -77,6 +77,16 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
   const variants = product?.variants || [];
   const piecesLeft = variants.reduce((sum, v) => sum + Math.max(0, Number(v?.stock || 0)), 0);
 
+  const getDropBadge = (product) => {
+    if (!product?.dropId && !product?.drop) return null;
+    const drop = product.drop || {};
+    const ended = drop.endDate && new Date(drop.endDate) < new Date();
+    if (!ended) return { label: "Drop · Live", color: "gold" };
+    return { label: `Drop · ${drop.name || "Archive"}`, color: "muted" };
+  };
+
+  const dropBadge = getDropBadge(product);
+
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -103,6 +113,15 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
         ) : piecesLeft > 0 && piecesLeft < 5 ? (
           <div className="absolute top-3 left-3 bg-[#93000a] text-[#ffb4ab] px-3 py-1 se-label text-[9px] tracking-[0.28em] backdrop-blur-sm">
             {piecesLeft} Pieces Left
+          </div>
+        ) : dropBadge ? (
+          <div className={cn(
+            "absolute top-3 left-3 px-3 py-1 se-label text-[9px] tracking-[0.28em] border backdrop-blur-sm",
+            dropBadge.color === "gold" 
+              ? "bg-[#D4AF37]/90 text-[#0a0a0a] border-[#D4AF37]" 
+              : "bg-[#0a0a0a]/90 text-[#99907c] border-[#4d4635]"
+          )}>
+            {dropBadge.label}
           </div>
         ) : isLimited ? (
           <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#e5e2e1] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#4d4635] backdrop-blur-sm">

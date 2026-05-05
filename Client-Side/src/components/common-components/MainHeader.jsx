@@ -135,9 +135,12 @@ const MainHeader = () => {
         <div className={`bg-background border-b border-border transition-all duration-300 ${scrolled ? "py-2" : "py-3"}`}>
           <div className="w-full px-6 flex items-center justify-between gap-3">
             <div>
-              <Link to="/shopping/home" className="block">
-                <p className="font-display text-[22px] tracking-[0.08em] text-primary">SAGA ELITE</p>
-                <p className="text-[10px] text-muted">Premium Fashion · Sri Lanka</p>
+              <Link to="/shopping/home" className="flex items-center gap-3">
+                <img src="/LOGO.png" alt="Saga Elite" className="h-9 w-9 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <div className="hidden sm:block">
+                  <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+                  <p className="text-[10px] text-[#99907c]">Rare Fit. Forever.</p>
+                </div>
               </Link>
             </div>
 
@@ -240,9 +243,12 @@ const MainHeader = () => {
             transition={{ duration: 0.25 }}
             className="fixed inset-y-0 left-0 w-[84%] max-w-[320px] z-[60] bg-background border-r border-border p-5 md:hidden overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-4">
-              <p className="font-display text-xl text-primary">SAGA ELITE</p>
-              <button onClick={() => setMobileOpen(false)} aria-label="Close drawer"><X /></button>
+            <div className="flex justify-between items-center mb-6">
+              <Link to="/shopping/home" className="flex items-center gap-3">
+                <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+              </Link>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="text-[#e5e2e1]"><X /></button>
             </div>
             <div className="space-y-2">
               {navItems.map((item) => (

@@ -236,10 +236,14 @@ export const getLandingData = async () => {
         Formal: findImageForCategory(categoryLogoImages, "Formal"),
         Accessories: findImageForCategory(categoryLogoImages, "Men Accessories"),
       },
-      kids: {
-        Girls: findImageForCategory(categoryLogoImages, "Girls"),
-        Boys: findImageForCategory(categoryLogoImages, "Boys"),
-        Infants: findImageForCategory(categoryLogoImages, "Infants"),
+      ladies: {
+        Ladies: findImageForCategory(categoryLogoImages, "Ladies"),
+      },
+      gents: {
+        Gents: findImageForCategory(categoryLogoImages, "Gents"),
+      },
+      unisex: {
+        Unisex: findImageForCategory(categoryLogoImages, "Unisex"),
       },
     },
     socialImages: adImages.length ? adImages : FALLBACK_AD_IMAGES,
