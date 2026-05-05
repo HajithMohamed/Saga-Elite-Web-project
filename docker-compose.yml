@@ -3,17 +3,19 @@ services:
     build:
       context: .
       dockerfile: Server-side/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: saga_backend
     restart: unless-stopped
     ports:
-      - "5001:5001"
+      - "${HOST_BACKEND_PORT:-5001}:5001"
     env_file:
       - .env
     volumes:
       - ./Server-side:/workspace/Server-side
       - /workspace/node_modules
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5001/health"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -25,18 +27,20 @@ services:
     build:
       context: .
       dockerfile: Client-Side/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: saga_frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "${HOST_FRONTEND_PORT:-5173}:5173"
     environment:
-      - VITE_API_URL=http://localhost:5001/api/v1
+      - VITE_API_URL=http://localhost:${HOST_BACKEND_PORT:-5001}/api/v1
       - VITE_BACKEND_TARGET=http://backend:5001
     volumes:
       - ./Client-Side:/workspace/Client-Side
       - /workspace/node_modules
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5173/"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:5173/"]
       interval: 30s
       timeout: 10s
       retries: 3
