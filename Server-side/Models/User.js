@@ -153,13 +153,12 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.pre("save", function (next) {
+userSchema.pre("save", function () {
   if (!this.slug || this.isModified("email")) {
     const local = (this.email || "user").split("@")[0] || "user";
     const tail = String(this._id || "").slice(-6) || Math.random().toString(36).slice(2, 8);
     this.slug = slugify(`${local}-${tail}`, { lower: true, strict: true });
   }
-  next();
 });
 
 // ── Fixed pre-save hook (Mongoose 9.x style) ──

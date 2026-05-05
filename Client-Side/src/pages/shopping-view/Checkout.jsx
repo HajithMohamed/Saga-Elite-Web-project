@@ -19,7 +19,7 @@ import VariantSelectors, {
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
-import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { compressImageFile } from "@/lib/image-compression";
 import { cn } from "@/lib/utils";
