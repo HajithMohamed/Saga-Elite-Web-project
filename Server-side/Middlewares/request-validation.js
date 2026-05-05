@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
 
-const PRODUCT_CATEGORIES = ["Unisex", "Boys", "Girls"];
+const PRODUCT_CATEGORIES = ["Women", "Men", "Kids"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
 const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "system"];
@@ -432,6 +432,13 @@ const validateDropUpdate = createValidationMiddleware((req) => {
 });
 
 const validateProductCreate = createValidationMiddleware((req) => {
+  const tags = Array.isArray(req.body.tags)
+    ? req.body.tags.map((tag, index) => sanitizeString(tag, `tags[${index}]`, { required: true, maxLength: 40 }))
+    : [];
+  const relatedProductIds = Array.isArray(req.body.relatedProductIds)
+    ? req.body.relatedProductIds.map((id, index) => sanitizeObjectId(id, `relatedProductIds[${index}]`))
+    : [];
+
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 }),
     artNo: sanitizeString(req.body.artNo, "artNo", { required: true, minLength: 2, maxLength: 50 }),
@@ -440,7 +447,15 @@ const validateProductCreate = createValidationMiddleware((req) => {
     category: sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true }),
     drop: sanitizeObjectId(req.body.drop, "drop"),
     basePrice: sanitizeNumber(req.body.basePrice, "basePrice", { required: true, min: 0 }),
+    originalPrice: sanitizeNumber(req.body.originalPrice ?? req.body.basePrice, "originalPrice", { min: 0 }),
+    salePrice: sanitizeNumber(req.body.salePrice ?? req.body.basePrice, "salePrice", { min: 0 }),
     discountPercent: sanitizeNumber(req.body.discountPercent ?? 0, "discountPercent", { min: 0, max: 100 }),
+    categoryPath: sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 }),
+    tags,
+    relatedProductIds,
+    trendScore: sanitizeNumber(req.body.trendScore ?? 0, "trendScore", { min: 0 }),
+    isDeal: sanitizeBoolean(req.body.isDeal ?? false, "isDeal"),
+    dealEndsAt: req.body.dealEndsAt ? sanitizeDate(req.body.dealEndsAt, "dealEndsAt") : undefined,
     variants: sanitizeVariants(req.body.variants, { required: true }),
   };
 });
@@ -454,7 +469,21 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.category !== undefined) body.category = sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true });
   if (req.body.drop !== undefined) body.drop = sanitizeObjectId(req.body.drop, "drop");
   if (req.body.basePrice !== undefined) body.basePrice = sanitizeNumber(req.body.basePrice, "basePrice", { min: 0 });
+  if (req.body.originalPrice !== undefined) body.originalPrice = sanitizeNumber(req.body.originalPrice, "originalPrice", { min: 0 });
+  if (req.body.salePrice !== undefined) body.salePrice = sanitizeNumber(req.body.salePrice, "salePrice", { min: 0 });
   if (req.body.discountPercent !== undefined) body.discountPercent = sanitizeNumber(req.body.discountPercent, "discountPercent", { min: 0, max: 100 });
+  if (req.body.categoryPath !== undefined) body.categoryPath = sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 });
+  if (req.body.tags !== undefined) {
+    if (!Array.isArray(req.body.tags)) fail("tags must be an array");
+    body.tags = req.body.tags.map((tag, index) => sanitizeString(tag, `tags[${index}]`, { required: true, maxLength: 40 }));
+  }
+  if (req.body.relatedProductIds !== undefined) {
+    if (!Array.isArray(req.body.relatedProductIds)) fail("relatedProductIds must be an array");
+    body.relatedProductIds = req.body.relatedProductIds.map((id, index) => sanitizeObjectId(id, `relatedProductIds[${index}]`));
+  }
+  if (req.body.trendScore !== undefined) body.trendScore = sanitizeNumber(req.body.trendScore, "trendScore", { min: 0 });
+  if (req.body.isDeal !== undefined) body.isDeal = sanitizeBoolean(req.body.isDeal, "isDeal");
+  if (req.body.dealEndsAt !== undefined) body.dealEndsAt = sanitizeDate(req.body.dealEndsAt, "dealEndsAt");
   if (req.body.isFeatured !== undefined) body.isFeatured = sanitizeBoolean(req.body.isFeatured, "isFeatured");
   if (req.body.isActive !== undefined) body.isActive = sanitizeBoolean(req.body.isActive, "isActive");
   if (req.body.maxPerUser !== undefined) body.maxPerUser = sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true });

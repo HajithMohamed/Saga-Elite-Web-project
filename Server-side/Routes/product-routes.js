@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   getAllProducts,
+  getLandingProducts,
   getSingleProduct,
   addProduct,
   updateProduct,
@@ -21,6 +22,7 @@ const {
 const router = express.Router();
 
 router.get("/get-all-products", paginatedResult(Product), getAllProducts);
+router.get("/", getLandingProducts);
 router.get("/search", searchProducts);
 router.get("/recommendations", getRecommendations);
 router.get("/get-single-product/:slug", getSingleProduct);

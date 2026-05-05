@@ -106,6 +106,19 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
     }],
+    trendScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isDeal: {
+      type: Boolean,
+      default: false,
+    },
+    dealEndsAt: {
+      type: Date,
+      default: null,
+    },
 
     drop: {
       type: mongoose.Schema.Types.ObjectId,
@@ -117,6 +130,14 @@ const productSchema = new mongoose.Schema(
     basePrice: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    originalPrice: {
+      type: Number,
+      min: 0,
+    },
+    salePrice: {
+      type: Number,
       min: 0,
     },
 
@@ -217,6 +238,12 @@ productSchema.pre("save", function () {
       (sum, variant) => sum + variant.stock,
       0
     );
+  }
+  if (typeof this.originalPrice !== "number") {
+    this.originalPrice = this.basePrice;
+  }
+  if (typeof this.salePrice !== "number") {
+    this.salePrice = Math.max(0, Math.round(this.basePrice * (100 - (this.discountPercent || 0)) / 100));
   }
   
 });

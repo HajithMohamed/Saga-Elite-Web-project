@@ -71,8 +71,16 @@ const addProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
         "variants"
     );
@@ -141,8 +149,16 @@ const updateProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
         "isFeatured",
         "isActive",
@@ -252,6 +268,33 @@ const getAdminAnalytics = catchAsync(async (req, res, next) => {
     });
 });
 
+const getLandingProducts = catchAsync(async (req, res) => {
+    const { category, tag, isDeal, limit = 8 } = req.query;
+    const filter = { isActive: true };
+
+    if (category) {
+        filter.category = new RegExp(`^${String(category)}$`, "i");
+    }
+    if (tag) {
+        filter.tags = { $in: [String(tag)] };
+    }
+    if (typeof isDeal !== "undefined") {
+        filter.isDeal = String(isDeal) === "true";
+    }
+
+    const products = await Product.find(filter)
+        .sort({ arrivedAt: -1, createdAt: -1 })
+        .limit(Math.max(1, Number(limit) || 8))
+        .populate("images")
+        .populate("relatedProductIds", "name slug category basePrice salePrice");
+
+    res.status(200).json({
+        success: true,
+        results: products.length,
+        data: products,
+    });
+});
+
 
 /*
 |--------------------------------------------------------------------------
@@ -309,21 +352,12 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     });
 });
 
-module.exports = {
-    getAllProducts,
-    getSingleProduct,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    getAdminAnalytics
-};
-
 /*
 |--------------------------------------------------------------------------
 | Get Recommendations
 |--------------------------------------------------------------------------
 */
-exports.getRecommendations = catchAsync(async (req, res, next) => {
+const getRecommendations = catchAsync(async (req, res, next) => {
   const { productId, userId } = req.query;
   let recommendations = [];
 
@@ -361,7 +395,7 @@ exports.getRecommendations = catchAsync(async (req, res, next) => {
 | Instant / Full Search
 |--------------------------------------------------------------------------
 */
-exports.searchProducts = catchAsync(async (req, res, next) => {
+const searchProducts = catchAsync(async (req, res, next) => {
   const { q, limit = 10, page = 1 } = req.query;
   if (!q) return next(new AppError("Search query is required", 400));
 
@@ -386,3 +420,15 @@ exports.searchProducts = catchAsync(async (req, res, next) => {
     data: { products },
   });
 });
+
+module.exports = {
+    getAllProducts,
+    getLandingProducts,
+    getSingleProduct,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    getAdminAnalytics,
+    getRecommendations,
+    searchProducts,
+};

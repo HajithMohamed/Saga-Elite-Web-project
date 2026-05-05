@@ -17,6 +17,20 @@ exports.getActiveBanners = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.getBannerFeed = catchAsync(async (req, res) => {
+  const banners = await Banner.find({ isActive: true }).sort({ displayOrder: 1 });
+  const payload = banners.map((banner) => ({
+    id: banner._id,
+    imageUrl: banner.imageUrl,
+    headline: banner.headline || banner.title,
+    subheadline: banner.title,
+    ctaText: banner.ctaText || "Shop Now",
+    ctaLink: banner.redirectUrl,
+    order: banner.displayOrder || 0,
+  }));
+  res.status(200).json({ status: "success", data: payload });
+});
+
 exports.createBanner = catchAsync(async (req, res, next) => {
   const banner = await Banner.create(req.body);
 
