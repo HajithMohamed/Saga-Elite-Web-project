@@ -6,6 +6,8 @@ const {
   updateProduct,
   deleteProduct,
   getAdminAnalytics,
+  searchProducts,
+  getRecommendations,
 } = require("../Controllers/product-controller");
 const paginatedResult = require("../Middlewares/pagination-middleware");
 const Product = require("../Models/Product");
@@ -19,6 +21,8 @@ const {
 const router = express.Router();
 
 router.get("/get-all-products", paginatedResult(Product), getAllProducts);
+router.get("/search", searchProducts);
+router.get("/recommendations", getRecommendations);
 router.get("/get-single-product/:slug", getSingleProduct);
 router.get("/analytics", authMiddleware, adminMiddleware, requirePermission("products"), getAdminAnalytics);
 router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, addProduct);

@@ -4,21 +4,19 @@
 
 @layer components {
   /* ── Editorial type tiers — luxury Sri Lankan e-commerce stack ─
-     Display: Cinzel (Roman caps, campaign poster).
-     Headlines / pull-quotes: Playfair Display (timeless serif).
-     Body / labels / instruments: Inter (modern sans).
-     Numerics only: JetBrains Mono (SKUs, refs, countdowns). */
+     Display / Headlines: Playfair Display (timeless serif).
+     Body / labels: DM Sans (modern sans).
+     Numerics only: DM Mono (SKUs, refs, countdowns). */
   .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
   .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
-  .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
-  .se-instrument { font-family: 'Instrument Sans', system-ui, sans-serif; font-weight: 600; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
-  .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
-  .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
-  .se-label      { font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
+  .se-display    { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
+  .se-wordmark   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
+  .se-body       { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
+  .se-mono       { font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  .se-label      { font-family: 'DM Sans', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
   /* Override stray italic utilities on editorial classes — directive: no italics. */
   .se-serif.italic, .se-headline.italic, .se-display.italic,
-  .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
+  .se-wordmark.italic { font-style: normal !important; }
 
   /* ── Hairline system ──────────────────────────────────────── */
   .se-hairline { border-color: #4d4635; }
@@ -81,9 +79,9 @@
 
 @layer base {
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: theme('colors.background');
+    color: theme('colors.foreground');
+    font-family: 'DM Sans', system-ui, sans-serif;
     line-height: 1.6;
     letter-spacing: -0.005em;
   }

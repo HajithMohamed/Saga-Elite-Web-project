@@ -82,9 +82,30 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Unisex", "Boys", "Girls"],
+      enum: ["Women", "Men", "Kids"],
       required: true,
     },
+
+    categoryPath: {
+      type: String,
+      trim: true,
+      description: "E.g., Women > Dresses > Midi",
+    },
+
+    tags: [{
+      type: String,
+      trim: true,
+    }],
+
+    arrivedAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    relatedProductIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }],
 
     drop: {
       type: mongoose.Schema.Types.ObjectId,
@@ -164,6 +185,22 @@ const productSchema = new mongoose.Schema(
    Index Optimization
 =================================*/
 productSchema.index({ drop: 1, isActive: 1 });
+productSchema.index({ 
+  name: "text", 
+  category: "text", 
+  tags: "text", 
+  brand: "text",
+  categoryPath: "text" 
+}, {
+  weights: {
+    name: 10,
+    category: 5,
+    tags: 5,
+    brand: 3,
+    categoryPath: 2
+  },
+  name: "productSearchIndex"
+});
 
 /* ===============================
    Slug Generation & Stock Calc

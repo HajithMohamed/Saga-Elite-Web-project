@@ -317,3 +317,72 @@ module.exports = {
     deleteProduct,
     getAdminAnalytics
 };
+
+/*
+|--------------------------------------------------------------------------
+| Get Recommendations
+|--------------------------------------------------------------------------
+*/
+exports.getRecommendations = catchAsync(async (req, res, next) => {
+  const { productId, userId } = req.query;
+  let recommendations = [];
+
+  if (productId) {
+    // Contextual: find products in the same category or via relatedProductIds
+    const product = await Product.findById(productId);
+    if (!product) return next(new AppError("Product not found", 404));
+
+    // Combine related products and same category
+    recommendations = await Product.find({
+      $or: [
+        { _id: { $in: product.relatedProductIds } },
+        { category: product.category, _id: { $ne: product._id } }
+      ],
+      isActive: true
+    }).limit(10).populate("images");
+
+  } else {
+    // Fallback: Trending / Bestsellers
+    recommendations = await Product.find({ isActive: true })
+      .sort({ soldCount: -1 })
+      .limit(10)
+      .populate("images");
+  }
+
+  res.status(200).json({
+    status: "success",
+    results: recommendations.length,
+    data: { recommendations },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Instant / Full Search
+|--------------------------------------------------------------------------
+*/
+exports.searchProducts = catchAsync(async (req, res, next) => {
+  const { q, limit = 10, page = 1 } = req.query;
+  if (!q) return next(new AppError("Search query is required", 400));
+
+  const skip = (page - 1) * limit;
+
+  // MongoDB text search
+  const products = await Product.find(
+    { $text: { $search: q }, isActive: true },
+    { score: { $meta: "textScore" } }
+  )
+    .sort({ score: { $meta: "textScore" } })
+    .skip(Number(skip))
+    .limit(Number(limit))
+    .populate("images");
+
+  const total = await Product.countDocuments({ $text: { $search: q }, isActive: true });
+
+  res.status(200).json({
+    status: "success",
+    results: products.length,
+    total,
+    data: { products },
+  });
+});
