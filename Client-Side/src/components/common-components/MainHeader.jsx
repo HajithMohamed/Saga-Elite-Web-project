@@ -16,6 +16,10 @@ import {
   ShoppingBag,
   User,
   X,
+  ChevronDown,
+  Archive,
+  Info,
+  Mail,
 } from "lucide-react";
 
 import { logoutUserAction } from "@/store/auth-slice";
@@ -25,22 +29,42 @@ import NotificationsDropdown from "@/components/common-components/NotificationsD
 import { CONTACT_INFO } from "@/config";
 import { Wordmark } from "@/components/ui/editorial";
 
-// ── countdown helper ────────────────────────────────────────────
-const computeCountdown = (target) => {
-  if (!target) return { d: "00", h: "00", m: "00" };
-  const diff = target - new Date();
-  if (diff <= 0) return { d: "00", h: "00", m: "00" };
-  return {
-    d: String(Math.floor(diff / 86400000)).padStart(2, "0"),
-    h: String(Math.floor((diff / 3600000) % 24)).padStart(2, "0"),
-    m: String(Math.floor((diff / 60000) % 60)).padStart(2, "0"),
-  };
+// ── Announcement Bar Auto-Rotate ────────────────────────────────
+const AnnouncementBar = ({ items = [] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (!items.length) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [items.length]);
+
+  return (
+    <div className="bg-primary text-primary-foreground py-2 px-4 md:px-8 lg:px-12 overflow-hidden">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={currentIndex}
+          initial={reduced ? { opacity: 0 } : { x: 40, opacity: 0 }}
+          animate={reduced ? { opacity: 1 } : { x: 0, opacity: 1 }}
+          exit={reduced ? { opacity: 0 } : { x: -40, opacity: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center se-label text-[11px] md:text-xs tracking-[0.24em]"
+        >
+          {items[currentIndex]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
 };
 
-// ── tiny badge that scale-pops on count change ─────────────────
+// ── Animated Badge ──────────────────────────────────────────────
 const AnimatedBadge = ({ count }) => {
   const reduced = useReducedMotion();
   if (!count || count <= 0) return null;
+
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.span
@@ -53,7 +77,7 @@ const AnimatedBadge = ({ count }) => {
         }
         exit={reduced ? { opacity: 0 } : { scale: 0.6, opacity: 0 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-[#f2ca50] text-[#1b1c1c] se-mono text-[9px] font-semibold"
+        className="absolute -top-2 -right-2 min-w-[18px] h-5 px-1 inline-flex items-center justify-center rounded-full bg-accent text-foreground se-mono text-[9px] font-semibold"
       >
         {count > 99 ? "99+" : count}
       </motion.span>
@@ -61,6 +85,68 @@ const AnimatedBadge = ({ count }) => {
   );
 };
 
+// ── Mega Menu Category Item ─────────────────────────────────────
+const MegaMenuCategory = ({ label, items = [], isOpen }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: isOpen ? 1 : 0, y: isOpen ? 0 : -8 }}
+      transition={{ duration: 0.2 }}
+      className="text-foreground"
+    >
+      <h3 className="se-label text-[10px] tracking-[0.24em] text-accent font-semibold mb-3 uppercase">
+        {label}
+      </h3>
+      <ul className="space-y-2">
+        {items.map((item, idx) => (
+          <li key={idx}>
+            <Link
+              to={item.href}
+              className="se-body text-sm text-foreground/80 hover:text-foreground hover:text-accent transition-colors"
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </motion.div>
+  );
+};
+
+// ── Mega Menu Dropdown ──────────────────────────────────────────
+const MegaMenuDropdown = ({ isOpen, onClose, categoryConfig }) => {
+  const reduced = useReducedMotion();
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
+          animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="absolute left-0 right-0 top-full mt-0 bg-background border-b border-border shadow-lg"
+          onMouseLeave={onClose}
+        >
+          <div className="max-w-screen-2xl mx-auto px-4 md:px-8 lg:px-12 py-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+              {categoryConfig.map((config, idx) => (
+                <MegaMenuCategory
+                  key={idx}
+                  label={config.label}
+                  items={config.items}
+                  isOpen={true}
+                />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ── Main Header Component ───────────────────────────────────────
 const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,7 +159,8 @@ const MainHeader = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredMegaMenu, setHoveredMegaMenu] = useState(null);
+  const [megaMenuTimeout, setMegaMenuTimeout] = useState(null);
   const userMenuRef = useRef(null);
 
   const { user } = useSelector((state) => state.auth);
@@ -86,32 +173,12 @@ const MainHeader = () => {
   const cartCount = totalQuantity || 0;
   const wishlistCount = wishlistItems?.length || 0;
 
-  const [nextDrop, setNextDrop] = useState(null);
-  const [countdown, setCountdown] = useState({ d: "00", h: "00", m: "00" });
-
-  // Drops fetch + nearest-drop pick
+  // Fetch drops
   useEffect(() => {
     if (!isAdminView && drops.length === 0) dispatch(getAllDrops());
   }, [dispatch, isAdminView, drops.length]);
 
-  useEffect(() => {
-    if (isAdminView || drops.length === 0) return;
-    const upcoming = [...drops]
-      .filter((d) => d?.releaseDate && new Date(d.releaseDate) > new Date())
-      .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
-    setNextDrop(upcoming[0] || null);
-  }, [drops, isAdminView]);
-
-  useEffect(() => {
-    if (!nextDrop?.releaseDate) return;
-    const target = new Date(nextDrop.releaseDate);
-    const tick = () => setCountdown(computeCountdown(target));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [nextDrop]);
-
-  // Scroll state for compact header
+  // Scroll state
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
     onScroll();
@@ -153,86 +220,164 @@ const MainHeader = () => {
     }
   };
 
-  const navActiveId = useMemo(() => {
-    const p = location.pathname;
-    const cat = new URLSearchParams(location.search).get("category") || "";
-    if (p === "/" || p === "/shopping/home") return "home";
-    if (p.startsWith("/shopping/product-list") && cat.toLowerCase() === "drops") return "drops";
-    if (p.startsWith("/shopping/product-list")) return "products";
-    if (p === "/about") return "about";
-    if (p === "/contact") return "contact";
-    return null;
-  }, [location.pathname, location.search]);
-
-  // Conventional, adult-friendly labels (replacing Atelier/Lookbook/Journal)
-  const desktopNav = [
-    { id: "home", to: homePath, label: "Home" },
-    { id: "products", to: "/shopping/product-list", label: "Products" },
-    { id: "drops", to: "/shopping/product-list?category=drops", label: "Drops" },
-    { id: "about", to: "/about", label: "About" },
-    { id: "contact", to: "/contact", label: "Contact" },
-  ];
-
-  const underlineNavId = hoveredNav || navActiveId;
-
-  const marqueeItems = nextDrop
-    ? [
-        `${(nextDrop.name || "Next chapter").toUpperCase()} drops in ${countdown.d}d ${countdown.h}h ${countdown.m}m`,
-        "Members enter first",
-        "Free island-wide delivery",
-        "Crafted in Sri Lanka",
-      ]
-    : [
-        "Free island-wide delivery",
-        "Members enter first",
-        "Crafted in Sri Lanka",
-        "Limited editions, every chapter",
-      ];
-
-  // ── motion variants ─────────────────────────────────────────
-  const headerReveal = reduced
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.3 } }
-    : {
-        initial: { opacity: 0, y: -8 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-      };
-
-  const navList = {
-    hidden: {},
-    visible: { transition: { staggerChildren: reduced ? 0 : 0.06, delayChildren: 0.1 } },
+  const handleMegaMenuEnter = (menuId) => {
+    if (megaMenuTimeout) clearTimeout(megaMenuTimeout);
+    const timeout = setTimeout(() => {
+      setHoveredMegaMenu(menuId);
+    }, 200);
+    setMegaMenuTimeout(timeout);
   };
-  const navItem = reduced
-    ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
-    : {
-        hidden: { opacity: 0, y: -4 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
-      };
+
+  const handleMegaMenuLeave = () => {
+    if (megaMenuTimeout) clearTimeout(megaMenuTimeout);
+    setHoveredMegaMenu(null);
+  };
+
+  // Mega menu configurations
+  const megaMenus = {
+    women: {
+      label: "Women",
+      config: [
+        {
+          label: "Categories",
+          items: [
+            { label: "New Arrivals", href: "/shopping/product-list?category=women&tag=new" },
+            { label: "Bestsellers", href: "/shopping/product-list?category=women" },
+            { label: "Dresses", href: "/shopping/product-list?category=women&type=dresses" },
+            { label: "Essentials", href: "/shopping/product-list?category=women&type=essentials" },
+          ],
+        },
+        {
+          label: "Collections",
+          items: [
+            { label: "Seasonal", href: "/shopping/product-list?category=women&collection=seasonal" },
+            { label: "Limited Edition", href: "/shopping/product-list?category=women&limited=true" },
+            { label: "Premium", href: "/shopping/product-list?category=women&premium=true" },
+          ],
+        },
+        {
+          label: "Explore",
+          items: [
+            { label: "Shop All", href: "/shopping/product-list?category=women" },
+            { label: "Sales & Deals", href: "/shopping/product-list?category=women&deal=true" },
+          ],
+        },
+      ],
+    },
+    men: {
+      label: "Men",
+      config: [
+        {
+          label: "Categories",
+          items: [
+            { label: "New Arrivals", href: "/shopping/product-list?category=men&tag=new" },
+            { label: "Bestsellers", href: "/shopping/product-list?category=men" },
+            { label: "Essentials", href: "/shopping/product-list?category=men&type=essentials" },
+            { label: "Premium", href: "/shopping/product-list?category=men&premium=true" },
+          ],
+        },
+        {
+          label: "Collections",
+          items: [
+            { label: "Seasonal", href: "/shopping/product-list?category=men&collection=seasonal" },
+            { label: "Limited Edition", href: "/shopping/product-list?category=men&limited=true" },
+          ],
+        },
+        {
+          label: "Explore",
+          items: [
+            { label: "Shop All", href: "/shopping/product-list?category=men" },
+            { label: "Sales & Deals", href: "/shopping/product-list?category=men&deal=true" },
+          ],
+        },
+      ],
+    },
+    drops: {
+      label: "Drops",
+      config: [
+        {
+          label: "Upcoming",
+          items: [
+            { label: "Next Drop", href: "/shopping/product-list?category=drops" },
+            { label: "Release Calendar", href: "/shopping/drops-calendar" },
+          ],
+        },
+        {
+          label: "Browse",
+          items: [
+            { label: "All Drops", href: "/shopping/product-list?category=drops" },
+            { label: "Most Wanted", href: "/shopping/product-list?category=drops&sort=popular" },
+          ],
+        },
+      ],
+    },
+    archive: {
+      label: "Archive",
+      config: [
+        {
+          label: "Collections",
+          items: [
+            { label: "Past Seasons", href: "/shopping/product-list?archive=true" },
+            { label: "Vault", href: "/shopping/product-list?vault=true" },
+          ],
+        },
+      ],
+    },
+    about: {
+      label: "About",
+      config: [
+        {
+          label: "Company",
+          items: [
+            { label: "Our Story", href: "/about" },
+            { label: "Craftsmanship", href: "/about#craftsmanship" },
+            { label: "Sustainability", href: "/about#sustainability" },
+          ],
+        },
+        {
+          label: "Connect",
+          items: [
+            { label: "Contact", href: "/contact" },
+            { label: "Newsletter", href: "#newsletter" },
+          ],
+        },
+      ],
+    },
+  };
+
+  const announcementItems = [
+    "New Collection Drops Every Friday",
+    "Members Get First Access",
+    "Free Island-Wide Delivery",
+    "Handcrafted in Sri Lanka",
+  ];
 
   /* ─── Admin variant ───────────────────────────────────────── */
   if (isAdminView) {
     return (
       <motion.header
-        {...headerReveal}
-        className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-white/10 bg-[#0a0a0a] px-6 lg:px-8"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-border bg-background px-6 lg:px-8"
       >
         <div className="flex flex-1 items-center gap-6">
-          <button type="button" className="lg:hidden text-[#f2ca50]" aria-label="Menu">
+          <button type="button" className="lg:hidden text-primary" aria-label="Menu">
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex flex-col">
-            <span className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+            <span className="se-label text-[10px] tracking-[0.32em] text-accent">
               Saga Elite
             </span>
-            <span className="se-headline text-base text-white">Atelier · Admin</span>
+            <span className="se-headline text-base text-foreground">Atelier · Admin</span>
           </div>
         </div>
 
         <div className="flex items-center gap-5">
           <NotificationsDropdown />
           <div className="hidden md:flex flex-col items-end">
-            <span className="se-body text-sm text-white">{user?.userName || "Admin"}</span>
-            <span className="se-label text-[9px] tracking-[0.3em] text-[#f2ca50] mt-0.5">
+            <span className="se-body text-sm text-foreground">{user?.userName || "Admin"}</span>
+            <span className="se-label text-[9px] tracking-[0.3em] text-accent mt-0.5">
               {user?.role || "admin"}
             </span>
           </div>
@@ -240,7 +385,7 @@ const MainHeader = () => {
             type="button"
             onClick={handleLogout}
             aria-label="Sign out"
-            className="flex h-10 w-10 items-center justify-center border border-[#93000a]/50 text-[#ffb4ab] hover:bg-[#93000a]/15 transition-colors"
+            className="flex h-10 w-10 items-center justify-center border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -256,212 +401,222 @@ const MainHeader = () => {
 
   return (
     <>
-      <div className="fixed top-0 z-50 w-full">
+      {/* Announcement Bar */}
+      <AnnouncementBar items={announcementItems} />
+
+      {/* Main Header */}
+      <div className="sticky top-[40px] z-50 w-full">
         <motion.header
-          {...headerReveal}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
           className={`w-full transition-all duration-300 ${
             scrolled
-              ? "bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#4d4635]"
-              : "bg-transparent border-b border-transparent"
+              ? "bg-background/95 backdrop-blur-xl border-b border-border shadow-sm"
+              : "bg-background border-b border-border"
           }`}
         >
-          <div className="px-4 md:px-8 lg:px-12 h-16 md:h-20 flex items-center justify-between relative">
-            {/* Left ── logo + wordmark (mobile: hamburger + wordmark center) */}
-            <div className="flex items-center gap-3 flex-shrink-0 md:w-64">
-              <button
-                type="button"
-                aria-label={menuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((v) => !v)}
-                className="md:hidden text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"
-              >
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={menuOpen ? "x" : "menu"}
-                    initial={reduced ? { opacity: 0 } : { rotate: -90, opacity: 0 }}
-                    animate={reduced ? { opacity: 1 } : { rotate: 0, opacity: 1 }}
-                    exit={reduced ? { opacity: 0 } : { rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="inline-flex"
-                  >
-                    {menuOpen ? (
-                      <X className="h-5 w-5" strokeWidth={1.5} />
-                    ) : (
-                      <Menu className="h-5 w-5" strokeWidth={1.5} />
-                    )}
-                  </motion.span>
-                </AnimatePresence>
-              </button>
-
-              <Link
-                to={homePath}
-                aria-label="Saga Elite home"
-                className="hidden md:flex items-center gap-3"
-              >
-                <motion.img
-                  src="/LOGO.png"
-                  alt=""
-                  className="h-9 w-9 object-contain"
-                  initial={false}
-                  animate={{ scale: scrolled ? 0.92 : 1 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                />
-                <motion.div
-                  initial={false}
-                  animate={{ scale: scrolled ? 0.96 : 1 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                  style={{ transformOrigin: "left center" }}
+          <div className="max-w-screen-2xl mx-auto px-4 md:px-8 lg:px-12">
+            <div className="h-16 md:h-20 flex items-center justify-between relative">
+              {/* Left: Logo + Menu Toggle */}
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <button
+                  type="button"
+                  aria-label={menuOpen ? "Close menu" : "Open menu"}
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="md:hidden text-foreground hover:text-primary transition-colors"
                 >
-                  <Wordmark size={scrolled ? "sm" : "md"} tagline={!scrolled} />
-                </motion.div>
-              </Link>
-            </div>
-
-            {/* Center ── desktop nav (hover-aware underline) */}
-            <motion.nav
-              variants={navList}
-              initial="hidden"
-              animate="visible"
-              className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center justify-center gap-8"
-              onMouseLeave={() => setHoveredNav(null)}
-            >
-              {desktopNav.map((item) => {
-                const active = navActiveId === item.id;
-                const showUnderline = underlineNavId === item.id;
-                return (
-                  <motion.div key={item.id} variants={navItem} className="relative">
-                    <Link
-                      to={item.to}
-                      onMouseEnter={() => setHoveredNav(item.id)}
-                      className={`relative inline-block py-2 se-label text-[10.5px] tracking-[0.26em] transition-colors ${
-                        active ? "text-[#f2ca50]" : "text-[#d0c5af] hover:text-[#e5e2e1]"
-                      }`}
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={menuOpen ? "x" : "menu"}
+                      initial={reduced ? { opacity: 0 } : { rotate: -90, opacity: 0 }}
+                      animate={reduced ? { opacity: 1 } : { rotate: 0, opacity: 1 }}
+                      exit={reduced ? { opacity: 0 } : { rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="inline-flex"
                     >
-                      {item.label}
-                      {showUnderline && (
-                        <motion.span
-                          layoutId="nav-underline"
-                          className="absolute -bottom-0.5 left-0 right-0 h-px bg-[#f2ca50]"
-                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                        />
+                      {menuOpen ? (
+                        <X className="h-5 w-5" strokeWidth={1.5} />
+                      ) : (
+                        <Menu className="h-5 w-5" strokeWidth={1.5} />
                       )}
-                    </Link>
+                    </motion.span>
+                  </AnimatePresence>
+                </button>
+
+                <Link
+                  to={homePath}
+                  aria-label="Saga Elite home"
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <motion.img
+                    src="/LOGO.png"
+                    alt=""
+                    className="h-8 w-8 object-contain"
+                    initial={false}
+                    animate={{ scale: scrolled ? 0.92 : 1 }}
+                    transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                  />
+                  <motion.div
+                    initial={false}
+                    animate={{ scale: scrolled ? 0.96 : 1 }}
+                    transition={{ type: "spring", stiffness: 320, damping: 26 }}
+                    style={{ transformOrigin: "left center" }}
+                  >
+                    <Wordmark size={scrolled ? "sm" : "md"} tagline={!scrolled} />
                   </motion.div>
-                );
-              })}
-            </motion.nav>
-
-            {/* Mobile centered wordmark */}
-            <Link
-              to={homePath}
-              className="md:hidden flex items-center justify-self-center"
-              aria-label="Saga Elite home"
-            >
-              <Wordmark size="sm" />
-            </Link>
-
-            {/* Right ── utility (deduped: notifications, wishlist, cart, account/sign-in) */}
-            <div className="flex items-center justify-end gap-4 md:gap-5 text-[#d0c5af] flex-shrink-0 md:w-64">
-              <div className="hidden md:block">
-                <NotificationsDropdown />
+                </Link>
               </div>
 
-              <Link
-                to="/shopping/wishlist"
-                className="relative hidden md:inline-flex hover:text-[#e5e2e1] transition-colors"
-                aria-label="Wishlist"
-              >
-                <Heart size={18} strokeWidth={1.5} />
-                <AnimatedBadge count={wishlistCount} />
-              </Link>
-
-              <Link
-                to="/shopping/cart"
-                className="relative inline-flex hover:text-[#e5e2e1] transition-colors"
-                aria-label="Cart"
-              >
-                <ShoppingBag size={18} strokeWidth={1.5} />
-                <AnimatedBadge count={cartCount} />
-              </Link>
-
-              {/* Single account control — sign-in link OR user dropdown, never both */}
-              {!user ? (
-                <Link
-                  to="/auth/login"
-                  className="inline-flex se-label text-[10px] tracking-[0.26em] text-[#e5e2e1] hover:text-[#f2ca50] transition-colors"
-                >
-                  Sign in
-                </Link>
-              ) : (
-                <div className="relative" ref={userMenuRef}>
-                  <button
-                    type="button"
-                    aria-label="Account menu"
-                    aria-expanded={userMenuOpen}
-                    onClick={() => setUserMenuOpen((v) => !v)}
-                    className="hover:text-[#e5e2e1] transition-colors"
+              {/* Center: Desktop Mega Menu Nav */}
+              <nav className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-8">
+                {Object.entries(megaMenus).map(([key, menu]) => (
+                  <div
+                    key={key}
+                    className="relative"
+                    onMouseEnter={() => handleMegaMenuEnter(key)}
+                    onMouseLeave={handleMegaMenuLeave}
                   >
-                    <User size={18} strokeWidth={1.5} />
-                  </button>
-                  <AnimatePresence>
-                    {userMenuOpen && (
-                      <motion.div
-                        initial={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
-                        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-                        exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
-                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute right-0 mt-3 w-60 border border-[#4d4635] bg-[#0b0b0b] shadow-xl"
-                        style={{ transformOrigin: "top right" }}
-                      >
-                        <div className="border-b border-[#4d4635]/60 px-4 py-3">
-                          <div className="se-label text-[9px] tracking-[0.28em] text-[#99907c]">
-                            Signed in
+                    <button
+                      type="button"
+                      className={`flex items-center gap-1.5 se-label text-[10.5px] tracking-[0.26em] uppercase transition-colors ${
+                        hoveredMegaMenu === key
+                          ? "text-primary"
+                          : "text-foreground hover:text-primary"
+                      }`}
+                    >
+                      {menu.label}
+                      <ChevronDown
+                        className={`h-3 w-3 transition-transform ${
+                          hoveredMegaMenu === key ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {hoveredMegaMenu === key && (
+                      <MegaMenuDropdown
+                        isOpen={hoveredMegaMenu === key}
+                        onClose={handleMegaMenuLeave}
+                        categoryConfig={menu.config}
+                      />
+                    )}
+                  </div>
+                ))}
+              </nav>
+
+              {/* Mobile Centered Logo */}
+              <Link
+                to={homePath}
+                className="md:hidden flex items-center justify-self-center"
+                aria-label="Saga Elite home"
+              >
+                <Wordmark size="sm" />
+              </Link>
+
+              {/* Right: Icons + Account */}
+              <div className="flex items-center justify-end gap-4 md:gap-6 text-foreground flex-shrink-0">
+                <div className="hidden md:block">
+                  <NotificationsDropdown />
+                </div>
+
+                <Link
+                  to="/shopping/wishlist"
+                  className="relative hidden md:inline-flex hover:text-primary transition-colors"
+                  aria-label="Wishlist"
+                >
+                  <Heart size={18} strokeWidth={1.5} />
+                  <AnimatedBadge count={wishlistCount} />
+                </Link>
+
+                <Link
+                  to="/shopping/cart"
+                  className="relative inline-flex hover:text-primary transition-colors"
+                  aria-label="Cart"
+                >
+                  <ShoppingBag size={18} strokeWidth={1.5} />
+                  <AnimatedBadge count={cartCount} />
+                </Link>
+
+                {/* Account: Sign in OR User Dropdown */}
+                {!user ? (
+                  <Link
+                    to="/auth/login"
+                    className="inline-flex se-label text-[10px] tracking-[0.26em] text-foreground hover:text-primary transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                ) : (
+                  <div className="relative" ref={userMenuRef}>
+                    <button
+                      type="button"
+                      aria-label="Account menu"
+                      aria-expanded={userMenuOpen}
+                      onClick={() => setUserMenuOpen((v) => !v)}
+                      className="hover:text-primary transition-colors"
+                    >
+                      <User size={18} strokeWidth={1.5} />
+                    </button>
+                    <AnimatePresence>
+                      {userMenuOpen && (
+                        <motion.div
+                          initial={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
+                          animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                          exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
+                          transition={{ duration: 0.18 }}
+                          className="absolute right-0 mt-3 w-60 border border-border bg-background shadow-xl"
+                          style={{ transformOrigin: "top right" }}
+                        >
+                          <div className="border-b border-border px-4 py-3">
+                            <div className="se-label text-[9px] tracking-[0.28em] text-foreground/60 uppercase">
+                              Signed in
+                            </div>
+                            <div className="se-body text-sm text-foreground mt-1 truncate">
+                              {user.userName || user.email || "Member"}
+                            </div>
                           </div>
-                          <div className="se-body text-sm text-[#e5e2e1] mt-1 truncate">
-                            {user.userName || user.email || "Member"}
-                          </div>
-                        </div>
-                        {isAdminLike && (
+                          {isAdminLike && (
+                            <Link
+                              to="/admin/dashboard"
+                              className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-foreground hover:bg-primary/5 hover:text-primary"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <Shield className="h-4 w-4" /> Admin panel
+                            </Link>
+                          )}
                           <Link
-                            to="/admin/dashboard"
-                            className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-[#d0c5af] hover:bg-white/5 hover:text-[#f2ca50]"
+                            to="/shopping/account"
+                            className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-foreground hover:bg-primary/5 hover:text-primary"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <Shield className="h-4 w-4" /> Admin panel
+                            <Settings className="h-4 w-4" /> My account
                           </Link>
-                        )}
-                        <Link
-                          to="/shopping/account"
-                          className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-[#d0c5af] hover:bg-white/5 hover:text-[#f2ca50]"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          <Settings className="h-4 w-4" /> My account
-                        </Link>
-                        <Link
-                          to="/shopping/orders"
-                          className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-[#d0c5af] hover:bg-white/5 hover:text-[#f2ca50]"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          <Package className="h-4 w-4" /> Orders
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={handleLogout}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 se-body text-sm text-[#d0c5af] hover:bg-white/5 hover:text-[#ffb4ab] border-t border-[#4d4635]/60"
-                        >
-                          <LogOut className="h-4 w-4" /> Sign out
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
+                          <Link
+                            to="/shopping/orders"
+                            className="flex items-center gap-3 px-4 py-2.5 se-body text-sm text-foreground hover:bg-primary/5 hover:text-primary"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <Package className="h-4 w-4" /> Orders
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 se-body text-sm text-foreground hover:bg-primary/5 hover:text-primary border-t border-border"
+                          >
+                            <LogOut className="h-4 w-4" /> Sign out
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </motion.header>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile Navigation Drawer */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -472,7 +627,7 @@ const MainHeader = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[70] bg-black/60 md:hidden"
+              className="fixed inset-0 z-[70] bg-black/20 md:hidden backdrop-blur-sm"
               onClick={() => setMenuOpen(false)}
             />
             <motion.aside
@@ -480,125 +635,106 @@ const MainHeader = () => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              className="fixed bottom-0 left-0 top-0 z-[80] flex w-[min(320px,88vw)] flex-col bg-[#0a0a0a] text-[#e5e2e1] shadow-2xl md:hidden border-r border-[#4d4635]"
+              className="fixed bottom-0 left-0 top-[calc(40px+64px)] z-[80] w-[min(320px,88vw)] flex flex-col bg-background text-foreground shadow-2xl md:hidden border-r border-border overflow-y-auto"
             >
-              <div className="flex items-center justify-between border-b border-[#4d4635]/60 p-5">
+              <div className="flex-1 p-6 space-y-1">
+                {/* Mobile Navigation Items */}
+                {Object.entries(megaMenus).map(([key, menu]) => (
+                  <Link
+                    key={key}
+                    to={`/shopping/product-list?category=${key === "drops" ? "drops" : key}`}
+                    onClick={() => setMenuOpen(false)}
+                    className="block se-label text-xs tracking-[0.24em] text-foreground px-3 py-3 border-b border-border/50 hover:text-primary transition-colors uppercase"
+                  >
+                    {menu.label}
+                  </Link>
+                ))}
+
                 <Link
-                  to={homePath}
-                  className="flex items-center gap-3"
+                  to="/shopping/wishlist"
                   onClick={() => setMenuOpen(false)}
+                  className="flex items-center justify-between se-label text-xs tracking-[0.24em] text-foreground px-3 py-3 border-b border-border/50 hover:text-primary transition-colors uppercase mt-4"
                 >
-                  <img src="/LOGO.png" alt="" className="h-8 w-8 object-contain" />
-                  <Wordmark size="sm" tagline />
+                  <span>Wishlist</span>
+                  {wishlistCount > 0 && (
+                    <span className="se-mono text-[10px] text-accent">{wishlistCount}</span>
+                  )}
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setMenuOpen(false)}
-                  aria-label="Close menu"
-                  className="p-1 text-[#f2ca50]"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+
+                {isAdminLike && (
+                  <Link
+                    to="/admin/dashboard"
+                    onClick={() => setMenuOpen(false)}
+                    className="block se-label text-xs tracking-[0.24em] text-foreground px-3 py-3 border-b border-border/50 hover:text-primary transition-colors uppercase"
+                  >
+                    Admin
+                  </Link>
+                )}
+
+                {user && (
+                  <Link
+                    to="/shopping/account"
+                    onClick={() => setMenuOpen(false)}
+                    className="block se-label text-xs tracking-[0.24em] text-foreground px-3 py-3 border-b border-border/50 hover:text-primary transition-colors uppercase"
+                  >
+                    My Account
+                  </Link>
+                )}
               </div>
 
-              <motion.nav
-                variants={navList}
-                initial="hidden"
-                animate="visible"
-                className="flex flex-1 flex-col overflow-y-auto p-3"
-              >
-                {desktopNav.map((item) => (
-                  <motion.div key={item.id} variants={navItem}>
-                    <Link
-                      to={item.to}
-                      onClick={() => setMenuOpen(false)}
-                      className={`block se-label text-xs tracking-[0.24em] px-3 py-4 border-b border-[#4d4635]/40 transition-colors ${
-                        navActiveId === item.id
-                          ? "text-[#f2ca50]"
-                          : "text-[#d0c5af] hover:text-[#f2ca50]"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </motion.div>
-                ))}
-                <motion.div variants={navItem}>
+              {/* Mobile Auth Button or Logout */}
+              <div className="border-t border-border p-6">
+                {!user ? (
                   <Link
-                    to="/shopping/wishlist"
+                    to="/auth/login"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between se-label text-xs tracking-[0.24em] text-[#d0c5af] px-3 py-4 border-b border-[#4d4635]/40 hover:text-[#f2ca50]"
+                    className="block w-full text-center se-label text-[11px] tracking-[0.26em] bg-primary text-primary-foreground py-3 hover:bg-primary-hover transition-colors uppercase"
                   >
-                    <span>Wishlist</span>
-                    {wishlistCount > 0 && (
-                      <span className="se-mono text-[10px] text-[#f2ca50]">{wishlistCount}</span>
-                    )}
+                    Sign in
                   </Link>
-                </motion.div>
-                {isAdminLike && (
-                  <motion.div variants={navItem}>
-                    <Link
-                      to="/admin/dashboard"
-                      onClick={() => setMenuOpen(false)}
-                      className="block se-label text-xs tracking-[0.24em] text-[#d0c5af] px-3 py-4 border-b border-[#4d4635]/40 hover:text-[#f2ca50]"
-                    >
-                      Admin
-                    </Link>
-                  </motion.div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLogout();
+                      setMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full se-label text-[11px] tracking-[0.26em] text-primary py-3 hover:text-primary/80 transition-colors uppercase"
+                  >
+                    <LogOut className="h-4 w-4" /> Sign out
+                  </button>
                 )}
+              </div>
 
-                {/* Single mobile auth action — no duplicate sign-in/sign-up pair */}
-                {!user && (
-                  <motion.div variants={navItem} className="px-3 mt-6">
-                    <Link
-                      to="/auth/login"
-                      onClick={() => setMenuOpen(false)}
-                      className="block w-full text-center se-label text-[11px] tracking-[0.26em] bg-[#f2ca50] text-[#1b1c1c] py-3 hover:bg-[#ffe088] transition-colors"
-                    >
-                      Sign in
-                    </Link>
-                  </motion.div>
-                )}
-                {user && (
-                  <motion.div variants={navItem}>
-                    <Link
-                      to="/shopping/account"
-                      onClick={() => setMenuOpen(false)}
-                      className="block se-label text-xs tracking-[0.24em] text-[#d0c5af] px-3 py-4 border-b border-[#4d4635]/40 hover:text-[#f2ca50]"
-                    >
-                      My account
-                    </Link>
-                  </motion.div>
-                )}
-              </motion.nav>
-
-              <div className="border-t border-[#4d4635]/60 p-5">
-                <div className="se-label text-[9px] tracking-[0.32em] text-[#574500]">
+              {/* Social Links */}
+              <div className="border-t border-border p-4 text-center">
+                <div className="se-label text-[9px] tracking-[0.32em] text-foreground/60 uppercase mb-3">
                   Follow Saga Elite
                 </div>
-                <div className="mt-3 flex gap-4 se-label text-[10px] tracking-[0.26em]">
+                <div className="flex justify-center gap-3 se-label text-[10px] tracking-[0.26em]">
                   <a
                     href={CONTACT_INFO?.socials?.instagram || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#d0c5af] hover:text-[#f2ca50]"
+                    className="text-foreground/70 hover:text-primary transition-colors"
                   >
                     Instagram
                   </a>
-                  <span className="text-[#4d4635]">·</span>
+                  <span className="text-border">·</span>
                   <a
                     href={CONTACT_INFO?.socials?.facebook || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#d0c5af] hover:text-[#f2ca50]"
+                    className="text-foreground/70 hover:text-primary transition-colors"
                   >
                     Facebook
                   </a>
-                  <span className="text-[#4d4635]">·</span>
+                  <span className="text-border">·</span>
                   <a
                     href={CONTACT_INFO?.socials?.tiktok || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#d0c5af] hover:text-[#f2ca50]"
+                    className="text-foreground/70 hover:text-primary transition-colors"
                   >
                     TikTok
                   </a>
