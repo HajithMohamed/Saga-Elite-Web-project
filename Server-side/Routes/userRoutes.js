@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
 const {
   validateObjectIdParam,
   validateAdminUserStatus,
@@ -26,10 +26,10 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-router.get("/admin/users", adminMiddleware, getAdminUsers);
-router.get("/admin/users/:id", adminMiddleware, validateObjectIdParam("id", "user id"), getAdminUserDetail);
-router.patch("/admin/users/:id/status", adminMiddleware, validateObjectIdParam("id", "user id"), validateAdminUserStatus, updateAdminUserStatus);
-router.delete("/admin/users/:id", adminMiddleware, validateObjectIdParam("id", "user id"), deleteAdminUser);
+router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
+router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
+router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, updateAdminUserStatus);
+router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), deleteAdminUser);
 
 router.get("/cart", getCart);
 router.post("/cart", validateCartAdd, addToCart);

@@ -79,30 +79,35 @@ const quickLinks = [
     description: "Approve manual payments and move fulfilment forward.",
     to: "/admin/order",
     icon: ShoppingCart,
+    permission: "orders",
   },
   {
     title: "Manual payments",
     description: "Review bank-transfer proofs and verify payments.",
     to: "/admin/payments/pending",
     icon: Wallet,
+    permission: "verifyPayments",
   },
   {
     title: "Product catalog",
     description: "Update stock, pricing, and limited-release products.",
     to: "/admin/product",
     icon: Package,
+    permission: "products",
   },
   {
     title: "Drop registry",
     description: "Manage live collections and prepare the next release.",
     to: "/admin/drop",
     icon: Layers3,
+    permission: "drops",
   },
   {
     title: "Notifications",
     description: "Broadcast launch updates and customer alerts.",
     to: "/admin/notifications",
     icon: Sparkles,
+    permission: "notifications",
   },
 ];
 
@@ -152,6 +157,10 @@ const HighlightCard = ({ eyebrow, title, value, meta, accent = "text-[#D4AF37]" 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const { dashboardStats, isLoading, orderError } = useSelector((state) => state.order);
+  const { user } = useSelector((state) => state.auth);
+
+  const isSuperAdmin = user?.role === "super_admin" || user?.role === "superadmin";
+  const userPerms = user?.permissions || {};
 
   useEffect(() => {
     dispatch(fetchDashboardStats());
@@ -166,6 +175,11 @@ const Dashboard = () => {
   const recentOrders = dashboardStats?.recentOrders || [];
   const paymentMethodBreakdown = dashboardStats?.paymentMethodBreakdown || [];
   const orderStatusBreakdown = dashboardStats?.orderStatusBreakdown || {};
+
+  // Filter quick links based on user permissions (super admins see everything)
+  const visibleQuickLinks = isSuperAdmin
+    ? quickLinks
+    : quickLinks.filter((item) => !item.permission || userPerms[item.permission]);
 
   const maxRevenue = Math.max(...salesTrend.map((entry) => entry.revenue || 0), 1);
 
@@ -270,7 +284,7 @@ const Dashboard = () => {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {quickLinks.map((item) => {
+              {visibleQuickLinks.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link

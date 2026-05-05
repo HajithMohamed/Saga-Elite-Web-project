@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 
 const CheckAuth = ({ isAuthenticated, user, children }) => {
   const location = useLocation();
-  const isAdminLike = user?.role === "admin" || user?.role === "super_admin" || user?.role === "superadmin";
+  const isAdminLike = user?.role === "admin" || user?.role === "super_admin" || user?.role === "superadmin" || user?.role === "sub_admin";
 
   // Allow public access to shopping routes EXCEPT account/orders (checkout & cart now allowed for guests)
   const isShoppingRoute = location.pathname.startsWith("/shopping");

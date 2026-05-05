@@ -1,6 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
 const { imageUpload } = require("../Middlewares/multer-middleware");
 const {
   validateObjectIdParam,
@@ -36,7 +36,7 @@ userRouter.post("/:reviewId/flag", authMiddleware, validateObjectIdParam("review
 userRouter.patch("/:reviewId", authMiddleware, validateObjectIdParam("reviewId", "review id"), validateReviewUpdate, updateReview);
 userRouter.delete("/:reviewId", authMiddleware, validateObjectIdParam("reviewId", "review id"), deleteReview);
 
-adminRouter.get("/", authMiddleware, adminMiddleware, getAllReviews);
-adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, validateObjectIdParam("reviewId", "review id"), validateReviewModeration, moderateReview);
+adminRouter.get("/", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getAllReviews);
+adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewModeration, moderateReview);
 
 module.exports = { userRouter, adminRouter };

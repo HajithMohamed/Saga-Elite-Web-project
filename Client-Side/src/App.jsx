@@ -27,6 +27,7 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 
 // admin page imports
 import AdminLayout from "./components/admin-components/Layout";
+import PermissionGuard from "./components/admin-components/PermissionGuard";
 import AdminDashboard from "./pages/admin-view/Dashboard";
 import AdminFeatures from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
@@ -40,6 +41,8 @@ import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
 import AboutSiteConfig from "./pages/admin-view/AboutSiteConfig";
+import ContactInquiriesPage from "./pages/admin-view/ContactInquiriesPage";
+import NewsletterSubscribersPage from "./pages/admin-view/NewsletterSubscribersPage";
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -193,20 +196,22 @@ function App() {
             }
           >
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="home-images" element={<AdminHomeImages />} />
-            <Route path="feature" element={<AdminFeatures />} />
-            <Route path="order" element={<AdminOrders />} />
-            <Route path="product" element={<AdminProduct />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="super-admin" element={<SuperAdminDashboard />} />
-            <Route path="notifications" element={<NotificationsManager />} />
-            <Route path="payments/pending" element={<PendingPaymentsPage />} />
-            <Route path="manual-payments" element={<PendingPaymentsPage />} />
-            <Route path="manual-payments/:paymentId" element={<PaymentVerificationPage />} />
-            <Route path="reviews" element={<ReviewModerationPage />} />
+            <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
+            <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
+            <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
+            <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
+            <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
+            <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
+            <Route path="notifications" element={<PermissionGuard permission="notifications"><NotificationsManager /></PermissionGuard>} />
+            <Route path="payments/pending" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
+            <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
+            <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
+            <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
             <Route path="about-content" element={<AboutSiteConfig />} />
+            <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
+            <Route path="newsletter" element={<NewsletterSubscribersPage />} />
             <Route path="account" element={<Account />} />
-            <Route path="drop" element={<AdminDrops />} />
+            <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
           </Route>
 
           {/* SHOPPING */}

@@ -15,6 +15,9 @@ import {
   CreditCard,
   StarHalf,
   Landmark,
+  FileText,
+  Inbox,
+  Newspaper,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -185,6 +188,24 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
       permission: "drops",
+    },
+    {
+      label: "About Content",
+      path: "/admin/about-content",
+      icon: <FileText className="h-5 w-5" />,
+      permission: null, // available to all admins
+    },
+    {
+      label: "Contact Inquiries",
+      path: "/admin/contact-inquiries",
+      icon: <Inbox className="h-5 w-5" />,
+      permission: null, // available to all admins
+    },
+    {
+      label: "Newsletter",
+      path: "/admin/newsletter",
+      icon: <Newspaper className="h-5 w-5" />,
+      permission: null, // available to all admins
     },
   ];
 
