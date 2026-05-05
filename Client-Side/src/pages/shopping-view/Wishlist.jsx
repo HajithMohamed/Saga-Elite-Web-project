@@ -72,63 +72,51 @@ const Wishlist = () => {
               return (
                 <div
                   key={item.id}
-                  className="group relative rounded-[2rem] border border-white/5 bg-gradient-to-b from-[#0a0a0a] to-[#040404] p-5 overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-2 flex flex-col"
+                  className="group relative flex flex-col gap-3"
                 >
-                  {/* Image */}
-                  <div className="relative h-64 overflow-hidden rounded-2xl bg-[#000]">
+                  {/* Image Container */}
+                  <Link to={`/shopping/product/${item.slug}`} className="relative aspect-[4/5] overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
                     <img
                       src={item.image || "/placeholder.jpg"}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.02] group-hover:brightness-90"
                       alt={item.name}
                     />
 
                     {/* Remove Button */}
                     <button
-                      onClick={() => handleRemove(item.id)}
-                      className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-md hover:bg-red-500/20"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemove(item.id); }}
+                      className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#0a0a0a]/80 backdrop-blur-md transition hover:bg-red-500 hover:text-white border border-[#4d4635] text-[#d0c5af] hover:border-red-500 z-10"
                     >
-                      <Trash2 className="h-5 w-5 text-red-500" />
+                      <Trash2 size={16} />
                     </button>
-
-                    {/* Details Link */}
-                    <Link
-                      to={`/shopping/product/${item.slug}`}
-                      className="absolute bottom-4 left-4 flex items-center gap-1 rounded-full bg-black/60 px-4 text-xs font-semibold uppercase tracking-wider backdrop-blur-md hover:bg-[#D4AF37] hover:text-black"
+                    
+                    {/* Add to Cart button (Quick Action) */}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(item); }}
+                      className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF37] text-black shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] transition hover:bg-[#F2CA50] hover:scale-110 z-10"
                     >
-                      Details <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
+                      <ShoppingBag size={18} />
+                    </button>
+                  </Link>
 
-                  {/* Content */}
-                  <div className="pt-6 flex flex-col flex-1">
-                    <div>
-                      <p className="text-xs text-[#D4AF37] font-bold uppercase tracking-widest">
-                        {item.category || item.brand}
-                      </p>
-                      <h2 className="mt-2 text-xl font-medium tracking-wide">
+                  {/* Metadata */}
+                  <Link to={`/shopping/product/${item.slug}`} className="block transition-colors p-2 rounded-sm mt-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-[#e5e2e1] se-body max-w-[70%] leading-tight font-medium line-clamp-2">
                         {item.name}
-                      </h2>
-                    </div>
-
-                    <div className="mt-auto pt-4">
-                      <div className="text-2xl font-semibold flex items-center gap-2">
-                        <span>LKR {price.toLocaleString()}</span>
-                        {item.discountPercent > 0 && (
-                          <span className="text-sm text-gray-500 line-through">
+                      </h3>
+                      <div className="flex flex-col items-end shrink-0 pl-2">
+                        <p className="text-[#D4AF37] se-instrument text-right tabular-nums font-semibold">
+                          LKR {price.toLocaleString()}
+                        </p>
+                        {item.discountPercent > 0 && item.basePrice && (
+                          <span className="se-instrument text-[10px] text-gray-500 line-through tabular-nums text-right mt-0.5">
                             LKR {item.basePrice.toLocaleString()}
                           </span>
                         )}
                       </div>
-
-                      <button
-                        onClick={() => handleAddToCart(item)}
-                        className="mt-4 w-full rounded-xl bg-[#D4AF37] px-4 py-3 text-sm font-bold uppercase text-black hover:bg-[#F2CA50] flex items-center justify-center gap-2"
-                      >
-                        <ShoppingBag className="h-4 w-4" />
-                        Add to Cart
-                      </button>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               );
             })}

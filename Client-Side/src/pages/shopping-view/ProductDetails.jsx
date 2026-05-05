@@ -416,30 +416,47 @@ const ProductDetails = () => {
         </button>
 
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start relative">
-          {/* LEFT 60%: Scrollable Image Gallery */}
+          {/* LEFT 60%: Image Gallery */}
           <div className="lg:col-span-7 flex flex-col gap-4">
-            {product.images?.map((img, i) => (
-              <div key={img._id || i} className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group">
-                <img
-                  src={img.url}
-                  alt={`View ${i + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.02] group-hover:brightness-90"
+            <div className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]">
+                <motion.img
+                  key={activeImageIndex}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  src={product.images?.[activeImageIndex]?.url}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.3] cursor-zoom-in"
+                  onClick={() => setLightboxOpen(true)}
                 />
-                {i === 0 && (
+                <button
+                  type="button"
+                  onClick={toggleWishlist}
+                  className="absolute top-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50] hover:scale-110"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition-colors ${
+                      inWishlist ? "fill-[#f2ca50] text-[#f2ca50]" : "text-[#d0c5af]"
+                    }`}
+                  />
+                </button>
+            </div>
+            {/* Thumbnails */}
+            {product.images?.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
+                {product.images.map((img, i) => (
                   <button
-                    type="button"
-                    onClick={toggleWishlist}
-                    className="absolute top-6 right-6 z-20 flex h-12 w-12 items-center justify-center border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50]"
+                    key={img._id || i}
+                    onClick={() => setActiveImageIndex(i)}
+                    className={`relative shrink-0 w-24 h-32 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                      i === activeImageIndex ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)] scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
                   >
-                    <Heart
-                      className={`w-5 h-5 ${
-                        inWishlist ? "fill-[#f2ca50] text-[#f2ca50]" : "text-[#d0c5af]"
-                      }`}
-                    />
+                    <img src={img.url} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
                   </button>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
           {/* RIGHT 40%: Sticky Details */}
@@ -525,7 +542,7 @@ const ProductDetails = () => {
                   !selectedVariant ||
                   selectedVariant.stock === 0
                 }
-                className="flex h-14 w-full items-center justify-center bg-[#f2ca50] text-[#3c2f00] se-label tracking-[0.18em] transition-colors hover:bg-[#ffe088] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-14 w-full items-center justify-center rounded-full bg-[#f2ca50] text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] hover:bg-[#ffe088] hover:shadow-[0_6px_20px_rgba(212,175,55,0.23)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Proceed to Secure Checkout
               </motion.button>
@@ -539,13 +556,13 @@ const ProductDetails = () => {
                   !selectedVariant ||
                   selectedVariant.stock === 0
                 }
-                className={`flex h-14 w-full items-center justify-center border border-[#4d4635] text-[#e5e2e1] se-label tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  cartAddedPulse ? "border-[#f2ca50] text-[#f2ca50]" : "hover:bg-[#1c1b1b] hover:border-[#99907c]"
+                className={`flex h-14 w-full items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  cartAddedPulse ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
                 }`}
               >
                 {cartAddedPulse ? (
                   <>
-                    <Check className="h-4 w-4 mr-2" /> Added to Atelier Bag
+                    <Check className="h-5 w-5 mr-2" /> Added to Bag
                   </>
                 ) : (
                   "Add to Bag"
