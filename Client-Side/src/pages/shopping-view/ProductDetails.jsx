@@ -406,139 +406,70 @@ const ProductDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white pt-24 pb-20">
-      <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+    <div className="min-h-screen bg-[#0a0a0a] text-white pt-24 pb-32">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white uppercase tracking-widest mb-8"
+          className="flex items-center gap-2 se-label tracking-[0.2em] text-[#d0c5af] hover:text-[#f2ca50] mb-8"
         >
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" /> Back to catalogue
         </button>
 
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
-          <div className="flex flex-col-reverse lg:flex-row gap-4 lg:gap-6 lg:h-[70vh]">
-            <div className="flex lg:flex-col gap-4 overflow-x-auto lg:overflow-y-auto no-scrollbar pb-2 lg:pb-0 lg:w-24 shrink-0">
-              {product.images?.map((img, i) => (
-                <button
-                  key={img._id}
-                  onClick={() => setActiveImageIndex(i)}
-                  className={`relative shrink-0 rounded-xl overflow-hidden border-2 w-20 lg:w-24 aspect-[4/5] ${
-                    activeImageIndex === i
-                      ? "border-[#D4AF37]"
-                      : "border-transparent opacity-50 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={img.url}
-                    alt={`View ${i + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-
-            <div className="relative flex-1 overflow-hidden rounded-[2rem] bg-[#111] aspect-[4/5] lg:aspect-auto">
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={activeImageIndex}
-                  src={
-                    product.images?.[activeImageIndex]?.url || "/placeholder.jpg"
-                  }
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.28 }}
-                  className="pointer-events-none h-full w-full object-cover"
-                  alt={product.name}
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start relative">
+          {/* LEFT 60%: Scrollable Image Gallery */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            {product.images?.map((img, i) => (
+              <div key={img._id || i} className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group">
+                <img
+                  src={img.url}
+                  alt={`View ${i + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.02] group-hover:brightness-90"
                 />
-              </AnimatePresence>
-              <button
-                type="button"
-                className="absolute inset-0 z-[1] cursor-zoom-in bg-transparent"
-                aria-label="Open image preview"
-                onClick={() => setLightboxOpen(true)}
-              />
-              <button
-                type="button"
-                onClick={toggleWishlist}
-                className="absolute top-6 right-6 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-black/40 backdrop-blur-xl transition hover:bg-black/80"
-              >
-                <Heart
-                  className={`w-6 h-6 ${
-                    inWishlist ? "fill-[#D4AF37] text-[#D4AF37]" : "text-white"
-                  }`}
-                />
-              </button>
-            </div>
+                {i === 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleWishlist}
+                    className="absolute top-6 right-6 z-20 flex h-12 w-12 items-center justify-center border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50]"
+                  >
+                    <Heart
+                      className={`w-5 h-5 ${
+                        inWishlist ? "fill-[#f2ca50] text-[#f2ca50]" : "text-[#d0c5af]"
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
 
-          <div className="flex flex-col justify-center py-4">
-            <p className="text-[#D4AF37] font-bold uppercase tracking-[0.2em] text-sm mb-3">
+          {/* RIGHT 40%: Sticky Details */}
+          <div className="lg:col-span-5 sticky top-24 flex flex-col py-4">
+            <p className="text-[#f2ca50] se-label tracking-[0.28em] text-[10px] mb-4">
               {product.category} {product.isLimited && "• Limited Drop"}
             </p>
-            <h1 className="font-serif text-4xl font-bold tracking-tight md:text-5xl mb-2">
+            <h1 className="se-serif text-4xl md:text-5xl text-[#e5e2e1] leading-[1.1] mb-4">
               {product.name}
             </h1>
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <StarRating value={product.averageRating || 0} readOnly size="sm" />
-              <span className="text-xs text-gray-400">
-                {(product.averageRating || 0).toFixed(1)} avg ·{" "}
-                {product.reviewCount || 0} reviews
-              </span>
-              <Link
-                to={`/product/${product._id}/reviews`}
-                className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] hover:underline"
-              >
-                See all
-              </Link>
-            </div>
-            <p className="text-gray-500 uppercase tracking-widest text-xs mb-4">
-              Art No. {product.artNo}
-            </p>
-            <p className="mb-8 text-sm uppercase tracking-[0.25em] text-gray-400">
-              Drop: <span className="text-[#D4AF37]">{productDropName}</span>
+            
+            <p className="se-label text-[10px] tracking-[0.28em] text-[#99907c] mb-8">
+              Chapter · {productDropName}
             </p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-              className="mb-6 flex flex-wrap items-baseline gap-4"
-            >
-              <span className="text-3xl font-semibold text-[#D4AF37]">
-                LKR {price.toLocaleString()}
+            <div className="mb-8 flex flex-wrap items-baseline gap-4">
+              <span className="se-instrument text-3xl font-medium text-[#f2ca50]">
+                {formatLKR(price)}
               </span>
               {product.discountPercent > 0 && (
-                <span className="text-xl text-gray-500 line-through">
-                  LKR {basePrice.toLocaleString()}
+                <span className="se-instrument text-lg text-[#574500] line-through">
+                  {formatLKR(basePrice)}
                 </span>
               )}
-            </motion.div>
+            </div>
 
-            {hasVariants && selectedVariant ? (
-              <p className="mb-8 text-sm font-medium">
-                {selectedVariant.stock === 0 ? (
-                  <span className="text-red-500">Out of Stock</span>
-                ) : selectedVariant.stock < 5 ? (
-                  <span className="text-amber-500">
-                    Only {selectedVariant.stock} left in stock
-                  </span>
-                ) : (
-                  <span className="text-emerald-500">In Stock</span>
-                )}
-              </p>
-            ) : !hasVariants ? (
-              <p className="mb-8 text-sm text-gray-400">One size fits all</p>
-            ) : null}
-
-            <div className="space-y-6 mb-10">
+            <div className="space-y-8 mb-10 border-y border-[#4d4635]/40 py-8">
               <div>
                 {hasVariants ? (
                   <>
-                    <div className="mb-3 flex justify-between text-sm font-semibold uppercase tracking-widest text-gray-400">
-                      <span>Size & Color</span>
-                      <span>Stock: {selectedVariant?.stock ?? 0}</span>
-                    </div>
                     <VariantSelectors
                       product={{ ...product, sizes: productSizes }}
                       selectedSize={selectedSize}
@@ -547,38 +478,34 @@ const ProductDetails = () => {
                       onColorChange={handleColorChange}
                       errors={variantErrors}
                     />
-                    {selectedSize && selectedColor ? (
-                      <p className="mt-3 text-xs text-gray-500">
-                        {selectedVariant?.stock ?? 0} in stock
-                      </p>
-                    ) : null}
                   </>
                 ) : (
-                  <p className="text-sm text-gray-400">One size fits all</p>
+                  <p className="se-body text-sm text-[#d0c5af]">One size fits all</p>
                 )}
-
               </div>
 
               <div>
-                <label className="block mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
+                <label className="block mb-3 se-label text-[10px] tracking-[0.28em] text-[#99907c]">
                   Quantity
                 </label>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-gray-800 rounded-full bg-[#111] w-32 h-12">
+                  <div className="flex items-center border border-[#4d4635] bg-[#0a0a0a] w-32 h-12">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="flex-1 text-xl text-gray-400 hover:text-white"
+                      className="flex-1 text-xl text-[#d0c5af] hover:text-[#f2ca50] hover:bg-[#1c1b1b] h-full"
                     >
                       -
                     </button>
-                    <span className="font-semibold">{quantity}</span>
+                    <span className="se-instrument text-lg text-[#e5e2e1] w-12 text-center">
+                      {quantity}
+                    </span>
                     <button
                       onClick={() =>
                         setQuantity(
                           Math.min(selectedVariant?.stock || 1, quantity + 1)
                         )
                       }
-                      className="flex-1 text-xl text-gray-400 hover:text-white"
+                      className="flex-1 text-xl text-[#d0c5af] hover:text-[#f2ca50] hover:bg-[#1c1b1b] h-full"
                     >
                       +
                     </button>
@@ -587,30 +514,8 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            <div className="mb-10 flex flex-col gap-4 sm:flex-row">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleAddToCart}
-                disabled={
-                  !hasVariants ||
-                  !selectedVariant ||
-                  selectedVariant.stock === 0
-                }
-                className={`flex h-14 flex-1 items-center justify-center gap-2 rounded-full uppercase tracking-widest text-sm font-bold transition-colors disabled:opacity-50 ${
-                  cartAddedPulse
-                    ? "bg-emerald-600 text-white"
-                    : "bg-white/10 hover:bg-white/20"
-                }`}
-              >
-                {cartAddedPulse ? (
-                  <>
-                    <Check className="h-5 w-5" /> Added
-                  </>
-                ) : (
-                  "Add To Cart"
-                )}
-              </motion.button>
+            {/* CTAs */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-[#4d4635]/40 lg:relative lg:p-0 lg:bg-transparent lg:border-none z-50 flex flex-col gap-4">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.97 }}
@@ -620,10 +525,42 @@ const ProductDetails = () => {
                   !selectedVariant ||
                   selectedVariant.stock === 0
                 }
-                className="flex h-14 flex-1 items-center justify-center rounded-full bg-[#D4AF37] text-black transition-colors hover:bg-[#F2CA50] uppercase tracking-widest text-sm font-bold disabled:opacity-50"
+                className="flex h-14 w-full items-center justify-center bg-[#f2ca50] text-[#3c2f00] se-label tracking-[0.18em] transition-colors hover:bg-[#ffe088] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Buy Now
+                Proceed to Secure Checkout
               </motion.button>
+
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.97 }}
+                onClick={handleAddToCart}
+                disabled={
+                  !hasVariants ||
+                  !selectedVariant ||
+                  selectedVariant.stock === 0
+                }
+                className={`flex h-14 w-full items-center justify-center border border-[#4d4635] text-[#e5e2e1] se-label tracking-[0.18em] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  cartAddedPulse ? "border-[#f2ca50] text-[#f2ca50]" : "hover:bg-[#1c1b1b] hover:border-[#99907c]"
+                }`}
+              >
+                {cartAddedPulse ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" /> Added to Atelier Bag
+                  </>
+                ) : (
+                  "Add to Bag"
+                )}
+              </motion.button>
+
+              {/* Urgency Signal */}
+              {hasVariants && selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <div className="w-2 h-2 rounded-full bg-[#93000a] animate-pulse" />
+                  <span className="se-instrument text-[#ffb4ab] text-sm">
+                    {selectedVariant.stock} Pieces Left in the Atelier
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="mb-10">

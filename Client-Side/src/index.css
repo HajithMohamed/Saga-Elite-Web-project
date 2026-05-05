@@ -11,7 +11,7 @@
   .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
   .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
   .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
-  .se-instrument { font-family: 'Inter', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.005em; font-style: normal !important; font-variant-numeric: tabular-nums; }
+  .se-instrument { font-family: 'Instrument Sans', system-ui, sans-serif; font-weight: 600; font-style: normal !important; font-variant-numeric: tabular-nums; }
   .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
   .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
   .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -37,7 +37,7 @@
   /* ── Editorial focus ring ─────────────────────────────────── */
   .se-focus:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #131313, 0 0 0 4px #f2ca50;
+    box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
   }
 
 
@@ -166,6 +166,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #353535;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 @keyframes homepage-marquee {

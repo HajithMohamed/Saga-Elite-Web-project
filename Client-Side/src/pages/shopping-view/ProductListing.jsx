@@ -313,18 +313,15 @@ const ProductListing = () => {
       <main className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
         {/* LOADING */}
         {isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-[#4d4635]/40">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#0a0a0a] p-5 md:p-6">
-                <div
-                  className="border border-[#4d4635] bg-[#1c1b1b] animate-pulse"
-                  style={{ aspectRatio: "4/5" }}
-                />
-                <div className="mt-5 h-3 w-1/3 bg-[#1c1b1b] animate-pulse" />
-                <div className="mt-3 h-4 w-2/3 bg-[#1c1b1b] animate-pulse" />
-                <div className="mt-3 h-3 w-1/4 bg-[#1c1b1b] animate-pulse" />
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-32">
+            <motion.div
+              className="w-8 h-8 border-[3px] border-[#4d4635] border-t-[#f2ca50] rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, ease: "linear", repeat: Infinity }}
+            />
+            <span className="se-label mt-6 text-[#d0c5af] tracking-[0.2em] text-[10px]">
+              LOADING ATELIER
+            </span>
           </div>
         )}
 

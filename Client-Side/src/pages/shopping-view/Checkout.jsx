@@ -788,8 +788,14 @@ const Checkout = () => {
         {/* LEFT: FORM (Shipping & Payment) */}
         <div className="space-y-12 lg:space-y-16">
           <section>
-            <h1 className="text-4xl font-extrabold tracking-tight mb-4 text-[#D4AF37]">Checkout</h1>
-            <p className="text-muted-foreground">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#f2ca50]/10 text-[#f2ca50]">
+                <Lock className="w-4 h-4" />
+              </span>
+              <span className="se-label tracking-[0.28em] text-[10px] text-[#f2ca50]">SECURE CHECKOUT</span>
+            </div>
+            <h1 className="se-serif text-4xl md:text-5xl text-[#e5e2e1] leading-[1.1] mb-4">Complete Your Order</h1>
+            <p className="se-body text-sm text-[#d0c5af]">
               Review your items and complete your purchase.
             </p>
           </section>
@@ -926,16 +932,12 @@ const Checkout = () => {
                       value={formData.guestEmail}
                       onChange={handleChange}
                       placeholder=" "
-                      className={cn(
-                        "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                        "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                        "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                      )}
+                      className="se-input"
                       required
                     />
                     <label
                       htmlFor="checkout-guest-email"
-                      className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
+                      className="se-input-label"
                     >
                       Email Address
                     </label>
@@ -962,15 +964,11 @@ const Checkout = () => {
                     value={formData.shippingAddress}
                     onChange={handleChange}
                     placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
+                    className="se-input"
                   />
                   <label
                     htmlFor="checkout-shipping-address"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
+                    className="se-input-label"
                   >
                     Complete Address
                   </label>
@@ -983,15 +981,11 @@ const Checkout = () => {
                     value={formData.contactNumber}
                     onChange={handleChange}
                     placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
+                    className="se-input"
                   />
                   <label
                     htmlFor="checkout-contact-number"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
+                    className="se-input-label"
                   >
                     Contact Number
                   </label>
@@ -1004,15 +998,11 @@ const Checkout = () => {
                     value={formData.notes}
                     onChange={handleChange}
                     placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
+                    className="se-input"
                   />
                   <label
                     htmlFor="checkout-notes"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
+                    className="se-input-label"
                   >
                     Notes (Optional)
                   </label>
@@ -1075,56 +1065,58 @@ const Checkout = () => {
               <div className="space-y-8 rounded-xl border border-border bg-surface-container-low p-8 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-[#222] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
                 {formData.paymentMethod === "card" && (
                   <>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Cardholder Name</label>
+                    <div className="flex flex-col gap-2 relative">
                       <input
+                        id="cardholderName"
                         name="cardholderName"
                         value={cardDetails.cardholderName}
                         onChange={(e) => setCardDetails(prev => ({ ...prev, cardholderName: e.target.value }))}
-                        placeholder="John Doe"
-                        className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
+                        placeholder=" "
+                        className="se-input"
                       />
+                      <label htmlFor="cardholderName" className="se-input-label">Cardholder Name</label>
                     </div>
                     
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Card Number</label>
-                      <div className="relative">
-                        <input
-                          name="cardNumber"
-                          value={cardDetails.cardNumber}
-                          onChange={handleCardChange}
-                          placeholder="0000 0000 0000 0000"
-                          maxLength={19}
-                          className="w-full bg-[#111] border-0 border-b border-gray-800 p-4 pr-12 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm tracking-[0.2em]"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                          <CreditCard className="text-gray-500 w-5 h-5" />
-                        </div>
+                    <div className="flex flex-col gap-2 relative">
+                      <input
+                        id="cardNumber"
+                        name="cardNumber"
+                        value={cardDetails.cardNumber}
+                        onChange={handleCardChange}
+                        placeholder=" "
+                        maxLength={19}
+                        className="se-input pr-12 tracking-[0.2em]"
+                      />
+                      <label htmlFor="cardNumber" className="se-input-label">Card Number</label>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                        <CreditCard className="text-[#99907c] w-5 h-5" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Expiry Date</label>
+                      <div className="flex flex-col gap-2 relative">
                         <input
+                          id="expiryDate"
                           name="expiryDate"
                           value={cardDetails.expiryDate}
                           onChange={handleCardChange}
-                          placeholder="MM/YY"
+                          placeholder=" "
                           maxLength={5}
-                          className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
+                          className="se-input"
                         />
+                        <label htmlFor="expiryDate" className="se-input-label">Expiry Date (MM/YY)</label>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">CVC</label>
+                      <div className="flex flex-col gap-2 relative">
                         <input
+                          id="cvv"
                           name="cvv"
                           value={cardDetails.cvv}
                           onChange={handleCardChange}
-                          placeholder="123"
+                          placeholder=" "
                           maxLength={4}
-                          className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
+                          className="se-input"
                         />
+                        <label htmlFor="cvv" className="se-input-label">CVC</label>
                       </div>
                     </div>
                   </>

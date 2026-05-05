@@ -144,48 +144,53 @@ const MainFooter = () => {
   return (
     <footer className="bg-[#0e0e0e] border-t border-[#4d4635]/60">
       <div className="px-5 md:px-12 py-12 md:py-20">
-        <div className="flex flex-col gap-10 md:flex-row md:gap-16">
-          {/* Brand block */}
-          <div className="md:flex-1 md:max-w-md">
+        {/* Top Section: Community & Newsletter */}
+        <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-16">
+          <Eyebrow tone="gold" size="md">Join the Community</Eyebrow>
+          <h3 className="mt-4 se-serif text-3xl md:text-4xl text-[#e5e2e1]">Receive the journal, read it slowly.</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log("Footer newsletter:", email);
+              setEmail("");
+            }}
+            className="mt-8 flex items-end gap-3 border-b border-[#4d4635] focus-within:border-[#f2ca50] pb-3 w-full max-w-sm transition-colors mx-auto"
+          >
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.name@email.com"
+              className="bg-transparent flex-1 se-body text-sm text-[#e5e2e1] placeholder:text-[#574500] outline-none py-1"
+            />
+            <button
+              type="submit"
+              className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] flex items-center gap-1"
+            >
+              Subscribe <ArrowRight size={12} strokeWidth={1.5} />
+            </button>
+          </form>
+        </div>
+
+        {/* Bottom Section: Footer Link Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 py-16 border-t border-[#4d4635]/50">
+          {/* Brand Column */}
+          <div className="md:col-span-4 flex flex-col items-start gap-4">
             <Link to="/shopping/home">
               <Wordmark size="lg" tagline />
             </Link>
-            <p className="mt-6 se-body text-[#d0c5af]/80 text-sm md:text-base leading-relaxed max-w-sm">
-              An atelier of limited-edition streetwear, made in Sri Lanka, sent to ninety-three
-              countries. Nothing restocks. Everything is considered.
+            <p className="text-[#d0c5af]/80 text-sm mt-2 leading-relaxed max-w-sm">
+              Sri Lanka's premium streetwear brand. An atelier of limited-edition streetwear, made in Sri Lanka, sent to ninety-three countries.
             </p>
-
-            {/* Newsletter */}
-            <div className="mt-8">
-              <Eyebrow tone="gold" size="xs">Next chapter</Eyebrow>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  console.log("Footer newsletter:", email);
-                  setEmail("");
-                }}
-                className="mt-3 flex items-end gap-3 border-b border-[#4d4635] focus-within:border-[#f2ca50] pb-3 max-w-sm transition-colors"
-              >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your.name@email.com"
-                  className="bg-transparent flex-1 se-body text-sm text-[#e5e2e1] placeholder:text-[#574500] outline-none py-1"
-                />
-                <button
-                  type="submit"
-                  className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] flex items-center gap-1"
-                >
-                  Subscribe <ArrowRight size={12} strokeWidth={1.5} />
-                </button>
-              </form>
+            <div className="flex flex-wrap items-center gap-5 mt-4">
+              <a href={CONTACT_INFO?.socials?.instagram || "#"} target="_blank" rel="noopener noreferrer" className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"><InstagramIcon /></a>
+              <a href={CONTACT_INFO?.socials?.facebook || "#"} target="_blank" rel="noopener noreferrer" className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"><FacebookIcon /></a>
+              <a href={CONTACT_INFO?.socials?.tiktok || "#"} target="_blank" rel="noopener noreferrer" className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"><TikTokIcon /></a>
             </div>
-
-            {/* Next drop teaser */}
+            {/* Next drop teaser moved here if desired, or can be kept off if it's already on the page */}
             {nextDrop && countdown ? (
-              <div className="mt-8 border border-[#4d4635] px-5 py-4 max-w-sm">
+              <div className="mt-8 border border-[#4d4635] px-5 py-4 w-full">
                 <Eyebrow tone="muted" size="xs">Next drop</Eyebrow>
                 <div className="mt-2 se-headline text-[#e5e2e1] text-lg truncate">
                   {nextDrop.name || "Untitled chapter"}
@@ -203,83 +208,33 @@ const MainFooter = () => {
             ) : null}
           </div>
 
-          {/* Link columns */}
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-10 md:flex-1">
-            {cols.map((c) => (
-              <div key={c.title}>
-                <Eyebrow tone="muted" size="xs">{c.title}</Eyebrow>
-                <ul className="mt-5 space-y-3">
-                  {c.items.map((it) => (
-                    <li key={it.label}>
-                      {it.external ? (
-                        <a
-                          href={it.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="se-body text-sm text-[#d0c5af] hover:text-[#e5e2e1] transition-colors"
-                        >
-                          {it.label}
-                        </a>
-                      ) : (
-                        <Link
-                          to={it.to}
-                          className="se-body text-sm text-[#d0c5af] hover:text-[#e5e2e1] transition-colors"
-                        >
-                          {it.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Hairline className="mt-12 md:mt-16" />
-
-        {/* Socials + payments */}
-        <div className="mt-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-5">
-            <Eyebrow tone="muted" size="xs">Follow</Eyebrow>
-            <a
-              href={CONTACT_INFO?.socials?.instagram || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"
-            >
-              <InstagramIcon />
-            </a>
-            <a
-              href={CONTACT_INFO?.socials?.facebook || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"
-            >
-              <FacebookIcon />
-            </a>
-            <a
-              href={CONTACT_INFO?.socials?.tiktok || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="TikTok"
-              className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"
-            >
-              <TikTokIcon />
-            </a>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Eyebrow tone="muted" size="xs">Accepts</Eyebrow>
-            <VisaBadge />
-            <MastercardBadge />
-            <span className="inline-flex items-center gap-1.5 border border-[#4d4635] px-2 h-6 se-label text-[9px] tracking-[0.18em] text-[#d0c5af]">
-              <Building2 className="h-3 w-3" />
-              Bank
-            </span>
-          </div>
+          {/* Links Columns */}
+          {cols.map((c) => (
+            <div key={c.title} className="md:col-span-2 flex flex-col gap-3">
+              <h4 className="se-label text-[#e5e2e1] mb-2">{c.title}</h4>
+              {c.items.map((it) => (
+                <div key={it.label}>
+                  {it.external ? (
+                    <a
+                      href={it.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="se-body text-sm text-[#d0c5af] hover:text-[#e5e2e1] transition-colors"
+                    >
+                      {it.label}
+                    </a>
+                  ) : (
+                    <Link
+                      to={it.to}
+                      className="se-body text-sm text-[#d0c5af] hover:text-[#e5e2e1] transition-colors"
+                    >
+                      {it.label}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
 
         <Hairline className="mt-8" tone="soft" />
@@ -289,22 +244,23 @@ const MainFooter = () => {
           <div className="se-label text-[9px] tracking-[0.32em] text-[#574500]">
             © Saga Elite Pvt Ltd · Colombo · MMXXVI
           </div>
+          <div className="flex flex-wrap items-center gap-3">
+             <Eyebrow tone="muted" size="xs">Accepts</Eyebrow>
+             <VisaBadge />
+             <MastercardBadge />
+             <span className="inline-flex items-center gap-1.5 border border-[#4d4635] px-2 h-6 se-label text-[9px] tracking-[0.18em] text-[#d0c5af]">
+               <Building2 className="h-3 w-3" />
+               Bank
+             </span>
+          </div>
           <div className="flex flex-wrap items-center gap-3 se-label text-[9px] tracking-[0.3em] text-[#99907c]">
-            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">
-              Privacy
-            </Link>
+            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Privacy</Link>
             <span className="text-[#4d4635]">·</span>
-            <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50] transition-colors">
-              Terms
-            </Link>
+            <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50] transition-colors">Terms</Link>
             <span className="text-[#4d4635]">·</span>
-            <Link to="/legal/refund-policy" className="hover:text-[#f2ca50] transition-colors">
-              Refunds
-            </Link>
+            <Link to="/legal/refund-policy" className="hover:text-[#f2ca50] transition-colors">Refunds</Link>
             <span className="text-[#4d4635]">·</span>
-            <Link to="/legal/delivery-policy" className="hover:text-[#f2ca50] transition-colors">
-              Delivery
-            </Link>
+            <Link to="/legal/delivery-policy" className="hover:text-[#f2ca50] transition-colors">Delivery</Link>
           </div>
         </div>
       </div>

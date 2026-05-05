@@ -201,7 +201,9 @@ const Home = () => {
         {/* VALUES MARQUEE */}
         <div id="atelier-marquee">
           <Marquee
-            tone="gold"
+            tone="invert"
+            speed={30}
+            sep="•"
             items={[
               "Made in Sri Lanka",
               "Hand-finished",
@@ -215,8 +217,8 @@ const Home = () => {
 
         {/* DROP COUNTDOWN BAND */}
         {dropTarget && (
-          <section className="px-5 md:px-12 py-16 md:py-28 border-b border-[#4d4635]/40 bg-[#131313]">
-            <Reveal>
+          <section className="px-5 md:px-12 py-6 border-b border-[#4d4635]/40 bg-[#201f1f] sticky top-[64px] md:top-[80px] z-40">
+            <Reveal y={0}>
               <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
                 <div className="max-w-xl">
                   <Eyebrow tone="gold" size="md">Drops in</Eyebrow>
@@ -254,7 +256,7 @@ const Home = () => {
               </Link>
             </div>
 
-            <div className="space-y-12 md:space-y-16">
+            <div className="flex overflow-x-auto snap-x snap-mandatory md:block space-x-6 md:space-x-0 md:space-y-16 pb-8 md:pb-0 scrollbar-hide">
               {featuredProducts.map((product, idx) => {
                 const slug = product.slug || product.productSlug || product._id;
                 const discount = Number(product.discountPercent || 0);
@@ -265,8 +267,8 @@ const Home = () => {
                 const mirror = idx % 2 === 1;
 
                 return (
-                  <Reveal key={product._id || slug || idx}>
-                    <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-8">
+                  <Reveal key={product._id || slug || idx} className="min-w-[85vw] snap-center md:min-w-0 flex-shrink-0">
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-8 h-full">
                       <div
                         className={`md:col-span-7 ${mirror ? "md:order-2" : ""}`}
                       >
@@ -346,23 +348,27 @@ const Home = () => {
                   to={`/shopping/product-list?category=${c.lbl.toLowerCase()}`}
                   className="block group"
                 >
-                  <div
+                  <motion.div
+                    whileHover="hover"
                     className="relative overflow-hidden border border-[#4d4635]"
                     style={{ aspectRatio: "4/5" }}
                   >
                     {c.logo?.url ? (
-                      <img
+                      <motion.img
                         src={c.logo.url}
                         alt={c.lbl}
-                        className="w-full h-full object-cover transition-[filter] duration-[600ms] group-hover:grayscale"
+                        loading="lazy"
+                        variants={{ hover: { scale: 1.05 } }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="se-img-fallback w-full h-full">
                         <span className="se-label text-[10px] tracking-[0.3em]">{c.lbl}</span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/85 to-transparent" />
-                    <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 right-0 p-8 flex items-end justify-between pointer-events-none">
                       <div>
                         <h3 className="se-headline text-[#fafafa] text-3xl">{c.lbl}</h3>
                         <Eyebrow tone="muted" size="xs" className="mt-2 block">
@@ -375,7 +381,7 @@ const Home = () => {
                         className="text-[#f2ca50] group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 </Link>
               </Reveal>
             ))}

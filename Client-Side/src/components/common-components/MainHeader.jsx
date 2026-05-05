@@ -256,33 +256,18 @@ const MainHeader = () => {
 
   return (
     <>
-      <div className="sticky top-0 z-50 w-full">
-        {/* Header marquee */}
-        <div className="relative overflow-hidden bg-[#0e0e0e] border-b border-[#4d4635]/60 py-2">
-          <div className="flex whitespace-nowrap header-marquee-track">
-            {[...marqueeItems, ...marqueeItems, ...marqueeItems].map((item, i) => (
-              <span
-                key={i}
-                className="se-label text-[9px] tracking-[0.32em] text-[#d0c5af] px-6 inline-flex items-center gap-6"
-              >
-                {item}
-                <span className="text-[#574500]">◆</span>
-              </span>
-            ))}
-          </div>
-        </div>
-
+      <div className="fixed top-0 z-50 w-full">
         <motion.header
           {...headerReveal}
           className={`w-full transition-all duration-300 ${
             scrolled
-              ? "bg-[#131313]/95 backdrop-blur-md border-b border-[#4d4635]/40"
-              : "bg-[#131313]/85 backdrop-blur-sm border-b border-transparent"
+              ? "bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#4d4635]"
+              : "bg-transparent border-b border-transparent"
           }`}
         >
-          <div className="px-4 md:px-8 lg:px-12 h-16 md:h-20 flex items-center justify-between gap-4 md:grid md:grid-cols-[auto_1fr_auto]">
+          <div className="px-4 md:px-8 lg:px-12 h-16 md:h-20 flex items-center justify-between relative">
             {/* Left ── logo + wordmark (mobile: hamburger + wordmark center) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0 md:w-64">
               <button
                 type="button"
                 aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -337,7 +322,7 @@ const MainHeader = () => {
               variants={navList}
               initial="hidden"
               animate="visible"
-              className="hidden md:flex items-center justify-center gap-7 lg:gap-10"
+              className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center justify-center gap-8"
               onMouseLeave={() => setHoveredNav(null)}
             >
               {desktopNav.map((item) => {
@@ -376,7 +361,7 @@ const MainHeader = () => {
             </Link>
 
             {/* Right ── utility (deduped: notifications, wishlist, cart, account/sign-in) */}
-            <div className="flex items-center justify-end gap-4 md:gap-5 text-[#d0c5af]">
+            <div className="flex items-center justify-end gap-4 md:gap-5 text-[#d0c5af] flex-shrink-0 md:w-64">
               <div className="hidden md:block">
                 <NotificationsDropdown />
               </div>

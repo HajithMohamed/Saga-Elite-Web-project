@@ -644,7 +644,13 @@ const AuthLayout = () => {
 
         {/* Form panel */}
         <main className="flex items-start md:items-center justify-center px-5 py-10 md:px-12 md:py-16 lg:px-20">
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md bg-[#131313] p-8 md:p-12 border border-[#4d4635]/40 shadow-[0_24px_60px_rgba(0,0,0,0.6)] relative">
+            {/* Invitation Accents */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#f2ca50]/40 -translate-x-px -translate-y-px" />
+            <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#f2ca50]/40 translate-x-px -translate-y-px" />
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#f2ca50]/40 -translate-x-px translate-y-px" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#f2ca50]/40 translate-x-px translate-y-px" />
+            
             <Outlet />
           </div>
         </main>

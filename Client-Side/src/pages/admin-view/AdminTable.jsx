@@ -46,23 +46,23 @@ const AdminTable = ({ admins = [], currentUserId }) => {
     <div className="overflow-x-auto rounded-[20px] border border-white/10">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/10 bg-white/5">
-            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+          <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+            <th className="px-4 py-2 text-left">
               Admin
             </th>
-            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+            <th className="px-4 py-2 text-left">
               Role
             </th>
-            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+            <th className="px-4 py-2 text-left">
               Joined
             </th>
-            <th className="px-5 py-3 text-left text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+            <th className="px-4 py-2 text-left">
               Last Active
             </th>
-            <th className="px-5 py-3 text-right text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+            <th className="px-4 py-2 text-right">
               Actions
             </th>
-            <th className="px-5 py-3 text-right text-[10px] font-medium uppercase tracking-[0.2em] text-gray-500">
+            <th className="px-4 py-2 text-right">
               Status
             </th>
           </tr>
@@ -82,49 +82,49 @@ const AdminTable = ({ admins = [], currentUserId }) => {
               <motion.tr
                 key={admin._id}
                 variants={itemVariants}
-                className="border-t border-white/10 transition-colors hover:bg-white/[0.02]"
+                className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
               >
-                <td className="px-5 py-4">
+                <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-semibold text-black">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f2ca50] to-[#9a7a1e] text-xs font-semibold text-[#0a0a0a]">
                       {getInitials(admin.name || admin.email)}
                     </div>
                     <div>
-                      <p className="font-medium leading-tight text-white">
+                      <p className="font-medium leading-tight text-[#e5e2e1] se-body">
                         {admin.name || "N/A"}
                         {isSelf ? (
-                          <span className="ml-2 text-xs font-normal text-gray-400">(you)</span>
+                          <span className="ml-2 text-[10px] font-normal text-[#99907c] se-label tracking-widest">(you)</span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 text-xs text-gray-400">{admin.email}</p>
+                      <p className="mt-0.5 text-[10px] text-[#99907c] se-mono">{admin.email}</p>
                     </div>
                   </div>
                 </td>
 
-                <td className="px-5 py-4">
+                <td className="px-4 py-3">
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    className={`inline-flex rounded-sm px-2 py-1 text-[9px] se-label tracking-widest ${
                       isSuperAdmin
-                        ? "bg-[#D4AF37] text-black"
-                        : "bg-white/10 text-gray-200"
+                        ? "bg-[#f2ca50] text-[#0a0a0a]"
+                        : "bg-[#4d4635] text-[#e5e2e1]"
                     }`}
                   >
                     {getRoleLabel(admin.role)}
                   </span>
                 </td>
 
-                <td className="px-5 py-4 text-gray-400">{formatDate(admin.createdAt)}</td>
+                <td className="px-4 py-3 text-[#99907c] se-mono text-[10px]">{formatDate(admin.createdAt)}</td>
 
-                <td className="px-5 py-4 text-gray-400">
+                <td className="px-4 py-3 text-[#99907c] se-mono text-[10px]">
                   {admin.lastActiveAt ? formatDate(admin.lastActiveAt) : "Never"}
                 </td>
 
-                <td className="px-5 py-4 text-right">
-                  <span className="font-medium text-white">{admin.actionCount ?? 0}</span>
-                  <span className="ml-1 text-xs text-gray-500">actions</span>
+                <td className="px-4 py-3 text-right">
+                  <span className="font-medium text-[#e5e2e1] se-mono">{admin.actionCount ?? 0}</span>
+                  <span className="ml-1 text-[9px] text-[#99907c] se-label tracking-widest">actions</span>
                 </td>
 
-                <td className="px-5 py-4 text-right">
+                <td className="px-4 py-3 text-right">
                   {isSelf || isSuperAdmin ? (
                     <span className="text-xs text-gray-500">—</span>
                   ) : admin.isActive ? (

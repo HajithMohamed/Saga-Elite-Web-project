@@ -445,13 +445,13 @@ const NotificationsManager = () => {
                 <div className="mt-4 overflow-x-auto">
                   <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
                     <thead>
-                      <tr className="bg-white/5 text-xs uppercase tracking-[0.2em] text-gray-500">
-                        <th className="px-4 py-3">Title</th>
-                        <th className="px-4 py-3">User</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Actions</th>
+                      <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+                        <th className="px-4 py-2 text-left">Title</th>
+                        <th className="px-4 py-2 text-left">User</th>
+                        <th className="px-4 py-2 text-left">Type</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                        <th className="px-4 py-2 text-left">Date</th>
+                        <th className="px-4 py-2 text-left">Actions</th>
                       </tr>
                     </thead>
                     <motion.tbody
@@ -474,27 +474,27 @@ const NotificationsManager = () => {
                             key={notification._id}
                             variants={itemVariants}
                             layout
-                            className="border-t border-white/10 hover:bg-white/5"
+                            className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
                           >
-                            <td className="px-4 py-4 align-top">
-                              <div className="font-semibold text-white">{notification.title}</div>
-                              <div className="mt-1 text-xs text-gray-400 line-clamp-2">
+                            <td className="px-4 py-3 align-top">
+                              <div className="font-semibold text-[#e5e2e1] se-body text-sm">{notification.title}</div>
+                              <div className="mt-1 text-xs text-[#d0c5af] line-clamp-2 se-body">
                                 {notification.message}
                               </div>
                             </td>
-                            <td className="px-4 py-4 align-top text-sm text-gray-300">
+                            <td className="px-4 py-3 align-top text-sm text-[#99907c] se-mono text-[10px]">
                               {notification.user?.email || "-"}
                             </td>
-                            <td className="px-4 py-4 align-top text-sm text-gray-300">
-                              <span className="rounded-full bg-[#1f1f1f] px-3 py-1 text-xs uppercase tracking-[0.15em] text-gray-200">
+                            <td className="px-4 py-3 align-top">
+                              <span className="rounded-sm bg-[#1c1b1b] border border-[#4d4635] px-2 py-1 text-[9px] uppercase tracking-[0.15em] text-[#99907c] se-label">
                                 {notification.type}
                               </span>
                             </td>
-                            <td className="px-4 py-4 align-top">{renderStatusLabel(notification.isRead)}</td>
-                            <td className="px-4 py-4 align-top text-sm text-gray-400">
+                            <td className="px-4 py-3 align-top">{renderStatusLabel(notification.isRead)}</td>
+                            <td className="px-4 py-3 align-top text-[#99907c] se-mono text-[10px]">
                               {new Date(notification.createdAt).toLocaleString()}
                             </td>
-                            <td className="px-4 py-4 align-top">
+                            <td className="px-4 py-3 align-top">
                               <div className="flex flex-wrap gap-2">
                                 <motion.button
                                   type="button"

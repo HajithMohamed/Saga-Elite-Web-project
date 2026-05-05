@@ -500,14 +500,14 @@ const Orders = () => {
           >
             <table className="min-w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-                  <th className="px-5 py-3">Order</th>
-                  <th className="px-5 py-3">Customer</th>
-                  <th className="px-5 py-3">Total</th>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">Payment</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+                  <th className="px-4 py-2">Order</th>
+                  <th className="px-4 py-2">Customer</th>
+                  <th className="px-4 py-2">Total</th>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Payment</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -518,15 +518,15 @@ const Orders = () => {
                     <motion.tr
                       key={order._id}
                       variants={itemVariants}
-                      className="border-t border-white/10 align-top transition-colors hover:bg-white/[0.02]"
+                      className="border-t border-[#4d4635]/40 align-top transition-colors hover:bg-[#131313]"
                     >
-                      <td className="max-w-[200px] px-5 py-4 align-top">
+                      <td className="max-w-[200px] px-4 py-3 align-top">
                         <button
                           type="button"
                           onClick={() =>
                             setExpandedOrderId((id) => (id === order._id ? null : order._id))
                           }
-                          className="break-all text-left font-mono text-xs text-gray-300 underline-offset-2 hover:text-[#D4AF37]"
+                          className="break-all text-left se-mono text-[10px] text-[#e5e2e1] underline-offset-2 hover:text-[#f2ca50]"
                         >
                           {String(order._id).slice(-12)}…
                         </button>
@@ -552,16 +552,16 @@ const Orders = () => {
                           ) : null}
                         </AnimatePresence>
                       </td>
-                      <td className="px-5 py-4 text-gray-300">{getCustomerName(order)}</td>
-                      <td className="px-5 py-4 text-gray-300">
+                      <td className="px-4 py-3 text-[#e5e2e1] se-body text-xs">{getCustomerName(order)}</td>
+                      <td className="px-4 py-3 text-[#d0c5af] se-instrument text-xs">
                         LKR {formatCurrency(order.totalAmount)}
                       </td>
-                      <td className="px-5 py-4 text-gray-400">{formatDate(order.createdAt)}</td>
-                      <td className="px-5 py-4 text-gray-400">{order.paymentMethod || "—"}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-[#99907c] se-mono text-[10px]">{formatDate(order.createdAt)}</td>
+                      <td className="px-4 py-3 text-[#99907c] se-label text-[9px] tracking-widest">{order.paymentMethod || "—"}</td>
+                      <td className="px-4 py-3">
                         <StatusBadge status={order.status} />
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex flex-col items-end gap-3">
                           <AnimatePresence>
                             {successFlashId === order._id ? (
@@ -588,10 +588,10 @@ const Orders = () => {
                                     [order._id]: s.value,
                                   }))
                                 }
-                                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                className={`rounded-sm border px-2 py-1 text-[9px] se-label tracking-wider transition ${
                                   draft === s.value
-                                    ? "border-[#D4AF37] bg-[#D4AF37] text-black"
-                                    : "border-white/10 text-gray-400 hover:border-[#D4AF37]/40"
+                                    ? "border-[#f2ca50] bg-[#f2ca50] text-[#0a0a0a]"
+                                    : "border-[#4d4635] text-[#99907c] hover:border-[#f2ca50]/40"
                                 }`}
                               >
                                 {s.label}

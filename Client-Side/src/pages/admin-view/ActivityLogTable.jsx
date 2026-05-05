@@ -27,11 +27,11 @@ const ActivityLogTable = () => {
       <div className="mt-6 overflow-x-auto rounded-[20px] border border-white/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-              <th className="px-5 py-3 text-left">Date</th>
-              <th className="px-5 py-3 text-left">Admin Email</th>
-              <th className="px-5 py-3 text-left">Action</th>
-              <th className="px-5 py-3 text-left">Method &amp; Route</th>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
             </tr>
           </thead>
           <tbody>
@@ -74,11 +74,11 @@ const ActivityLogTable = () => {
       <div className="overflow-x-auto rounded-[20px] border border-white/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-              <th className="px-5 py-3 text-left">Date</th>
-              <th className="px-5 py-3 text-left">Admin Email</th>
-              <th className="px-5 py-3 text-left">Action</th>
-              <th className="px-5 py-3 text-left">Method &amp; Route</th>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
             </tr>
           </thead>
           <motion.tbody
@@ -91,18 +91,18 @@ const ActivityLogTable = () => {
               <motion.tr
                 key={log._id}
                 variants={itemVariants}
-                className="border-t border-white/10 transition-colors hover:bg-white/[0.02]"
+                className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
               >
-                <td className="whitespace-nowrap px-5 py-4 text-gray-400">
+                <td className="whitespace-nowrap px-4 py-3 text-[#99907c] se-mono text-[10px]">
                   {new Date(log.createdAt).toLocaleString("en-GB")}
                 </td>
-                <td className="px-5 py-4 font-medium text-white">
+                <td className="px-4 py-3 font-medium text-[#e5e2e1] se-body text-sm">
                   {log.adminId?.email || "Unknown Admin"}
                 </td>
-                <td className="px-5 py-4 text-gray-300">{log.action}</td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-3 text-[#d0c5af] se-body text-sm">{log.action}</td>
+                <td className="px-4 py-3">
                   <MethodBadge method={log.method} />
-                  <span className="ml-2 text-xs font-mono text-gray-500">{log.route}</span>
+                  <span className="ml-2 text-xs se-mono text-[#99907c]">{log.route}</span>
                 </td>
               </motion.tr>
             ))}

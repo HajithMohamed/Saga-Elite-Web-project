@@ -320,6 +320,20 @@ const Cart = () => {
           <aside className="lg:col-span-4">
             <div className="border border-[#4d4635] p-6 md:p-7 lg:sticky lg:top-32">
               <Eyebrow tone="gold" size="sm">Order summary</Eyebrow>
+              <div className="mb-6">
+                <div className="flex items-center justify-between se-label text-[10px] tracking-[0.18em] mb-2">
+                  <span className="text-[#e5e2e1]">{totalPrice >= 20000 ? "Free Shipping Unlocked" : "Free Shipping"}</span>
+                  {totalPrice < 20000 && <span className="text-[#99907c]">{formatLKR(20000 - totalPrice)} away</span>}
+                </div>
+                <div className="h-1 bg-[#1c1b1b] overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-[#f2ca50]" 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (totalPrice / 20000) * 100)}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
+              </div>
               <div className="mt-6 space-y-4">
                 <div className="flex items-baseline justify-between">
                   <span className="se-body text-sm text-[#d0c5af]">Subtotal</span>
@@ -327,7 +341,7 @@ const Cart = () => {
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="se-body text-sm text-[#d0c5af]">Shipping</span>
-                  <span className="se-body text-sm text-[#99907c]">Complimentary</span>
+                  <span className="se-body text-sm text-[#99907c]">{totalPrice >= 20000 ? "Complimentary" : "Calculated at next step"}</span>
                 </div>
                 <div className="flex items-baseline justify-between">
                   <span className="se-body text-sm text-[#d0c5af]">Tax (incl.)</span>
