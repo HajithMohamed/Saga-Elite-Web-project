@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import MainHeader from '@/components/common-components/MainHeader';
 import MainFooter from '@/components/common-components/MainFooter';
+import MobileBottomNav from '@/components/common-components/MobileBottomNav';
 import { fetchCartAction, fetchWishlistAction } from '@/store/cart-slice';
 
 const Layout = () => {
@@ -35,6 +36,7 @@ const Layout = () => {
         </AnimatePresence>
       </main>
       <MainFooter />
+      <MobileBottomNav />
     </div>
   );
 };
