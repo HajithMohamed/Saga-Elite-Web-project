@@ -71,7 +71,7 @@ const ReviewList = ({ productId, initialStats }) => {
     if (!userOrders?.length) return null;
     return userOrders.find(
       (order) =>
-        order.status === "confirmed" &&
+        order.status === "delivered" &&
         order.items?.some((item) =>
           String(item.product?._id || item.product) === String(productId)
         )
