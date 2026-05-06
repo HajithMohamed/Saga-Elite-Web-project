@@ -220,7 +220,8 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "About Content",
       path: "/admin/about-content",
       icon: <FileText className="h-5 w-5" />,
-      permission: null, // available to all admins
+      permission: null,
+      superAdminOnly: true,
     },
     {
       label: "Contact Inquiries",
@@ -239,7 +240,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   // Super admins see everything; others filtered by their permissions
   const menuItems = isSuperAdminUser
     ? allMenuItems
-    : allMenuItems.filter((item) => !item.permission || userPerms[item.permission]);
+    : allMenuItems.filter((item) => {
+        if (item.superAdminOnly) return false;
+        return !item.permission || userPerms[item.permission];
+      });
 
   if (isSuperAdminUser) {
     menuItems.push({
