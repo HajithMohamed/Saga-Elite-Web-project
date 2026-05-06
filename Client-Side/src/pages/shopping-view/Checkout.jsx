@@ -25,7 +25,7 @@ import { compressImageFile } from "@/lib/image-compression";
 import { cn } from "@/lib/utils";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
-const MANUAL_BANK_DETAILS = {
+const DEFAULT_MANUAL_BANK_DETAILS = {
   bankName: "Sampath Bank",
   branch: "Hatton",
   accountName: "N.Gayathree",
@@ -197,6 +197,7 @@ const Checkout = () => {
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
+  const [bankDetails, setBankDetails] = useState(null);
   
   const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [guestCheckInfo, setGuestCheckInfo] = useState(null);
@@ -262,6 +263,28 @@ const Checkout = () => {
     setCheckoutItems(items);
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    axios
+      .get(`${API_BASE}/site-config/bank_details`)
+      .then((res) => {
+        if (cancelled) return;
+        setBankDetails({
+          ...DEFAULT_MANUAL_BANK_DETAILS,
+          ...(res.data?.data || {}),
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBankDetails(DEFAULT_MANUAL_BANK_DETAILS);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setCheckoutTotal(
@@ -342,6 +365,8 @@ const Checkout = () => {
     setVariantErrorsByItem(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
+
+  const displayBankDetails = bankDetails || DEFAULT_MANUAL_BANK_DETAILS;
 
   const syncCartVariant = async (item, nextVariant) => {
     if (isBuyNow || !nextVariant?.sku) {
@@ -1144,23 +1169,23 @@ const Checkout = () => {
                         <h4 className="font-bold text-[#D4AF37] text-lg">Bank Information</h4>
                         <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
                           <span className="text-gray-400">Bank:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.bankName}</span>
+                          <span className="font-medium">{displayBankDetails.bankName}</span>
                           
                           <span className="text-gray-400">Branch:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.branch}</span>
+                          <span className="font-medium">{displayBankDetails.branch}</span>
                           
                           <span className="text-gray-400">Account Name:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.accountName}</span>
+                          <span className="font-medium">{displayBankDetails.accountName}</span>
                           
                           <span className="text-gray-400">Account No:</span>
                           <div className="flex items-center gap-2">
                             <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">
-                              {MANUAL_BANK_DETAILS.accountNumber}
+                              {displayBankDetails.accountNumber}
                             </span>
                             <button 
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(MANUAL_BANK_DETAILS.accountNumber);
+                                navigator.clipboard.writeText(displayBankDetails.accountNumber);
                                 toast({ title: "Copied!", description: "Account number copied to clipboard." });
                               }}
                               className="text-xs bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black px-2 py-1 rounded transition-colors"
@@ -1170,7 +1195,7 @@ const Checkout = () => {
                           </div>
 
                           <span className="text-gray-400">WhatsApp:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.whatsapp}</span>
+                          <span className="font-medium">{displayBankDetails.whatsapp}</span>
                         </div>
                         <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-gray-300">
                           <p className="font-semibold text-[#D4AF37]">
@@ -1179,7 +1204,7 @@ const Checkout = () => {
                           <p className="mt-1">
                             Step 1: place the order. Step 2: we show your unique reference. Step 3: make the bank transfer using that reference in the memo.
                           </p>
-                          <p className="mt-2 text-amber-200">{MANUAL_BANK_DETAILS.deadline}</p>
+                          <p className="mt-2 text-amber-200">{displayBankDetails.deadline}</p>
                         </div>
                       </div>
                     </div>

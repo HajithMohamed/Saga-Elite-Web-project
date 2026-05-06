@@ -24,6 +24,65 @@ const PERMISSIONS = [
   { key: "manageAdmins", label: "Admin Management" },
 ];
 
+const ROLE_PRESETS = {
+  fulfillment_manager: {
+    label: "Fulfillment Manager",
+    description: "Can process orders and verify bank payments. Cannot touch content.",
+    subRole: "order_manager",
+    permissions: {
+      orders: true,
+      verifyPayments: true,
+      manageInventory: true,
+      products: false,
+      users: false,
+      notifications: false,
+      drops: false,
+      manageReviews: false,
+      viewAnalytics: false,
+      sendCampaigns: false,
+      manageAdmins: false,
+    },
+  },
+  content_manager: {
+    label: "Content Manager",
+    description: "Can manage drops, products, and moderate reviews. No payment access.",
+    subRole: "product_manager",
+    permissions: {
+      products: true,
+      drops: true,
+      manageReviews: true,
+      sendCampaigns: true,
+      notifications: true,
+      viewAnalytics: true,
+      orders: false,
+      users: false,
+      verifyPayments: false,
+      manageInventory: false,
+      manageAdmins: false,
+    },
+  },
+  customer_support: {
+    label: "Customer Support",
+    description: "Can see orders and user info to answer customer queries.",
+    subRole: "support_admin",
+    permissions: {
+      users: true,
+      orders: true,
+      products: false,
+      drops: false,
+      notifications: false,
+      verifyPayments: false,
+      manageReviews: false,
+      viewAnalytics: false,
+      sendCampaigns: false,
+      manageInventory: false,
+      manageAdmins: false,
+    },
+  },
+};
+
+const ROLE_PRESET_ENTRIES = Object.entries(ROLE_PRESETS);
+
 const SUB_ROLES = [
   {
     value: "order_manager",
@@ -93,6 +152,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
   );
   const [form, setForm] = useState(INITIAL);
   const [touched, setTouched] = useState({});
+  const [activePreset, setActivePreset] = useState(null);
 
   useEffect(() => {
     if (createSuccess) {
@@ -101,6 +161,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
         onClose();
         setForm(INITIAL);
         setTouched({});
+        setActivePreset(null);
       }, 1600);
       return () => clearTimeout(t);
     }
@@ -110,6 +171,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
     if (!isOpen) {
       dispatch(clearCreateStatus());
       setTouched({});
+      setActivePreset(null);
     }
   }, [isOpen, dispatch]);
 
@@ -155,6 +217,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
       role,
       permissions: role === "admin" ? allPermissions() : presetPermissions(prev.subRole),
     }));
+    setActivePreset(null);
   };
 
   const handleSubRoleChange = (e) => {
@@ -164,9 +227,11 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
       subRole,
       permissions: presetPermissions(subRole),
     }));
+    setActivePreset(null);
   };
 
   const handlePermissionToggle = (key) => {
+    setActivePreset(null);
     setForm((prev) => ({
       ...prev,
       permissions: {
@@ -177,6 +242,19 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
   };
 
   const handleBlur = (e) => setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+
+  const applyRolePreset = (presetKey) => {
+    const preset = ROLE_PRESETS[presetKey];
+    if (!preset) return;
+
+    setActivePreset(presetKey);
+    setForm((prev) => ({
+      ...prev,
+      role: "sub_admin",
+      subRole: preset.subRole,
+      permissions: { ...blankPermissions(), ...preset.permissions },
+    }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -401,6 +479,42 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                       ) : null}
                     </div>
                   ) : null}
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Quick role presets</p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Pick a starting profile, then fine-tune the permissions below.
+                    </p>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {ROLE_PRESET_ENTRIES.map(([presetKey, preset]) => {
+                      const isActive = activePreset === presetKey;
+                      return (
+                        <button
+                          key={presetKey}
+                          type="button"
+                          onClick={() => applyRolePreset(presetKey)}
+                          className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
+                            isActive
+                              ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-white shadow-[0_0_24px_rgba(212,175,55,0.12)]"
+                              : "border-white/10 bg-black/30 text-gray-300 hover:border-[#D4AF37]/30 hover:bg-black/50"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">{preset.label}</p>
+                              <p className="mt-1 text-xs text-gray-500">{preset.description}</p>
+                            </div>
+                            <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+                              Preset
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>

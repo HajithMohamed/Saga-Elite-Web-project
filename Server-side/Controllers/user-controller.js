@@ -222,6 +222,11 @@ const buildActivityTimeline = ({ user, recentOrders = [], recentNotifications = 
     .slice(0, 10);
 };
 
+const escapeCsvValue = (value) => {
+  const normalized = value === null || value === undefined ? "" : String(value);
+  return `"${normalized.replace(/"/g, '""')}"`;
+};
+
 const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = await User.find()
     .select(
@@ -817,12 +822,55 @@ const getAllUsers = catchAsync(async (req, res, next) => {
   });
 });
 
+const exportCustomersCsv = catchAsync(async (_req, res) => {
+  const customers = await User.find({ role: { $in: ["customer", "user"] } })
+    .select("email name createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const customerIds = customers.map((customer) => customer._id);
+  const orderStats = customerIds.length
+    ? await Order.aggregate([
+        { $match: { user: { $in: customerIds } } },
+        {
+          $group: {
+            _id: "$user",
+            orderCount: { $sum: 1 },
+            totalSpend: { $sum: "$totalAmount" },
+          },
+        },
+      ])
+    : [];
+
+  const statsMap = new Map(orderStats.map((entry) => [String(entry._id), entry]));
+  const rows = [
+    ["email", "name", "orderCount", "totalSpend", "createdAt"].map(escapeCsvValue).join(","),
+    ...customers.map((customer) => {
+      const stats = statsMap.get(String(customer._id)) || {};
+      return [
+        customer.email || "",
+        customer.name || "",
+        stats.orderCount || 0,
+        stats.totalSpend || 0,
+        customer.createdAt ? new Date(customer.createdAt).toISOString() : "",
+      ].map(escapeCsvValue).join(",");
+    }),
+  ];
+
+  const csv = rows.join("\n");
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="customers-export.csv"');
+  res.status(200).send(csv);
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
   deleteAdminUser,
   getAllUsers,
+  exportCustomersCsv,
   getCart,
   addToCart,
   updateCartItem,

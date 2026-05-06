@@ -210,7 +210,7 @@ function App() {
             <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
             <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
             <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
-            <Route path="about-content" element={<AboutSiteConfig />} />
+            <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
             <Route path="account" element={<Account />} />
