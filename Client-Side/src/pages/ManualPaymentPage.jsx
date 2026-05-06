@@ -271,6 +271,35 @@ const ManualPaymentPage = () => {
     }
   };
 
+  const handleRequestExtension = async () => {
+    if (!activePaymentSlug) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || ""}/api/v1/manual-payments/${activePaymentSlug}/request-extension`,
+        { method: "POST" }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Extension granted",
+          description: "Your payment deadline has been extended by 12 hours.",
+          variant: "success",
+        });
+        dispatch(fetchMyManualPaymentStatus(activePaymentSlug));
+      } else {
+        throw new Error(data.message || "Failed to request extension");
+      }
+    } catch (extensionError) {
+      toast({
+        title: "Unable to request extension",
+        description: extensionError?.message || "Could not request extension.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const bankDetails = currentPayment?.bankDetails || {
     bankName: "Sampath Bank",
     branch: "Hatton",
@@ -377,6 +406,19 @@ const ManualPaymentPage = () => {
           </div>
         ) : null}
 
+        <div className="text-center py-8 border border-[#4d4635] bg-[#131313] mb-8 rounded-2xl">
+          <div className="se-label text-[10px] tracking-[0.32em] text-[#99907c] mb-2 uppercase font-bold">
+            YOUR PAYMENT REFERENCE
+          </div>
+          <div className="se-serif text-[#f2ca50] text-4xl md:text-6xl tracking-widest font-black drop-shadow-md">
+            {activeReferenceNumber || "-"}
+          </div>
+          <p className="se-body text-[#d0c5af] text-sm mt-3 max-w-sm mx-auto leading-relaxed">
+            Write this exact code in the bank transfer remarks or on your ATM deposit slip.
+            Without it, we cannot match your payment.
+          </p>
+        </div>
+
         <ManualPaymentInstructions
           bankDetails={bankDetails}
           referenceNumber={activeReferenceNumber}
@@ -468,6 +510,15 @@ const ManualPaymentPage = () => {
                     Regenerate reference
                   </button>
                 </div>
+              ) : null}
+
+              {paymentStatus === 'pending_payment' && expiresAtTime && (expiresAtTime - Date.now() < 3 * 60 * 60 * 1000) && !currentPayment?.extensionGranted ? (
+                <button onClick={handleRequestExtension}
+                        className="se-label text-[10px] tracking-[0.26em] text-[#d0c5af] 
+                                   border border-[#4d4635] px-4 py-2 hover:border-[#f2ca50] 
+                                   hover:text-[#f2ca50] transition-colors mt-4 w-full">
+                  Need more time? Request 12-hour extension
+                </button>
               ) : null}
             </div>
           </div>

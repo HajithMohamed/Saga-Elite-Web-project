@@ -26,7 +26,11 @@ const manualPaymentSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      index: true,
+    },
+    guestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Guest",
       index: true,
     },
     amount: {
@@ -88,6 +92,14 @@ const manualPaymentSchema = new mongoose.Schema(
       default: null,
       trim: true,
       maxlength: 2000,
+    },
+    extensionGranted: {
+      type: Boolean,
+      default: false,
+    },
+    extensionRequestedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

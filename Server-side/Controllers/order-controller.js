@@ -7,6 +7,8 @@ const Gift = require("../Models/Gift");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
+const ManualPayment = require("../Models/ManualPayment");
+const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const {
@@ -333,6 +335,55 @@ const createOrder = catchAsync(async (req, res, next) => {
         logger.error("WhatsApp order notify failed", { error: err.message })
       );
     });
+  }
+
+  // If guest or registered, send payment instructions
+  if (isBankTransferPayment) {
+    const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
+    const manualPayment = await ManualPayment.create({
+      referenceNumber,
+      orderId: createdOrder._id,
+      userId: user ? user._id : undefined,
+      guestId: guest ? guest._id : undefined,
+      amount: createdOrder.totalAmount,
+      currency: "LKR",
+    });
+
+    const paymentLink = `${process.env.FRONTEND_URL}/shopping/manual-payment/${manualPayment.slug}`;
+    const customerEmail = user?.email || guestEmailNormalized;
+    const customerPhone = cleanPhoneNumber(contactNumber);
+
+    if (customerEmail) {
+      const emailHtml = buildEmailTemplate(
+        "Complete your payment",
+        `<p>Thank you for your order! Here are your payment instructions:</p>
+         <p><strong>Reference:</strong> ${manualPayment.referenceNumber}</p>
+         <p><strong>Amount:</strong> LKR ${createdOrder.totalAmount.toLocaleString()}</p>
+         <p><strong>Bank:</strong> Sampath Bank, Hatton Branch</p>
+         <p><strong>Account Name:</strong> N.Gayathree</p>
+         <p><strong>Account No:</strong> 108052612262</p>
+         <p><strong>IMPORTANT:</strong> Write ${manualPayment.referenceNumber} in the transfer remarks or on your ATM deposit slip.</p>
+         <p><strong>You have 24 hours.</strong> After that your order expires.</p>
+         <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
+      );
+      sendEmail({
+        to: customerEmail,
+        subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
+        html: emailHtml,
+      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
+    }
+
+    if (customerPhone) {
+      sendWhatsAppMessage({
+        to: customerPhone,
+        message:
+          `*Saga Elite Order*\n` +
+          `Reference: *${manualPayment.referenceNumber}*\n` +
+          `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
+          `Upload your receipt: ${paymentLink}\n` +
+          `You have 24 hours to complete payment.`
+      }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
+    }
   }
 
   res.status(201).json({

@@ -16,10 +16,12 @@ const {
   getPendingPayments,
   getPaymentById,
   verifyPayment,
+  requestExtension,
 } = require("../Controllers/manualPaymentController");
 
 const router = express.Router();
 
+router.post("/manual-payments/:slug/request-extension", requestExtension);
 router.post("/manual-payment/generate", authMiddleware, validateManualPaymentReference, generateReference);
 router.post("/payments/generate-reference", authMiddleware, validateManualPaymentReference, generateReference);
 router.get("/payments/my-pending", authMiddleware, getMyPendingPayments);

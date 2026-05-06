@@ -3,12 +3,9 @@ const SAFE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const generateRandomCode = (length = 4) =>
   Array.from({ length }, () => SAFE_CHARS[Math.floor(Math.random() * SAFE_CHARS.length)]).join("");
 
-const generateReference = (orderId) => {
-  const shortId = String(orderId).slice(-4).toUpperCase();
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+const generateReference = () => {
   const code = generateRandomCode(4);
-
-  return `SAGA-${shortId}-${date}-${code}`;
+  return `SAGA-${code}`;
 };
 
 const generateUniqueReference = async (orderId, ManualPaymentModel) => {
