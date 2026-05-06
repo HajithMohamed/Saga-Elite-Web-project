@@ -14,6 +14,7 @@ import {
 } from "@/store/manualPaymentSlice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import usePageMeta from "@/hooks/use-page-meta";
 import VariantSelectors, {
   getColorsForSize,
   getProductSizes,
@@ -275,6 +276,12 @@ const Checkout = () => {
       persistBuyNowItem(buildBuyNowPersistencePayload(checkoutItems[0]));
     }
   }, [checkoutItems, isBuyNow]);
+
+  usePageMeta({ title: "Checkout" });
+
+  const whatsAppLink = MANUAL_BANK_DETAILS.whatsapp
+    ? `https://wa.me/${MANUAL_BANK_DETAILS.whatsapp.replace(/\D/g, "")}`
+    : "#";
 
   // ---------------- CART ACTIONS ----------------
   const handleQuantityChange = async (item, quantity) => {
@@ -1029,13 +1036,17 @@ const Checkout = () => {
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">03</span>
                 <h2 className="text-xl font-bold tracking-tight">Payment Method</h2>
+                <div className="ml-auto inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <Lock className="w-4 h-4" />
+                  <span>Secure checkout</span>
+                </div>
               </div>
               
               {/* Payment Choice */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {[
-                  { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="h-6 w-6" /> },
-                  { id: "card", label: "Card Payment", icon: <CreditCard className="h-6 w-6" /> },
+                    { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="h-6 w-6" /> },
+                    { id: "card", label: "Card Payment", icon: <CreditCard className="h-6 w-6" /> },
                 ].map((method) => {
                   const selected = formData.paymentMethod === method.id;
                   return (
@@ -1063,7 +1074,12 @@ const Checkout = () => {
                         >
                           {method.icon}
                         </span>
-                        <span className="font-bold">{method.label}</span>
+                        <div>
+                          <span className="font-bold">{method.label}</span>
+                          {method.id === "manual_bank_transfer" ? (
+                            <div className="text-xs text-muted-foreground">100% safe</div>
+                          ) : null}
+                        </div>
                       </div>
                       {selected ? (
                         <div className="h-4 w-4 rounded-full border-4 border-[#D4AF37]" />
@@ -1138,23 +1154,23 @@ const Checkout = () => {
 
                 {formData.paymentMethod === "manual_bank_transfer" && (
                   <div className="space-y-6">
-                    <div className="bg-[#111] border border-gray-800 p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
+                    <div className="bg-[#111] border border-border p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
                        <div className="absolute top-0 right-0 bg-[#D4AF37]/10 w-32 h-32 blur-3xl rounded-full"></div>
                        <div className="space-y-3 flex-1 relative z-10">
                         <h4 className="font-bold text-[#D4AF37] text-lg">Bank Information</h4>
                         <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                          <span className="text-gray-400">Bank:</span>
+                          <span className="text-muted-foreground">Bank:</span>
                           <span className="font-medium">{MANUAL_BANK_DETAILS.bankName}</span>
                           
-                          <span className="text-gray-400">Branch:</span>
+                          <span className="text-muted-foreground">Branch:</span>
                           <span className="font-medium">{MANUAL_BANK_DETAILS.branch}</span>
                           
-                          <span className="text-gray-400">Account Name:</span>
+                          <span className="text-muted-foreground">Account Name:</span>
                           <span className="font-medium">{MANUAL_BANK_DETAILS.accountName}</span>
                           
-                          <span className="text-gray-400">Account No:</span>
+                          <span className="text-muted-foreground">Account No:</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">
+                            <span className="font-mono bg-black px-2 py-1 border border-border rounded">
                               {MANUAL_BANK_DETAILS.accountNumber}
                             </span>
                             <button 
@@ -1169,10 +1185,10 @@ const Checkout = () => {
                             </button>
                           </div>
 
-                          <span className="text-gray-400">WhatsApp:</span>
+                          <span className="text-muted-foreground">WhatsApp:</span>
                           <span className="font-medium">{MANUAL_BANK_DETAILS.whatsapp}</span>
                         </div>
-                        <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-gray-300">
+                        <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-muted-foreground">
                           <p className="font-semibold text-[#D4AF37]">
                             You must place the order first to get your payment reference.
                           </p>
@@ -1180,6 +1196,10 @@ const Checkout = () => {
                             Step 1: place the order. Step 2: we show your unique reference. Step 3: make the bank transfer using that reference in the memo.
                           </p>
                           <p className="mt-2 text-amber-200">{MANUAL_BANK_DETAILS.deadline}</p>
+                          <p className="mt-2 text-sm">Your order is reserved for 24 hours while we await your transfer.</p>
+                          <p className="mt-3">
+                            <a href={whatsAppLink} target="_blank" rel="noreferrer" className="text-[#D4AF37] font-medium">Questions? Chat with us on WhatsApp</a>
+                          </p>
                         </div>
                       </div>
                     </div>

@@ -20,6 +20,7 @@ import {
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
@@ -36,6 +37,7 @@ const errMsg = (err, fallback) =>
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  usePageMeta({ title: "Cart" });
   const [activeItemId, setActiveItemId] = useState(null);
   const [removingItemId, setRemovingItemId] = useState(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);

@@ -8,6 +8,7 @@ import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,6 +128,8 @@ const Register = () => {
       );
     }
   }, [isAuthenticated, user, navigate]);
+
+  usePageMeta({ title: "Create Account" });
 
   useEffect(() => {
     setErrors(validateRegister(formData, touched));
