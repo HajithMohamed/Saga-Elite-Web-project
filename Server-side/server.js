@@ -70,6 +70,15 @@ app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
 
+// Allow popup-based OAuth flows to close child windows without being
+// blocked by strict Cross-Origin-Opener-Policy during local development
+// or when using external OAuth providers (e.g., Google). This header
+// permits popups while still keeping sensible COOP behavior.
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
+
 // Healthcheck — used by docker-compose healthcheck and orchestrators
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", uptime: process.uptime() });
