@@ -120,10 +120,10 @@ const ReviewCard = ({
         <button
           type="button"
           onClick={() => onHelpfulVote && onHelpfulVote(review)}
-          className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
+          className={`inline-flex items-center gap-1.5 se-label text-[9px] tracking-[0.24em] transition-colors ${
             hasVoted
-              ? "border-[#D4AF37] bg-[#D4AF37]/20 text-[#f0d58a]"
-              : "border-white/10 text-white/70 hover:border-[#D4AF37]/50"
+              ? "text-[#D4AF37]"
+              : "text-[#99907c] hover:text-[#d0c5af]"
           }`}
         >
           <ThumbsUp className="h-3 w-3" />

@@ -2,12 +2,14 @@ const mongoose = require("mongoose");
 const Review = require("../Models/Review");
 const Order = require("../Models/Order");
 const Product = require("../Models/Product");
+const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
+const reviewFilterConfig = require("../Config/review-filter-config");
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -120,13 +122,13 @@ const createReview = catchAsync(async (req, res, next) => {
   const order = await Order.findOne({
     _id: orderId,
     user: userId,
-    status: "confirmed",
+    status: "delivered",
     "items.product": productId,
   }).select("_id");
 
   if (!order) {
     return next(
-      new AppError("You can only review products you have purchased", 403)
+      new AppError("You can only leave a review after your order is delivered.", 403)
     );
   }
 
@@ -135,6 +137,29 @@ const createReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review already exists for this product", 409));
   }
 
+  const getSentiment = (r) => {
+    if (r >= 4) return 'positive';
+    if (r === 3) return 'neutral';
+    return 'negative';
+  };
+
+  const allText = `${title.trim()} ${content.trim()}`;
+
+  const containsProfanity = reviewFilterConfig.BLOCKED_PATTERNS.some((pattern) => pattern.test(allText));
+
+  if (containsProfanity) {
+    return res.status(422).json({
+      success: false,
+      message: 'Your review contains content that cannot be published. Please revise and resubmit.'
+    });
+  }
+
+  const urlMatches = allText.match(/https?:\/\//g) || [];
+  const isSuspicious =
+    urlMatches.length > reviewFilterConfig.MAX_URLS_ALLOWED ||
+    allText === allText.toUpperCase() ||
+    allText.length < reviewFilterConfig.AUTO_FLAG_MIN_LENGTH;
+
   const review = await Review.create({
     productId,
     userId,
@@ -142,9 +167,12 @@ const createReview = catchAsync(async (req, res, next) => {
     rating,
     title: title.trim(),
     content: content.trim(),
+    sentiment: getSentiment(rating),
     images: Array.isArray(images) ? images : [],
     verifiedPurchase: true,
     status: "pending",
+    isFlagged: Boolean(isSuspicious),
+    flagReason: isSuspicious ? "Auto-flagged: suspicious pattern" : null,
   });
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
@@ -557,6 +585,97 @@ const uploadReviewImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const getDropAnalytics = catchAsync(async (req, res, next) => {
+  const { dropId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(dropId)) {
+    return next(new AppError("Valid drop ID is required", 400));
+  }
+
+  const drop = await Drop.findById(dropId);
+  if (!drop) {
+    return next(new AppError("Drop not found", 404));
+  }
+
+  const products = await Product.find({ drop: dropId }).select("_id name averageRating reviewCount soldCount basePrice totalStock");
+  const productIds = products.map(p => p._id);
+
+  let totalSales = 0;
+  let revenue = 0;
+  let remainingStock = 0;
+  let topProductsRaw = [];
+
+  for (const p of products) {
+    totalSales += (p.soldCount || 0);
+    revenue += (p.soldCount || 0) * (p.basePrice || 0);
+    remainingStock += (p.totalStock || 0);
+    topProductsRaw.push({
+      name: p.name,
+      avgRating: p.averageRating || 0,
+      reviewCount: p.reviewCount || 0
+    });
+  }
+
+  const topProducts = topProductsRaw.sort((a, b) => b.avgRating - a.avgRating).slice(0, 5);
+
+  const stats = await Review.aggregate([
+    { $match: { productId: { $in: productIds }, status: "approved" } },
+    {
+      $group: {
+        _id: null,
+        totalReviews: { $sum: 1 },
+        averageRating: { $avg: "$rating" },
+        posCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "positive"] }, 1, 0 ] }
+        },
+        neuCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "neutral"] }, 1, 0 ] }
+        },
+        negCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "negative"] }, 1, 0 ] }
+        },
+        rating5: { $sum: { $cond: [ { $eq: ["$rating", 5] }, 1, 0 ] } },
+        rating4: { $sum: { $cond: [ { $eq: ["$rating", 4] }, 1, 0 ] } },
+        rating3: { $sum: { $cond: [ { $eq: ["$rating", 3] }, 1, 0 ] } },
+        rating2: { $sum: { $cond: [ { $eq: ["$rating", 2] }, 1, 0 ] } },
+        rating1: { $sum: { $cond: [ { $eq: ["$rating", 1] }, 1, 0 ] } },
+      }
+    }
+  ]);
+
+  const summary = stats[0] || {
+    totalReviews: 0,
+    averageRating: 0,
+    posCount: 0, neuCount: 0, negCount: 0,
+    rating5: 0, rating4: 0, rating3: 0, rating2: 0, rating1: 0
+  };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      dropName: drop.name,
+      totalReviews: summary.totalReviews,
+      averageRating: Math.round(summary.averageRating * 10) / 10,
+      sentiment: {
+        positive: summary.posCount,
+        neutral: summary.neuCount,
+        negative: summary.negCount
+      },
+      ratingDistribution: {
+        5: summary.rating5,
+        4: summary.rating4,
+        3: summary.rating3,
+        2: summary.rating2,
+        1: summary.rating1
+      },
+      topProducts,
+      totalSales,
+      revenue,
+      remainingStock
+    }
+  });
+});
+
 module.exports = {
   createReview,
   getFeaturedReviews,
@@ -571,4 +690,5 @@ module.exports = {
   flagReview,
   recalculateProductRating,
   getRatingStats,
+  getDropAnalytics,
 };

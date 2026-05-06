@@ -33,6 +33,7 @@ import AdminFeatures from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
+import DropAnalytics from "./pages/admin-view/DropAnalytics";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
 import PendingPaymentsPage from "./pages/admin-view/PendingPaymentsPage";
@@ -212,6 +213,7 @@ function App() {
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
             <Route path="account" element={<Account />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
+            <Route path="drop-analytics" element={<PermissionGuard permission="analytics"><DropAnalytics /></PermissionGuard>} />
           </Route>
 
           {/* SHOPPING */}

@@ -49,6 +49,11 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: null,
+    },
     helpfulCount: {
       type: Number,
       default: 0,
