@@ -763,6 +763,35 @@ const getMyPendingPayments = catchAsync(async (req, res) => {
   });
 });
 
+const requestExtension = catchAsync(async (req, res, next) => {
+  const payment = await ManualPayment.findOne({ slug: req.params.slug });
+  if (!payment) return next(new AppError('Payment not found', 404));
+  if (payment.extensionGranted) {
+    return next(new AppError('Extension already used. Contact support.', 400));
+  }
+  if (payment.status !== 'pending_payment') {
+    return next(new AppError('This payment cannot be extended.', 400));
+  }
+
+  payment.expiresAt = new Date(payment.expiresAt.getTime() + 12 * 60 * 60 * 1000);
+  payment.extensionGranted = true;
+  payment.extensionRequestedAt = new Date();
+  
+  await payment.save({ validateModifiedOnly: true });
+
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@sagaelite.com';
+  
+  sendEmail({
+    to: adminEmail,
+    subject: `Payment extension requested for reference: ${payment.referenceNumber}`,
+    html: `<p>A customer has requested a 12-hour extension for their manual payment via Bank Transfer.</p>
+           <p><strong>Reference:</strong> ${payment.referenceNumber}</p>
+           <p><strong>New Expiration:</strong> ${payment.expiresAt.toLocaleString()}</p>`
+  }).catch(err => logger.error("Admin extension notify failed", { error: err.message }));
+
+  res.status(200).json({ success: true, newExpiresAt: payment.expiresAt });
+});
+
 module.exports = {
   generateReference,
   submitProof,
@@ -771,4 +800,5 @@ module.exports = {
   getPendingPayments,
   getPaymentById,
   verifyPayment,
+  requestExtension,
 };

@@ -196,13 +196,42 @@ const PaymentVerificationPage = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
                 <p className={eyebrow}>Reference number</p>
-                <p className="mt-2 font-mono text-lg tracking-[0.2em] text-[#D4AF37]">{currentPayment.referenceNumber}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="font-mono text-lg tracking-[0.2em] text-[#D4AF37]">{currentPayment.referenceNumber}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentPayment.referenceNumber);
+                    }}
+                    className="rounded-full border border-[#D4AF37]/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10 hover:text-white"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
                 <p className={eyebrow}>Customer email</p>
-                <p className="mt-2 text-sm text-white">{customerEmail}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm text-white">{customerEmail}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(customerEmail);
+                    }}
+                    className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
             </div>
+
+            {currentPayment.extensionGranted && (
+              <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">Time Extension Granted</p>
+                <p className="mt-1 text-sm text-blue-200">
+                  Customer requested 12-hour extension at {currentPayment.extensionRequestedAt ? formatDateTime(currentPayment.extensionRequestedAt) : "unknown time"}.
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
@@ -265,10 +294,22 @@ const PaymentVerificationPage = () => {
                   <span className={eyebrow}>Order total</span>
                   <span className="mt-1 block text-base text-white">LKR {formatCurrency(order.totalAmount || currentPayment.amount)}</span>
                 </p>
-                <p>
+                <div>
                   <span className={eyebrow}>Contact number</span>
-                  <span className="mt-1 block text-white">{order.contactNumber || "—"}</span>
-                </p>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="block text-white">{order.contactNumber || "—"}</span>
+                    {order.contactNumber && (
+                      <a
+                        href={`https://wa.me/${order.contactNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, regarding your Saga Elite order ${currentPayment.referenceNumber}`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full bg-green-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-green-400 transition hover:bg-green-500/30"
+                      >
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
                 <p>
                   <span className={eyebrow}>Order status</span>
                   <span className="mt-1 block text-white">{order.status || "—"}</span>
