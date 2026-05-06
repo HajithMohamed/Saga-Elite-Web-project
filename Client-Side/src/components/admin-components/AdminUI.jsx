@@ -1,6 +1,9 @@
 import React from "react";
+import usePageMeta from "@/hooks/use-page-meta";
 
 export const AdminPage = ({ title, description, eyebrow, actions, children }) => {
+  usePageMeta({ title: "Admin" });
+
   return (
     <div className="admin-page-shell">
       <div className="admin-page-header">

@@ -15,6 +15,7 @@ import {
   TrendingGrid,
   TrustBar,
 } from "@/components/landing/LandingSections";
+import usePageMeta from "@/hooks/use-page-meta";
 import { Reveal, Eyebrow } from "@/components/ui/editorial";
 import ProductCard from "@/components/shopping-components/ProductCard";
 
@@ -71,6 +72,8 @@ const Home = () => {
     };
     load();
   }, []);
+
+  usePageMeta({ title: "Saga Elite — Rare Fit. Forever.", fullTitle: true });
 
   const heroSlides = useMemo(
     () =>

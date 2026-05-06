@@ -32,6 +32,8 @@ import VariantSelectors, {
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
 
+import usePageMeta from "@/hooks/use-page-meta";
+
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
     maximumFractionDigits: 0,
@@ -89,6 +91,8 @@ const ProductDetails = () => {
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
   );
+
+  usePageMeta({ title: product?.name || "Product" });
 
   useEffect(() => {
     const fetchProduct = async () => {

@@ -25,6 +25,7 @@ import {
   SortDropdown,
   StatusBadge,
 } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
 import ProductCard from "@/components/shopping-components/ProductCard";
 
 const CATEGORY_LABELS = {
@@ -54,6 +55,7 @@ const formatLKR = (value = 0) =>
   })}`;
 
 const ProductListing = () => {
+  usePageMeta({ title: "Shop" });
   const [products, setProducts] = useState([]);
   const [drops, setDrops] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

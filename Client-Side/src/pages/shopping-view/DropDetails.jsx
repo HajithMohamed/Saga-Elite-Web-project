@@ -3,7 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+
+import usePageMeta from "@/hooks/use-page-meta";
 
 const DropDetails = () => {
   const { slug } = useParams();
@@ -35,6 +38,8 @@ const DropDetails = () => {
 
     if (slug) fetchDrop();
   }, [slug]);
+
+  usePageMeta({ title: drop ? `${drop.name} Drop` : "Drop" });
 
   if (isLoading) {
     return (
@@ -133,9 +138,15 @@ const DropDetails = () => {
       {/* Products Grid */}
       <section className="py-24 px-8 md:px-12 max-w-[1400px] mx-auto">
         {products.length === 0 ? (
-          <div className="text-center py-20 text-outline border border-outline/10 p-12">
-            No products available for this drop yet.
-          </div>
+          <EmptyState
+            title="No products available"
+            subtitle="This drop currently has no products. Check back soon or browse the atelier."
+            action={
+              <Link to="/shopping/product-list" className="inline-flex">
+                <button className="inline-flex rounded-md bg-[#D4AF37] px-4 py-2 text-black font-semibold">Browse products</button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {products.map((product) => (
