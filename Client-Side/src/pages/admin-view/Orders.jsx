@@ -1,66 +1,28 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  closestCenter,
-  useDroppable,
   useSensor,
   useSensors,
+  closestCorners,
+  useDraggable,
+  useDroppable,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { GripVertical, Loader2, RefreshCcw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, RefreshCcw, LayoutGrid, Table2, Search } from "lucide-react";
 
 import { fetchAdminOrders, updateOrderStatus } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
-import StatusBadge from "@/components/common-components/StatusBadge";
+import { AdminPage } from "@/components/admin-components/AdminUI";
+import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
+import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
+import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 
-const VIEW_STORAGE_KEY = "admin-order-management-view";
-
-const BOARD_COLUMNS = [
-  {
-    key: "pending",
-    label: "Pending",
-    statuses: ["pending", "pending_payment"],
-    canonicalStatus: "pending_payment",
-    borderClass: "border-amber-400/25",
-    accentClass: "text-amber-300",
-  },
-  {
-    key: "processing",
-    label: "Processing",
-    statuses: ["verification_pending", "confirmed"],
-    canonicalStatus: "confirmed",
-    borderClass: "border-sky-400/25",
-    accentClass: "text-sky-300",
-  },
-  {
-    key: "shipped",
-    label: "Shipped",
-    statuses: ["shipped"],
-    canonicalStatus: "shipped",
-    borderClass: "border-indigo-400/25",
-    accentClass: "text-indigo-300",
-  },
-  {
-    key: "delivered",
-    label: "Delivered",
-    statuses: ["delivered"],
-    canonicalStatus: "delivered",
-    borderClass: "border-emerald-400/25",
-    accentClass: "text-emerald-300",
-  },
-  {
-    key: "cancelled",
-    label: "Cancelled",
-    statuses: ["cancelled"],
-    canonicalStatus: "cancelled",
-    borderClass: "border-rose-400/25",
-    accentClass: "text-rose-300",
-  },
-];
+const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
@@ -72,80 +34,41 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const STATUS_TO_COLUMN = BOARD_COLUMNS.reduce((accumulator, column) => {
-  column.statuses.forEach((status) => {
-    accumulator[status] = column.key;
-  });
-  return accumulator;
-}, {});
-
-const COLUMN_TO_STATUS = BOARD_COLUMNS.reduce((accumulator, column) => {
-  accumulator[column.key] = column.canonicalStatus;
-  return accumulator;
-}, {});
-
-const sortOrders = (orders = []) =>
-  [...orders].sort((left, right) => {
-    const leftTime = new Date(left.createdAt || 0).getTime();
-    const rightTime = new Date(right.createdAt || 0).getTime();
-
-    return rightTime - leftTime;
-  });
-
-const getColumnKey = (status = "") => STATUS_TO_COLUMN[String(status).toLowerCase()] || "pending";
-
-const createEmptyBoard = () =>
-  BOARD_COLUMNS.reduce((accumulator, column) => {
-    accumulator[column.key] = [];
-    return accumulator;
-  }, {});
-
-const groupOrdersByBoard = (orders = []) => {
-  const grouped = createEmptyBoard();
-
-  orders.forEach((order) => {
-    const columnKey = getColumnKey(order.status);
-    grouped[columnKey].push(order);
-  });
-
-  BOARD_COLUMNS.forEach((column) => {
-    grouped[column.key] = sortOrders(grouped[column.key]);
-  });
-
-  return grouped;
-};
-
-const flattenBoard = (board = {}) =>
-  BOARD_COLUMNS.flatMap((column) => board[column.key] || []);
-
-const moveOrderBetweenColumns = (board, orderId, nextStatus) => {
-  const nextColumnKey = getColumnKey(nextStatus);
-  const nextBoard = createEmptyBoard();
-  let movedOrder = null;
-
-  BOARD_COLUMNS.forEach((column) => {
-    (board[column.key] || []).forEach((order) => {
-      if (String(order._id) === String(orderId)) {
-        movedOrder = { ...order, status: nextStatus };
-        return;
-      }
-
-      nextBoard[column.key].push(order);
-    });
-  });
-
-  if (!movedOrder) {
-    return board;
-  }
-
-  nextBoard[nextColumnKey].push(movedOrder);
-
-  BOARD_COLUMNS.forEach((column) => {
-    nextBoard[column.key] = sortOrders(nextBoard[column.key]);
-  });
-
-  return nextBoard;
-};
+const KANBAN_COLUMNS = [
+  {
+    id: "pending",
+    title: "Pending",
+    targetStatus: "pending",
+    match: (s) => s === "pending" || s === "pending_payment",
+  },
+  {
+    id: "processing",
+    title: "Processing",
+    targetStatus: "verification_pending",
+    match: (s) =>
+      ["verification_pending", "confirmed", "processing", "proof_submitted"].includes(
+        s
+      ),
+  },
+  {
+    id: "shipped",
+    title: "Shipped",
+    targetStatus: "shipped",
+    match: (s) => s === "shipped",
+  },
+  {
+    id: "delivered",
+    title: "Delivered",
+    targetStatus: "delivered",
+    match: (s) => s === "delivered",
+  },
+  {
+    id: "cancelled",
+    title: "Cancelled",
+    targetStatus: "cancelled",
+    match: (s) => s === "cancelled",
+  },
+];
 
 const formatCurrency = (amount = 0) =>
   Number(amount || 0).toLocaleString("en-LK", {
@@ -154,13 +77,9 @@ const formatCurrency = (amount = 0) =>
   });
 
 const formatDate = (value) => {
-  if (!value) return "—";
-
+  if (!value) return "-";
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
+  if (Number.isNaN(date.getTime())) return "-";
 
   return date.toLocaleDateString("en-LK", {
     year: "numeric",
@@ -171,7 +90,6 @@ const formatDate = (value) => {
 
 const getCustomerName = (order) => {
   const user = order.user || {};
-
   return (
     user.fullName ||
     user.name ||
@@ -183,207 +101,115 @@ const getCustomerName = (order) => {
   );
 };
 
-const useIsDesktop = () => {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === "undefined") return true;
-
-    return window.matchMedia("(min-width: 768px)").matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const mediaQuery = window.matchMedia("(min-width: 768px)");
-    const handleChange = (event) => setIsDesktop(event.matches);
-
-    setIsDesktop(mediaQuery.matches);
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    }
-
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
-  }, []);
-
-  return isDesktop;
+const getColumnIdForStatus = (status) => {
+  const col = KANBAN_COLUMNS.find((c) => c.match(status));
+  return col?.id || "pending";
 };
 
-const OrderCardContent = ({ order, compact = false, dragHandleProps = {}, isDragging = false }) => {
-  const itemCount = order.items?.length || 0;
-
-  return (
-    <div
-      className={`rounded-[1.5rem] border bg-[#0b0b0b] p-4 transition-shadow ${
-        isDragging ? "shadow-[0_24px_80px_rgba(0,0,0,0.45)]" : "shadow-none"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Order ID</p>
-          <p className="mt-1 break-all text-sm font-semibold text-white">{order._id}</p>
-        </div>
-
-        {!compact ? (
-          <button
-            type="button"
-            className="rounded-full border border-white/10 p-2 text-gray-500 transition hover:border-[#2f7cf6]/50 hover:text-[#2f7cf6]"
-            {...dragHandleProps}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-        ) : null}
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Customer</p>
-          <p className="mt-1 text-sm text-white">{getCustomerName(order)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Total Amount</p>
-          <p className="mt-1 text-sm text-white">LKR {formatCurrency(order.totalAmount)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Date</p>
-          <p className="mt-1 text-sm text-white">{formatDate(order.createdAt)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">Items</p>
-          <p className="mt-1 text-sm text-white">{itemCount}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <StatusBadge status={order.status} />
-        {order.paymentMethod ? (
-          <span className="rounded-full bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-gray-300">
-            {order.paymentMethod}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-};
-
-const SortableOrderCard = ({ order, onStatusChange, isLocked }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+function KanbanOrderCard({ order, disabled }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: order._id,
-    disabled: isLocked,
+    disabled,
+    data: { order },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.35 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <OrderCardContent order={order} isDragging={isDragging} />
-    </div>
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      whileHover={isDragging ? undefined : { y: -3, borderColor: "rgba(212,175,55,0.35)" }}
+      transition={{ duration: 0.2 }}
+      className="cursor-grab rounded-2xl border border-white/10 bg-black/50 p-4 shadow-sm active:cursor-grabbing"
+    >
+      <p className="text-[10px] uppercase tracking-wider text-gray-500">
+        {formatDate(order.createdAt)}
+      </p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold text-white">
+        {getCustomerName(order)}
+      </p>
+      <p className="mt-2 font-mono text-[10px] text-gray-400">
+        {String(order._id).slice(-8)}
+      </p>
+      <p className="mt-2 text-sm text-[#D4AF37]">LKR {formatCurrency(order.totalAmount)}</p>
+      <div className="mt-3">
+        <StatusBadge status={order.status} />
+      </div>
+    </motion.div>
   );
-};
+}
 
-const BoardColumn = ({ column, orders, isHighlighted, isLocked }) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.key,
-    disabled: isLocked,
-  });
+function KanbanColumn({ column, orders, updatingOrderId }) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <section
-      ref={setNodeRef}
-      className={`flex min-h-[520px] flex-col rounded-[1.75rem] border bg-[#090909] p-4 transition-colors ${
-        isOver || isHighlighted
-          ? "border-[#2f7cf6] shadow-[0_0_0_1px_rgba(47,124,246,0.4)]"
-          : column.borderClass
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-4">
-        <div>
-          <h2 className={`text-lg font-bold ${column.accentClass}`}>{column.label}</h2>
-          <p className="mt-1 text-xs uppercase tracking-[0.24em] text-gray-500">
-            {orders.length} orders
-          </p>
-        </div>
+    <div className="flex min-h-[420px] min-w-[260px] flex-1 flex-col rounded-2xl border border-white/10 bg-[#0b0b0b]/80">
+      <div className="border-b border-white/10 px-4 py-3">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+          {column.title}
+        </h3>
+        <p className="text-[10px] text-gray-500">{orders.length} orders</p>
       </div>
-
-      <div className="mt-4 flex-1 space-y-3">
-        {orders.length === 0 ? (
-          <div className="flex min-h-[300px] items-center justify-center rounded-[1.25rem] border border-dashed border-white/10 bg-white/[0.02] text-sm text-gray-500">
-            Drop orders here
-          </div>
-        ) : (
-          <SortableContext items={orders.map((order) => order._id)} strategy={verticalListSortingStrategy}>
-            {orders.map((order) => (
-              <SortableOrderCard key={order._id} order={order} isLocked={isLocked} />
-            ))}
-          </SortableContext>
-        )}
+      <div
+        ref={setNodeRef}
+        className={`flex flex-1 flex-col gap-3 p-3 transition-colors ${
+          isOver ? "bg-[#D4AF37]/5 ring-1 ring-[#D4AF37]/25" : ""
+        }`}
+      >
+        {orders.map((order) => (
+          <KanbanOrderCard
+            key={order._id}
+            order={order}
+            disabled={Boolean(updatingOrderId)}
+          />
+        ))}
       </div>
-    </section>
+    </div>
   );
-};
-
-const StatusSelect = ({ order, onChange, isDisabled = false }) => (
-  <select
-    value={order.status}
-    onChange={(event) => onChange(order, event.target.value)}
-    disabled={isDisabled}
-    className="w-full rounded-2xl border border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none transition focus:border-[#2f7cf6] disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {STATUS_OPTIONS.map((statusOption) => (
-      <option key={statusOption.value} value={statusOption.value}>
-        {statusOption.label}
-      </option>
-    ))}
-  </select>
-);
+}
 
 const Orders = () => {
   const dispatch = useDispatch();
   const { adminOrders, isLoading } = useSelector((state) => state.order);
-
-  const [boardColumns, setBoardColumns] = useState(() => createEmptyBoard());
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [viewMode, setViewMode] = useState(() => {
-    if (typeof window === "undefined") {
-      return "kanban";
-    }
-
-    return window.localStorage.getItem(VIEW_STORAGE_KEY) || "kanban";
-  });
-  const [activeOrderId, setActiveOrderId] = useState(null);
-  const [hoverColumnId, setHoverColumnId] = useState(null);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
-  const previousBoardRef = useRef(null);
+  const [activeDrag, setActiveDrag] = useState(null);
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 1024 : false
+  );
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window === "undefined") return "kanban";
+    return window.localStorage.getItem(ADMIN_ORDERS_VIEW_KEY) === "table"
+      ? "table"
+      : "kanban";
+  });
 
-  const isDesktop = useIsDesktop();
-
-  const activeOrder = useMemo(() => {
-    if (!activeOrderId) return null;
-
-    return flattenBoard(boardColumns).find((order) => String(order._id) === String(activeOrderId)) || null;
-  }, [activeOrderId, boardColumns]);
-
-  const flatOrders = useMemo(() => flattenBoard(boardColumns), [boardColumns]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listStatusFilter, setListStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [orderStatusDraft, setOrderStatusDraft] = useState({});
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [successFlashId, setSuccessFlashId] = useState(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
   );
+
+  useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(ADMIN_ORDERS_VIEW_KEY, viewMode);
+  }, [viewMode]);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -403,234 +229,400 @@ const Orders = () => {
     loadOrders();
   }, [loadOrders]);
 
-  useEffect(() => {
-    setBoardColumns(groupOrdersByBoard(adminOrders));
-  }, [adminOrders]);
+  const orders = useMemo(
+    () =>
+      [...(adminOrders || [])].sort(
+        (left, right) =>
+          new Date(right.createdAt || 0).getTime() -
+          new Date(left.createdAt || 0).getTime()
+      ),
+    [adminOrders]
+  );
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(VIEW_STORAGE_KEY, viewMode);
-    }
-  }, [viewMode]);
+  const filteredOrders = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return orders.filter((order) => {
+      const email =
+        (order.user && (order.user.email || order.user.userName)) ||
+        order.guestEmail ||
+        "";
+      const searchOk =
+        !q ||
+        String(order._id).toLowerCase().includes(q) ||
+        String(email).toLowerCase().includes(q);
+      const statusOk =
+        listStatusFilter === "all" || order.status === listStatusFilter;
+      const pm = (order.paymentMethod || "").toLowerCase();
+      const payOk = paymentFilter === "all" || pm === paymentFilter.toLowerCase();
+      return searchOk && statusOk && payOk;
+    });
+  }, [orders, searchTerm, listStatusFilter, paymentFilter]);
+
+  const paymentMethods = useMemo(() => {
+    const set = new Set();
+    orders.forEach((o) => {
+      if (o.paymentMethod) set.add(String(o.paymentMethod));
+    });
+    return ["all", ...Array.from(set)];
+  }, [orders]);
+
+  const ordersByColumn = useMemo(() => {
+    const map = Object.fromEntries(KANBAN_COLUMNS.map((c) => [c.id, []]));
+    filteredOrders.forEach((order) => {
+      const colId = getColumnIdForStatus(order.status);
+      if (map[colId]) map[colId].push(order);
+      else map.pending.push(order);
+    });
+    return map;
+  }, [filteredOrders]);
 
   const handleStatusChange = useCallback(
-    async (order, nextStatus) => {
-      if (!order || !nextStatus || String(order.status) === String(nextStatus)) {
+    async (orderId, status) => {
+      if (!orderId || !status) {
         return;
       }
-
-      if (updatingOrderId) {
-        return;
-      }
-
-      previousBoardRef.current = boardColumns;
-      setUpdatingOrderId(order._id);
-      setBoardColumns((currentBoard) => moveOrderBetweenColumns(currentBoard, order._id, nextStatus));
 
       try {
-        await dispatch(updateOrderStatus({ orderId: order._id, status: nextStatus })).unwrap();
-
+        setUpdatingOrderId(orderId);
+        await dispatch(updateOrderStatus({ orderId, status })).unwrap();
         toast({
           title: "Order updated",
-          description: `Status changed to ${nextStatus.replace(/_/g, " ")}.`,
+          description: `Status changed to ${status.replace(/_/g, " ")}.`,
           variant: "success",
         });
+        setSuccessFlashId(orderId);
+        setTimeout(() => setSuccessFlashId((id) => (id === orderId ? null : id)), 2600);
       } catch (error) {
-        setBoardColumns(previousBoardRef.current || createEmptyBoard());
-
         toast({
           title: "Update failed",
           description: error || "Unable to update status.",
           variant: "destructive",
         });
       } finally {
-        previousBoardRef.current = null;
         setUpdatingOrderId(null);
       }
     },
-    [boardColumns, dispatch, updatingOrderId],
+    [dispatch]
   );
 
-  const getTargetColumnId = (targetId) => {
-    if (!targetId) return null;
-
-    const directColumn = BOARD_COLUMNS.find((column) => column.key === targetId);
-    if (directColumn) {
-      return directColumn.key;
-    }
-
-    const targetOrder = flatOrders.find((order) => String(order._id) === String(targetId));
-    if (!targetOrder) return null;
-
-    return getColumnKey(targetOrder.status);
+  const handleDragStart = (event) => {
+    const order = filteredOrders.find((o) => o._id === event.active.id);
+    setActiveDrag(order || null);
   };
 
-  const handleDragStart = ({ active }) => {
-    setActiveOrderId(active.id);
-  };
+  const handleDragEnd = async (event) => {
+    setActiveDrag(null);
+    const { active, over } = event;
+    if (!over) return;
 
-  const handleDragOver = ({ over }) => {
-    setHoverColumnId(getTargetColumnId(over?.id));
-  };
+    const orderId = active.id;
+    const columnId = over.id;
+    const column = KANBAN_COLUMNS.find((c) => c.id === columnId);
+    if (!column) return;
 
-  const handleDragCancel = () => {
-    setActiveOrderId(null);
-    setHoverColumnId(null);
-  };
+    const order = filteredOrders.find((o) => o._id === orderId);
+    if (!order) return;
 
-  const handleDragEnd = ({ active, over }) => {
-    const sourceOrder = flatOrders.find((order) => String(order._id) === String(active.id));
-    const targetColumnId = getTargetColumnId(over?.id);
+    const fromCol = getColumnIdForStatus(order.status);
+    if (fromCol === columnId) return;
 
-    setActiveOrderId(null);
-    setHoverColumnId(null);
+    if (column.targetStatus === order.status) return;
 
-    if (!sourceOrder || !targetColumnId || updatingOrderId) {
-      return;
-    }
-
-    const nextStatus = COLUMN_TO_STATUS[targetColumnId];
-
-    if (!nextStatus || getColumnKey(sourceOrder.status) === targetColumnId) {
-      return;
-    }
-
-    void handleStatusChange(sourceOrder, nextStatus);
+    await handleStatusChange(orderId, column.targetStatus);
   };
 
   const showLoading = isLoading && !hasLoaded;
+  const showKanban = !isNarrow && viewMode === "kanban";
+
+  const activeOrderCount = orders.filter((o) => o.status !== "cancelled").length;
+
+  const applyTableStatusUpdate = async (orderId) => {
+    const order = filteredOrders.find((o) => o._id === orderId);
+    if (!order) return;
+    const next = orderStatusDraft[orderId] ?? order.status;
+    if (next === order.status) {
+      toast({
+        title: "No change",
+        description: "Select a different status before updating.",
+      });
+      return;
+    }
+    await handleStatusChange(orderId, next);
+  };
 
   return (
-    <div className="min-h-screen bg-[#060606] py-10 text-white">
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <AdminPage
+      eyebrow="Order Operations"
+      title="Orders"
+description="Monitor customer orders and update fulfillment status in board or table mode."
+    >
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full"
+      >
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-widest text-white">Orders</h1>
-            <p className="mt-2 max-w-2xl text-sm text-gray-400">
-              Drag cards across columns to update status, or switch to list view for a table-based workflow.
+            <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-[#D4AF37]">
+              Order Operations
+            </p>
+            <h1 className="text-3xl font-black tracking-tight text-white">Orders</h1>
+            <p className="mt-2 max-w-xl text-sm text-gray-400">
+              <span className="text-white/90">{orders.length}</span> total ·{" "}
+              <span className="text-emerald-300/90">{activeOrderCount}</span> active (non-cancelled)
+              {isNarrow
+                ? " · On smaller screens, use table mode with status pills."
+                : " · Drag cards between columns in board view, or switch to table."}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {isDesktop ? (
-              <button
-                type="button"
-                onClick={() => setViewMode((current) => (current === "kanban" ? "list" : "kanban"))}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#2f7cf6]/50 hover:text-[#2f7cf6]"
-              >
-                {viewMode === "kanban" ? "List View" : "Kanban View"}
-              </button>
+            {!isNarrow ? (
+              <div className="inline-flex rounded-full border border-white/10 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("kanban")}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest ${
+                    viewMode === "kanban"
+                      ? "bg-[#D4AF37] text-black"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4" /> Board
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest ${
+                    viewMode === "table"
+                      ? "bg-[#D4AF37] text-black"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  <Table2 className="h-4 w-4" /> Table
+                </button>
+              </div>
             ) : null}
 
             <button
               type="button"
               onClick={loadOrders}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#2f7cf6]/50 hover:text-[#2f7cf6]"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#D4AF37]/50"
             >
               <RefreshCcw className="h-4 w-4" /> Refresh
             </button>
           </div>
         </div>
 
-        {showLoading ? (
-          <div className="flex items-center justify-center rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] py-16 text-gray-400">
-            <Loader2 className="mr-3 h-5 w-5 animate-spin text-[#2f7cf6]" /> Loading orders…
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search order ID or email…"
+              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+            />
           </div>
-        ) : flatOrders.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-white/10 bg-[#090909] p-10 text-center text-sm text-gray-400">
+          <select
+            value={listStatusFilter}
+            onChange={(e) => setListStatusFilter(e.target.value)}
+            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+          >
+            <option value="all">All statuses</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+          >
+            {paymentMethods.map((p) => (
+              <option key={p} value={p}>
+                {p === "all" ? "All payment methods" : p}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {showLoading ? (
+          <SkeletonGrid count={3} className="grid gap-4 md:grid-cols-3" />
+        ) : orders.length === 0 ? (
+          <div className="rounded-[28px] border border-white/10 bg-[#090909] p-10 text-center text-sm text-gray-400">
             No orders placed yet.
           </div>
-        ) : isDesktop && viewMode === "kanban" ? (
+        ) : filteredOrders.length === 0 ? (
+          <div className="rounded-[28px] border border-white/10 bg-[#090909] p-10 text-center text-sm text-gray-400">
+            No orders match your search or filters.
+          </div>
+        ) : showKanban ? (
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={closestCorners}
             onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragCancel={handleDragCancel}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid gap-5 xl:grid-cols-5">
-              {BOARD_COLUMNS.map((column) => (
-                <BoardColumn
-                  key={column.key}
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {KANBAN_COLUMNS.map((column) => (
+                <KanbanColumn
+                  key={column.id}
                   column={column}
-                  orders={boardColumns[column.key] || []}
-                  isHighlighted={hoverColumnId === column.key}
-                  isLocked={Boolean(updatingOrderId)}
+                  orders={ordersByColumn[column.id] || []}
+                  updatingOrderId={updatingOrderId}
                 />
               ))}
             </div>
-
-            <DragOverlay>
-              {activeOrder ? <OrderCardContent order={activeOrder} isDragging /> : null}
+            <DragOverlay dropAnimation={null}>
+              {activeDrag ? (
+                <div className="w-[260px] cursor-grabbing rounded-2xl border border-[#D4AF37]/40 bg-[#111] p-4 shadow-2xl">
+                  <p className="text-sm font-semibold text-white">
+                    {getCustomerName(activeDrag)}
+                  </p>
+                  <p className="mt-2 text-xs text-[#D4AF37]">
+                    LKR {formatCurrency(activeDrag.totalAmount)}
+                  </p>
+                </div>
+              ) : null}
             </DragOverlay>
           </DndContext>
-        ) : isDesktop ? (
-          <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#090909]">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10 text-left text-sm">
-                <thead className="bg-black/40 text-[10px] uppercase tracking-[0.24em] text-gray-400">
-                  <tr>
-                    <th className="px-6 py-4">Order ID</th>
-                    <th className="px-6 py-4">Customer Name</th>
-                    <th className="px-6 py-4">Total Amount</th>
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">Items Count</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Actions</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-white/5">
-                  {flatOrders.map((order) => (
-                    <tr key={order._id} className="align-top hover:bg-white/[0.02]">
-                      <td className="px-6 py-5 break-all text-white">{order._id}</td>
-                      <td className="px-6 py-5 text-gray-300">{getCustomerName(order)}</td>
-                      <td className="px-6 py-5 text-gray-300">LKR {formatCurrency(order.totalAmount)}</td>
-                      <td className="px-6 py-5 text-gray-300">{formatDate(order.createdAt)}</td>
-                      <td className="px-6 py-5 text-gray-300">{order.items?.length || 0}</td>
-                      <td className="px-6 py-5">
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="overflow-x-auto rounded-[20px] border border-white/10 bg-[#090909]"
+          >
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+                  <th className="px-4 py-2">Order</th>
+                  <th className="px-4 py-2">Customer</th>
+                  <th className="px-4 py-2">Total</th>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Payment</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((order) => {
+                  const draft = orderStatusDraft[order._id] ?? order.status;
+                  const isBusy = updatingOrderId === order._id;
+                  return (
+                    <motion.tr
+                      key={order._id}
+                      variants={itemVariants}
+                      className="border-t border-[#4d4635]/40 align-top transition-colors hover:bg-[#131313]"
+                    >
+                      <td className="max-w-[200px] px-4 py-3 align-top">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedOrderId((id) => (id === order._id ? null : order._id))
+                          }
+                          className="break-all text-left se-mono text-[10px] text-[#e5e2e1] underline-offset-2 hover:text-[#f2ca50]"
+                        >
+                          {String(order._id).slice(-12)}…
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {expandedOrderId === order._id ? (
+                            <motion.div
+                              key="items"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.28, ease: "easeOut" }}
+                              className="overflow-hidden"
+                            >
+                              <ul className="mt-2 space-y-1 border-l border-white/10 pl-3 text-xs text-gray-400">
+                                {(order.items || []).map((line, idx) => (
+                                  <li key={idx}>
+                                    {(line.quantity || 1)}×{" "}
+                                    {line.name || line.product?.name || "Item"}
+                                  </li>
+                                ))}
+                              </ul>
+                            </motion.div>
+                          ) : null}
+                        </AnimatePresence>
+                      </td>
+                      <td className="px-4 py-3 text-[#e5e2e1] se-body text-xs">{getCustomerName(order)}</td>
+                      <td className="px-4 py-3 text-[#d0c5af] se-instrument text-xs">
+                        LKR {formatCurrency(order.totalAmount)}
+                      </td>
+                      <td className="px-4 py-3 text-[#99907c] se-mono text-[10px]">{formatDate(order.createdAt)}</td>
+                      <td className="px-4 py-3 text-[#99907c] se-label text-[9px] tracking-widest">{order.paymentMethod || "—"}</td>
+                      <td className="px-4 py-3">
                         <StatusBadge status={order.status} />
                       </td>
-                      <td className="px-6 py-5">
-                        <StatusSelect
-                          order={order}
-                          onChange={handleStatusChange}
-                          isDisabled={Boolean(updatingOrderId)}
-                        />
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-col items-end gap-3">
+                          <AnimatePresence>
+                            {successFlashId === order._id ? (
+                              <motion.div
+                                key="ok"
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300"
+                              >
+                                ✓ Status updated
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
+                          <div className="flex max-w-[min(100%,320px)] flex-wrap justify-end gap-2">
+                            {STATUS_OPTIONS.map((s) => (
+                              <motion.button
+                                key={s.value}
+                                type="button"
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() =>
+                                  setOrderStatusDraft((prev) => ({
+                                    ...prev,
+                                    [order._id]: s.value,
+                                  }))
+                                }
+                                className={`rounded-sm border px-2 py-1 text-[9px] se-label tracking-wider transition ${
+                                  draft === s.value
+                                    ? "border-[#f2ca50] bg-[#f2ca50] text-[#0a0a0a]"
+                                    : "border-[#4d4635] text-[#99907c] hover:border-[#f2ca50]/40"
+                                }`}
+                              >
+                                {s.label}
+                              </motion.button>
+                            ))}
+                          </div>
+                          <PrimaryButton
+                            type="button"
+                            disabled={isBusy || draft === order.status}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50"
+                            onClick={() => applyTableStatusUpdate(order._id)}
+                          >
+                            {isBusy ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" /> Updating…
+                              </>
+                            ) : (
+                              "Update"
+                            )}
+                          </PrimaryButton>
+                        </div>
                       </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 md:hidden">
-            {flatOrders.map((order) => (
-              <div key={order._id} className="rounded-[1.5rem] border border-white/10 bg-[#090909] p-4">
-                <OrderCardContent order={order} compact />
-
-                <div className="mt-4 border-t border-white/5 pt-4">
-                  <p className="mb-2 text-[10px] uppercase tracking-[0.24em] text-gray-500">Update Status</p>
-                  <StatusSelect
-                    order={order}
-                    onChange={handleStatusChange}
-                    isDisabled={Boolean(updatingOrderId)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </motion.div>
         )}
-
-        {isDesktop ? (
-          <p className="mt-4 text-xs uppercase tracking-[0.22em] text-gray-500">
-            Kanban board is available on desktop screens only.
-          </p>
-        ) : null}
-      </div>
-    </div>
+      </motion.div>
+    </AdminPage>
   );
 };
 

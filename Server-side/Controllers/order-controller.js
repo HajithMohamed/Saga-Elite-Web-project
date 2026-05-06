@@ -6,8 +6,37 @@ const Order = require("../Models/Order");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
+const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
-const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
+const {
+  sendWhatsAppMessage,
+  parsePhoneList,
+  cleanPhoneNumber,
+} = require("../Utils/whatsapp-service");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
+
+const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
+
+const escapeHtml = (str = "") =>
+  String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const ORDER_STATUS_FLOW = {
+  pending: ["pending_payment", "confirmed", "cancelled"],
+  pending_payment: ["verification_pending", "confirmed", "cancelled"],
+  verification_pending: ["confirmed", "cancelled"],
+  confirmed: ["shipped", "cancelled"],
+  shipped: ["delivered"],
+  delivered: [],
+  cancelled: [],
+};
+
+const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
 
 const DASHBOARD_ORDER_STATUSES = [
   "pending",
@@ -69,7 +98,10 @@ const createOrder = catchAsync(async (req, res, next) => {
     guestEmail,
   } = req.body;
 
-  console.log("Order creation request:", req.body);
+  logger.debug("Order creation request received", {
+    paymentMethod: req.body?.paymentMethod,
+    itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
+  });
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return next(new AppError("Order items are required", 400));
@@ -216,7 +248,7 @@ const createOrder = catchAsync(async (req, res, next) => {
             : "confirmed",
         paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
         expiresAt: isLegacyManualPayment || paymentMethod === "cash"
-          ? new Date(Date.now() + 15 * 60000)
+          ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
           : undefined,
       };
 
@@ -261,12 +293,33 @@ const createOrder = catchAsync(async (req, res, next) => {
     filter: { role: "admin" },
   });
 
+  const orderNotifyPhones = parsePhoneList(
+    process.env.WHATSAPP_ORDER_NOTIFY_NUMBERS ||
+      process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS ||
+      ""
+  );
+
+  if (orderNotifyPhones.length > 0) {
+    const customerLabel = user?.email || guestEmailNormalized || "Guest";
+    const notifyBody =
+      `New order — Saga Elite\n` +
+      `Order: ${createdOrder._id}\n` +
+      `Total: LKR ${createdOrder.totalAmount}\n` +
+      `Contact: ${contactNumber.trim()}\n` +
+      `Customer: ${customerLabel}\n` +
+      `Payment: ${paymentMethod}`;
+
+    orderNotifyPhones.forEach((to) => {
+      sendWhatsAppMessage({ to, message: notifyBody }).catch((err) =>
+        logger.error("WhatsApp order notify failed", { error: err.message })
+      );
+    });
+  }
+
   res.status(201).json({
     success: true,
     message: "Order placed successfully",
     orderId: createdOrder._id,
-    amount: createdOrder.totalAmount,
-    referenceNumber: createdOrder.referenceNumber || null,
     data: createdOrder,
   });
 });
@@ -323,7 +376,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
   const orderOwnerId = order.user?._id || order.user;
   const isOwner = String(orderOwnerId) === String(req.userInfo._id);
-  const isAdmin = ["admin", "superadmin"].includes(req.userInfo.role);
+  const isAdmin = isAdminRole(req.userInfo.role);
 
   if (!isOwner && !isAdmin) {
     return next(new AppError("You are not authorized to view this order", 403));
@@ -337,7 +390,7 @@ const getOrderById = catchAsync(async (req, res, next) => {
 });
 
 const updateOrderStatus = catchAsync(async (req, res, next) => {
-  const { status } = req.body;
+  const { status, cancellationReason } = req.body;
   const allowedStatuses = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 
   if (!status || !allowedStatuses.includes(status)) {
@@ -350,6 +403,51 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Order not found", 404));
   }
 
+  const currentStatus = order.status;
+  const allowedNext = ORDER_STATUS_FLOW[currentStatus] || [];
+
+  if (!allowedNext.includes(status)) {
+    return next(
+      new AppError(
+        `Cannot transition order from "${currentStatus}" to "${status}". ` +
+          (allowedNext.length ? `Allowed next statuses: ${allowedNext.join(", ")}.` : "This status is final."),
+        400
+      )
+    );
+  }
+
+  if (status === "cancelled") {
+    const reason = String(cancellationReason || "").trim();
+    if (!reason) {
+      return next(new AppError("A cancellation reason is required when cancelling an order.", 400));
+    }
+    order.cancellationReason = reason;
+    order.cancelledAt = new Date();
+    order.cancelledBy = req.userInfo._id;
+
+    // Restore stock for each order item
+    for (const item of order.items) {
+      try {
+        const product = await Product.findById(item.product);
+        if (product) {
+          const variant = product.variants.find((v) => v.sku === item.variantSku);
+          if (variant) {
+            variant.stock += item.quantity;
+          }
+          product.soldCount = Math.max(0, (product.soldCount || 0) - item.quantity);
+          await product.save({ validateModifiedOnly: true });
+        }
+      } catch (stockErr) {
+        logger.error("Failed to restore stock for cancelled order item", {
+          orderId: order._id,
+          productId: item.product,
+          variantSku: item.variantSku,
+          error: stockErr.message,
+        });
+      }
+    }
+  }
+
   order.status = status;
   if (status === "confirmed" && ["manual", "manual_bank_transfer", "cash", "receipt"].includes(order.paymentMethod)) {
     order.paymentStatus = "paid";
@@ -357,51 +455,158 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 
   await order.save({ validateModifiedOnly: true });
 
-  await createNotification({
-    userId: order.user,
-    type: "order",
-    title: "Order status updated",
-    message: `Your order ${order._id} status changed to ${order.status}.`,
-    entityRef: order._id,
-    entityType: "Order",
-    meta: { orderId: order._id, status: order.status },
-  });
+  if (status === "cancelled" && order.user) {
+    const populatedOrder = await Order.findById(order._id).populate("user", "email");
 
-  await broadcastNotification({
-    type: "admin",
-    title: `Order ${order._id} status changed`,
-    message: `Order ${order._id} is now ${order.status}.`,
-    entityRef: order._id,
-    entityType: "Order",
-    meta: { orderId: order._id, status: order.status },
-    filter: { role: "admin" },
-  });
+    const customer = populatedOrder?.user;
+    const reasonHtml = escapeHtml(populatedOrder.cancellationReason || order.cancellationReason || "");
+    const reasonPlain =
+      populatedOrder.cancellationReason || order.cancellationReason || "";
 
-  emitToUser(order.user, SOCKET_EVENTS.ORDER_REFRESH, {
-    userId: order.user,
-    orderId: order._id,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-  });
+    await createNotification({
+      userId: order.user,
+      type: "order",
+      title: "Your order has been cancelled",
+      message: `Order #${order._id} was cancelled. Reason: ${reasonPlain}`,
+      entityRef: order._id,
+      entityType: "Order",
+      meta: { orderId: order._id, status: "cancelled", cancellationReason: reasonPlain },
+    });
 
-  emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
-    userId: order.user,
-    orderId: order._id,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    source: "order-status-update",
-  });
+    if (customer?.email) {
+      sendEmail({
+        email: customer.email,
+        subject: "Your Saga Elite order has been cancelled",
+        html: buildEmailTemplate(
+          "Order cancellation notice",
+          `<p>Hi,</p>
+           <p>Your order <strong>#${order._id}</strong> has been cancelled.</p>
+           <p><strong>Reason:</strong> ${reasonHtml}</p>
+           <p>If you believe this is an error or need assistance, please contact us at sagaaelite@gmail.com or WhatsApp +94 77 070 4274.</p>`
+        ),
+      }).catch((err) => logger.error("[cancel] Email failed", { error: err.message }));
+    }
 
-  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
-    source: "order-status-update",
-    orderId: order._id,
-    userId: order.user,
-  });
+    const phone = cleanPhoneNumber(populatedOrder?.contactNumber || order.contactNumber || "");
+    if (phone) {
+      sendWhatsAppMessage({
+        to: phone,
+        message: `Your Saga Elite order #${order._id} has been cancelled.\n\nReason: ${reasonPlain}\n\nFor help: sagaaelite@gmail.com`,
+      }).catch((err) => logger.error("[cancel] WhatsApp failed", { error: err.message }));
+    }
+
+    await broadcastNotification({
+      type: "admin",
+      title: `Order ${order._id} cancelled`,
+      message: `Order ${order._id} was cancelled. Reason: ${reasonPlain}`,
+      entityRef: order._id,
+      entityType: "Order",
+      meta: { orderId: order._id, status: "cancelled" },
+      filter: { role: "admin" },
+    });
+  } else if (status !== "delivered") {
+    if (order.user) {
+      await createNotification({
+        userId: order.user,
+        type: "order",
+        title: "Order status updated",
+        message: `Your order ${order._id} status changed to ${order.status}.`,
+        entityRef: order._id,
+        entityType: "Order",
+        meta: { orderId: order._id, status: order.status },
+      });
+    }
+
+    await broadcastNotification({
+      type: "admin",
+      title: `Order ${order._id} status changed`,
+      message: `Order ${order._id} is now ${order.status}.`,
+      entityRef: order._id,
+      entityType: "Order",
+      meta: { orderId: order._id, status: order.status },
+      filter: { role: "admin" },
+    });
+  } else if (status === "delivered") {
+    const deliveredOrder = await Order.findById(order._id).populate("user", "email");
+    const line0 = order.items?.[0];
+    const productSlug =
+      line0?.productSlug ||
+      (line0?.product != null ? String(line0.product) : "") ||
+      "";
+    const base = clientShopUrl();
+    const reviewUrl =
+      productSlug.trim() !== ""
+        ? `${base}/shopping/product/${encodeURIComponent(productSlug.trim())}#reviews`
+        : `${base}/shopping/product-list`;
+
+    const customer = deliveredOrder?.user;
+    const productName =
+      typeof line0?.productName === "string" ? line0.productName : "your recent purchase";
+    const greeting = customer?.email ? customer.email.split("@")[0] : "there";
+    const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+
+    if (customer?._id) {
+      await createNotification({
+        userId: customer._id,
+        type: "reminder",
+        title: "How was your order?",
+        message: `Your order #${order._id} has been delivered! Share your experience: ${reviewUrl}`,
+        entityRef: order._id,
+        entityType: "Order",
+        meta: { orderId: order._id, reviewUrl, status: "delivered" },
+      });
+    }
+
+    if (customer?.email) {
+      sendEmail({
+        email: customer.email,
+        subject: "How was your Saga Elite order? Leave a review",
+        html: buildEmailTemplate(
+          "How was your order? Leave a review!",
+          `<p>Hi ${greeting},</p>
+           <p>Your Saga Elite order #${order._id} has been delivered. We hope you love ${productName}${
+             itemCount > 1 ? ` and your other ${itemCount - 1} item(s)` : ""
+           }!</p>
+           <p>Your feedback helps other customers and helps us improve. It only takes a moment.</p>
+           <p style="text-align:center;margin:24px 0;">
+             <a href="${reviewUrl}"
+               style="background:#D4AF37;color:#000;padding:12px 28px;border-radius:6px;font-weight:bold;text-decoration:none;display:inline-block;font-size:14px;letter-spacing:1px;text-transform:uppercase;">
+               Leave a Review
+             </a>
+           </p>
+           <p>Thank you for shopping with Saga Elite.</p>`
+        ),
+      }).catch((err) => logger.error("[review-notify] Email failed", { error: err.message }));
+    }
+
+    const phone = cleanPhoneNumber(deliveredOrder?.contactNumber || order.contactNumber || "");
+    if (phone) {
+      sendWhatsAppMessage({
+        to: phone,
+        message:
+          `Hi ${greeting}! Your Saga Elite order #${order._id} has been delivered.\n\n` +
+          `We'd love to hear what you think. Leave a quick review:\n${reviewUrl}\n\n` +
+          `Thank you.`,
+      }).catch((err) => logger.error("[review-notify] WhatsApp failed", { error: err.message }));
+    }
+
+    await broadcastNotification({
+      type: "admin",
+      title: `Order ${order._id} status changed`,
+      message: `Order ${order._id} is now ${order.status}.`,
+      entityRef: order._id,
+      entityType: "Order",
+      meta: { orderId: order._id, status: order.status },
+      filter: { role: "admin" },
+    });
+  }
+
+  const fresh = await Order.findById(order._id);
 
   res.status(200).json({
     success: true,
     message: "Order status updated successfully",
-    data: order,
+    data: fresh,
   });
 });
 

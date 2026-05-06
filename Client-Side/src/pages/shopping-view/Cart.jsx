@@ -1,40 +1,36 @@
 import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  fetchCartAction,
-  updateCartItemAction,
-  removeFromCartAction,
-} from "@/store/cart-slice";
-import { toast } from "@/hooks/use-toast";
-import {
+  ArrowLeft,
   ArrowRight,
-  ChevronLeft,
+  Heart,
   Loader2,
-  LockKeyhole,
+  Lock,
   Minus,
   Plus,
-  ShieldCheck,
-  ShoppingBag,
-  Truck,
   Trash2,
 } from "lucide-react";
+import {
+  fetchCartAction,
+  removeFromCartAction,
+  updateCartItemAction,
+} from "@/store/cart-slice";
+import { toast } from "@/hooks/use-toast";
+import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
 
-const formatCurrency = (value = 0) =>
-  new Intl.NumberFormat("en-LK", {
-    style: "currency",
-    currency: "LKR",
-    maximumFractionDigits: 0,
-  }).format(Number(value) || 0);
+const formatLKR = (value = 0) =>
+  `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
 
-const getProductImage = (product) =>
+const productImage = (product) =>
   product?.image || product?.images?.[0]?.url || "/LOGO.png";
 
-const getVariantLabel = (variant = {}) =>
-  [variant?.size, variant?.color].filter(Boolean).join(" / ") || "Standard";
+const variantLabel = (variant = {}) =>
+  [variant?.size, variant?.color].filter(Boolean).join(" · ") || "Standard";
 
-const getErrorMessage = (error, fallback) =>
-  typeof error === "string" ? error : error?.message || fallback;
+const errMsg = (err, fallback) =>
+  typeof err === "string" ? err : err?.message || fallback;
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -47,84 +43,70 @@ const Cart = () => {
     useSelector((state) => state.cart.cart);
 
   useEffect(() => {
-    dispatch(fetchCartAction()).finally(() => {
-      setHasLoadedOnce(true);
-    });
+    dispatch(fetchCartAction()).finally(() => setHasLoadedOnce(true));
   }, [dispatch]);
 
-  const handleQuantityChange = async (item, quantity) => {
+  const handleQuantity = async (item, quantity) => {
+    if (
+      quantity < 1 ||
+      activeItemId === item.id ||
+      removingItemId === item.id
+    ) {
+      return;
+    }
+    setActiveItemId(item.id);
     try {
-      if (quantity < 1 || activeItemId === item.id || removingItemId === item.id) {
-        return;
-      }
-
-      setActiveItemId(item.id);
-
-      await dispatch(
-        updateCartItemAction({
-          itemId: item.id,
-          quantity,
-        })
-      ).unwrap();
+      await dispatch(updateCartItemAction({ itemId: item.id, quantity })).unwrap();
     } catch (err) {
       toast({
         title: "Update failed",
-        description: getErrorMessage(err, "Unable to update quantity."),
+        description: errMsg(err, "Unable to update quantity."),
         variant: "destructive",
       });
     } finally {
-      setActiveItemId((current) => (current === item.id ? null : current));
+      setActiveItemId((c) => (c === item.id ? null : c));
     }
   };
 
   const handleRemove = async (itemId) => {
+    if (activeItemId === itemId || removingItemId === itemId) return;
+    setRemovingItemId(itemId);
     try {
-      if (activeItemId === itemId || removingItemId === itemId) {
-        return;
-      }
-
-      setRemovingItemId(itemId);
       await dispatch(removeFromCartAction(itemId)).unwrap();
-
       toast({
         title: "Removed",
-        description: "Item removed from cart.",
+        description: "Piece removed from your selection.",
         variant: "success",
       });
     } catch (err) {
       toast({
         title: "Remove failed",
-        description: getErrorMessage(err, "Unable to remove item."),
+        description: errMsg(err, "Unable to remove this piece."),
         variant: "destructive",
       });
     } finally {
-      setRemovingItemId((current) => (current === itemId ? null : current));
+      setRemovingItemId((c) => (c === itemId ? null : c));
     }
   };
 
-  const handleProceedToCheckout = () => {
+  const handleProceed = () => {
     if (items.length === 0 || activeItemId || removingItemId) return;
-
     navigate("/shopping/checkout", {
-      state: {
-        cartItems: items,
-        cartTotal: totalPrice,
-      },
+      state: { cartItems: items, cartTotal: totalPrice },
     });
   };
 
   const showInitialLoader = !hasLoadedOnce && isLoading && items.length === 0;
-  const hasPendingItemAction = Boolean(activeItemId || removingItemId);
+  const busy = Boolean(activeItemId || removingItemId);
 
   if (showInitialLoader) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#050505] px-4 text-white">
-        <div className="flex h-20 w-20 items-center justify-center rounded-[28px] border border-white/10 bg-white/5">
-          <Loader2 className="h-9 w-9 animate-spin text-[#D4AF37]" />
+      <div className="flex min-h-[60vh] flex-col items-center justify-center bg-[#0a0a0a] px-4 text-[#e5e2e1]">
+        <div className="flex h-14 w-14 items-center justify-center border border-[#4d4635]">
+          <Loader2 className="h-5 w-5 animate-spin text-[#f2ca50]" />
         </div>
-        <p className="mt-6 text-lg font-semibold">Loading your cart</p>
-        <p className="mt-2 text-sm text-zinc-500">
-          Bringing your selected pieces into view.
+        <p className="mt-6 se-label text-[10px] tracking-[0.32em] text-[#99907c]">
+          Bringing your selection into view
         </p>
       </div>
     );
@@ -132,363 +114,287 @@ const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen overflow-hidden bg-[#050505] text-white">
-        <div className="relative isolate flex min-h-screen items-center justify-center px-4 py-16">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#d4af3726,transparent_35%),radial-gradient(circle_at_bottom_right,#ffffff12,transparent_28%)]" />
-          <div className="relative w-full max-w-3xl rounded-[36px] border border-white/10 bg-white/[0.04] p-8 text-center shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-12">
-            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/10 bg-black/30">
-              <ShoppingBag className="h-11 w-11 text-[#D4AF37]" />
-            </div>
-
-            <span className="mt-8 inline-flex items-center rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-[#f1d27a]">
-              Cart refreshed
-            </span>
-
-            <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-5xl">
-              Your cart is empty
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-zinc-400 sm:text-base">
-              Start building a sharper checkout. Add a few standout pieces and
-              your bag will be ready right here.
-            </p>
-
-            <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-              <Link
-                to="/shopping/product-list"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-7 py-3 text-sm font-bold text-black transition-colors hover:bg-[#f2ca50]"
-              >
-                Browse Collection
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to="/shopping/home"
-                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-7 py-3 text-sm font-semibold text-white transition-colors hover:border-white/20 hover:bg-white/10"
-              >
-                Back to Home
-              </Link>
-            </div>
+      <section className="bg-[#0a0a0a] text-[#e5e2e1] se-body">
+        <div className="px-5 md:px-12 py-16 md:py-24 max-w-3xl">
+          <Eyebrow tone="gold" size="md">Your selection</Eyebrow>
+          <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-7xl">
+            Nothing chosen<br />yet.
+          </h1>
+          <Hairline tone="strong" className="mt-10" />
+          <p className="mt-8 se-body text-base md:text-lg text-[#d0c5af] leading-relaxed max-w-xl">
+            The atelier is open — eighty-four pieces this chapter, hand-finished and ready
+            to be considered. Browse slowly. Take what speaks to you.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Link to="/shopping/product-list">
+              <Btn variant="default" size="lg" iconRight={ArrowRight}>
+                Browse the atelier
+              </Btn>
+            </Link>
+            <Link to="/shopping/wishlist">
+              <Btn variant="outline" size="lg">View wishlist</Btn>
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,#d4af372b,transparent_30%),radial-gradient(circle_at_top_right,#ffffff12,transparent_25%)]" />
-
-        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 md:px-6 md:pb-14 md:pt-12">
-          <Link
-            to="/shopping/product-list"
-            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Continue shopping
-          </Link>
-
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1.45fr_0.95fr] lg:items-end">
-            <div className="max-w-2xl">
-              <span className="inline-flex rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-[#f1d27a]">
-                Cart overview
-              </span>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Ready to check out?
-              </h1>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-zinc-400 sm:text-base">
-                Review your pieces, adjust quantities, and move to checkout from
-                a cleaner, more premium bag experience.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                  Items
-                </p>
-                <p className="mt-3 text-3xl font-semibold">{totalQuantity}</p>
-              </div>
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                  Current total
-                </p>
-                <p className="mt-3 text-lg font-semibold text-[#f1d27a]">
-                  {formatCurrency(totalPrice)}
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                  Checkout
-                </p>
-                <p className="mt-3 text-sm font-medium text-zinc-300">
-                  Secure and streamlined
-                </p>
-              </div>
-            </div>
-          </div>
+    <section className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">
+      <header className="px-5 md:px-12 pt-10 md:pt-14 pb-6 md:pb-10">
+        <Link
+          to="/shopping/product-list"
+          className="inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+        >
+          <ArrowLeft size={12} strokeWidth={1.5} />
+          Continue browsing
+        </Link>
+        <div className="mt-6">
+          <Eyebrow tone="gold" size="md">Your selection</Eyebrow>
+          <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-6xl">
+            {totalQuantity} {totalQuantity === 1 ? "piece" : "pieces"}, considered.
+          </h1>
         </div>
-      </section>
+      </header>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
-        <div className="grid gap-8 lg:grid-cols-[1.45fr_0.95fr]">
-          <div className="space-y-5">
-            <div className="rounded-[32px] border border-white/10 bg-[#0c0c0c] p-5 shadow-[0_20px_90px_rgba(0,0,0,0.35)] sm:p-7">
-              <div className="mb-6 flex flex-col gap-2 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                    Bag review
-                  </p>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                    Cart items
-                  </h2>
-                </div>
-                <p className="text-sm text-zinc-400">
-                  Fine-tune quantities before checkout.
-                </p>
-              </div>
+      <div className="px-5 md:px-12 pb-16 md:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Items */}
+          <div className="lg:col-span-8">
+            <Hairline tone="strong" />
+            <AnimatePresence initial={false}>
+              {items.map((item) => {
+                const isUpdating = activeItemId === item.id;
+                const isRemoving = removingItemId === item.id;
+                const itemSubtotal =
+                  item.subTotal != null
+                    ? item.subTotal
+                    : (item.unitPrice || 0) * (item.quantity || 0);
+                const slug = item.product?.slug;
+                const variant = variantLabel(item.variant || {});
 
-              <div className="space-y-4">
-                {items.map((item) => {
-                  const isUpdating = activeItemId === item.id;
-                  const isRemoving = removingItemId === item.id;
-                  const isBusy = isUpdating || isRemoving;
-                  const itemSubtotal =
-                    item.subTotal ?? item.unitPrice * item.quantity;
-                  const productSlug = item.product?.slug;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 transition-colors hover:border-white/15 sm:p-5"
+                return (
+                  <motion.article
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -32, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr_auto] gap-4 sm:gap-6 py-7 md:py-8 border-b border-[#4d4635]/60 items-start"
+                  >
+                    {/* Thumbnail */}
+                    <Link
+                      to={slug ? `/shopping/product/${slug}` : "#"}
+                      className="border border-[#4d4635] overflow-hidden block hover:border-[#99907c] transition-colors"
+                      style={{ aspectRatio: "4/5" }}
                     >
-                      <div className="flex flex-col gap-5 md:flex-row">
-                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-white/10 bg-black/30 md:h-36 md:w-32 md:flex-shrink-0">
-                          <img
-                            src={getProductImage(item.product)}
-                            className="h-full w-full object-cover"
-                            alt={item.product?.name}
-                          />
+                      <img
+                        src={productImage(item.product)}
+                        alt={item.product?.name || "Piece"}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </Link>
+
+                    {/* Details */}
+                    <div className="min-w-0">
+                      <Eyebrow tone="muted" size="xs">
+                        {item.product?.category || "Atelier"}
+                      </Eyebrow>
+                      <h3 className="mt-2 se-headline text-[#e5e2e1] text-xl md:text-2xl truncate">
+                        {item.product?.name || "Untitled piece"}
+                      </h3>
+                      <p className="mt-1 se-body text-sm text-[#99907c]">{variant}</p>
+
+                      {/* Mobile total + qty */}
+                      <div className="mt-4 sm:hidden flex items-center justify-between">
+                        <div className="inline-flex items-center border border-[#4d4635]">
+                          <button
+                            type="button"
+                            onClick={() => handleQuantity(item, (item.quantity || 1) - 1)}
+                            disabled={isUpdating || isRemoving || (item.quantity || 1) <= 1}
+                            className="w-9 h-9 flex items-center justify-center text-[#d0c5af] hover:bg-[#1c1b1b] disabled:opacity-40"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus size={12} strokeWidth={1.5} />
+                          </button>
+                          <span className="w-10 text-center se-mono text-sm text-[#e5e2e1]">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantity(item, (item.quantity || 1) + 1)}
+                            disabled={isUpdating || isRemoving}
+                            className="w-9 h-9 flex items-center justify-center text-[#d0c5af] hover:bg-[#1c1b1b] disabled:opacity-40"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={12} strokeWidth={1.5} />
+                          </button>
                         </div>
+                        <span className="se-mono text-base text-[#e5e2e1]">
+                          {formatLKR(itemSubtotal)}
+                        </span>
+                      </div>
 
-                        <div className="flex min-w-0 flex-1 flex-col gap-4">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              {productSlug ? (
-                                <Link
-                                  to={`/shopping/product/${productSlug}`}
-                                  className="text-xl font-semibold tracking-tight transition-colors hover:text-[#f1d27a]"
-                                >
-                                  {item.product?.name}
-                                </Link>
-                              ) : (
-                                <h3 className="text-xl font-semibold tracking-tight">
-                                  {item.product?.name}
-                                </h3>
-                              )}
-                              <p className="mt-2 text-sm text-zinc-400">
-                                {getVariantLabel(item.variant)}
-                              </p>
-                              <div className="mt-4 flex flex-wrap gap-2">
-                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-300">
-                                  Unit {formatCurrency(item.unitPrice)}
-                                </span>
-                                <span className="rounded-full border border-[#D4AF37]/15 bg-[#D4AF37]/10 px-3 py-1 text-xs font-medium text-[#f1d27a]">
-                                  Subtotal {formatCurrency(itemSubtotal)}
-                                </span>
-                              </div>
-                            </div>
+                      <div className="mt-4 flex items-center gap-4 flex-wrap">
+                        {slug ? (
+                          <Link
+                            to={`/shopping/product/${slug}`}
+                            className="se-label text-[10px] tracking-[0.24em] text-[#99907c] hover:text-[#e5e2e1]"
+                          >
+                            View piece
+                          </Link>
+                        ) : null}
+                        <span className="text-[#4d4635]">·</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(item.id)}
+                          disabled={isRemoving || isUpdating}
+                          className="se-label text-[10px] tracking-[0.24em] text-[#99907c] hover:text-[#ffb4ab] inline-flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isRemoving ? (
+                            <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={12} strokeWidth={1.5} />
+                          )}
+                          {isRemoving ? "Removing" : "Remove"}
+                        </button>
+                      </div>
+                    </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleRemove(item.id)}
-                              disabled={isBusy}
-                              className="inline-flex items-center gap-2 self-start rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {isRemoving ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                              Remove
-                            </button>
-                          </div>
-
-                          <div className="flex flex-col gap-4 border-t border-white/10 pt-4 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                                Quantity
-                              </p>
-                              <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-black/30 p-1">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQuantityChange(item, item.quantity - 1)
-                                  }
-                                  disabled={item.quantity <= 1 || isBusy}
-                                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </button>
-                                <span className="flex h-10 min-w-12 items-center justify-center text-sm font-semibold">
-                                  {isUpdating ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" />
-                                  ) : (
-                                    item.quantity
-                                  )}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleQuantityChange(item, item.quantity + 1)
-                                  }
-                                  disabled={isBusy}
-                                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="sm:text-right">
-                              <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">
-                                Line total
-                              </p>
-                              <p className="mt-3 text-2xl font-semibold text-[#f1d27a]">
-                                {formatCurrency(itemSubtotal)}
-                              </p>
-                            </div>
-                          </div>
+                    {/* Desktop qty + total */}
+                    <div className="hidden sm:flex flex-col items-end gap-3">
+                      <div className="inline-flex items-center border border-[#4d4635]">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item, (item.quantity || 1) - 1)}
+                          disabled={isUpdating || isRemoving || (item.quantity || 1) <= 1}
+                          className="w-9 h-9 flex items-center justify-center text-[#d0c5af] hover:bg-[#1c1b1b] disabled:opacity-40"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus size={12} strokeWidth={1.5} />
+                        </button>
+                        <span className="w-10 text-center se-mono text-sm text-[#e5e2e1]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item, (item.quantity || 1) + 1)}
+                          disabled={isUpdating || isRemoving}
+                          className="w-9 h-9 flex items-center justify-center text-[#d0c5af] hover:bg-[#1c1b1b] disabled:opacity-40"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus size={12} strokeWidth={1.5} />
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <div className="se-mono text-lg md:text-xl text-[#e5e2e1]">
+                          {formatLKR(itemSubtotal)}
+                        </div>
+                        <div className="mt-1 se-body text-[11px] text-[#99907c]">
+                          {item.quantity > 1 ? `${formatLKR(item.unitPrice)} per piece` : "Per piece"}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </motion.article>
+                );
+              })}
+            </AnimatePresence>
 
-              <div className="mt-6 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-zinc-400">
-                  Need a different piece? Keep browsing before you check out.
-                </p>
-                <Link
-                  to="/shopping/product-list"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#f1d27a] transition-colors hover:text-[#f7df98]"
-                >
-                  Explore more products
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+              <Eyebrow tone="muted" size="xs">
+                {totalQuantity} {totalQuantity === 1 ? "piece" : "pieces"} · Reserved for thirty minutes
+              </Eyebrow>
+              <Link
+                to="/shopping/product-list"
+                className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] inline-flex items-center gap-2"
+              >
+                Continue browsing <ArrowRight size={12} strokeWidth={1.5} />
+              </Link>
             </div>
-
-            {isLoading && hasLoadedOnce ? (
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-400">
-                Cart totals are refreshing in the background.
-              </div>
-            ) : null}
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-28">
-            <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#0d0d0d] shadow-[0_20px_90px_rgba(0,0,0,0.35)]">
-              <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top,#d4af3720,transparent_55%)] p-6 sm:p-7">
-                <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                  Order summary
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                  Checkout snapshot
-                </h2>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Everything you need before payment.
-                </p>
+          {/* Summary */}
+          <aside className="lg:col-span-4">
+            <div className="border border-[#4d4635] p-6 md:p-7 lg:sticky lg:top-32">
+              <Eyebrow tone="gold" size="sm">Order summary</Eyebrow>
+              <div className="mb-6">
+                <div className="flex items-center justify-between se-label text-[10px] tracking-[0.18em] mb-2">
+                  <span className="text-[#e5e2e1]">{totalPrice >= 20000 ? "Free Shipping Unlocked" : "Free Shipping"}</span>
+                  {totalPrice < 20000 && <span className="text-[#99907c]">{formatLKR(20000 - totalPrice)} away</span>}
+                </div>
+                <div className="h-1 bg-[#1c1b1b] overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-[#f2ca50]" 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (totalPrice / 20000) * 100)}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
               </div>
-
-              <div className="space-y-6 p-6 sm:p-7">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm text-zinc-400">
-                    <span>Items</span>
-                    <span className="font-medium text-white">{totalQuantity}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-zinc-400">
-                    <span>Subtotal</span>
-                    <span className="font-medium text-white">
-                      {formatCurrency(totalPrice)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-zinc-400">
-                    <span>Shipping</span>
-                    <span className="font-medium text-white">
-                      Calculated at checkout
-                    </span>
-                  </div>
+              <div className="mt-6 space-y-4">
+                <div className="flex items-baseline justify-between">
+                  <span className="se-body text-sm text-[#d0c5af]">Subtotal</span>
+                  <span className="se-mono text-sm text-[#e5e2e1]">{formatLKR(totalPrice)}</span>
                 </div>
-
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm uppercase tracking-[0.22em] text-zinc-500">
-                      Total
-                    </span>
-                    <span className="text-3xl font-semibold tracking-tight text-[#f1d27a]">
-                      {formatCurrency(totalPrice)}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-zinc-400">
-                    Final delivery costs will be confirmed in the checkout step.
-                  </p>
+                <div className="flex items-baseline justify-between">
+                  <span className="se-body text-sm text-[#d0c5af]">Shipping</span>
+                  <span className="se-body text-sm text-[#99907c]">{totalPrice >= 20000 ? "Complimentary" : "Calculated at next step"}</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleProceedToCheckout}
-                  disabled={hasPendingItemAction}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-6 py-4 text-base font-bold text-black transition-colors hover:bg-[#f2ca50] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Proceed to Checkout
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-
-                <div className="flex items-center gap-2 text-sm text-zinc-400">
-                  <LockKeyhole className="h-4 w-4 text-[#f1d27a]" />
-                  Protected payment flow and encrypted checkout steps.
+                <div className="flex items-baseline justify-between">
+                  <span className="se-body text-sm text-[#d0c5af]">Tax (incl.)</span>
+                  <span className="se-mono text-sm text-[#99907c]">—</span>
                 </div>
+              </div>
+              <Hairline className="my-6" />
+              <div className="flex items-baseline justify-between">
+                <Eyebrow tone="muted" size="xs">Total</Eyebrow>
+                <span className="se-serif text-3xl text-[#f2ca50]">
+                  {formatLKR(totalPrice)}
+                </span>
+              </div>
+              <Btn
+                variant="default"
+                size="lg"
+                className="mt-6 w-full"
+                iconRight={ArrowRight}
+                onClick={handleProceed}
+                disabled={busy || items.length === 0}
+              >
+                Take it to checkout
+              </Btn>
+              <div className="mt-4 flex items-center gap-2 justify-center se-label text-[9px] tracking-[0.28em] text-[#99907c]">
+                <Lock size={11} strokeWidth={1.5} /> Encrypted checkout · Card or manual transfer
               </div>
             </div>
 
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur sm:p-7">
-              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">
-                Why this cart feels better
+            <div className="mt-6 border border-[#4d4635] p-5 md:p-6">
+              <Eyebrow tone="muted" size="xs">Need a hand?</Eyebrow>
+              <p className="mt-3 se-body text-xs md:text-sm text-[#d0c5af] leading-relaxed">
+                The atelier replies on WhatsApp between nine and seven, Sri Lankan time. We are
+                happy to hold a piece for you.
               </p>
-              <div className="mt-5 space-y-4">
-                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
-                  <Truck className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
-                  <div>
-                    <p className="font-medium text-white">Delivery clarity</p>
-                    <p className="mt-1 text-sm leading-6 text-zinc-400">
-                      Shipping details stay visible before you commit.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
-                  <ShieldCheck className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
-                  <div>
-                    <p className="font-medium text-white">Secure checkout</p>
-                    <p className="mt-1 text-sm leading-6 text-zinc-400">
-                      Your order summary stays anchored and easy to review.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 rounded-[22px] border border-white/8 bg-black/20 p-4">
-                  <ShoppingBag className="mt-0.5 h-5 w-5 text-[#f1d27a]" />
-                  <div>
-                    <p className="font-medium text-white">Curated flow</p>
-                    <p className="mt-1 text-sm leading-6 text-zinc-400">
-                      Clean hierarchy keeps focus on products and the next step.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Link
+                to="/contact"
+                className="mt-4 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088]"
+              >
+                Reach the atelier <ArrowRight size={12} strokeWidth={1.5} />
+              </Link>
             </div>
+
+            <Link
+              to="/shopping/wishlist"
+              className="mt-4 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+            >
+              <Heart size={12} strokeWidth={1.5} />
+              Move pieces to wishlist
+            </Link>
           </aside>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 };
 

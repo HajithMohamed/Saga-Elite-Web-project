@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   BellRing,
@@ -15,6 +16,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   deleteAdminUser,
   fetchAdminUserDetail,
@@ -22,6 +24,10 @@ import {
   updateAdminUserStatus,
 } from "@/store/admin/user-slice";
 import { toast } from "@/hooks/use-toast";
+import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
+import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
+import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
+import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -116,6 +122,7 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAdminUsers());
@@ -205,17 +212,9 @@ const UsersPage = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const executeDeleteConfirmed = async () => {
     if (!selectedUser) return;
-
-    const confirmed = window.confirm(
-      `Delete ${selectedUser.email}? This removes the customer account and related notifications.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+    setDeleteConfirmOpen(false);
     try {
       await dispatch(deleteAdminUser(selectedUser._id)).unwrap();
       toast({
@@ -240,8 +239,18 @@ const UsersPage = () => {
     selectedUser._id !== currentUser?._id;
 
   return (
-    <div className="min-h-screen bg-[#070707] px-6 py-8 text-white lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-full min-h-0"
+    >
+    <AdminPage
+      eyebrow="Admin User Management"
+      title="Users"
+      description="Review account health, activity, and customer relationship details."
+    >
+      <div className="flex w-full flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -345,21 +354,29 @@ const UsersPage = () => {
 
             <div className="mt-5 space-y-3">
               {isListLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-28 animate-pulse rounded-[1.5rem] border border-white/10 bg-[#101010]"
-                  />
-                ))
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <SkeletonCard key={index} className="h-28" />
+                  ))}
+                </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
                   No users matched the current filters.
                 </div>
               ) : (
-                filteredUsers.map((user) => (
-                  <button
+                <motion.div
+                  className="space-y-3"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                {filteredUsers.map((user) => (
+                  <motion.button
                     key={user._id}
                     type="button"
+                    variants={itemVariants}
+                    whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
+                    transition={{ duration: 0.2 }}
                     onClick={() => setSelectedUserId(user._id)}
                     className={`w-full rounded-[1.5rem] border p-5 text-left transition ${
                       selectedUserId === user._id
@@ -370,11 +387,7 @@ const UsersPage = () => {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${statusBadgeClasses(user.isActive)}`}
-                          >
-                            {user.isActive ? "Active" : "Inactive"}
-                          </span>
+                          <StatusBadge status={user.isActive ? "active" : "inactive"} />
                           <span
                             className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${roleBadgeClasses(user.role)}`}
                           >
@@ -386,9 +399,12 @@ const UsersPage = () => {
                             {user.provider}
                           </span>
                         </div>
-                        <p className="mt-4 truncate text-base font-semibold text-white">
-                          {user.email}
-                        </p>
+                        <div className="mt-4 flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-bold text-black">
+                            {(user.email || "?").slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="truncate text-base font-semibold text-white">{user.email}</p>
+                        </div>
                         <div className="mt-3 flex flex-wrap gap-4 text-xs uppercase tracking-[0.18em] text-gray-500">
                           <span>{user.relationship.orderCount} orders</span>
                           <span>{user.relationship.wishlistCount} wishlist</span>
@@ -405,8 +421,9 @@ const UsersPage = () => {
                         </p>
                       </div>
                     </div>
-                  </button>
-                ))
+                  </motion.button>
+                ))}
+                </motion.div>
               )}
             </div>
           </div>
@@ -463,24 +480,37 @@ const UsersPage = () => {
                       </div>
                     </div>
 
-                    <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
-                      <button
-                        type="button"
-                        onClick={handleStatusToggle}
-                        disabled={!canManageSelectedUser || isMutating}
-                        className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {selectedUser.isActive ? "Deactivate User" : "Activate User"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        disabled={!canManageSelectedUser || isMutating}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete User
-                      </button>
+                    <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
+                      <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
+                        <button
+                          type="button"
+                          onClick={handleStatusToggle}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {selectedUser.isActive ? "Deactivate User" : "Activate User"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmOpen(true)}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete User
+                        </button>
+                      </div>
+                      <ConfirmInline
+                        show={deleteConfirmOpen && !!selectedUser}
+                        message={
+                          selectedUser
+                            ? `Delete ${selectedUser.email}? This removes the customer account and related notifications.`
+                            : ""
+                        }
+                        onCancel={() => setDeleteConfirmOpen(false)}
+                        onConfirm={executeDeleteConfirmed}
+                        className="w-full max-w-md"
+                      />
                     </div>
                   </div>
                 </section>
@@ -751,7 +781,8 @@ const UsersPage = () => {
           </div>
         </section>
       </div>
-    </div>
+    </AdminPage>
+    </motion.div>
   );
 };
 

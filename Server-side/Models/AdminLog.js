@@ -11,6 +11,20 @@ const adminLogSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    category: {
+      type: String,
+      enum: ["auth", "product", "order", "payment", "user", "drop",
+             "notification", "review", "system", "admin"],
+      default: "system",
+    },
+    details: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    ipAddress: {
+      type: String,
+      default: null,
+    },
     resourceId: {
       type: String,
       default: null,
@@ -27,8 +41,9 @@ const adminLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-expire logs after 90 days
-adminLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+// Auto-expire logs after 1 year (production-grade retention)
+adminLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 365 * 24 * 60 * 60 });
 adminLogSchema.index({ adminId: 1, createdAt: -1 });
+adminLogSchema.index({ category: 1, createdAt: -1 });
 
 module.exports = mongoose.model("AdminLog", adminLogSchema);

@@ -18,13 +18,19 @@ const configuredOrigins = [
     .map((value) => value.trim())
     .filter(Boolean);
 
-const allowedOrigins = new Set([
-    ...configuredOrigins,
-    ...defaultOrigins
-]);
+const allowedOrigins = new Set(
+    process.env.NODE_ENV === "production"
+        ? configuredOrigins
+        : [...configuredOrigins, ...defaultOrigins]
+);
 
-const isLocalDevOrigin = (origin) =>
-    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+const isLocalDevOrigin = (origin) => {
+    const match = /^https?:\/\/(localhost|127\.0\.0\.1)(?::(\d{1,5}))?$/i.exec(origin);
+    if (!match) return false;
+    if (!match[2]) return true;
+    const port = Number(match[2]);
+    return port >= 1 && port <= 65535;
+};
 
 const configureCors = () => {
     return cors({
@@ -37,7 +43,7 @@ const configureCors = () => {
             ) {
                 callBack(null, true);
             } else {
-                callBack(new Error("Not allowed cors"));
+                callBack(new Error("Not allowed by CORS"));
             }
         },
 

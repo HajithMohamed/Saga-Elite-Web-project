@@ -1,85 +1,107 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import CommonForm from "@/components/common-components/CommonForm";
-import { forgotPasswordControls } from "@/config";
-import { forgotPasswordAction } from "@/store/auth-slice";
 import { useDispatch } from "react-redux";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { forgotPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
+import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateEmail = (email, touched) => {
+  if (touched && !email) return "Tell us where to send the code.";
+  if (email && !EMAIL_REGEX.test(email)) return "Please enter a valid email address.";
+  return "";
+};
 
 const ForgotPassword = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-  });
-  const [errors, setErrors] = useState({});
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // simple email validation
   useEffect(() => {
-    const newErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (formData.email && !emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address.";
-    }
-    setErrors(newErrors);
-  }, [formData]);
+    setError(validateEmail(email, touched));
+  }, [email, touched]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (Object.keys(errors).length > 0) {
-      toast({
-        title: "Invalid form",
-        description: "Please fix the errors before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
+    setTouched(true);
+    const fresh = validateEmail(email, true);
+    setError(fresh);
+    if (fresh) return;
     setIsLoading(true);
     try {
-      const response = await dispatch(forgotPasswordAction(formData)).unwrap();
+      const response = await dispatch(forgotPasswordAction({ email })).unwrap();
       toast({
-        title: "Reset email sent",
-        description: response.message || "Check your email for the reset code.",
+        title: "Code sent",
+        description: response.message || "Check your inbox for a four-digit code.",
         variant: "success",
       });
-      navigate("/auth/reset-password-otp", { state: { email: formData.email } });
+      navigate("/auth/reset-password-otp", { state: { email } });
     } catch (err) {
-      const msg = typeof err === 'string' ? err : err?.response?.data?.message || err.message || "Failed to send reset email";
+      const msg =
+        typeof err === "string"
+          ? err
+          : err?.response?.data?.message || err.message || "Could not send the code.";
       toast({ title: "Request failed", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans";
-  const labelClasses = "text-white";
-  const buttonClasses = "bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow";
-
   return (
-    <div className="w-full max-w-md">
-      <h2 className="text-2xl font-bold text-center mb-6 text-[#D4AF37]">Forgot Password</h2>
-      <p className="text-gray-400 text-center mb-8">Enter your email address and we'll send you a reset code.</p>
-
-      <CommonForm
-        formControls={forgotPasswordControls}
-        formData={formData}
-        setFormData={setFormData}
-        formErrors={errors}
-        onSubmit={handleSubmit}
-        buttonText="Send Reset Code"
-        isLoading={isLoading}
-        inputClass={inputClasses}
-        labelClass={labelClasses}
-        buttonClass={buttonClasses}
-      />
-
-      <p className="text-sm text-center mt-4">
-        Remember your password?{" "}
-        <Link to="/auth/login" className="text-[#D4AF37] hover:underline">
-          Back to Login
-        </Link>
+    <div>
+      <Eyebrow tone="gold" size="md">Forgotten</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Reset your<br />password.
+      </h1>
+      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed max-w-md">
+        Tell us the email tied to your account. We'll send a four-digit code to confirm it's
+        you.
       </p>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+        <div>
+          <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setTouched(true)}
+            placeholder="your.name@email.com"
+            aria-invalid={Boolean(touched && error)}
+            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
+              touched && error
+                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+                : "border-[#4d4635] focus:border-[#f2ca50]"
+            }`}
+          />
+          <FieldError>{touched ? error : null}</FieldError>
+        </div>
+
+        <Btn
+          variant="default"
+          size="lg"
+          className="w-full"
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Sending code" : "Send the code"}
+        </Btn>
+      </form>
+
+      <Link
+        to="/auth/login"
+        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+      >
+        <ArrowLeft size={12} strokeWidth={1.5} />
+        Back to sign in
+      </Link>
     </div>
   );
 };

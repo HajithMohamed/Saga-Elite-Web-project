@@ -28,6 +28,9 @@ const createSendToken = (user, statusCode, res, message) => {
     user.password = undefined;
     user.passwordConfirm = undefined;
     user.otp = undefined;
+    user.otpExpires = undefined;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpires = undefined;
 
     res.status(statusCode).json({
         status: "success",

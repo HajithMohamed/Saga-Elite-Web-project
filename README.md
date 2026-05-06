@@ -42,10 +42,17 @@ computer, make sure these values are set correctly:
 - `EMAIL` and `PASS`
 - `CLOUDINARY_*`
 - `GOOGLE_CLIENT_ID`
-- `FRONTEND_PORT` and `BACKEND_PORT` if you need different host ports
+- `HOST_FRONTEND_PORT` and `HOST_BACKEND_PORT` if you need different Docker host ports
 
 If MongoDB is running on your computer and the backend runs in Docker, use
 `host.docker.internal` instead of `localhost` in `MONGO_DB_URI`.
+
+Optional (helpful for local development):
+
+- `VITE_SOCKET_URL` to force the Socket.IO base URL (defaults to API host or window origin).
+- `RATE_LIMIT_DEV_MULTIPLIER` to loosen rate limits in non-production (defaults to 10x).
+- `RATE_LIMIT_*_MAX` and `RATE_LIMIT_*_WINDOW_MS` to override specific limiter values
+  (`LOGIN`, `AUTH`, `GENERAL`, `CONTACT`).
 
 The preferred pattern is to maintain a single `.env` file at the workspace root
 which contains **all** the variables needed by both backend and frontend.
@@ -67,7 +74,7 @@ mail credentials, etc.  The root `.env` additionally defines `BACKEND_PORT`
 (mirrored to `PORT` for the server) and `VITE_API_URL` for the frontend.
 
 > **Note:** Changing port numbers? Update both `.env` and
-> `docker-compose.yaml` (they use variable substitution).  The root npm
+> `docker-compose.yml` (they use variable substitution).  The root npm
 > scripts already read from the workspace `.env` when running
 > `npm run dev`.
 ---
@@ -84,11 +91,9 @@ npm install              # installs dependencies for both Server-side and Client
 npm run dev              # starts backend + frontend concurrently
 ```
 
-- Backend will listen on the port defined by `BACKEND_PORT`/`PORT` in your `.env` (defaults to 5001 if you omit the variable).
-  The `docker-compose.yaml` file uses `:${BACKEND_PORT:-5001}` so a container
-  will still publish port 5001 even when no `.env` file is present; however you
-  should still create a `.env` so your own value is persisted.
-- Frontend runs on port 5173 (or 5174 when served through Docker).
+- Backend will listen on the port defined by `PORT`/`BACKEND_PORT` in your `.env` (defaults to 5001 if you omit the variable).
+  Docker publishes that service through `HOST_BACKEND_PORT`, which defaults to `5001`.
+- Frontend runs on port 5173. Docker publishes it through `HOST_FRONTEND_PORT`, which defaults to `5173`.
 
 Other root-level scripts:
 
@@ -100,29 +105,53 @@ npm start                # launches the backend in production mode
 
 The root scripts simply proxy into the corresponding `Server-side` or `Client-Side` commands using [`concurrently`](https://www.npmjs.com/package/concurrently). Feel free to run the individual projects manually if you prefer.
 
-#### (B) Using Docker (Recommended for full-stack environment)
+#### (B) Using Docker (recommended for a full-stack environment)
 
-Docker quick notes for a fresh machine:
-
-- Frontend default URL: `http://localhost:5174`
-- Backend default URL: `http://localhost:5001/api`
-- Frontend hot reload uses polling for better Docker Desktop compatibility
-- Backend uses `nodemon --legacy-watch` for shared-volume reloads
-- `host.docker.internal` is mapped for the backend container
+Docker is the fastest way to initialize the project on a fresh machine because it builds both the backend API and frontend app from the root workspace.
 
 ```bash
-# make sure you have a `.env` file at the root; you can copy
-# `.env.example` and edit as needed.  If you forget, Docker will still start
-# and publish port 5001 using the built-in default, but the service won’t
-# reflect your custom configuration.
+# first time only
+cp .env.example .env
 
+# edit .env with real MongoDB Atlas, JWT, email, Cloudinary, and payment values
+
+# build and start the development containers
 docker compose up --build
 ```
 
-- Frontend: http://localhost:5174
-- Backend API: http://localhost:5001/api (or whatever `BACKEND_PORT` you set)
+Development access points:
 
-This is the same as before and remains the easiest way to get a fully containerised environment.
+- Frontend: `http://localhost:5173` or `http://localhost:${HOST_FRONTEND_PORT}`
+- Backend health check: `http://localhost:5001/health`
+- Backend API: `http://localhost:5001/api/v1` or `http://localhost:${HOST_BACKEND_PORT}/api/v1`
+
+Common Docker commands:
+
+```bash
+docker compose up -d --build        # start in the background
+docker compose logs -f backend      # follow backend logs
+docker compose logs -f frontend     # follow frontend logs
+docker compose down                 # stop containers
+docker compose down -v              # stop and remove anonymous volumes
+```
+
+Docker development notes:
+
+- The root `.env` is loaded by the backend container through `env_file`.
+- `HOST_BACKEND_PORT` defaults to `5001`; `HOST_FRONTEND_PORT` defaults to `5173`.
+- Frontend requests use `VITE_API_URL=http://localhost:${HOST_BACKEND_PORT:-5001}/api/v1`.
+- If MongoDB runs on your host machine, use `host.docker.internal` instead of `localhost` in the Mongo URI.
+- MongoDB Atlas users must whitelist their current public IP before starting the backend.
+
+Production initialization:
+
+```bash
+# create a production .env first, then run:
+docker compose -f docker-compose.prod.yml up -d --build
+
+# stop production containers
+docker compose -f docker-compose.prod.yml down
+```
 
 #### (C) Manual/Local Development (alternate two-terminal approach)
 
@@ -156,6 +185,7 @@ All of these may be executed from the **workspace root**; the root `package.json
 - `npm run build` – build the frontend for production
 - `npm run lint` – run ESLint across the entire repository (JS/JSX/TS/TSX)
 - `npm start` – start the backend in production mode
+- `npm run seed:demo-admins` – create/update demo admin users for every admin role
 
 You can also execute the equivalent commands inside `Server-side` or `Client-Side` if you prefer working in isolated terminals.
 
@@ -164,7 +194,7 @@ You can also execute the equivalent commands inside `Server-side` or `Client-Sid
 ### 5. Troubleshooting
 
 - Ensure MongoDB URI is correct in `.env`
-- If ports are busy, change them in `docker-compose.yaml` and `.env`
+- If ports are busy, change them in `docker-compose.yml` and `.env`
 - For Docker issues, try `docker compose down -v` then `docker compose up --build`
 - For Windows: Use Git Bash or WSL for best compatibility
 
@@ -301,6 +331,77 @@ Checkout → Select Manual Payment → View Bank Details → Make Payment → Up
 
 ---
 
+## Admin Roles and Access Restrictions
+
+The admin area uses role-based access control backed by `Server-side/Utils/admin-roles.js` and enforced by `Server-side/Middlewares/admin-middleware.js`.
+
+### Admin role levels
+
+| Role | Purpose | Access |
+|------|---------|--------|
+| `super_admin` / `superadmin` | Platform owner / highest privileged user | Bypasses permission checks, manages admins, views admin logs and system stats |
+| `admin` | Full operational admin | Gets all admin permissions by default, except super-admin-only account control |
+| `sub_admin` | Restricted admin account | Access depends on assigned sub-role and permission flags |
+| `customer` / `user` | Shopper account | No admin panel access |
+
+### Sub-admin roles
+
+| Sub-role | Default permissions |
+|----------|---------------------|
+| `order_manager` | Orders and manual payment verification |
+| `product_manager` | Products, drops, and inventory management |
+| `marketing_manager` | Notifications, analytics, and campaigns |
+| `support_admin` | Orders, users, and review moderation |
+| `inventory_manager` | Products and inventory management |
+
+### Permission keys
+
+Admin routes can require one or more of these permissions:
+
+- `products`
+- `orders`
+- `users`
+- `notifications`
+- `drops`
+- `verifyPayments`
+- `manageReviews`
+- `viewAnalytics`
+- `sendCampaigns`
+- `manageInventory`
+- `manageAdmins`
+
+### Restriction rules
+
+- All admin pages require authentication and an admin-level role.
+- Super admins can access every admin feature and are the only users allowed into the super-admin console.
+- Only super admins can create admins, change admin roles, update admin permissions, deactivate/reactivate admins, and view privileged activity logs.
+- Super admin accounts cannot be modified through the normal admin-management actions.
+- Sub-admins must have the required permission flag for each protected route.
+- Customers/users are blocked from admin routes even if they are authenticated.
+- Admin and super-admin users are blocked from Google customer sign-in flow.
+
+### Demo admin accounts
+
+Run this command after configuring `.env` and connecting MongoDB to create or update demo admins for every role:
+
+```bash
+npm run seed:demo-admins
+```
+
+| Demo user | Email | Password | Role |
+|-----------|-------|----------|------|
+| Saga Super Admin | `superadmin@sagaelite.com` | `SuperSecret123!` | `super_admin` |
+| Saga Operations Admin | `admin@sagaelite.com` | `AdminSecret123!` | `admin` |
+| Order Manager Demo | `orders.admin@sagaelite.com` | `OrderAdmin123!` | `sub_admin` / `order_manager` |
+| Product Manager Demo | `products.admin@sagaelite.com` | `ProductAdmin123!` | `sub_admin` / `product_manager` |
+| Marketing Manager Demo | `marketing.admin@sagaelite.com` | `MarketingAdmin123!` | `sub_admin` / `marketing_manager` |
+| Support Admin Demo | `support.admin@sagaelite.com` | `SupportAdmin123!` | `sub_admin` / `support_admin` |
+| Inventory Manager Demo | `inventory.admin@sagaelite.com` | `InventoryAdmin123!` | `sub_admin` / `inventory_manager` |
+
+These are demo credentials for development and presentation only. Change or remove them before production deployment.
+
+---
+
 ## 🔔 Notification System
 
 ### Email
@@ -354,14 +455,21 @@ Checkout → Select Manual Payment → View Bank Details → Make Payment → Up
 ## 🐳 Docker Support
 
 ### Services:
-- Client-Side (React)
-- Server-side (Node.js API)
-- MongoDB
-- Nginx (optional)
+- `frontend`: React/Vite development server from `Client-Side/Dockerfile`
+- `backend`: Node.js/Express API from `Server-side/Dockerfile`
+- Production adds `nginx` through `docker-compose.prod.yml`
 
-### Run with Docker:
+MongoDB is expected to run externally, usually through MongoDB Atlas. Configure it with `MONGO_URI` or the matching MongoDB variable in `.env`.
+
+### Initialize Docker development:
 ```bash
-docker-compose up --build
+cp .env.example .env
+docker compose up --build
+```
+
+### Initialize Docker production:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---

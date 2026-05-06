@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const slugify = require("slugify");
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,6 +12,12 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       validate: [validator.isEmail, "Provide a valid email address"],
+    },
+
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 120,
     },
 
     password: {
@@ -29,16 +36,35 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["admin", "superadmin", "super_admin", "user", "customer"],
+      enum: ["admin", "superadmin", "super_admin", "sub_admin", "user", "customer"],
       default: "customer",
     },
 
+    subRole: {
+      type: String,
+      enum: ["order_manager", "product_manager", "marketing_manager",
+             "support_admin", "inventory_manager", null],
+      default: null,
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     permissions: {
-      products: { type: Boolean, default: false },
-      orders: { type: Boolean, default: false },
-      users: { type: Boolean, default: false },
-      notifications: { type: Boolean, default: false },
-      drops: { type: Boolean, default: false },
+      products:        { type: Boolean, default: false },
+      orders:          { type: Boolean, default: false },
+      users:           { type: Boolean, default: false },
+      notifications:   { type: Boolean, default: false },
+      drops:           { type: Boolean, default: false },
+      verifyPayments:  { type: Boolean, default: false },
+      manageReviews:   { type: Boolean, default: false },
+      viewAnalytics:   { type: Boolean, default: false },
+      sendCampaigns:   { type: Boolean, default: false },
+      manageInventory: { type: Boolean, default: false },
+      manageAdmins:    { type: Boolean, default: false },
     },
 
     provider: {
@@ -51,6 +77,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true,
+      lowercase: true,
     },
 
     profilePicture: String,
@@ -112,11 +147,19 @@ const userSchema = new mongoose.Schema(
     ],
     savedPaymentMethod: {
       type: String,
-      enum: ["payhere", "gpay", "manual", "card", "lankapay", "cash"],
+      enum: ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"],
     }
   },
   { timestamps: true }
 );
+
+userSchema.pre("save", function () {
+  if (!this.slug || this.isModified("email")) {
+    const local = (this.email || "user").split("@")[0] || "user";
+    const tail = String(this._id || "").slice(-6) || Math.random().toString(36).slice(2, 8);
+    this.slug = slugify(`${local}-${tail}`, { lower: true, strict: true });
+  }
+});
 
 // ── Fixed pre-save hook (Mongoose 9.x style) ──
 userSchema.pre("save", async function () {

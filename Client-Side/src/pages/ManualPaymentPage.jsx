@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Link,
   useLocation,
@@ -15,6 +15,7 @@ import {
   RotateCcw,
   ShieldAlert,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { toast } from "@/hooks/use-toast";
 import {
@@ -33,39 +34,69 @@ const ManualPaymentPage = () => {
   const location = useLocation();
   const { paymentSlug = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const contextRef = useRef(null);
 
   const {
     currentPayment,
     paymentContext,
+    lastGeneratedReference,
     isGenerating,
     isSubmitting,
     isFetching,
     error,
   } = useSelector((state) => state.manualPayment);
 
+  const orderIdParam = searchParams.get("orderId");
+  const amountParam = searchParams.get("amount");
+  const referenceParam = searchParams.get("referenceNumber");
+  const slugParam = searchParams.get("slug");
+
   const resolvedOrderId =
     location.state?.orderId ||
-    searchParams.get("orderId") ||
+    orderIdParam ||
     currentPayment?.orderId?._id ||
     currentPayment?.orderId ||
     paymentContext?.orderId ||
     "";
   const resolvedAmount = Number(
     location.state?.amount ||
-      searchParams.get("amount") ||
+      amountParam ||
       currentPayment?.amount ||
       paymentContext?.amount ||
       0
   );
+  const storedPlainRefFallback = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const raw = window.localStorage.getItem("saga_manual_payment_ref");
+      if (!raw) return "";
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("{")) {
+        const parsed = JSON.parse(trimmed);
+        return (
+          parsed.referenceNumber ||
+          parsed.reference ||
+          parsed.ref ||
+          ""
+        );
+      }
+      return trimmed;
+    } catch {
+      return "";
+    }
+  }, [paymentContext?.referenceNumber, lastGeneratedReference]);
+
   const resolvedReferenceNumber =
     paymentSlug ||
     location.state?.referenceNumber ||
-    searchParams.get("referenceNumber") ||
-    searchParams.get("slug") ||
+    referenceParam ||
+    slugParam ||
     currentPayment?.slug ||
     currentPayment?.referenceNumber ||
     paymentContext?.slug ||
     paymentContext?.referenceNumber ||
+    lastGeneratedReference ||
+    storedPlainRefFallback ||
     "";
 
   useEffect(() => {
@@ -73,14 +104,27 @@ const ManualPaymentPage = () => {
       return;
     }
 
-    dispatch(
-      storeManualPaymentContext({
-        orderId: resolvedOrderId || null,
-        amount: resolvedAmount || null,
-        slug: currentPayment?.slug || paymentSlug || searchParams.get("slug") || null,
-        referenceNumber: resolvedReferenceNumber || null,
-      })
-    );
+    const nextContext = {
+      orderId: resolvedOrderId || null,
+      amount: resolvedAmount || null,
+      slug: currentPayment?.slug || paymentSlug || slugParam || null,
+      referenceNumber: resolvedReferenceNumber || null,
+    };
+
+    const prevContext = contextRef.current;
+    const hasChanged =
+      !prevContext ||
+      prevContext.orderId !== nextContext.orderId ||
+      prevContext.amount !== nextContext.amount ||
+      prevContext.slug !== nextContext.slug ||
+      prevContext.referenceNumber !== nextContext.referenceNumber;
+
+    if (!hasChanged) {
+      return;
+    }
+
+    contextRef.current = nextContext;
+    dispatch(storeManualPaymentContext(nextContext));
   }, [
     currentPayment?.slug,
     dispatch,
@@ -88,7 +132,7 @@ const ManualPaymentPage = () => {
     resolvedAmount,
     resolvedOrderId,
     resolvedReferenceNumber,
-    searchParams,
+    slugParam,
   ]);
 
   useEffect(() => {
@@ -252,7 +296,12 @@ const ManualPaymentPage = () => {
       : false);
   const isVerified = paymentStatus === "verified";
 
-  if (!resolvedOrderId && !resolvedReferenceNumber && !currentPayment?.referenceNumber) {
+  if (
+    !resolvedOrderId &&
+    !resolvedReferenceNumber &&
+    !currentPayment?.referenceNumber &&
+    !lastGeneratedReference
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
         <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#0b0b0b] p-8 text-center">
@@ -320,7 +369,7 @@ const ManualPaymentPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-screen bg-background text-on-surface">
       <div className="mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-10">
         {error ? (
           <div className="mb-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -337,9 +386,14 @@ const ManualPaymentPage = () => {
           onCopyReference={handleCopyReference}
         />
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="mt-8 grid gap-8 lg:grid-cols-[1.05fr_0.95fr]"
+        >
           <div className="space-y-6">
-            <div className="rounded-[26px] border border-white/10 bg-[#0b0b0b] p-6">
+            <div className="rounded-[26px] border border-border bg-surface-container-low p-6 dark:border-white/10 dark:bg-[#0b0b0b]">
               <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
                 <Clock3 className="h-4 w-4" />
                 Current status
@@ -459,7 +513,7 @@ const ManualPaymentPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

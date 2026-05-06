@@ -1,9 +1,26 @@
 import React from "react";
+import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleAdminStatus } from "../../store/admin/super-admin-slice";
+import { itemVariants, containerVariants } from "@/components/admin-components/_shared/animations";
+import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
+import { Users } from "lucide-react";
+import { DangerButton, SecondaryButton } from "@/components/admin-components/_shared/Buttons";
 
-const getRoleLabel = (role) =>
-  role === "super_admin" ? "Super Admin" : "Admin";
+const SUB_ROLE_LABELS = {
+  order_manager: "Order Manager",
+  product_manager: "Product Manager",
+  marketing_manager: "Marketing",
+  support_admin: "Support",
+  inventory_manager: "Inventory",
+};
+
+const getRoleLabel = (admin) => {
+  if (admin.role === "super_admin" || admin.role === "superadmin") return "Super Admin";
+  if (admin.role === "sub_admin") return SUB_ROLE_LABELS[admin.subRole] || "Sub Admin";
+  return "Full Admin";
+};
 
 const getInitials = (name = "") =>
   name
@@ -28,115 +45,131 @@ const AdminTable = ({ admins = [], currentUserId }) => {
 
   if (!admins.length) {
     return (
-      <div className="text-center py-16 text-gray-400 text-sm">
-        No admin accounts found.
-      </div>
+      <EmptyState
+        icon={Users}
+        title="No admin accounts found"
+        subtitle="Create a new admin to grant dashboard access."
+      />
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100">
+    <div className="overflow-x-auto rounded-[20px] border border-white/10">
       <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Admin</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Role</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Joined</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Last Active</th>
-            <th className="text-right px-5 py-3 font-medium text-gray-500">Actions</th>
-            <th className="text-right px-5 py-3 font-medium text-gray-500">Status</th>
+        <thead className="sticky top-0 z-10 bg-[#111]/95 backdrop-blur-md">
+          <tr className="border-b border-[#4d4635] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+            <th className="px-4 py-3 text-left">
+              Admin
+            </th>
+            <th className="px-4 py-3 text-left">
+              Role
+            </th>
+            <th className="px-4 py-3 text-left">
+              Joined
+            </th>
+            <th className="px-4 py-3 text-left">
+              Last Active
+            </th>
+            <th className="px-4 py-3 text-right">
+              Actions
+            </th>
+            <th className="px-4 py-3 text-right">
+              Status
+            </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50 bg-white">
+        <motion.tbody
+          className="bg-transparent"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {admins.map((admin) => {
             const isSelf = admin._id === currentUserId;
-            const isSuperAdmin = admin.role === "super_admin";
+            const isSuperAdmin = admin.role === "super_admin" || admin.role === "superadmin";
             const isToggling = toggleLoading === admin._id;
 
             return (
-              <tr
+              <motion.tr
                 key={admin._id}
-                className="bg-white hover:bg-gray-50/60 transition-colors"
+                variants={itemVariants}
+                className="border-t border-[#4d4635]/40 transition-all duration-300 hover:bg-[#1c1b1b] hover:shadow-[inset_4px_0_0_0_#D4AF37]"
               >
-                {/* Admin info */}
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f2ca50] to-[#9a7a1e] text-xs font-semibold text-[#0a0a0a]">
                       {getInitials(admin.name || admin.email)}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 leading-tight">
+                      <p className="font-medium leading-tight text-[#e5e2e1] se-body">
                         {admin.name || "N/A"}
-                        {isSelf && (
-                          <span className="ml-2 text-xs text-gray-400 font-normal">
-                            (you)
-                          </span>
-                        )}
+                        {isSelf ? (
+                          <span className="ml-2 text-[10px] font-normal text-[#99907c] se-label tracking-widest">(you)</span>
+                        ) : null}
                       </p>
-                      <p className="text-gray-400 text-xs mt-0.5">
-                        {admin.email}
-                      </p>
+                      <p className="mt-0.5 text-[10px] text-[#99907c] se-mono">{admin.email}</p>
                     </div>
                   </div>
                 </td>
 
-                <td className="px-5 py-4">
+                <td className="px-4 py-4">
                   <span
-                    className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${
-                        isSuperAdmin
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
+                    className={`inline-flex rounded-sm px-2 py-1 text-[9px] se-label tracking-widest ${
+                      isSuperAdmin
+                        ? "bg-[#f2ca50] text-[#0a0a0a]"
+                        : "bg-[#4d4635] text-[#e5e2e1]"
+                    }`}
                   >
-                    {getRoleLabel(admin.role)}
+                    {getRoleLabel(admin)}
                   </span>
                 </td>
 
-                <td className="px-5 py-4 text-gray-500">
-                  {formatDate(admin.createdAt)}
+                <td className="px-4 py-4 text-[#99907c] se-mono text-[10px]">{formatDate(admin.createdAt)}</td>
+
+                <td className="px-4 py-4 text-[#99907c] se-mono text-[10px]">
+                  {admin.lastActiveAt ? formatDate(admin.lastActiveAt) : "Never"}
                 </td>
 
-                <td className="px-5 py-4 text-gray-500">
-                  {admin.lastActiveAt
-                    ? formatDate(admin.lastActiveAt)
-                    : "Never"}
+                <td className="px-4 py-4 text-right">
+                  <span className="font-medium text-[#e5e2e1] se-mono">{admin.actionCount ?? 0}</span>
+                  <span className="ml-1 text-[9px] text-[#99907c] se-label tracking-widest">actions</span>
                 </td>
 
-                <td className="px-5 py-4 text-right">
-                  <span className="text-gray-700 font-medium">
-                    {admin.actionCount ?? 0}
-                  </span>
-                  <span className="text-gray-400 text-xs ml-1">actions</span>
-                </td>
-
-                <td className="px-5 py-4 text-right">
+                <td className="px-4 py-4 text-right">
                   {isSelf || isSuperAdmin ? (
-                    <span className="text-gray-300 text-xs">—</span>
-                  ) : (
-                    <button
-                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                    <span className="text-xs text-gray-500">—</span>
+                  ) : admin.isActive ? (
+                    <DangerButton
+                      type="button"
                       disabled={isToggling}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                        ${
-                          admin.isActive
-                            ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
-                            : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
-                        }
-                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                      className="px-3 py-1.5 text-xs"
                     >
-                      {isToggling
-                        ? "…"
-                        : admin.isActive
-                        ? "Deactivate"
-                        : "Activate"}
-                    </button>
+                      {isToggling ? (
+                        <Loader2 className="inline h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Deactivate"
+                      )}
+                    </DangerButton>
+                  ) : (
+                    <SecondaryButton
+                      type="button"
+                      disabled={isToggling}
+                      onClick={() => dispatch(toggleAdminStatus(admin._id))}
+                      className="px-3 py-1.5 text-xs"
+                    >
+                      {isToggling ? (
+                        <Loader2 className="inline h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Activate"
+                      )}
+                    </SecondaryButton>
                   )}
                 </td>
-              </tr>
+              </motion.tr>
             );
           })}
-        </tbody>
+        </motion.tbody>
       </table>
     </div>
   );

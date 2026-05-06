@@ -28,3 +28,15 @@ createRoot(document.getElementById("root")).render(
     app
   ),
 );
+
+// Fade out the pre-React editorial loader once React has painted.
+// We wait two animation frames so React has a chance to render its first DOM tree
+// (which is the App's own AppLoader, visually identical to the boot loader).
+const dismissBootLoader = () => {
+  const boot = document.getElementById("saga-boot");
+  if (!boot) return;
+  boot.classList.add("is-leaving");
+  // Remove from DOM after the CSS opacity transition finishes
+  setTimeout(() => boot.remove(), 500);
+};
+requestAnimationFrame(() => requestAnimationFrame(dismissBootLoader));

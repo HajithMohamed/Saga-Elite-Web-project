@@ -1,159 +1,329 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { useDispatch } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
-import CommonForm from '@/components/common-components/CommonForm'
-import PasswordStrengthMeter from '@/components/common-components/PasswordStrengthMeter'
-import { loginFormControl } from '@/config'
-import { Button } from '@/components/ui/button'
-import { toast } from '@/hooks/use-toast'
-import { PASSWORD_REGEX, PASSWORD_ERROR_MSG } from '@/lib/password-strength'
-import GoogleAuthButton from '@/components/auth-components/GoogleAuthButton'
+import { toast } from "@/hooks/use-toast";
+import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
 
-const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID)
+const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+  console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
+}
+
+const describeAuthError = (err) => {
+  // Thunk rejectWithValue may pass through a string (the unwrapped server msg)
+  if (typeof err === "string") return { title: "Login failed", description: err };
+
+  const status = err?.response?.status;
+  const serverMsg = err?.response?.data?.message;
+  const code = err?.code;
+
+  if (code === "ERR_NETWORK" || err?.message === "Network Error") {
+    return {
+      title: "Cannot reach the atelier",
+      description:
+        "The backend isn't responding. Confirm it's running at the configured VITE_API_URL and that CORS allows http://localhost:5173 with credentials.",
+    };
+  }
+  if (status === 401) {
+    return {
+      title: "Wrong details",
+      description: serverMsg || "Email or password didn't match. Try again.",
+    };
+  }
+  if (status === 403) {
+    return {
+      title: "Account not verified",
+      description: serverMsg || "Verify your email before signing in.",
+    };
+  }
+  if (status === 429) {
+    return {
+      title: "Too many attempts",
+      description: serverMsg || "Wait a few minutes and try again.",
+    };
+  }
+  if (status >= 500) {
+    return {
+      title: `Server error · ${status}`,
+      description: serverMsg || "The atelier had an issue. Try again shortly.",
+    };
+  }
+  if (status) {
+    return {
+      title: `Login failed · ${status}`,
+      description: serverMsg || err?.message || "Something didn't work.",
+    };
+  }
+  return {
+    title: "Login failed",
+    description: serverMsg || err?.message || "Something didn't work.",
+  };
+};
+
+// Login does NOT enforce password complexity client-side — older accounts may
+// have passwords that don't match current complexity rules. Just require non-empty
+// fields and a well-formed email; let the backend verify the credentials.
+const validateLogin = (data, touched = {}) => {
+  const errs = {};
+  if (touched.email && !data.email) {
+    errs.email = "Tell us your email.";
+  } else if (data.email && !EMAIL_REGEX.test(data.email)) {
+    errs.email = "Please enter a valid email address.";
+  }
+  if (touched.password && !data.password) {
+    errs.password = "Enter your password.";
+  }
+  return errs;
+};
+
+const resolveDestination = (user) => {
+  const role = String(user?.role || "").toLowerCase();
+  if (["admin", "super_admin", "superadmin", "sub_admin"].includes(role)) {
+    return "/admin/dashboard";
+  }
+  return "/shopping/home";
+};
+
+const resolveUserFromPayload = (payload) => {
+  if (!payload) return null;
+  // Accept multiple backend shapes:
+  //   { success: true, data: { user } }
+  //   { success: true, data: user }
+  //   { user: {...} }
+  //   { token, user }
+  return payload.data?.user || (payload.data && typeof payload.data === "object" ? payload.data : null) || payload.user || null;
+};
 
 const Login = () => {
-  const [formData,setFormData] = useState({
-    email : "",
-    password : ""
-  })
-  const [errors,setErrors] = useState({})
-  const [isLoading,setIsLoading] = useState(false)
-  const location = useLocation()
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  useEffect(()=>{
-    const newErrors = {}
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  // If already authenticated when landing here, bounce away
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  useEffect(() => {
+    if (isAuthenticated) navigate(resolveDestination(user), { replace: true });
+  }, [isAuthenticated, user, navigate]);
 
-    if(formData.email && !emailRegex.test(formData.email)){
-      newErrors.email = "Please enter a valid email address."
-    }
-    if(formData.password && !PASSWORD_REGEX.test(formData.password)){
-      newErrors.password = PASSWORD_ERROR_MSG
-    }
-    setErrors(newErrors)
-  },[formData])
+  useEffect(() => {
+    setErrors(validateLogin(formData, touched));
+  }, [formData, touched]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if(Object.keys(errors).length > 0){
-      toast({title:'Invalid form',description:'Fix the errors above before logging in.',variant:'destructive'})
-      return
-    }
-    setIsLoading(true)
+    e.preventDefault();
+    const allTouched = { email: true, password: true };
+    setTouched(allTouched);
+    const fresh = validateLogin(formData, allTouched);
+    setErrors(fresh);
+    if (Object.keys(fresh).length > 0) return;
+    setIsLoading(true);
     try {
       const response = await dispatch(loginUserAction(formData)).unwrap();
+      // Diagnostic: log full response so the shape is visible during debugging
+      // eslint-disable-next-line no-console
+      console.info("[login] response", response);
+
+      const u = resolveUserFromPayload(response);
       toast({
-        title: "Login successful",
-        description: response.message || "Welcome back!",
+        title: "Welcome back",
+        description: response?.message || "Signed in.",
         variant: "success",
       });
-      // Navigation handled by CheckAuth
+
+      // Explicit redirect — don't rely on CheckAuth race
+      navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      const msg = typeof err === 'string' ? err : err?.response?.data?.message || err.message || "Login failed";
-      toast({ title: "Login failed", description: msg, variant: "destructive" });
+      // eslint-disable-next-line no-console
+      console.error("[login] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({ title, description, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const handleGoogleSuccess = async ({ access_token }) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await dispatch(googleSignInAction({ accessToken: access_token })).unwrap()
+      const response = await dispatch(googleSignInAction({ accessToken: access_token })).unwrap();
+      // eslint-disable-next-line no-console
+      console.info("[google sign-in] response", response);
+      const u = resolveUserFromPayload(response);
       toast({
-        title: 'Signed in',
-        description: response.message || 'Welcome!',
-        variant: 'success',
-      })
+        title: "Welcome back",
+        description: response?.message || "Signed in.",
+        variant: "success",
+      });
+      navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      const msg = typeof err === 'string' ? err : err?.message || 'Google sign-in failed'
-      toast({ title: 'Google sign-in failed', description: msg, variant: 'destructive' })
+      // eslint-disable-next-line no-console
+      console.error("[google sign-in] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title: title === "Login failed" ? "Google sign-in failed" : title,
+        description,
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleGoogleError = () =>
-    toast({ title: 'Google sign-in failed', description: 'Could not open Google sign-in.', variant: 'destructive' })
+  const handleGoogleError = (err) => {
+    if (err?.type === "popup_closed" || err?.error === "popup_closed_by_user") {
+      return;
+    }
 
-  // style helpers
-  const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans"
-  const labelClasses = "text-white"
-  const buttonClasses = "bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow"
+    toast({
+      title: "Google sign-in failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
 
   return (
-    <div className="w-full max-w-md">
-      {/* toggle links */}
-      <div className="flex justify-center mb-8 space-x-8">
-        <Link
-          to="/auth/login"
-          className={`pb-2 ${location.pathname.endsWith('/login') ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]' : 'text-gray-400 hover:text-white'}`}
-        >
-          Log In
-        </Link>
+    <div>
+      <Eyebrow tone="gold" size="md">Welcome back</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Sign in.
+      </h1>
+      <p className="mt-5 se-body text-sm text-[#99907c]">
+        New to the atelier?{" "}
         <Link
           to="/auth/register"
-          className={`pb-2 ${location.pathname.endsWith('/register') ? 'border-b-2 border-[#D4AF37] text-[#D4AF37]' : 'text-gray-400 hover:text-white'}`}
+          className="text-[#f2ca50] underline-offset-4 hover:underline"
         >
-          Create Account
+          Become a member
         </Link>
-      </div>
-
-      <CommonForm
-        formControls={loginFormControl}
-        formData={formData}
-        setFormData={setFormData}
-        formErrors={errors}
-        onSubmit={handleSubmit}
-        buttonText="Log In"
-        isLoading={isLoading}
-        inputClass={inputClasses}
-        labelClass={labelClasses}
-        buttonClass={buttonClasses}
-      />
-
-      {/* password strength meter */}
-      <PasswordStrengthMeter password={formData.password} />
-
-      <p className="text-sm text-right mt-2">
-        <Link to="/auth/forgot-password" className="text-[#D4AF37] hover:underline">
-          Forgot password?
-        </Link>
+        .
       </p>
 
-      <div className="flex items-center my-6">
-        <hr className="flex-grow border-gray-600" />
-        <span className="px-2 text-gray-500">or</span>
-        <hr className="flex-grow border-gray-600" />
+      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+        <div>
+          <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+          <input
+            type="email"
+            autoComplete="email"
+            value={formData.email}
+            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            placeholder="your.name@email.com"
+            aria-invalid={Boolean(touched.email && errors.email)}
+            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
+              touched.email && errors.email
+                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+                : "border-[#4d4635] focus:border-[#f2ca50]"
+            }`}
+          />
+          <FieldError>{touched.email ? errors.email : null}</FieldError>
+        </div>
+
+        <div>
+          <div className="flex items-baseline justify-between">
+            <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+            <Link
+              to="/auth/forgot-password"
+              className="se-label text-[9px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088]"
+            >
+              Forgotten?
+            </Link>
+          </div>
+          <div className="relative mt-2">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
+              onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+              placeholder="••••••••••"
+              aria-invalid={Boolean(touched.password && errors.password)}
+              className={`w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
+                touched.password && errors.password
+                  ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+                  : "border-[#4d4635] focus:border-[#f2ca50]"
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff size={16} strokeWidth={1.5} />
+              ) : (
+                <Eye size={16} strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+          <FieldError>{touched.password ? errors.password : null}</FieldError>
+        </div>
+
+        <Btn
+          variant="default"
+          size="lg"
+          className="w-full"
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Signing in" : "Sign in"}
+        </Btn>
+      </form>
+
+      <div className="mt-10 flex items-center gap-5">
+        <Hairline />
+        <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">or</span>
+        <Hairline />
       </div>
 
-      {GOOGLE_ENABLED ? (
-        <GoogleAuthButton
-          onSuccess={handleGoogleSuccess}
-          onError={handleGoogleError}
-          disabled={isLoading}
-        />
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          disabled
-          className="w-full flex items-center justify-center gap-2 border-gray-500 text-gray-400 cursor-not-allowed"
-        >
-          Continue with Google (not configured)
-        </Button>
-      )}
+      <div className="mt-6">
+        {GOOGLE_ENABLED ? (
+          <GoogleAuthButton
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            disabled={isLoading}
+            label="Continue with Google"
+          />
+        ) : (
+          <button
+            type="button"
+            disabled
+            title="Set VITE_GOOGLE_CLIENT_ID in your .env.local to enable Google sign-in"
+            className="w-full h-12 bg-white/95 border border-[#dadce0] rounded-sm flex items-center justify-center gap-3 text-[#5f6368] cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.06)] opacity-70"
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#9aa0a6" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+            </svg>
+            <span className="text-sm font-medium" style={{ fontFamily: 'Geist, "Roboto", sans-serif' }}>
+              Google sign-in unavailable
+            </span>
+          </button>
+        )}
+      </div>
 
-      <p className="text-sm text-center mt-4">
-        Don&apos;t have an account?{' '}
-        <Link to="/auth/register" className="text-[#D4AF37] hover:underline">
-          Register
+      <p className="mt-12 se-body text-xs text-[#574500] leading-relaxed">
+        By signing in you accept our{" "}
+        <Link to="/legal/terms-and-conditions" className="text-[#99907c] hover:text-[#f2ca50]">
+          terms
+        </Link>{" "}
+        and{" "}
+        <Link to="/legal/privacy-policy" className="text-[#99907c] hover:text-[#f2ca50]">
+          privacy practice
         </Link>
+        .
       </p>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

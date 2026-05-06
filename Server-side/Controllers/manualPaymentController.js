@@ -5,14 +5,15 @@ const Order = require("../Models/Order");
 const ManualPayment = require("../Models/ManualPayment");
 const User = require("../Models/User");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
+const { ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const { SOCKET_EVENTS, emitToAll, emitToUser } = require("../Utils/socket-service");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("../Utils/whatsapp-service");
+const logger = require("../Utils/logger");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
-const ADMIN_ROLES = ["admin", "super_admin", "superadmin"];
 
 const formatCurrency = (amount) =>
   Number(amount || 0).toLocaleString("en-LK", {
@@ -81,7 +82,7 @@ const sendAdminWhatsAppAlert = async (message) => {
     try {
       await sendWhatsAppMessage({ to: recipient, message });
     } catch (error) {
-      console.error("Failed to send admin WhatsApp alert:", error);
+      logger.error("Failed to send admin WhatsApp alert", { error, recipient });
     }
   }
 };
@@ -377,7 +378,7 @@ const submitProof = catchAsync(async (req, res, next) => {
         html: proofEmail,
       });
     } catch (emailError) {
-      console.error("Failed to send proof submission email to customer:", emailError);
+      logger.error("Failed to send proof submission email to customer", { emailError });
     }
   }
 
@@ -385,7 +386,7 @@ const submitProof = catchAsync(async (req, res, next) => {
   try {
     await sendAdminEmailAlert("New payment proof submitted", adminEmailBody);
   } catch (emailError) {
-    console.error("Failed to send admin payment proof email:", emailError);
+    logger.error("Failed to send admin payment proof email", { emailError });
   }
 
   await sendAdminWhatsAppAlert(
@@ -593,7 +594,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
           html: buildDecisionEmail("Payment verified", order, payment),
         });
       } catch (emailError) {
-        console.error("Failed to send verification email to customer:", emailError);
+        logger.error("Failed to send verification email to customer", { emailError });
       }
     }
 
@@ -604,7 +605,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
           message: `Saga Elite: your payment for order ${orderId} has been verified successfully. Thank you for your purchase.`,
         });
       } catch (whatsAppError) {
-        console.error("Failed to send payment verification WhatsApp message:", whatsAppError);
+        logger.error("Failed to send payment verification WhatsApp message", { whatsAppError });
       }
     }
 
@@ -688,7 +689,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
         html: buildDecisionEmail("Payment proof rejected", order, payment, payment.rejectionReason),
       });
     } catch (emailError) {
-      console.error("Failed to send rejection email to customer:", emailError);
+      logger.error("Failed to send rejection email to customer", { emailError });
     }
   }
 
@@ -699,7 +700,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
         message: `Saga Elite: your payment proof for order ${orderId} was rejected. ${payment.rejectionReason} Please submit an updated receipt within 24 hours to avoid cancellation.`,
       });
     } catch (whatsAppError) {
-      console.error("Failed to send payment rejection WhatsApp message:", whatsAppError);
+      logger.error("Failed to send payment rejection WhatsApp message", { whatsAppError });
     }
   }
 
@@ -746,10 +747,27 @@ const verifyPayment = catchAsync(async (req, res, next) => {
   });
 });
 
+const getMyPendingPayments = catchAsync(async (req, res) => {
+  const userId = req.userInfo._id;
+  const payments = await ManualPayment.find({
+    userId,
+    status: { $in: ["pending_payment", "proof_submitted"] },
+  })
+    .populate("orderId", "totalAmount items status createdAt paymentMethod")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: { payments },
+  });
+});
+
 module.exports = {
   generateReference,
   submitProof,
   getMyPaymentStatus,
+  getMyPendingPayments,
   getPendingPayments,
   getPaymentById,
   verifyPayment,

@@ -1,339 +1,274 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+// eslint-disable-next-line no-unused-vars -- `motion.*` JSX is used in this file
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  ShoppingCart,
-  User,
-  Menu,
-  LogOut,
-  Settings,
-  X,
+  ChevronRight,
   Heart,
-  Shield,
-  Package
+  LogOut,
+  Menu,
+  Search,
+  ShoppingBag,
+  User,
+  X,
+  Dot,
 } from "lucide-react";
 
-import { useDispatch, useSelector } from "react-redux";
 import { logoutUserAction } from "@/store/auth-slice";
-import { getAllDrops } from "@/store/admin/drop-slice";
-import { toast } from "@/hooks/use-toast";
-import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
+import { QuickActions } from "@/components/landing/LandingSections";
 
-const computeCountdown = (targetDate) => {
-  if (!targetDate) {
-    return {
-      days: "00",
-      hours: "00",
-      minutes: "00",
-      seconds: "00",
-    };
-  }
+const AnnouncementBar = ({ items }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const diff = targetDate - new Date();
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [items]);
 
-  if (diff <= 0) {
-    return {
-      days: "00",
-      hours: "00",
-      minutes: "00",
-      seconds: "00",
-    };
-  }
+  return (
+    <div className="bg-primary text-[#FAF7F2] text-center text-xs py-1.5">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {items[currentIndex]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
 
-  return {
-    days: String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, "0"),
-    hours: String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, "0"),
-    minutes: String(Math.floor((diff / 1000 / 60) % 60)).padStart(2, "0"),
-    seconds: String(Math.floor((diff / 1000) % 60)).padStart(2, "0"),
-  };
+
+const AnimatedBadge = ({ count }) => {
+  if (!count || count <= 0) return null;
+  return (
+    <span className="absolute -top-2 -right-2 bg-sale text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full grid place-items-center">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
 };
 
 const MainHeader = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const homePath = "/shopping/home";
+
   const isAdminView = location.pathname.startsWith("/admin");
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  const userMenuRef = useRef(null);
+  const [megaOpen, setMegaOpen] = useState(null);
+  const megaCloseTimer = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
 
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
-  const { items: wishlistItems } =
-    useSelector((state) => state.cart.wishlist || { items: [] });
-
-  const { drops } = useSelector((state) => state.drop);
+  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
 
   const cartCount = totalQuantity || 0;
   const wishlistCount = wishlistItems?.length || 0;
 
-  const [nextDrop, setNextDrop] = useState(null);
-
-  const [countdown, setCountdown] = useState({
-    days: "00",
-    hours: "00",
-    minutes: "00",
-    seconds: "00",
-  });
-
   useEffect(() => {
-    if (!isAdminView && drops.length === 0) {
-      dispatch(getAllDrops());
-    }
-  }, [dispatch, isAdminView, drops.length]);
-
-  useEffect(() => {
-    if (!isAdminView && drops.length > 0) {
-      const upcoming = [...drops]
-        .filter((d) => new Date(d.releaseDate) > new Date())
-        .sort(
-          (a, b) =>
-            new Date(a.releaseDate) - new Date(b.releaseDate)
-        );
-
-      setNextDrop(upcoming[0] || null);
-    }
-  }, [drops, isAdminView]);
-
-  useEffect(() => {
-    if (!nextDrop?.releaseDate) return;
-
-    const timer = setInterval(() => {
-      setCountdown(
-        computeCountdown(
-          new Date(nextDrop.releaseDate)
-        )
-      );
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [nextDrop]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(e.target)
-      ) {
-        setUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
-
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const handleLogout = async () => {
-    setUserMenuOpen(false);
-
     try {
       await dispatch(logoutUserAction()).unwrap();
-
-      toast({
-        title: "Signed out",
-        description: "See you next time.",
-        variant: "success",
-      });
-
       navigate("/auth/login");
     } catch (err) {
-      toast({
-        title: "Logout failed",
-        description:
-          err?.message || "Please try again.",
-        variant: "destructive",
-      });
+      console.error(err);
     }
+  };
+
+  const navItems = useMemo(
+    () => [
+      { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies", children: ["Dresses", "Tops", "Bottoms", "Sarees", "Lingerie", "Accessories"] },
+      { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents", children: ["Shirts", "Trousers", "Casual", "Formal", "Accessories"] },
+      { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
+      { key: "sale", label: "Sale", to: "/shopping/product-list?sale=true", accent: "sale", children: ["Ladies' Sale", "Gents' Sale", "Unisex Sale", "Up to 70% Off"] },
+      { key: "newin", label: "New In", to: "/shopping/product-list?sort=newest", accent: "new" },
+    ],
+    []
+  );
+
+  const openMega = (key) => {
+    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
+    setMegaOpen(key);
+  };
+  const closeMega = () => {
+    megaCloseTimer.current = setTimeout(() => setMegaOpen(null), 200);
   };
 
   if (isAdminView) {
     return (
-      <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-800 bg-[#0a0a0a] px-8">
-        <div className="flex flex-1 items-center gap-6">
-          <div className="lg:hidden text-[#D4AF37]">
-            <Menu className="h-6 w-6 cursor-pointer" />
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center absolute left-1/2 -translate-x-1/2">
-          <h1 className="text-xl font-extrabold tracking-[0.2em] text-white font-serif">
-            SE <span className="text-[#D4AF37]">ADMIN</span>
-          </h1>
-
-          <p className="text-[10px] tracking-[0.3em] text-[#D4AF37]/70 mt-1">
-            BACK OFFICE PANEL
-          </p>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <NotificationsDropdown />
-
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-end">
-              <span className="text-sm font-semibold text-white">
-                {user?.userName || "Admin"}
-              </span>
-
-              <span className="text-[10px] text-[#D4AF37] px-2 py-0.5 rounded-full bg-[#D4AF37]/10 mt-1 uppercase">
-                Admin
-              </span>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-red-900/20 text-red-500 border border-red-900/50"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
+      <header className="h-20 flex justify-between items-center px-6 border-b">
+        <h2>Admin Panel</h2>
+        <button onClick={handleLogout}>
+          <LogOut />
+        </button>
       </header>
     );
   }
 
   return (
     <>
-      {nextDrop && (
-        <div className="bg-[#D4AF37] text-black text-xs font-bold py-2 px-4 text-center">
-          NEXT DROP: {nextDrop.name.toUpperCase()} LIVES IN{" "}
-          {countdown.days}d {countdown.hours}h{" "}
-          {countdown.minutes}m {countdown.seconds}s
-        </div>
-      )}
+      <AnnouncementBar
+        items={[
+          "Free delivery on orders over LKR 2,000",
+          "Easy 14-day returns — no questions asked",
+          "New arrivals every Friday — Ladies' collection updated",
+        ]}
+      />
 
-      <header className="sticky top-0 z-40 w-full bg-black text-white border-b border-[#D4AF37]/20">
-        <div className="container mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
+      <header role="banner" className="sticky top-0 z-50">
+        <div className={`bg-background border-b border-border transition-all duration-300 ${scrolled ? "py-2" : "py-3"}`}>
+          <div className="relative w-full px-6 flex items-center justify-between gap-3">
+            <div className="hidden md:block">
+              <Link to={homePath} className="flex items-center gap-3">
+                <img src="/LOGO.png" alt="Saga Elite" className="h-9 w-9 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <div className="hidden sm:block">
+                  <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+                  <p className="text-[10px] text-[#99907c]">Rare Fit. Forever.</p>
+                </div>
+              </Link>
+            </div>
 
-          <div className="md:hidden">
-            <button onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen
-                ? <X className="w-6 h-6"/>
-                : <Menu className="w-6 h-6"/>}
+            <Link to={homePath} className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <img src="/LOGO.png" alt="Saga Elite" className="h-6 w-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <p className="font-display text-[18px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-7 text-[13px]">
+              {navItems.map((item) => (
+                <div
+                  key={item.key}
+                  onMouseEnter={() => item.children && openMega(item.key)}
+                  onMouseLeave={closeMega}
+                  className="relative"
+                >
+                  <Link
+                    to={item.to}
+                    className={`pb-1 border-b-2 border-transparent hover:border-[#C9A96E] transition-all ${item.accent === "sale" ? "text-sale" : item.accent === "new" ? "text-new" : "text-[#2C2C2A]"}`}
+                  >
+                    {item.label} {item.key === "sale" ? <Dot className="inline h-4 w-4 text-sale" /> : null}
+                  </Link>
+                </div>
+              ))}
+            </nav>
+
+            <div className="hidden md:flex items-center gap-4">
+              <button aria-label="Open search" onClick={() => setSearchOpen((prev) => !prev)} className="text-[#2C2C2A] hover:text-primary transition">
+                <Search className="h-5 w-5" />
+              </button>
+              <Link to="/shopping/wishlist" className="relative text-[#2C2C2A] hover:text-primary">
+                <Heart className="h-5 w-5" />
+                <AnimatedBadge count={wishlistCount} />
+              </Link>
+              <Link to="/shopping/cart" className="relative text-[#2C2C2A] hover:text-primary">
+                <ShoppingBag className="h-5 w-5" />
+                <AnimatedBadge count={cartCount} />
+              </Link>
+              <div className="relative">
+                <button aria-label="Account menu" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#2C2C2A] hover:text-primary">
+                  <User className="h-5 w-5" />
+                </button>
+                {userMenuOpen ? (
+                  <div className="absolute right-0 mt-3 w-44 rounded-lg border border-border bg-background shadow-lg p-2 z-50 text-sm">
+                    {user ? (
+                      <>
+                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/shopping/orders">My Orders</Link>
+                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/shopping/wishlist">Wishlist</Link>
+                        <button className="w-full text-left px-3 py-2 hover:bg-surface rounded text-sale" onClick={handleLogout}>Sign Out</button>
+                      </>
+                    ) : (
+                      <>
+                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/auth/login">Sign In</Link>
+                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/auth/register">Register</Link>
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <button
+              className="md:hidden p-2"
+              onClick={() => setMobileOpen((prev) => !prev)}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            >
+              {mobileOpen ? <X /> : <Menu />}
             </button>
           </div>
-
-          <Link to="/shopping/home" className="flex items-center gap-3">
-            <img
-              src="/LOGO.png"
-              alt="Saga Elite Logo"
-              className="h-12 w-12 rounded-md"
-            />
-
-            <div className="hidden md:flex flex-col">
-              <span className="font-bold text-xl text-[#D4AF37] uppercase">
-                Saga Elite
-              </span>
-
-              <span className="text-[10px] text-gray-400 uppercase">
-                Rare Fit Forever
-              </span>
-            </div>
-          </Link>
-
-          <nav className="hidden md:flex gap-8 uppercase text-sm">
-            <Link to="/shopping/home">Home</Link>
-            <Link to="/shopping/product-list">Products</Link>
-            <Link to="/shopping/product-list?category=drops">
-              Drops
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-6">
-            <NotificationsDropdown />
-
-            <Link to="/shopping/wishlist" className="relative">
-              <Heart className="w-6 h-6"/>
-              {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-            <Link to="/shopping/cart" className="relative">
-              <ShoppingCart className="w-6 h-6"/>
-              <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                {cartCount}
-              </span>
-            </Link>
-
-            <div className="relative" ref={userMenuRef}>
-              <button onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                <User className="w-6 h-6"/>
-              </button>
-
-              {userMenuOpen && (
-                <div className="absolute right-0 mt-3 w-52 bg-[#0a0a0a] border border-[#D4AF37]/20 rounded shadow-xl">
-
-                  {user?.role === "admin" && (
-                    <Link
-                      to="/admin/dashboard"
-                      className="flex items-center gap-3 px-4 py-2"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Shield className="w-4 h-4"/>
-                      Admin Panel
-                    </Link>
-                  )}
-
-                  <Link
-                    to="/shopping/account"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <Settings className="w-4 h-4"/>
-                    My Account
-                  </Link>
-
-                  <Link
-                    to="/shopping/orders"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <Package className="w-4 h-4"/>
-                    Order History
-                  </Link>
-
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4"/>
-                    Sign Out
-                  </button>
-
-                </div>
-              )}
-            </div>
-          </div>
         </div>
+        <AnimatePresence>
+          {searchOpen ? (
+            <motion.div initial={{ y: -16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -16, opacity: 0 }} className="border-b border-border bg-background">
+              <div className="w-full px-6 py-3">
+                <input
+                  autoFocus
+                  type="search"
+                  placeholder="Search products..."
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-[#C9A96E]"
+                />
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
 
-        {menuOpen && (
-          <div className="md:hidden bg-[#0a0a0a] px-6 py-4 flex flex-col gap-4">
-            <Link to="/shopping/home">Home</Link>
-            <Link to="/shopping/product-list">Products</Link>
-            <Link to="/shopping/product-list?category=drops">
-              Drops
-            </Link>
-
-            {user?.role === "admin" && (
-              <Link to="/admin/dashboard">
-                Admin Panel
-              </Link>
-            )}
+        {megaOpen ? (
+          <div className="hidden md:block border-t-2 border-primary bg-background shadow-sm" onMouseEnter={() => openMega(megaOpen)} onMouseLeave={closeMega}>
+            <div className="w-full px-6 py-5 grid grid-cols-3 gap-6">
+              {(navItems.find((n) => n.key === megaOpen)?.children || []).map((entry) => (
+                <Link key={entry} to="/shopping/product-list" className="text-sm text-[#2C2C2A] hover:text-primary inline-flex items-center">
+                  {entry} <ChevronRight className="h-4 w-4 ml-1" />
+                </Link>
+              ))}
+            </div>
           </div>
-        )}
+        ) : null}
       </header>
+
+      <AnimatePresence>
+        {mobileOpen ? (
+          <motion.aside
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-y-0 left-0 w-[84%] max-w-[320px] z-[60] bg-background border-r border-border p-5 md:hidden overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <Link to={homePath} className="flex items-center gap-3">
+                <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+              </Link>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="text-[#e5e2e1]"><X /></button>
+            </div>
+            <div className="space-y-2">
+              {navItems.map((item) => (
+                <Link key={item.key} to={item.to} className="block rounded-lg px-3 py-2 hover:bg-surface">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-8 pt-4 border-t border-border">
+              <QuickActions />
+            </div>
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 };

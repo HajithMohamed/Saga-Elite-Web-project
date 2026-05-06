@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const unwrapAxiosError = (error) => {
   const serverMsg = error?.response?.data?.message;
@@ -287,8 +286,9 @@ const authSlice = createSlice({
       })
       .addCase(loginUserAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.success ? action.payload.data : null;
-        state.isAuthenticated = action.payload.success;
+        const isSuccess = action.payload.success || action.payload.status === "success";
+        state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
+        state.isAuthenticated = !!isSuccess;
       })
       .addCase(loginUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -356,8 +356,9 @@ const authSlice = createSlice({
       })
       .addCase(googleSignInAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignInAction.rejected, (state) => {
         state.isLoading = false;
@@ -370,8 +371,9 @@ const authSlice = createSlice({
       })
       .addCase(googleSignUpAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignUpAction.rejected, (state) => {
         state.isLoading = false;
@@ -416,8 +418,9 @@ const authSlice = createSlice({
       })
       .addCase(registerGuestAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.success ? action.payload.data : null;
-        state.isAuthenticated = action.payload.success;
+        const isSuccess = action.payload.success || action.payload.status === "success";
+        state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
+        state.isAuthenticated = !!isSuccess;
       })
       .addCase(registerGuestAction.rejected, (state) => {
         state.isLoading = false;

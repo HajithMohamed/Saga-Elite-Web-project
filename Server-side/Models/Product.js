@@ -82,8 +82,42 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Unisex", "Boys", "Girls"],
+      enum: ["Ladies", "Gents", "Unisex"],
       required: true,
+    },
+
+    categoryPath: {
+      type: String,
+      trim: true,
+      description: "E.g., Ladies > Dresses > Midi",
+    },
+
+    tags: [{
+      type: String,
+      trim: true,
+    }],
+
+    arrivedAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    relatedProductIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }],
+    trendScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isDeal: {
+      type: Boolean,
+      default: false,
+    },
+    dealEndsAt: {
+      type: Date,
+      default: null,
     },
 
     drop: {
@@ -96,6 +130,14 @@ const productSchema = new mongoose.Schema(
     basePrice: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    originalPrice: {
+      type: Number,
+      min: 0,
+    },
+    salePrice: {
+      type: Number,
       min: 0,
     },
 
@@ -164,6 +206,22 @@ const productSchema = new mongoose.Schema(
    Index Optimization
 =================================*/
 productSchema.index({ drop: 1, isActive: 1 });
+productSchema.index({ 
+  name: "text", 
+  category: "text", 
+  tags: "text", 
+  brand: "text",
+  categoryPath: "text" 
+}, {
+  weights: {
+    name: 10,
+    category: 5,
+    tags: 5,
+    brand: 3,
+    categoryPath: 2
+  },
+  name: "productSearchIndex"
+});
 
 /* ===============================
    Slug Generation & Stock Calc
@@ -180,6 +238,12 @@ productSchema.pre("save", function () {
       (sum, variant) => sum + variant.stock,
       0
     );
+  }
+  if (typeof this.originalPrice !== "number") {
+    this.originalPrice = this.basePrice;
+  }
+  if (typeof this.salePrice !== "number") {
+    this.salePrice = Math.max(0, Math.round(this.basePrice * (100 - (this.discountPercent || 0)) / 100));
   }
   
 });

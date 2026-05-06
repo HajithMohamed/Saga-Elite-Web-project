@@ -13,8 +13,24 @@ const isTransientError = (error) => {
 const uploadToCloudinary = (buffer, folder, mimetype = "image/jpeg", retries = 3) => {
     return new Promise((resolve, reject) => {
         const attempt = (attemptsLeft) => {
+            const isImage = String(mimetype || "").startsWith("image/");
             const uploadStream = cloudinary.uploader.upload_stream(
-                { folder, resource_type: "auto", timeout: 60000 },
+                {
+                    folder,
+                    resource_type: isImage ? "image" : "auto",
+                    timeout: 60000,
+                    transformation: isImage
+                        ? [
+                            {
+                                width: 2000,
+                                height: 2000,
+                                crop: "limit",
+                                quality: "auto:good",
+                                fetch_format: "auto",
+                            },
+                        ]
+                        : undefined,
+                },
                 (error, result) => {
                     if (error) {
                         if (attemptsLeft > 0 && isTransientError(error)) {

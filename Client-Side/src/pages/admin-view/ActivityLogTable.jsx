@@ -1,43 +1,114 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
+import { Search, ScrollText } from "lucide-react";
+import { containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
+import { MethodBadge } from "@/components/admin-components/_shared/StatusBadge";
+import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
+import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 
 const ActivityLogTable = () => {
   const { activityLogs, logsLoading } = useSelector((s) => s.superAdmin);
+  const [q, setQ] = useState("");
 
-  if (logsLoading) return <div className="text-center py-16 text-gray-400 text-sm animate-pulse">Loading logs…</div>;
-  if (!activityLogs.length) return <div className="text-center py-16 text-gray-400 text-sm">No activity logs found.</div>;
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return activityLogs;
+    return activityLogs.filter((log) => {
+      const email = (log.adminId?.email || "").toLowerCase();
+      const action = (log.action || "").toLowerCase();
+      const route = (log.route || "").toLowerCase();
+      return email.includes(s) || action.includes(s) || route.includes(s);
+    });
+  }, [activityLogs, q]);
+
+  if (logsLoading) {
+    return (
+      <div className="mt-6 overflow-x-auto rounded-[20px] border border-white/10">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <SkeletonRow key={i} colSpan={4} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (!activityLogs.length) {
+    return (
+      <EmptyState
+        icon={ScrollText}
+        title="No activity logs"
+        subtitle="Privileged actions will appear here once admins use the system."
+      />
+    );
+  }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100 mt-6">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Date</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Admin Email</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Action</th>
-            <th className="text-left px-5 py-3 font-medium text-gray-500">Method & Route</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50 bg-white">
-          {activityLogs.map((log) => (
-            <tr key={log._id} className="hover:bg-gray-50/60 transition-colors">
-              <td className="px-5 py-4 text-gray-500 whitespace-nowrap">
-                {new Date(log.createdAt).toLocaleString("en-GB")}
-              </td>
-              <td className="px-5 py-4 font-medium text-gray-900">
-                {log.adminId?.email || "Unknown Admin"}
-              </td>
-              <td className="px-5 py-4 text-gray-700">{log.action}</td>
-              <td className="px-5 py-4">
-                <span className="inline-flex px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs font-mono mr-2">
-                  {log.method}
-                </span>
-                <span className="text-xs text-gray-400 font-mono">{log.route}</span>
-              </td>
+    <div className="mt-6 space-y-4">
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Filter by email, action, or route…"
+          className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+        />
+      </div>
+
+      {!filtered.length ? (
+        <p className="text-sm text-gray-500">No logs match your search.</p>
+      ) : null}
+
+      <div className="overflow-x-auto rounded-[20px] border border-white/10">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <motion.tbody
+            className="bg-[#0b0b0b]"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {filtered.map((log) => (
+              <motion.tr
+                key={log._id}
+                variants={itemVariants}
+                className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
+              >
+                <td className="whitespace-nowrap px-4 py-3 text-[#99907c] se-mono text-[10px]">
+                  {new Date(log.createdAt).toLocaleString("en-GB")}
+                </td>
+                <td className="px-4 py-3 font-medium text-[#e5e2e1] se-body text-sm">
+                  {log.adminId?.email || "Unknown Admin"}
+                </td>
+                <td className="px-4 py-3 text-[#d0c5af] se-body text-sm">{log.action}</td>
+                <td className="px-4 py-3">
+                  <MethodBadge method={log.method} />
+                  <span className="ml-2 text-xs se-mono text-[#99907c]">{log.route}</span>
+                </td>
+              </motion.tr>
+            ))}
+          </motion.tbody>
+        </table>
+      </div>
     </div>
   );
 };

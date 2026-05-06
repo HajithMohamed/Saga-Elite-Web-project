@@ -9,6 +9,7 @@ import {
   submitReview,
   voteReviewHelpful,
   deleteReview,
+  flagReview,
 } from "@/store/reviewSlice";
 import { fetchUserOrders } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
@@ -115,6 +116,22 @@ const ReviewList = ({ productId, initialStats }) => {
     }
   };
 
+  const handleFlag = async (reviewId, reason) => {
+    try {
+      await dispatch(flagReview({ reviewId, reason })).unwrap();
+      toast({
+        title: "Review reported",
+        description: "Thank you for your report. Our team will review it shortly.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to report",
+        description: error || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <RatingSummary
@@ -184,6 +201,7 @@ const ReviewList = ({ productId, initialStats }) => {
               isOwnReview={review.userId?._id === currentUserId}
               currentUserId={currentUserId}
               onDelete={handleDelete}
+              onFlag={handleFlag}
             />
           ))}
         </div>

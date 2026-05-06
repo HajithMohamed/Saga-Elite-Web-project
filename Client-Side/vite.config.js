@@ -1,37 +1,49 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from "path"
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  // load .env from the workspace root so VITE_* vars are shared with the server .env
-  envDir: '../',
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    // allow Vite to move to the next free local port when 5173 is already in use
-    strictPort: false,
-    hmr: {
-      host: 'localhost',
-      protocol: 'ws',
+export default defineConfig(({ mode }) => {
+  // load env from workspace root and current dir
+  const rootEnv = loadEnv(mode, path.resolve(__dirname, '..'), '')
+  const localEnv = loadEnv(mode, __dirname, '')
+  const backendTarget =
+    process.env.VITE_BACKEND_TARGET ||
+    localEnv.VITE_BACKEND_TARGET ||
+    rootEnv.VITE_BACKEND_TARGET ||
+    'http://127.0.0.1:5001'
+
+  return {
+    plugins: [react()],
+    envDir: '../',
+    server: {
+      host: '0.0.0.0',
+      port: 5173,
+      strictPort: false,
+      hmr: {
+        host: 'localhost',
+        protocol: 'ws',
+      },
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      },
+      proxy: {
+        '/api/v1/': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
+        '/socket.io': {
+          target: backendTarget,
+          changeOrigin: true,
+          ws: true,
+        },
+      },
     },
-    watch: {
-      usePolling: true,
-      interval: 1000,
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
-    proxy: {
-      '/api/v1/': {
-        target: 'http://backend:5001',
-        changeOrigin: true,
-      }
-    }
-  },
-  resolve : {
-    alias : {
-      "@":path.resolve(__dirname,"./src"),
-      // Reuse the Socket.IO client bundle already available from the installed socket.io package.
-      "socket.io-client":path.resolve(__dirname,"../node_modules/socket.io/client-dist/socket.io.esm.min.js")
-    }
   }
 })

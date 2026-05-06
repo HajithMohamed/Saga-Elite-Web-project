@@ -16,28 +16,27 @@ const {
   updateImage,
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const { imageUpload, receiptUpload } = require("../Middlewares/multer-middleware");
 const {
-  imageUpload,
-  receiptUpload,
-} = require("../Middlewares/multer-middleware");
+  validateObjectIdParam,
+  validateImageUploadRequest,
+  validateImageReorder,
+  validateDeleteAllImages,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
-/* ==============================
-   Upload (admin only)
-============================== */
 router.post(
   "/upload-image",
   authMiddleware,
   adminMiddleware,
+  requirePermission("products"),
   imageUpload.array("images", 10),
-  uploadImages,
+  validateImageUploadRequest,
+  uploadImages
 );
 
-/* ==============================
-   Upload Receipt Image (Users)
-============================== */
 router.post(
   "/upload-receipt",
   authMiddleware,
@@ -45,38 +44,27 @@ router.post(
   uploadReceiptImage
 );
 
-/* ==============================
-   Update Image (admin only)
-============================== */
 router.patch(
   "/update-image/:id",
   authMiddleware,
   adminMiddleware,
+  requirePermission("products"),
   imageUpload.single("image"),
-  updateImage,
+  validateObjectIdParam("id", "image id"),
+  updateImage
 );
 
-/* ==============================
-   Fetch images — entity-specific
-============================== */
 router.get("/get-product-images/:id", getProductImages);
 router.get("/get-drop-images/:id", getDropImages);
 router.get("/get-review-images/:id", getReviewImages);
-
-/* ==============================
-   Fetch images — system (public)
-============================== */
 router.get("/get-hero-images", getHeroImages);
 router.get("/get-ad-images", getAdImages);
 router.get("/get-logo-images", getLogoImages);
 router.get("/get-category-logo-images", getCategoryLogoImages);
 
-/* ==============================
-   Admin actions
-============================== */
-router.patch("/set-primary/:id", authMiddleware, adminMiddleware, setPrimaryImage);
-router.delete("/delete-image/:id", authMiddleware, adminMiddleware, deleteImage);
-router.delete("/delete-all-images", authMiddleware, adminMiddleware, deleteAllImages);
-router.patch("/reorder-images", authMiddleware, adminMiddleware, reorderImages);
+router.patch("/set-primary/:id", authMiddleware, adminMiddleware, requirePermission("products"), validateObjectIdParam("id", "image id"), setPrimaryImage);
+router.delete("/delete-image/:id", authMiddleware, adminMiddleware, requirePermission("products"), deleteImage);
+router.delete("/delete-all-images", authMiddleware, adminMiddleware, requirePermission("products"), validateDeleteAllImages, deleteAllImages);
+router.patch("/reorder-images", authMiddleware, adminMiddleware, requirePermission("products"), validateImageReorder, reorderImages);
 
 module.exports = router;

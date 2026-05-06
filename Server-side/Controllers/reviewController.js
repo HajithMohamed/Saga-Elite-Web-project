@@ -6,6 +6,7 @@ const User = require("../Models/User");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 
 const normalizeNumber = (value, fallback) => {
@@ -303,6 +304,34 @@ const voteHelpful = catchAsync(async (req, res, next) => {
   });
 });
 
+const flagReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { reason } = req.body;
+  const userId = req.userInfo?._id;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (review.userId.toString() === userId.toString()) {
+    return next(new AppError("You cannot flag your own review", 400));
+  }
+
+  review.isFlagged = true;
+  review.flagReason = reason || "Inappropriate content";
+  await review.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Review flagged successfully",
+  });
+});
+
 const deleteReview = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
   const userId = req.userInfo?._id;
@@ -316,9 +345,7 @@ const deleteReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  const isAdmin = ["admin", "super_admin", "superadmin"].includes(
-    req.userInfo?.role
-  );
+  const isAdmin = isAdminRole(req.userInfo?.role);
 
   if (!isAdmin && review.userId.toString() !== userId.toString()) {
     return next(new AppError("You do not have permission to delete this review", 403));
@@ -393,12 +420,23 @@ const updateReview = catchAsync(async (req, res, next) => {
 
 const getAllReviews = catchAsync(async (req, res, next) => {
   const status = req.query.status || "pending";
+  const search = req.query.search || "";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
   const filter = status ? { status } : {};
+
+  if (search) {
+    const products = await Product.find({ name: { $regex: search, $options: "i" } }).select("_id");
+    const users = await User.find({ email: { $regex: search, $options: "i" } }).select("_id");
+
+    filter.$or = [
+      { productId: { $in: products.map((p) => p._id) } },
+      { userId: { $in: users.map((u) => u._id) } },
+    ];
+  }
 
   if (countOnly) {
     const totalReviews = await Review.countDocuments(filter);
@@ -414,7 +452,7 @@ const getAllReviews = catchAsync(async (req, res, next) => {
 
   const [reviews, totalReviews] = await Promise.all([
     Review.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ isFlagged: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate("productId", "name slug")
@@ -467,12 +505,6 @@ const moderateReview = catchAsync(async (req, res, next) => {
     await review.save({ validateBeforeSave: false });
   }
 
-  res.status(200).json({
-    success: true,
-    message: "Review moderation updated",
-    review,
-  });
-
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId: review.userId,
     reviewId: review._id,
@@ -487,6 +519,12 @@ const moderateReview = catchAsync(async (req, res, next) => {
     status: review.status,
     productId: review.productId,
     source: "review-moderated",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Review moderation updated",
+    review,
   });
 });
 
@@ -530,6 +568,7 @@ module.exports = {
   moderateReview,
   uploadReviewImages,
   updateReview,
+  flagReview,
   recalculateProductRating,
   getRatingStats,
 };

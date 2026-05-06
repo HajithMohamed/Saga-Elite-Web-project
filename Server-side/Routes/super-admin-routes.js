@@ -3,39 +3,59 @@ const superAdminController = require("../Controllers/super-admin-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireSuperAdmin, requirePermission } = require("../Middlewares/admin-middleware");
 const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
+const paginatedResult = require("../Middlewares/pagination-middleware");
+const Product = require("../Models/Product");
+const {
+  validateObjectIdParam,
+  validateSuperAdminCreate,
+  validateSuperAdminPermissions,
+  validateSuperAdminActivation,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
-/**
- * All routes here are protected by the Super Admin check.
- * This router level enforces authentication AND super admin role,
- * then pushes successful mutate-requests to the adminLogMiddleware.
- */
 router.use(authMiddleware);
 router.use(requireSuperAdmin);
 router.use(adminLogMiddleware);
 
-// --- Super Admin Actions ---
-
-// Manage admin accounts
+// ── Admin Management ────────────────────────────────────────────────
 router.route("/admins")
-  .post(superAdminController.createAdmin)
+  .post(validateSuperAdminCreate, superAdminController.createAdmin)
   .get(superAdminController.listAdmins);
 
-// Update admin permissions
-router.patch("/admins/:id/permissions", superAdminController.updateAdminPermissions);
+router.patch(
+  "/admins/:id/permissions",
+  validateObjectIdParam("id", "admin id"),
+  validateSuperAdminPermissions,
+  superAdminController.updateAdminPermissions
+);
 
-// Deactivate/activate an existing admin
-router.patch("/admins/:id/deactivate", superAdminController.toggleAdminActiveStatus);
+router.patch(
+  "/admins/:id/role",
+  validateObjectIdParam("id", "admin id"),
+  superAdminController.updateAdminRole
+);
 
-// View all combined activity logs across the platform
+router.patch(
+  "/admins/:id/deactivate",
+  validateObjectIdParam("id", "admin id"),
+  validateSuperAdminActivation,
+  superAdminController.toggleAdminActiveStatus
+);
+
+// ── Logs ────────────────────────────────────────────────────────────
 router.get("/logs", superAdminController.getActivityLogs);
+router.get(
+  "/admins/:id/logs",
+  validateObjectIdParam("id", "admin id"),
+  superAdminController.getAdminLogs
+);
 
-// Get system stats
+// ── System Stats ────────────────────────────────────────────────────
 router.get("/stats", superAdminController.getSystemStats);
 
-// Routes that regular admins can access based on permissions
-router.get("/products", requirePermission("products"), require("../Controllers/product-controller").getAllProducts);
+// ── Proxy Routes (super admin can access all resources) ─────────────
+router.get("/products", requirePermission("products"), paginatedResult(Product), require("../Controllers/product-controller").getAllProducts);
 router.get("/orders", requirePermission("orders"), require("../Controllers/order-controller").getAllOrders);
 router.get("/users", requirePermission("users"), require("../Controllers/user-controller").getAllUsers);
 router.get("/notifications", requirePermission("notifications"), require("../Controllers/notification-controller").getAllNotifications);

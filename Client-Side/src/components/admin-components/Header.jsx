@@ -6,7 +6,7 @@ import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown'
 
-const Header = () => {
+const Header = ({ onMenuToggle }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { isLoading } = useSelector((state) => state.auth)
@@ -25,9 +25,14 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-800 bg-black/80 px-8 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-6">
-        <div className="lg:hidden text-[#D4AF37]">
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          className="text-[#D4AF37] lg:hidden"
+          aria-label="Toggle admin sidebar"
+        >
           <Menu className="h-6 w-6 cursor-pointer" />
-        </div>
+        </button>
         <div className="relative group max-w-md w-full">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-hover:text-[#D4AF37] transition-colors" />
           <input 

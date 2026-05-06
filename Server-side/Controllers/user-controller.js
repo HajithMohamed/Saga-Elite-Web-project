@@ -4,6 +4,7 @@ const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
+const { isAdminRole } = require("../Utils/admin-roles");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -342,7 +343,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("You cannot change your own account status here", 400));
   }
 
-  if (user.role !== "user") {
+  if (isAdminRole(user.role)) {
     return next(new AppError("Only customer accounts can be updated from user management", 403));
   }
 
@@ -373,7 +374,7 @@ const deleteAdminUser = catchAsync(async (req, res, next) => {
     return next(new AppError("You cannot delete your own account here", 400));
   }
 
-  if (user.role !== "user") {
+  if (isAdminRole(user.role)) {
     return next(new AppError("Only customer accounts can be deleted from user management", 403));
   }
 

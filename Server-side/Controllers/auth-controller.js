@@ -1,11 +1,14 @@
+const crypto = require("crypto");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const sendMail = require("../Utils/send-mail");
 const generateOtp = require("../Utils/generate-otp");
 const User = require("../Models/User");
+const Guest = require("../Models/Guest");
 const filterObj = require("../Utils/filter-object");
 const createSendToken = require("../Utils/create-send-token");
 const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 
 // how long (in minutes) our one‑time codes stay valid. defaults to 10.
 const otpExpiryMinutes = () => Number(process.env.OTP_EXPIRES_IN || 10);
@@ -85,7 +88,7 @@ const registerUser = catchAsync(async (req, res, next) => {
         });
     } catch (err) {
         // log for debugging, but do not crash the whole request
-        console.error("[registerUser] mail send failed", err);
+        logger.error("Registration verification email failed", { error: err });
         mailError = err;
     }
 
@@ -97,7 +100,11 @@ const registerUser = catchAsync(async (req, res, next) => {
     res.status(201).json({
         status: "success",
         message: responseMessage,
-        data: newUser,
+        data: {
+            _id: newUser._id,
+            email: newUser.email,
+            isVerified: newUser.isVerified,
+        },
         mailError: mailError ? mailError.message : undefined,
     });
 });
@@ -137,11 +144,15 @@ const otpVerify = catchAsync(async(req, res, next)=>{
                 <p>Happy shopping!<br/>The Saga Elite Team</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Welcome to Saga Elite 🎉",
-        html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Welcome to Saga Elite 🎉",
+            html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
+        });
+    } catch (err) {
+        logger.error("Welcome email failed after OTP verification", { error: err });
+    }
     createSendToken(user, 200, res, "Email has been verified.");
 });
 
@@ -233,7 +244,7 @@ const login = catchAsync(async (req, res, next) => {
 
 const logout = catchAsync(async (req, res, next) => {
     res.cookie("token", "loggedout", {
-        expires: new Date(Date.now() + 10 * 100),
+        expires: new Date(0),
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -294,11 +305,15 @@ const changePassword = catchAsync(async (req, res, next) => {
                 <p>If this wasn't you, please contact support immediately.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Updated",
-        html: buildEmailTemplate("Password Updated", passwordChangedBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Updated",
+            html: buildEmailTemplate("Password Updated", passwordChangedBody),
+        });
+    } catch (err) {
+        logger.error("Password change confirmation email failed", { error: err });
+    }
 
     res.status(200).json({
         status: "success",
@@ -335,7 +350,7 @@ const forgotPassword = catchAsync(async(req, res, next)=>{
                             ${otp}
                         </span>
                     </div>
-                    <p>This code is valid for <strong>15 minutes</strong>.</p>
+                    <p>This code is valid for <strong>${otpExpiryMinutes()} minutes</strong>.</p>
                     <p>If you didn't request this, please ignore this email.</p>
                 `;
 
@@ -387,11 +402,18 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
                 <p>If you didn't request this, please ignore this email.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Reset Code",
-        html: buildEmailTemplate("Password Reset Request", resetBody2),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Reset Code",
+            html: buildEmailTemplate("Password Reset Request", resetBody2),
+        });
+    } catch (err) {
+        user.resetPasswordOtp = undefined;
+        user.resetPasswordOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("Failed to send email. Try again later.", 500));
+    }
 
     res.status(200).json({
         status: "success",
@@ -443,7 +465,7 @@ const resetPassword = catchAsync(async(req, res, next)=>{
     if(user.resetPasswordOtp.toString()!== otp.toString()){
         return next(new AppError("Invalid reset code",400));
     }
-    if(user.resetPasswordOtpExpires && user.resetPasswordOtpExpires<Date.now()){
+    if(user.resetPasswordOtpExpires && new Date(user.resetPasswordOtpExpires).getTime() < Date.now()){
         return next(new AppError("Code is expired",400));
     }
 
@@ -512,8 +534,8 @@ const registerGuest = catchAsync(async (req, res, next) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return next(new AppError("User already exists", 400));
 
-    // Generate random 10-char password
-    const temporaryPassword = Math.random().toString(36).slice(-10) + "S1!";
+    // Cryptographically random temp password (16 base64url chars + complexity suffix)
+    const temporaryPassword = crypto.randomBytes(12).toString("base64url") + "S1!";
 
     const newUser = await User.create({
         email,
@@ -545,7 +567,7 @@ const registerGuest = catchAsync(async (req, res, next) => {
             html: buildEmailTemplate("Account Created", registrationBody),
         });
     } catch (err) {
-        console.error("Mail failed", err);
+        logger.error("Guest registration email failed", { error: err });
     }
 
     createSendToken(newUser, 201, res, "Registration successful. Check your email for password.");

@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 export const fetchProductReviewsApi = ({ productId, rating, sort, page, limit }) =>
   axios.get(`${API_BASE}/reviews/product/${productId}`, {
@@ -30,14 +29,20 @@ export const voteReviewHelpfulApi = (reviewId) =>
 export const deleteReviewApi = (reviewId) =>
   axios.delete(`${API_BASE}/reviews/${reviewId}`, { withCredentials: true });
 
-export const fetchAdminReviewsApi = ({ status, page, limit }) =>
+export const fetchAdminReviewsApi = ({ status, page, limit, search }) =>
   axios.get(`${API_BASE}/admin/reviews`, {
     withCredentials: true,
-    params: { status, page, limit },
+    params: { status, page, limit, search },
   });
 
 export const moderateReviewApi = (reviewId, payload) =>
   axios.put(`${API_BASE}/admin/reviews/${reviewId}`, payload, {
+    withCredentials: true,
+    headers: { "Content-Type": "application/json" },
+  });
+
+export const flagReviewApi = (reviewId, reason) =>
+  axios.post(`${API_BASE}/reviews/${reviewId}/flag`, { reason }, {
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });

@@ -51,6 +51,12 @@ const imageSchema = new mongoose.Schema(
       default: "",
     },
 
+    colorTag: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     refId: {
       type: mongoose.Schema.Types.ObjectId,
       required: function () {

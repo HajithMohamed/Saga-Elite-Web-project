@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUserAction } from '@/store/auth-slice';
-import { fetchUserPaymentStatus } from '@/store/manualPaymentSlice'; // Added for payment warning mapping
 import { toast } from '@/hooks/use-toast';
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
 
@@ -13,8 +12,7 @@ const Header = () => {
   const userMenuRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  // manualPayment states
-  const { currentPaymentStatus, activeReference } = useSelector((state) => state.manualPayment || {});
+  const { currentPayment } = useSelector((state) => state.manualPayment || {});
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
@@ -32,18 +30,12 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      dispatch(fetchUserPaymentStatus());
-    }
-  }, [dispatch, user]);
-
   const hasPendingPayment =
-    currentPaymentStatus === 'pending_payment' || currentPaymentStatus === 'proof_submitted';
+    currentPayment?.status === 'pending_payment' || currentPayment?.status === 'proof_submitted';
 
   const computeTimeLeft = () => {
-    if (!activeReference?.expiresAt) return { hours: 0, minutes: 0 };
-    const diff = new Date(activeReference.expiresAt) - new Date();
+    if (!currentPayment?.expiresAt) return { hours: 0, minutes: 0 };
+    const diff = new Date(currentPayment.expiresAt) - new Date();
     if (diff <= 0) return { hours: 0, minutes: 0 };
     return {
       hours: Math.floor(diff / (1000 * 60 * 60)),
@@ -196,7 +188,7 @@ const Header = () => {
                       ⚠️ Pending payment — expires in {hours}h {minutes}m
                     </p>
                     <Link
-                      to={`/payment/manual/${activeReference?.orderId}`}
+                      to={`/shopping/manual-payment/${encodeURIComponent(currentPayment?.slug || currentPayment?.referenceNumber || '')}`}
                       onClick={() => setUserMenuOpen(false)}
                       className="text-[10px] uppercase font-bold text-amber-400 hover:text-amber-300 tracking-wider"
                     >

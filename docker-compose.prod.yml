@@ -1,8 +1,10 @@
 services:
   backend:
     build:
-      context: ./Server-side
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: Server-side/Dockerfile.prod
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: saga_backend_prod
     restart: always
     expose:
@@ -34,21 +36,36 @@ services:
       - BANK_BRANCH=${BANK_BRANCH}
       - MOBILE_BANKING_1_NAME=${MOBILE_BANKING_1_NAME}
       - MOBILE_BANKING_1_NUMBER=${MOBILE_BANKING_1_NUMBER}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     networks:
       - saga_network
 
   frontend:
     build:
-      context: ./Client-Side
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: Client-Side/Dockerfile.prod
       args:
-        - VITE_API_URL=${VITE_API_URL}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        # Default to relative /api/v1 — nginx proxies to backend, so no public backend URL leaks into the bundle.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: saga_frontend_prod
     restart: always
     expose:
       - "80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - saga_network
 

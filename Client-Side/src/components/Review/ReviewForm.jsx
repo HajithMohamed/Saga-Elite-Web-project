@@ -3,8 +3,8 @@ import axios from "axios";
 import { Loader2, Upload, X } from "lucide-react";
 import StarRating from "./StarRating";
 import { toast } from "@/hooks/use-toast";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
+import { compressImageFile } from "@/lib/image-compression";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const ReviewForm = ({ productId, orderId, onSubmit, onCancel, initialValues }) => {
   const fileInputRef = useRef(null);
@@ -37,8 +37,10 @@ const ReviewForm = ({ productId, orderId, onSubmit, onCancel, initialValues }) =
   const titleCount = title.length;
   const contentCount = content.length;
 
-  const handleFiles = (files) => {
-    const incoming = Array.from(files || []);
+  const handleFiles = async (files) => {
+    const incoming = await Promise.all(
+      Array.from(files || []).map((file) => compressImageFile(file))
+    );
     const next = [...images];
 
     incoming.forEach((file) => {
@@ -229,7 +231,9 @@ const ReviewForm = ({ productId, orderId, onSubmit, onCancel, initialValues }) =
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(event) => handleFiles(event.target.files)}
+            onChange={(event) => {
+              void handleFiles(event.target.files);
+            }}
           />
         </div>
 

@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+// eslint-disable-next-line no-unused-vars -- motion JSX
+import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
 import { RefreshCw, Star, Trash2, ArrowUpRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/v1`
-  : "http://localhost:5001/api/v1";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+import { compressImageFile } from "@/lib/image-compression";
+import { AdminPage } from "@/components/admin-components/AdminUI";
+import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
+import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
 
 const sectionConfig = [
   {
@@ -28,7 +31,7 @@ const sectionConfig = [
   {
     key: "category-logo",
     label: "Category Logos",
-    description: "Logos for specific categories (Boys, Girls, Unisex).",
+    description: "Logos for specific categories (Gents, Ladies, Unisex).",
     isCategorized: true,
   },
 ];
@@ -40,12 +43,34 @@ const useSectionState = () => {
   return { images, setImages, uploadQueue, setUploadQueue, loading, setLoading };
 };
 
+function ShimmerImageTile({ src, alt }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative h-44 overflow-hidden bg-neutral-950">
+      {!loaded ? (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-r from-white/0 via-white/15 to-white/0"
+          animate={{ x: ["-100%", "120%"] }}
+          transition={{ repeat: Infinity, duration: 1.8, ease: "linear" }}
+        />
+      ) : null}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={`h-full w-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
+}
+
 const AdminHomeImages = () => {
   const hero = useSectionState();
   const banner = useSectionState();
   const logo = useSectionState();
   const categoryLogo = useSectionState();
   const [globalLoading, setGlobalLoading] = useState(false);
+  const [newImageIds, setNewImageIds] = useState(() => new Set());
   const { toast } = useToast();
 
   const sectionState = {
@@ -90,6 +115,7 @@ const AdminHomeImages = () => {
 
   useEffect(() => {
     refreshAllSections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap
   }, []);
 
   const getSectionSetter = (type) => sectionState[type];
@@ -98,8 +124,20 @@ const AdminHomeImages = () => {
     const section = getSectionSetter(type);
     section.setImages((prev) => [...prev, ...uploaded]);
     section.setUploadQueue([]);
+    const ids = (uploaded || []).map((u) => u._id).filter(Boolean);
+    if (ids.length) {
+      setNewImageIds((prev) => new Set([...prev, ...ids]));
+      window.setTimeout(() => {
+        setNewImageIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+      }, 1600);
+    }
     toast({
       title: `${uploaded.length} ${type === "logo" ? "logo" : "image"} uploaded`,
+      description: "Assets are live in the gallery.",
       variant: "success",
     });
   };
@@ -113,6 +151,7 @@ const AdminHomeImages = () => {
       section.setImages((prev) => prev.filter((item) => item._id !== image._id));
       toast({
         title: "Image deleted",
+        description: "The asset was removed from this section.",
         variant: "success",
       });
     } catch (error) {
@@ -142,6 +181,7 @@ const AdminHomeImages = () => {
       );
       toast({
         title: `Primary ${type} image updated`,
+        description: "Homepage will prefer this asset.",
         variant: "success",
       });
     } catch (error) {
@@ -160,7 +200,8 @@ const AdminHomeImages = () => {
     input.accept = "image/*";
 
     input.onchange = async (event) => {
-      const file = event.target.files?.[0];
+      const originalFile = event.target.files?.[0];
+      const file = await compressImageFile(originalFile);
       if (!file) return;
 
       try {
@@ -181,6 +222,7 @@ const AdminHomeImages = () => {
         );
         toast({
           title: "Image replaced",
+          description: "The tile now shows the new file.",
           variant: "success",
         });
       } catch (error) {
@@ -196,8 +238,17 @@ const AdminHomeImages = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-[#e2e2e2] pb-28 pt-8">
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+    <AdminPage
+      eyebrow="Homepage media"
+      title="Home Images"
+      description="Manage hero, banner, logo, and category image assets with simple controls."
+    >
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full px-0 sm:px-2 lg:px-2"
+      >
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-black uppercase tracking-[0.35em] text-[#D4AF37]">
@@ -207,21 +258,34 @@ const AdminHomeImages = () => {
               Manage hero, banner/ad, and logo system images for the homepage.
             </p>
           </div>
-          <Button
-            variant="secondary"
-            onClick={refreshAllSections}
-            disabled={globalLoading}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh all
-          </Button>
+          <motion.div whileTap={{ scale: 0.97 }}>
+            <Button
+              variant="secondary"
+              onClick={refreshAllSections}
+              disabled={globalLoading}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh all
+            </Button>
+          </motion.div>
         </div>
 
-        <div className="space-y-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-10"
+        >
           {sectionConfig.map((section) => {
             const state = sectionState[section.key];
             return (
-              <section key={section.key} className="rounded-3xl border border-neutral-800 bg-[#111111] p-6 shadow-xl shadow-black/20">
+              <motion.section
+                key={section.key}
+                variants={itemVariants}
+                whileHover={{ y: -2 }}
+                transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                className="rounded-3xl border border-neutral-800 bg-[#111111] p-6 shadow-xl shadow-black/20"
+              >
                 <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-sm uppercase tracking-[0.35em] text-[#d0c5af]">
@@ -245,7 +309,7 @@ const AdminHomeImages = () => {
                   <div className="space-y-4">
                     {section.isCategorized ? (
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        {["Boys", "Girls", "Unisex"].map((catLabel) => (
+                        {["Ladies", "Gents", "Unisex"].map((catLabel) => (
                           <div key={catLabel} className="space-y-2">
                             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
                               {catLabel} Logo
@@ -287,74 +351,97 @@ const AdminHomeImages = () => {
                         Existing uploads
                       </p>
                       {state.loading ? (
-                        <p className="mt-4 text-sm text-gray-400">Loading images…</p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <SkeletonCard />
+                          <SkeletonCard />
+                        </div>
                       ) : state.images.length === 0 ? (
                         <p className="mt-4 text-sm text-gray-400">No images uploaded yet.</p>
                       ) : (
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          {state.images.map((image) => (
-                            <div key={image._id} className="group overflow-hidden rounded-3xl border border-neutral-800 bg-black/50">
-                              <div className="relative h-44 overflow-hidden bg-neutral-950">
-                                <img
-                                  src={image.url}
-                                  alt={image.altText || section.label}
-                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                />
-                                {image.isPrimary && (
-                                  <span className="absolute left-3 top-3 rounded-full bg-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black">
-                                    Primary
-                                  </span>
-                                )}
-                                {image.label && (
-                                  <span className="absolute right-3 top-3 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
-                                    {image.label}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="space-y-2 p-4">
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="truncate text-sm font-semibold text-white">{image.altText || "Uploaded image"}</p>
-                                  <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-gray-400">
-                                    {section.key}
-                                  </span>
+                          <AnimatePresence>
+                            {state.images.map((image) => (
+                              <motion.div
+                                key={image._id}
+                                layout
+                                initial={
+                                  newImageIds.has(image._id)
+                                    ? { scale: 0.85, opacity: 0 }
+                                    : { opacity: 1, scale: 1 }
+                                }
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                                whileHover={{ y: -4 }}
+                                className="group overflow-hidden rounded-3xl border border-neutral-800 bg-black/50"
+                              >
+                                <div className="relative">
+                                  <ShimmerImageTile src={image.url} alt={image.altText || section.label} />
+                                  {image.isPrimary ? (
+                                    <span className="absolute left-3 top-3 z-20 rounded-full bg-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black">
+                                      Primary
+                                    </span>
+                                  ) : null}
+                                  {image.label ? (
+                                    <span className="absolute right-3 top-3 z-20 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                                      {image.label}
+                                    </span>
+                                  ) : null}
                                 </div>
-                                <div className="grid gap-2 sm:grid-cols-3">
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => handleSetPrimary(image, section.key)}
-                                  >
-                                    <Star className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => handleReplace(image, section.key)}
-                                  >
-                                    <ArrowUpRight className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDelete(image, section.key)}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                                <div className="space-y-2 p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="truncate text-sm font-semibold text-white">{image.altText || "Uploaded image"}</p>
+                                    <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-gray-400">
+                                      {section.key}
+                                    </span>
+                                  </div>
+                                  <div className="grid gap-2 sm:grid-cols-3">
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => handleSetPrimary(image, section.key)}
+                                      className="inline-flex items-center justify-center gap-1.5"
+                                      title="Set as primary image"
+                                    >
+                                      <Star className="h-3.5 w-3.5" />
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Primary</span>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => handleReplace(image, section.key)}
+                                      className="inline-flex items-center justify-center gap-1.5"
+                                      title="Replace image file"
+                                    >
+                                      <ArrowUpRight className="h-3.5 w-3.5" />
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Replace</span>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDelete(image, section.key)}
+                                      className="inline-flex items-center justify-center gap-1.5"
+                                      title="Delete image"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Delete</span>
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-              </section>
+              </motion.section>
             );
           })}
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AdminPage>
   );
 };
 

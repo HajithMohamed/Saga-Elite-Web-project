@@ -1,10 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/v1`;
-const ORDER_API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/orders`
-  : "http://localhost:5001/api/orders";
+import { API_V1_URL as API_BASE, ORDERS_API_URL as ORDER_API_BASE } from "@/lib/api";
 
 const loadCartFromStorage = () => {
   if (typeof window === "undefined") return [];

@@ -1,39 +1,47 @@
 import React from "react";
 
 const statusConfig = {
-  pending: { label: "Pending", bg: "#FAEEDA", color: "#854F0B" },
-  processing: { label: "Processing", bg: "#E6F1FB", color: "#185FA5" },
-  shipped: { label: "Shipped", bg: "#EEEDFE", color: "#534AB7" },
-  delivered: { label: "Delivered", bg: "#EAF3DE", color: "#3B6D11" },
-  cancelled: { label: "Cancelled", bg: "#FCEBEB", color: "#A32D2D" },
+  pending: { label: "Pending", bg: "#4d4635", color: "#f2ca50" },
+  pending_payment: { label: "Pending Payment", bg: "#4d4635", color: "#f2ca50" },
+  processing: { label: "Processing", bg: "#f2ca50", color: "#0a0a0a" },
+  verification_pending: {
+    label: "Verification Pending",
+    bg: "#f2ca50",
+    color: "#0a0a0a",
+  },
+  confirmed: { label: "Confirmed", bg: "#f2ca50", color: "#0a0a0a" },
+  proof_submitted: { label: "Proof Submitted", bg: "#f2ca50", color: "#0a0a0a" },
+  shipped: { label: "Shipped", bg: "#e5e2e1", color: "#0a0a0a" },
+  delivered: { label: "Delivered", bg: "#f2ca50", color: "#0a0a0a" },
+  cancelled: { label: "Cancelled", bg: "#1c1b1b", color: "#99907c" },
+  paid: { label: "Paid", bg: "#f2ca50", color: "#0a0a0a" },
+  failed: { label: "Failed", bg: "#1c1b1b", color: "#e5e2e1" },
 };
 
-const statusAliases = {
-  pending_payment: "pending",
-  proof_submitted: "processing",
-  verification_pending: "processing",
-  confirmed: "processing",
-};
+const statusAliases = {};
 
 const StatusBadge = ({ status }) => {
   const normalizedStatus = String(status || "").toLowerCase();
-  const resolvedStatus = statusConfig[normalizedStatus]
-    ? normalizedStatus
-    : statusAliases[normalizedStatus] || "pending";
+  let resolvedStatus = normalizedStatus;
+  if (!statusConfig[normalizedStatus]) {
+    resolvedStatus = statusAliases[normalizedStatus] || "pending";
+  }
   const cfg = statusConfig[resolvedStatus] || statusConfig.pending;
 
   return (
     <span
+      className="se-label uppercase tracking-widest"
       style={{
         background: cfg.bg,
         color: cfg.color,
-        padding: "3px 10px",
-        borderRadius: "20px",
-        fontSize: "12px",
-        fontWeight: 500,
+        padding: "4px 8px",
+        borderRadius: "2px",
+        fontSize: "9px",
+        fontWeight: 600,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
+        border: `1px solid ${cfg.color}30`
       }}
     >
       {cfg.label}

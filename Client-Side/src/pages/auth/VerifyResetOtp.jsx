@@ -1,10 +1,14 @@
-import React, { useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  verifyResetOtpAction,
+  resendResetPasswordOtpAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
-import CommonForm from "@/components/common-components/CommonForm";
-import { verifyOtpFormControls } from "@/config";
-import { verifyResetOtpAction, resendResetPasswordOtpAction } from "@/store/auth-slice";
+import OtpCells from "@/components/auth-components/OtpCells";
+import { Btn, Eyebrow } from "@/components/ui/editorial";
 
 const VerifyResetOtp = () => {
   const location = useLocation();
@@ -12,67 +16,67 @@ const VerifyResetOtp = () => {
   const dispatch = useDispatch();
   const email = location.state?.email;
 
-  const [formData, setFormData] = useState({
-    otp: "",
-  });
-  const [errors, setErrors] = useState({ otp: "" });
+  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const id = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [seconds]);
 
   if (!email) {
     return (
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4 text-[#D4AF37]">Invalid Session</h2>
-        <p className="text-gray-400 mb-6">Please start the forgot password process again.</p>
-        <Link to="/auth/forgot-password" title="Go to Forgot Password">
-          <button className="bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 px-6 rounded shadow">
-            Go Back
-          </button>
+      <div>
+        <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
+        <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
+          Start again,<br />gently.
+        </h1>
+        <p className="mt-5 se-body text-sm text-[#d0c5af] leading-relaxed">
+          We don't have an email on file for this reset. Begin the process again to receive a fresh
+          code.
+        </p>
+        <Link to="/auth/forgot-password" className="mt-8 inline-block">
+          <Btn variant="default" size="lg" iconRight={ArrowRight}>
+            Back to forgot password
+          </Btn>
         </Link>
       </div>
     );
   }
 
-  React.useEffect(() => {
-    if (formData.otp && formData.otp.length < 4) {
-      setErrors(prev => ({ ...prev, otp: "Please enter 4-digit code." }));
-    } else {
-      setErrors(prev => ({ ...prev, otp: "" }));
-    }
-  }, [formData]);
+  const masked = (() => {
+    if (!email.includes("@")) return email;
+    const [name, domain] = email.split("@");
+    if (name.length <= 2) return `${name[0]}***@${domain}`;
+    return `${name[0]}${name[1]}***${name[name.length - 1]}@${domain}`;
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // check for validation errors first
-    if (errors.otp) {
+    if (otp.length < 4) {
       toast({
-        title: "Validation Error",
-        description: errors.otp,
+        title: "Incomplete code",
+        description: "Enter all four digits.",
         variant: "destructive",
       });
       return;
     }
-    if (!formData.otp || formData.otp.length < 4) {
-      toast({
-        title: "Incomplete Code",
-        description: "Please enter the 4-digit code sent to your email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
     try {
-      await dispatch(verifyResetOtpAction({ email, otp: formData.otp })).unwrap();
+      await dispatch(verifyResetOtpAction({ email, otp })).unwrap();
       toast({
-        title: "OTP Verified",
-        description: "You can now set your new password.",
+        title: "Code verified",
+        description: "Now choose a new password.",
         variant: "success",
       });
-      navigate("/auth/set-new-password", { state: { email, otp: formData.otp } });
-    } catch (error) {
+      navigate("/auth/set-new-password", { state: { email, otp } });
+    } catch (err) {
       toast({
-        title: "Verification Failed",
-        description: error || "Invalid or expired OTP",
+        title: "Verification failed",
+        description: err || "That code didn't match.",
         variant: "destructive",
       });
     } finally {
@@ -81,63 +85,79 @@ const VerifyResetOtp = () => {
   };
 
   const handleResend = async () => {
+    setResending(true);
     try {
       await dispatch(resendResetPasswordOtpAction({ email })).unwrap();
       toast({
-        title: "OTP Resent",
-        description: "A new reset code has been sent to your email.",
+        title: "Code resent",
+        description: "A new four-digit code is on its way.",
+        variant: "success",
       });
-    } catch (error) {
+      setSeconds(45);
+    } catch (err) {
       toast({
-        title: "Resend Failed",
-        description: error || "Failed to resend OTP",
+        title: "Couldn't resend",
+        description: err || "Try again in a moment.",
         variant: "destructive",
       });
+    } finally {
+      setResending(false);
     }
   };
 
-  const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans text-center text-2xl tracking-widest";
-  const labelClasses = "text-white";
-  const buttonClasses = "bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow w-full";
-
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-8 text-center text-white">
-        <h1 className="text-3xl font-bold mb-2 text-[#D4AF37]">Verify Reset Code</h1>
-        <p className="text-gray-400">
-          Enter the code sent to <span className="text-white font-medium">{email}</span>
-        </p>
-      </div>
+    <div>
+      <Eyebrow tone="gold" size="md">Reset · step two</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Verify the code.
+      </h1>
+      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+        We sent a four-digit code to{" "}
+        <span className="text-[#e5e2e1]">{masked}</span>. Enter it below to choose a new
+        password.
+      </p>
 
-      <CommonForm
-        formControls={verifyOtpFormControls}
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleSubmit}
-        buttonText="Verify Code"
-        isLoading={isLoading}
-        inputClass={inputClasses}
-        labelClass={labelClasses}
-        buttonClass={buttonClasses}
-        formErrors={errors}
-      />
-
-      <div className="mt-6 text-center text-white text-sm">
-        <p className="text-gray-400">
-          Didn't receive the code?{" "}
-          <button
-            onClick={handleResend}
-            className="text-[#D4AF37] hover:underline font-medium"
-          >
-            Resend
-          </button>
-        </p>
-        <div className="mt-4">
-          <Link to="/auth/login" className="text-gray-400 hover:text-[#D4AF37] transition-colors">
-            Back to Login
-          </Link>
+      <form onSubmit={handleSubmit} className="mt-10 md:mt-12">
+        <div className="flex justify-center">
+          <OtpCells length={4} value={otp} onChange={setOtp} disabled={isLoading} />
         </div>
+
+        <Btn
+          variant="default"
+          size="lg"
+          className="w-full mt-10"
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading || otp.length < 4}
+        >
+          {isLoading ? "Verifying" : "Verify code"}
+        </Btn>
+      </form>
+
+      <div className="mt-8 text-center">
+        {seconds > 0 ? (
+          <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+            Resend in {seconds}s
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {resending ? "Sending" : "Resend the code"}
+          </button>
+        )}
       </div>
+
+      <Link
+        to="/auth/login"
+        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+      >
+        <ArrowLeft size={12} strokeWidth={1.5} />
+        Back to sign in
+      </Link>
     </div>
   );
 };

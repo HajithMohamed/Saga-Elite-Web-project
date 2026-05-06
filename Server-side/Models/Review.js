@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -53,6 +54,16 @@ const reviewSchema = new mongoose.Schema(
       default: 0,
     },
     helpfulVotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    isFlagged: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    flagReason: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -68,11 +79,26 @@ const reviewSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
 reviewSchema.index({ productId: 1, status: 1 });
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+
+reviewSchema.pre("save", function (next) {
+  if (!this.slug) {
+    const idpart = this._id != null ? String(this._id) : `${this.productId}-${Date.now()}`;
+    this.slug = slugify(`review-${idpart}`, { lower: true, strict: true });
+  }
+  next();
+});
 
 module.exports = mongoose.model("Review", reviewSchema);

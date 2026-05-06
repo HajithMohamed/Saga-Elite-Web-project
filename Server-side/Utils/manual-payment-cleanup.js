@@ -3,6 +3,7 @@ const { createNotification } = require("./notification-service");
 const sendEmail = require("./send-mail");
 const buildEmailTemplate = require("./email-template");
 const { cleanPhoneNumber, sendWhatsAppMessage } = require("./whatsapp-service");
+const logger = require("./logger");
 
 let cleanupJobStarted = false;
 
@@ -70,7 +71,7 @@ const markExpiredManualPayments = async () => {
             html: buildExpiryEmail(payment),
           });
         } catch (emailError) {
-          console.error("Failed to send manual payment expiry email:", emailError);
+          logger.error("Failed to send manual payment expiry email", { emailError });
         }
       }
 
@@ -82,7 +83,7 @@ const markExpiredManualPayments = async () => {
             message: `Saga Elite: your payment reference ${payment.referenceNumber} expired because no proof was submitted within 24 hours. Please place a new order if you still want to continue.`,
           });
         } catch (whatsAppError) {
-          console.error("Failed to send manual payment expiry WhatsApp message:", whatsAppError);
+          logger.error("Failed to send manual payment expiry WhatsApp message", { whatsAppError });
         }
       }
     }
@@ -113,7 +114,7 @@ const startManualPaymentCleanupJob = () => {
       await markExpiredManualPayments();
       await pruneExpiredManualPayments();
     } catch (error) {
-      console.error("Manual payment cleanup job failed:", error);
+      logger.error("Manual payment cleanup job failed", { error });
     }
   };
 
@@ -123,7 +124,7 @@ const startManualPaymentCleanupJob = () => {
     try {
       await pruneExpiredManualPayments();
     } catch (error) {
-      console.error("Manual payment prune job failed:", error);
+      logger.error("Manual payment prune job failed", { error });
     }
   }, 24 * 60 * 60 * 1000);
 };

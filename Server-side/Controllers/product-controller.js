@@ -71,8 +71,16 @@ const addProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
         "variants"
     );
@@ -81,16 +89,18 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
-    // Validate Drop ID format and existence
-    if (productData.drop) {
-        if (!mongoose.isValidObjectId(productData.drop)) {
-            return next(new AppError("Invalid drop id", 400));
-        }
+    // Validate Drop ID — required by schema
+    if (!productData.drop) {
+        return next(new AppError("Drop is required", 400));
+    }
 
-        const dropExists = await Drop.exists({ _id: productData.drop });
-        if (!dropExists) {
-            return next(new AppError("Drop not found", 404));
-        }
+    if (!mongoose.isValidObjectId(productData.drop)) {
+        return next(new AppError("Invalid drop id", 400));
+    }
+
+    const dropExists = await Drop.exists({ _id: productData.drop });
+    if (!dropExists) {
+        return next(new AppError("Drop not found", 404));
     }
 
     const existingProduct = await Product.findOne({ artNo: productData.artNo });
@@ -139,8 +149,16 @@ const updateProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
         "isFeatured",
         "isActive",
@@ -250,6 +268,33 @@ const getAdminAnalytics = catchAsync(async (req, res, next) => {
     });
 });
 
+const getLandingProducts = catchAsync(async (req, res) => {
+    const { category, tag, isDeal, limit = 8 } = req.query;
+    const filter = { isActive: true };
+
+    if (category) {
+        filter.category = new RegExp(`^${String(category)}$`, "i");
+    }
+    if (tag) {
+        filter.tags = { $in: [String(tag)] };
+    }
+    if (typeof isDeal !== "undefined") {
+        filter.isDeal = String(isDeal) === "true";
+    }
+
+    const products = await Product.find(filter)
+        .sort({ arrivedAt: -1, createdAt: -1 })
+        .limit(Math.max(1, Number(limit) || 8))
+        .populate("images")
+        .populate("relatedProductIds", "name slug category basePrice salePrice");
+
+    res.status(200).json({
+        success: true,
+        results: products.length,
+        data: products,
+    });
+});
+
 
 /*
 |--------------------------------------------------------------------------
@@ -307,11 +352,83 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Get Recommendations
+|--------------------------------------------------------------------------
+*/
+const getRecommendations = catchAsync(async (req, res, next) => {
+  const { productId, userId } = req.query;
+  let recommendations = [];
+
+  if (productId) {
+    // Contextual: find products in the same category or via relatedProductIds
+    const product = await Product.findById(productId);
+    if (!product) return next(new AppError("Product not found", 404));
+
+    // Combine related products and same category
+    recommendations = await Product.find({
+      $or: [
+        { _id: { $in: product.relatedProductIds } },
+        { category: product.category, _id: { $ne: product._id } }
+      ],
+      isActive: true
+    }).limit(10).populate("images");
+
+  } else {
+    // Fallback: Trending / Bestsellers
+    recommendations = await Product.find({ isActive: true })
+      .sort({ soldCount: -1 })
+      .limit(10)
+      .populate("images");
+  }
+
+  res.status(200).json({
+    status: "success",
+    results: recommendations.length,
+    data: { recommendations },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Instant / Full Search
+|--------------------------------------------------------------------------
+*/
+const searchProducts = catchAsync(async (req, res, next) => {
+  const { q, limit = 10, page = 1 } = req.query;
+  if (!q) return next(new AppError("Search query is required", 400));
+
+  const skip = (page - 1) * limit;
+
+  // MongoDB text search
+  const products = await Product.find(
+    { $text: { $search: q }, isActive: true },
+    { score: { $meta: "textScore" } }
+  )
+    .sort({ score: { $meta: "textScore" } })
+    .skip(Number(skip))
+    .limit(Number(limit))
+    .populate("images");
+
+  const total = await Product.countDocuments({ $text: { $search: q }, isActive: true });
+
+  res.status(200).json({
+    status: "success",
+    results: products.length,
+    total,
+    data: { products },
+  });
+});
+
 module.exports = {
     getAllProducts,
+    getLandingProducts,
     getSingleProduct,
     addProduct,
     updateProduct,
     deleteProduct,
-    getAdminAnalytics
+    getAdminAnalytics,
+    getRecommendations,
+    searchProducts,
 };
