@@ -565,110 +565,48 @@ const BrandPanel = () => {
 
 const AuthLayout = () => {
   const location = useLocation();
-  const isLogin = location.pathname.endsWith("/login") || location.pathname === "/auth";
-  const isRegister = location.pathname.endsWith("/register");
+
+  const IMG_MAP = {
+    "/auth/login":
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=80",
+    "/auth/register":
+      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=900&q=80",
+  };
+
+  const DEFAULT_IMG = "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80";
+  const panelImage = (location.state && location.state.panelImage) || IMG_MAP[location.pathname] || DEFAULT_IMG;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e2e1] se-body flex flex-col">
-      {/* Header marquee */}
-      <div className="relative overflow-hidden bg-[#0e0e0e] border-b border-[#4d4635]/60 py-2">
-        <div className="flex whitespace-nowrap header-marquee-track">
-          {[...HEADER_MARQUEE, ...HEADER_MARQUEE, ...HEADER_MARQUEE].map((item, i) => (
-            <span
-              key={i}
-              className="se-label text-[9px] tracking-[0.32em] text-[#d0c5af] px-6 inline-flex items-center gap-6"
-            >
-              {item}
-              <span className="text-[#574500]">◆</span>
-            </span>
-          ))}
+    <div className="min-h-screen bg-[#0a0a0a] flex">
+      {/* LEFT — editorial image panel (hidden on mobile) */}
+      <div className="hidden md:block md:w-[45%] relative overflow-hidden">
+        <img
+          src={panelImage}
+          alt=""
+          className="w-full h-full object-cover brightness-75"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/80 to-transparent" />
+        <div className="absolute bottom-10 left-10">
+          <img src="/LOGO.png" alt="Saga Elite" className="h-10 w-10 object-contain mb-3"
+               onError={(e) => e.currentTarget.style.display='none'} />
+          <Wordmark size="lg" tagline />
         </div>
       </div>
 
-      {/* Top bar */}
-      <div className="px-5 md:px-10 lg:px-12 py-4 md:py-5 border-b border-[#4d4635]/40 flex items-center justify-between">
-        <Link
-          to="/"
-          className="se-label text-[10px] tracking-[0.28em] text-[#d0c5af] hover:text-[#f2ca50] inline-flex items-center gap-2 transition-colors"
-        >
-          <ArrowLeft size={12} strokeWidth={1.5} />
-          Back to atelier
+      {/* RIGHT — form panel */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 
+                      overflow-y-auto">
+        {/* Mobile logo (only on mobile) */}
+        <Link to="/" className="md:hidden mb-8 flex items-center gap-3">
+          <img src="/LOGO.png" alt="" className="h-8 w-8 object-contain"
+               onError={(e) => e.currentTarget.style.display='none'} />
+          <Wordmark size="md" />
         </Link>
-        <div className="hidden md:flex items-center gap-1 text-[10px] tracking-[0.28em] se-label">
-          <Link
-            to="/auth/login"
-            className={
-              isLogin
-                ? "px-4 py-1 border border-[#f2ca50] text-[#f2ca50]"
-                : "px-4 py-1 border border-transparent text-[#99907c] hover:text-[#e5e2e1]"
-            }
-          >
-            Sign in
-          </Link>
-          <Link
-            to="/auth/register"
-            className={
-              isRegister
-                ? "px-4 py-1 border border-[#f2ca50] text-[#f2ca50]"
-                : "px-4 py-1 border border-transparent text-[#99907c] hover:text-[#e5e2e1]"
-            }
-          >
-            Become a member
-          </Link>
+
+        <div className="w-full max-w-md">
+          <Outlet />
         </div>
       </div>
-
-      {/* Split */}
-      <div className="grid grid-cols-1 md:grid-cols-2 flex-1 min-h-0">
-        <BrandPanel />
-
-        {/* Mobile mini-banner */}
-        <div className="md:hidden bg-[#0e0e0e] border-b border-[#4d4635]/40 px-5 py-7 flex items-center gap-4">
-          <motion.img
-            src="/LOGO.png"
-            alt="Saga Elite"
-            className="h-14 w-14 object-contain shrink-0"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            style={{ filter: "drop-shadow(0 4px 12px rgba(242,202,80,0.2))" }}
-            draggable={false}
-          />
-          <div>
-            <Eyebrow tone="muted" size="xs">Chapter · XIV</Eyebrow>
-            <h2 className="mt-1 se-serif text-[#fafafa] text-2xl leading-tight">
-              Rare fit, forever.
-            </h2>
-          </div>
-        </div>
-
-        {/* Form panel */}
-        <main className="flex items-start md:items-center justify-center px-5 py-10 md:px-12 md:py-16 lg:px-20">
-          <div className="w-full max-w-md bg-[#131313] p-8 md:p-12 border border-[#4d4635]/40 shadow-[0_24px_60px_rgba(0,0,0,0.6)] relative">
-            {/* Invitation Accents */}
-            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[#f2ca50]/40 -translate-x-px -translate-y-px" />
-            <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[#f2ca50]/40 translate-x-px -translate-y-px" />
-            <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[#f2ca50]/40 -translate-x-px translate-y-px" />
-            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[#f2ca50]/40 translate-x-px translate-y-px" />
-            
-            <Outlet />
-          </div>
-        </main>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t border-[#4d4635]/40 px-5 md:px-12 py-5 md:py-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <span className="se-label text-[9px] tracking-[0.32em] text-[#574500]">
-          © Saga Elite · Colombo · MMXXVI
-        </span>
-        <div className="flex flex-wrap items-center gap-3 se-label text-[9px] tracking-[0.3em] text-[#99907c]">
-          <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50]">Privacy</Link>
-          <span className="text-[#4d4635]">·</span>
-          <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50]">Terms</Link>
-          <span className="text-[#4d4635]">·</span>
-          <Link to="/contact" className="hover:text-[#f2ca50]">Contact atelier</Link>
-        </div>
-      </footer>
     </div>
   );
 };

@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
-import { Btn, Eyebrow } from "@/components/ui/editorial";
+import { Btn, Eyebrow, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -101,6 +101,9 @@ const VerifyOtp = () => {
     return `${name[0]}${name[1]}***${name[name.length - 1]}@${domain}`;
   })();
 
+  const steps = ["Register", "Verify", "Done"];
+  const currentStep = 1; // Verify
+
   return (
     <div>
       <Eyebrow tone="gold" size="md">One last step</Eyebrow>
@@ -111,6 +114,20 @@ const VerifyOtp = () => {
         We sent a four-digit code to{" "}
         <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>. Enter it below.
       </p>
+
+      <div className="flex items-center gap-3 mb-8">
+        {steps.map((step, i) => (
+          <React.Fragment key={step}>
+            <div className={`flex items-center gap-2 ${i <= currentStep ? "" : "opacity-30"}`}>
+              <div className={`h-6 w-6 rounded-full border flex items-center justify-center se-mono text-[9px] ${i < currentStep ? 'bg-[#f2ca50] border-[#f2ca50] text-[#1b1c1c]' : i === currentStep ? 'border-[#f2ca50] text-[#f2ca50]' : 'border-[#4d4635] text-[#4d4635]'}`}>
+                {i < currentStep ? '✓' : i + 1}
+              </div>
+              <span className="se-label text-[9px] tracking-[0.2em] text-[#d0c5af]">{step}</span>
+            </div>
+            {i < steps.length - 1 && <div className="flex-1 h-px bg-[#4d4635]" />}
+          </React.Fragment>
+        ))}
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-10 md:mt-12">
         <div className="flex justify-center">
@@ -124,8 +141,7 @@ const VerifyOtp = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full mt-10"
+          className={`${AUTH_PRIMARY_BTN} mt-10`}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading || otp.length < 4}
