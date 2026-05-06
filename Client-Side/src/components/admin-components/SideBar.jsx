@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
+  Gift,
   ShoppingBag,
   ShoppingCart,
   Star,
@@ -157,6 +158,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Products",
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
+      permission: "products",
+    },
+    {
+      label: "Gifts",
+      path: "/admin/gifts",
+      icon: <Gift className="h-5 w-5" />,
       permission: "products",
     },
     {
