@@ -19,7 +19,7 @@ import VariantSelectors, {
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
-import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud, Lock } from "lucide-react";
+import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud, Lock, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { compressImageFile } from "@/lib/image-compression";
 import { cn } from "@/lib/utils";
@@ -115,6 +115,19 @@ const buildCheckoutItem = (item, variantOverride) => {
     unitPrice,
     subTotal: unitPrice * quantity,
   };
+};
+
+const getCheckoutDropId = (items = []) => {
+  const dropIds = items
+    .map((item) => item?.product?.drop?._id || item?.product?.drop?.id || item?.product?.drop || null)
+    .filter(Boolean)
+    .map(String);
+
+  if (dropIds.length === 0) {
+    return null;
+  }
+
+  return dropIds.every((id) => id === dropIds[0]) ? dropIds[0] : null;
 };
 
 const buildBuyNowPersistencePayload = (item) => {
@@ -658,6 +671,7 @@ const Checkout = () => {
             : "",
         notes: formData.notes,
         guestEmail: !isAuthenticated ? formData.guestEmail : undefined,
+        dropId: getCheckoutDropId(checkoutItems),
       };
 
       const resultAction = await dispatch(createOrder(payload)).unwrap();
@@ -1271,6 +1285,26 @@ const Checkout = () => {
                 </div>
               ))}
             </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center justify-between py-4 border-t border-gray-800"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 border border-[#4d4635] bg-[#111] flex items-center justify-center">
+                  <Gift size={16} strokeWidth={1.25} className="text-[#f2ca50]" />
+                </div>
+                <div>
+                  <p className="text-sm text-[#e5e2e1] font-semibold">Saga Exclusive Gift</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
+                    Surprise included with every order
+                  </p>
+                </div>
+              </div>
+              <span className="font-mono text-sm text-[#D4AF37]">FREE</span>
+            </motion.div>
 
             {/* Price Breakdown */}
             <div className="space-y-4 pt-8 border-t border-gray-800">
