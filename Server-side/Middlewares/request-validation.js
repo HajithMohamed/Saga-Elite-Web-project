@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
 
-const PRODUCT_CATEGORIES = ["Women", "Men", "Kids"];
+const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
 const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
 const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "system"];

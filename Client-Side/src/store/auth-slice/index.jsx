@@ -356,8 +356,9 @@ const authSlice = createSlice({
       })
       .addCase(googleSignInAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignInAction.rejected, (state) => {
         state.isLoading = false;
@@ -370,8 +371,9 @@ const authSlice = createSlice({
       })
       .addCase(googleSignUpAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignUpAction.rejected, (state) => {
         state.isLoading = false;

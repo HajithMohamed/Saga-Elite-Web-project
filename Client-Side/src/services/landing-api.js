@@ -6,9 +6,9 @@ const FALLBACK_SLIDES = [
     id: "slide-1",
     label: "New Season",
     headline: "She Leads in Style",
-    subheadline: "Women's collection — just arrived",
+    subheadline: "Ladies' collection — just arrived",
     ctaText: "Shop Now",
-    ctaLink: "/women/new-arrivals",
+    ctaLink: "/shopping/product-list?category=ladies",
     imageUrl: "",
     fallback: "linear-gradient(120deg, #8C2D40, #6B1A2A)",
     order: 1,
@@ -17,7 +17,7 @@ const FALLBACK_SLIDES = [
     id: "slide-2",
     label: "Flash Sale",
     headline: "Up to 60% Off",
-    subheadline: "Limited time — women's & men's picks",
+    subheadline: "Limited time — ladies' & gents' picks",
     ctaText: "Shop Now",
     ctaLink: "/sale",
     imageUrl: "",
@@ -26,11 +26,11 @@ const FALLBACK_SLIDES = [
   },
   {
     id: "slide-3",
-    label: "Men's Edit",
+    label: "Gents' Edit",
     headline: "Refined. Modern. Sri Lankan.",
     subheadline: "Formal & casual — new in store",
     ctaText: "Shop Now",
-    ctaLink: "/men/new-arrivals",
+    ctaLink: "/shopping/product-list?category=gents",
     imageUrl: "",
     fallback: "linear-gradient(120deg, #2C2C2A, #4A4A47)",
     order: 3,
@@ -41,7 +41,7 @@ const FALLBACK_SLIDES = [
     headline: "Saree & Ethnic Wear",
     subheadline: "Crafted for every occasion",
     ctaText: "Shop Now",
-    ctaLink: "/women/sarees",
+    ctaLink: "/shopping/product-list?category=ladies&sub=Sarees",
     imageUrl: "",
     fallback: "linear-gradient(120deg, #712B13, #6B1A2A)",
     order: 4,
@@ -95,7 +95,7 @@ const normalizeProduct = (product) => {
     id: product._id || product.id,
     slug: product.slug || product._id,
     name: product.name || "Untitled Product",
-    category: product.category || "Women",
+    category: product.category || "Ladies",
     basePrice,
     originalPrice: Number(product.originalPrice || basePrice),
     salePrice,
@@ -151,17 +151,27 @@ const fetchAdImages = async () => {
   return Array.isArray(res?.data?.images) ? res.data.images : [];
 };
 
-const findImageForCategory = (images, name) => {
-  const normalizedName = String(name || "").trim().toLowerCase();
-  const exact = images.find(
-    (item) => String(item?.label || "").trim().toLowerCase() === normalizedName
-  );
-  if (exact?.url) return exact.url;
+const findImageForCategory = (images, ...names) => {
+  const normalizedNames = names
+    .flat()
+    .map((name) => String(name || "").trim().toLowerCase())
+    .filter(Boolean);
 
-  const contains = images.find((item) =>
-    String(item?.label || "").trim().toLowerCase().includes(normalizedName)
-  );
-  return contains?.url || "";
+  for (const normalizedName of normalizedNames) {
+    const exact = images.find(
+      (item) => String(item?.label || "").trim().toLowerCase() === normalizedName
+    );
+    if (exact?.url) return exact.url;
+  }
+
+  for (const normalizedName of normalizedNames) {
+    const contains = images.find((item) =>
+      String(item?.label || "").trim().toLowerCase().includes(normalizedName)
+    );
+    if (contains?.url) return contains.url;
+  }
+
+  return "";
 };
 
 const normalizeSystemHeroImage = (image, index) => ({
@@ -177,13 +187,13 @@ const normalizeSystemHeroImage = (image, index) => ({
 });
 
 export const getLandingData = async () => {
-  const [bannersRes, heroImagesRes, womenArrivals, dealProductsRes, womenDealsFallback, menArrivals, trending, categoryLogosRes, adImagesRes] = await Promise.allSettled([
+  const [bannersRes, heroImagesRes, ladiesArrivals, dealProductsRes, ladiesDealsFallback, gentsArrivals, trending, categoryLogosRes, adImagesRes] = await Promise.allSettled([
     axios.get(`${API_BASE}/banners/active`),
     axios.get(`${API_BASE}/image/get-hero-images`),
-    fetchProducts({ category: "Women", tag: "new-arrival", limit: 8 }),
+    fetchProducts({ category: "Ladies", tag: "new-arrival", limit: 8 }),
     fetchActiveDeals(8),
-    fetchProducts({ category: "Women", isDeal: true, limit: 8 }),
-    fetchProducts({ category: "Men", tag: "new-arrival", limit: 8 }),
+    fetchProducts({ category: "Ladies", isDeal: true, limit: 8 }),
+    fetchProducts({ category: "Gents", tag: "new-arrival", limit: 8 }),
     fetchProducts({ tag: "trending", limit: 8 }),
     fetchCategoryLogoImages(),
     fetchAdImages(),
@@ -204,43 +214,37 @@ export const getLandingData = async () => {
     ? adImagesRes.value.map((item) => item?.url).filter(Boolean)
     : [];
 
-  const womenDeals =
+  const ladiesDeals =
     dealProductsRes.status === "fulfilled" && dealProductsRes.value.length
       ? dealProductsRes.value
-      : womenDealsFallback.status === "fulfilled"
-        ? womenDealsFallback.value
+      : ladiesDealsFallback.status === "fulfilled"
+        ? ladiesDealsFallback.value
         : [];
 
   return {
     heroSlides,
-    womenArrivals: womenArrivals.status === "fulfilled" ? womenArrivals.value : [],
-    womenDeals,
-    menArrivals: menArrivals.status === "fulfilled" ? menArrivals.value : [],
+    ladiesArrivals: ladiesArrivals.status === "fulfilled" ? ladiesArrivals.value : [],
+    ladiesDeals,
+    gentsArrivals: gentsArrivals.status === "fulfilled" ? gentsArrivals.value : [],
     trending:
       trending.status === "fulfilled"
         ? [...trending.value].sort((a, b) => b.trendScore - a.trendScore).slice(0, 8)
         : [],
     categoryImages: {
-      women: {
+      ladies: {
         Dresses: findImageForCategory(categoryLogoImages, "Dresses"),
         Tops: findImageForCategory(categoryLogoImages, "Tops"),
         Bottoms: findImageForCategory(categoryLogoImages, "Bottoms"),
         Sarees: findImageForCategory(categoryLogoImages, "Sarees"),
         Lingerie: findImageForCategory(categoryLogoImages, "Lingerie"),
-        Accessories: findImageForCategory(categoryLogoImages, "Women Accessories"),
+        Accessories: findImageForCategory(categoryLogoImages, "Ladies Accessories", "Women Accessories"),
       },
-      men: {
+      gents: {
         Shirts: findImageForCategory(categoryLogoImages, "Shirts"),
         Trousers: findImageForCategory(categoryLogoImages, "Trousers"),
         Casual: findImageForCategory(categoryLogoImages, "Casual"),
         Formal: findImageForCategory(categoryLogoImages, "Formal"),
-        Accessories: findImageForCategory(categoryLogoImages, "Men Accessories"),
-      },
-      ladies: {
-        Ladies: findImageForCategory(categoryLogoImages, "Ladies"),
-      },
-      gents: {
-        Gents: findImageForCategory(categoryLogoImages, "Gents"),
+        Accessories: findImageForCategory(categoryLogoImages, "Gents Accessories", "Men Accessories"),
       },
       unisex: {
         Unisex: findImageForCategory(categoryLogoImages, "Unisex"),

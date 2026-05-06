@@ -59,6 +59,7 @@ const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const homePath = "/shopping/home";
 
   const isAdminView = location.pathname.startsWith("/admin");
 
@@ -93,10 +94,10 @@ const MainHeader = () => {
 
   const navItems = useMemo(
     () => [
-      { key: "women", label: "Women", to: "/shopping/product-list?category=women", children: ["Dresses", "Tops", "Bottoms", "Sarees", "Lingerie", "Accessories"] },
-      { key: "men", label: "Men", to: "/shopping/product-list?category=men", children: ["Shirts", "Trousers", "Casual", "Formal", "Accessories"] },
-      { key: "kids", label: "Kids", to: "/shopping/product-list?category=kids" },
-      { key: "sale", label: "Sale", to: "/shopping/product-list?sale=true", accent: "sale", children: ["Women's Sale", "Men's Sale", "Kids' Sale", "Up to 70% Off"] },
+      { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies", children: ["Dresses", "Tops", "Bottoms", "Sarees", "Lingerie", "Accessories"] },
+      { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents", children: ["Shirts", "Trousers", "Casual", "Formal", "Accessories"] },
+      { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
+      { key: "sale", label: "Sale", to: "/shopping/product-list?sale=true", accent: "sale", children: ["Ladies' Sale", "Gents' Sale", "Unisex Sale", "Up to 70% Off"] },
       { key: "newin", label: "New In", to: "/shopping/product-list?sort=newest", accent: "new" },
     ],
     []
@@ -127,15 +128,15 @@ const MainHeader = () => {
         items={[
           "Free delivery on orders over LKR 2,000",
           "Easy 14-day returns — no questions asked",
-          "New arrivals every Friday — Women's collection updated",
+          "New arrivals every Friday — Ladies' collection updated",
         ]}
       />
 
       <header role="banner" className="sticky top-0 z-50">
         <div className={`bg-background border-b border-border transition-all duration-300 ${scrolled ? "py-2" : "py-3"}`}>
-          <div className="w-full px-6 flex items-center justify-between gap-3">
-            <div>
-              <Link to="/shopping/home" className="flex items-center gap-3">
+          <div className="relative w-full px-6 flex items-center justify-between gap-3">
+            <div className="hidden md:block">
+              <Link to={homePath} className="flex items-center gap-3">
                 <img src="/LOGO.png" alt="Saga Elite" className="h-9 w-9 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 <div className="hidden sm:block">
                   <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
@@ -143,6 +144,11 @@ const MainHeader = () => {
                 </div>
               </Link>
             </div>
+
+            <Link to={homePath} className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <img src="/LOGO.png" alt="Saga Elite" className="h-6 w-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <p className="font-display text-[18px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+            </Link>
 
             <nav className="hidden md:flex items-center gap-7 text-[13px]">
               {navItems.map((item) => (
@@ -244,7 +250,7 @@ const MainHeader = () => {
             className="fixed inset-y-0 left-0 w-[84%] max-w-[320px] z-[60] bg-background border-r border-border p-5 md:hidden overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <Link to="/shopping/home" className="flex items-center gap-3">
+              <Link to={homePath} className="flex items-center gap-3">
                 <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                 <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
               </Link>

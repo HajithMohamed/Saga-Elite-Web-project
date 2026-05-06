@@ -12,6 +12,10 @@ import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+  console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
+}
+
 const describeAuthError = (err) => {
   if (typeof err === "string") return { title: "Registration failed", description: err };
   const status = err?.response?.status;
@@ -116,7 +120,7 @@ const Register = () => {
     if (isAuthenticated) {
       const role = String(user?.role || "").toLowerCase();
       navigate(
-        role === "admin" || role === "super_admin" || role === "superadmin"
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
           ? "/admin/dashboard"
           : "/shopping/home",
         { replace: true }
@@ -184,7 +188,13 @@ const Register = () => {
         description: response?.message || "Signed up.",
         variant: "success",
       });
-      navigate("/shopping/home", { replace: true });
+      const role = String(response?.data?.user?.role || response?.data?.role || "").toLowerCase();
+      navigate(
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+          ? "/admin/dashboard"
+          : "/shopping/home",
+        { replace: true }
+      );
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error("[google sign-up] error", err);
@@ -199,12 +209,17 @@ const Register = () => {
     }
   };
 
-  const handleGoogleError = () =>
+  const handleGoogleError = (err) => {
+    if (err?.type === "popup_closed" || err?.error === "popup_closed_by_user") {
+      return;
+    }
+
     toast({
       title: "Google sign-up failed",
-      description: "Could not open Google sign-in.",
+      description: "Please try again or use email and password.",
       variant: "destructive",
     });
+  };
 
   const inputBase =
     "w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";

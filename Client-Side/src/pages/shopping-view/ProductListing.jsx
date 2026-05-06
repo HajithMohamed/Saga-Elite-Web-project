@@ -28,8 +28,8 @@ import {
 import ProductCard from "@/components/shopping-components/ProductCard";
 
 const CATEGORY_LABELS = {
-  boys: "Boys",
-  girls: "Girls",
+  ladies: "Ladies",
+  gents: "Gents",
   unisex: "Unisex",
 };
 
@@ -41,8 +41,8 @@ const SORT_OPTIONS = [
 
 const PILL_KEYS = [
   { value: "all", label: "All" },
-  { value: "boys", label: "Boys" },
-  { value: "girls", label: "Girls" },
+  { value: "ladies", label: "Ladies" },
+  { value: "gents", label: "Gents" },
   { value: "unisex", label: "Unisex" },
   { value: "drops", label: "Drops" },
   { value: "archive", label: "Archive" },

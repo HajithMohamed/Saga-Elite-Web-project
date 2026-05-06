@@ -309,7 +309,7 @@ const AdminHomeImages = () => {
                   <div className="space-y-4">
                     {section.isCategorized ? (
                       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        {["Gents", "Ladies", "Unisex"].map((catLabel) => (
+                        {["Ladies", "Gents", "Unisex"].map((catLabel) => (
                           <div key={catLabel} className="space-y-2">
                             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
                               {catLabel} Logo

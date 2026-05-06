@@ -82,14 +82,14 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Ladies", "Gents", "Unisex", "Women", "Men", "Kids"], // Kept legacy strings temporarily to avoid breaking existing DB docs
+      enum: ["Ladies", "Gents", "Unisex"],
       required: true,
     },
 
     categoryPath: {
       type: String,
       trim: true,
-      description: "E.g., Women > Dresses > Midi",
+      description: "E.g., Ladies > Dresses > Midi",
     },
 
     tags: [{

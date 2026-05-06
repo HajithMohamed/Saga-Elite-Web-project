@@ -10,6 +10,10 @@ import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+  console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
+}
+
 const describeAuthError = (err) => {
   // Thunk rejectWithValue may pass through a string (the unwrapped server msg)
   if (typeof err === "string") return { title: "Login failed", description: err };
@@ -79,7 +83,7 @@ const validateLogin = (data, touched = {}) => {
 
 const resolveDestination = (user) => {
   const role = String(user?.role || "").toLowerCase();
-  if (role === "admin" || role === "super_admin" || role === "superadmin") {
+  if (["admin", "super_admin", "superadmin", "sub_admin"].includes(role)) {
     return "/admin/dashboard";
   }
   return "/shopping/home";
@@ -174,12 +178,17 @@ const Login = () => {
     }
   };
 
-  const handleGoogleError = () =>
+  const handleGoogleError = (err) => {
+    if (err?.type === "popup_closed" || err?.error === "popup_closed_by_user") {
+      return;
+    }
+
     toast({
       title: "Google sign-in failed",
-      description: "Could not open Google sign-in.",
+      description: "Please try again or use email and password.",
       variant: "destructive",
     });
+  };
 
   return (
     <div>

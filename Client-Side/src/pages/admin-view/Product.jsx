@@ -391,9 +391,9 @@ const Product = () => {
                       onChange={e => setFormData({ ...formData, category: e.target.value })}
                       className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
                     >
+                      <option value="Ladies">Ladies</option>
+                      <option value="Gents">Gents</option>
                       <option value="Unisex">Unisex</option>
-                      <option value="Men">Men</option>
-                      <option value="Women">Women</option>
                     </select>
                   </div>
                   <div>
