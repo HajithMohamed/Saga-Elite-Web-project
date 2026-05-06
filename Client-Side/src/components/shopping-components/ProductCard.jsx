@@ -40,7 +40,7 @@ const stockTone = (product) => {
   return { color: "#a8d8b6", label: "In stock" };
 };
 
-const ProductCard = ({ product, density = "default", index = 0, className }) => {
+const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false }) => {
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
 
@@ -69,13 +69,13 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
   const discountPct = Number(product?.discountPercent || 0);
   const price = basePrice * (1 - discountPct / 100);
 
+  const variants = product?.variants || [];
   const stock = stockTone(product);
   const isLimited = Boolean(product?.isLimited);
-  const isSoldOut = stock?.label === "Sold out";
-  
-  // Need to extract the left pieces properly from variants
-  const variants = product?.variants || [];
-  const piecesLeft = variants.reduce((sum, v) => sum + Math.max(0, Number(v?.stock || 0)), 0);
+  const totalStock = Number(
+    product?.totalStock ?? variants.reduce((sum, v) => sum + Math.max(0, Number(v?.stock || 0)), 0)
+  );
+  const isSoldOut = totalStock === 0 || stock?.label === "Sold out";
 
   const getDropBadge = (product) => {
     if (!product?.dropId && !product?.drop) return null;
@@ -106,13 +106,17 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
         />
 
         {/* Hype Badges */}
-        {isSoldOut ? (
+        {showDealBadge && discountPct > 0 ? (
+          <div className="absolute top-3 left-3 bg-[#0a0a0a] border border-[#4d4635] px-2 py-1 se-label text-[9px] tracking-[0.2em] text-[#d0c5af] backdrop-blur-sm">
+            DROP ARCHIVE · {discountPct}% OFF
+          </div>
+        ) : isSoldOut ? (
           <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#e5e2e1] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#4d4635] backdrop-blur-sm">
             Archived
           </div>
-        ) : piecesLeft > 0 && piecesLeft < 5 ? (
+        ) : totalStock > 0 && totalStock <= 5 ? (
           <div className="absolute top-3 left-3 bg-[#93000a] text-[#ffb4ab] px-3 py-1 se-label text-[9px] tracking-[0.28em] backdrop-blur-sm">
-            {piecesLeft} Pieces Left
+            {totalStock} Pieces Left
           </div>
         ) : dropBadge ? (
           <div className={cn(
@@ -173,6 +177,16 @@ const ProductCard = ({ product, density = "default", index = 0, className }) => 
                 {formatLKR(basePrice)}
               </span>
             )}
+            {totalStock > 0 && totalStock <= 5 ? (
+              <p className="se-label text-[9px] tracking-[0.28em] text-[#f2ca50] mt-1">
+                Only {totalStock} left
+              </p>
+            ) : null}
+            {totalStock === 0 ? (
+              <p className="se-label text-[9px] tracking-[0.28em] text-[#ffb4ab] mt-1">
+                Sold out
+              </p>
+            ) : null}
           </div>
         </div>
       </Link>

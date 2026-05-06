@@ -17,6 +17,8 @@ import {
 
 import { logoutUserAction } from "@/store/auth-slice";
 import { QuickActions } from "@/components/landing/LandingSections";
+import { fetchUpcomingDrop } from "@/services/landing-api";
+import { getRemainingTime } from "@/utils/time";
 
 const AnnouncementBar = ({ items }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,6 +71,8 @@ const MainHeader = () => {
   const [megaOpen, setMegaOpen] = useState(null);
   const megaCloseTimer = useRef(null);
   const [scrolled, setScrolled] = useState(false);
+  const [nextDrop, setNextDrop] = useState(null);
+  const [countdown, setCountdown] = useState(getRemainingTime(new Date(Date.now() + 1000).toISOString()));
 
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
@@ -82,6 +86,33 @@ const MainHeader = () => {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadNextDrop = async () => {
+      try {
+        const drop = await fetchUpcomingDrop();
+        if (!cancelled) {
+          setNextDrop(drop);
+        }
+      } catch {
+        if (!cancelled) setNextDrop(null);
+      }
+    };
+    loadNextDrop();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!nextDrop?.releaseDate) return undefined;
+
+    const tick = () => setCountdown(getRemainingTime(nextDrop.releaseDate));
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [nextDrop?.releaseDate]);
 
   const handleLogout = async () => {
     try {
@@ -124,15 +155,24 @@ const MainHeader = () => {
 
   return (
     <>
+      {nextDrop ? (
+        <div className="sticky top-0 z-[60] bg-[#f2ca50] text-[#1b1c1c] py-2 px-4 text-center">
+          <span className="se-label text-[10px] tracking-[0.28em]">
+            {nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date()
+              ? `⚡ ${String(nextDrop.name || "NEXT DROP").toUpperCase()} DROPS IN ${countdown.d}D ${countdown.h}H ${countdown.m}M`
+              : `🔴 LIVE NOW — ${String(nextDrop.name || "NEXT DROP").toUpperCase()} — SHOP BEFORE IT CLOSES`}
+          </span>
+        </div>
+      ) : null}
       <AnnouncementBar
         items={[
           "Free delivery on orders over LKR 2,000",
           "Easy 14-day returns — no questions asked",
-          "New arrivals every Friday — Ladies' collection updated",
+          "Secure checkout and member-first drops",
         ]}
       />
 
-      <header role="banner" className="sticky top-0 z-50">
+      <header role="banner" className="sticky top-10 z-50">
         <div className={`bg-background border-b border-border transition-all duration-300 ${scrolled ? "py-2" : "py-3"}`}>
           <div className="relative w-full px-6 flex items-center justify-between gap-3">
             <div className="hidden md:block">

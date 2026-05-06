@@ -174,6 +174,16 @@ const findImageForCategory = (images, ...names) => {
   return "";
 };
 
+export const fetchUpcomingDrop = async () => {
+  const res = await axios.get(`${API_BASE}/drops/get-all-drops`);
+  const drops = Array.isArray(res?.data?.drops) ? res.data.drops : [];
+  const now = new Date();
+
+  return drops
+    .filter((drop) => drop?.releaseDate && new Date(drop.releaseDate) > now)
+    .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))[0] || null;
+};
+
 const normalizeSystemHeroImage = (image, index) => ({
   id: image?._id || `system-hero-${index + 1}`,
   label: image?.label || "Saga Elite",

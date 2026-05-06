@@ -92,7 +92,11 @@ const getAllDrops = catchAsync(async (req, res, next) => {
     const drops = await Drop.find(filter)
         .sort({ releaseDate: -1 })
         .populate("images")
-        .populate("products");
+        .populate({
+            path: "products",
+            match: { isActive: true },
+            populate: { path: "images" },
+        });
 
     res.status(200).json({
         success: true,

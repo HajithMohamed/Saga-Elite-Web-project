@@ -500,6 +500,11 @@ const ProductDetails = () => {
                       onColorChange={handleColorChange}
                       errors={variantErrors}
                     />
+                    {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 ? (
+                      <p className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] mt-2">
+                        Only {selectedVariant.stock} left in this size
+                      </p>
+                    ) : null}
                   </>
                 ) : (
                   <p className="se-body text-sm text-[#d0c5af]">One size fits all</p>

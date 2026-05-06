@@ -67,15 +67,16 @@ const ProductListing = () => {
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
 
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
+  const filterParam = (searchParams.get("filter") || "").toLowerCase();
   const sortParam = (searchParams.get("sort") || "new").toLowerCase();
   const inStockOnly = searchParams.get("stock") === "in";
   const limitedOnly = searchParams.get("limited") === "1";
-  const isDropListing = categoryParam === "drops";
+  const isDropListing = categoryParam === "drops" || filterParam === "drops";
 
   const activePill =
-    categoryParam === "drops"
+    categoryParam === "drops" || filterParam === "drops"
       ? "drops"
-      : categoryParam === "archive"
+      : categoryParam === "archive" || filterParam === "archive"
         ? "archive"
         : CATEGORY_LABELS[categoryParam]
           ? categoryParam
@@ -90,7 +91,8 @@ const ProductListing = () => {
 
   const setCategoryFilter = (key) => {
     const next = new URLSearchParams();
-    if (key !== "all") next.set("category", key);
+    if (key === "archive") next.set("filter", key);
+    else if (key !== "all") next.set("category", key);
     if (sortParam !== "new") next.set("sort", sortParam);
     if (inStockOnly) next.set("stock", "in");
     if (limitedOnly) next.set("limited", "1");
@@ -186,7 +188,7 @@ const ProductListing = () => {
         }
 
         const query = new URLSearchParams({ limit: "30" });
-        if (categoryParam === "archive") {
+        if (categoryParam === "archive" || filterParam === "archive") {
           query.set("status", "archive");
         } else if (CATEGORY_LABELS[categoryParam]) {
           query.set("category", CATEGORY_LABELS[categoryParam]);
@@ -219,7 +221,7 @@ const ProductListing = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryParam, isDropListing]);
+  }, [categoryParam, filterParam, isDropListing]);
 
   useEffect(() => {
     if (!products.length) return;

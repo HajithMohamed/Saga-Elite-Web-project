@@ -269,7 +269,7 @@ const getAdminAnalytics = catchAsync(async (req, res, next) => {
 });
 
 const getLandingProducts = catchAsync(async (req, res) => {
-    const { category, tag, isDeal, limit = 8 } = req.query;
+    const { category, tag, isDeal, hasDeal, limit = 8 } = req.query;
     const filter = { isActive: true };
 
     if (category) {
@@ -280,6 +280,9 @@ const getLandingProducts = catchAsync(async (req, res) => {
     }
     if (typeof isDeal !== "undefined") {
         filter.isDeal = String(isDeal) === "true";
+    }
+    if (typeof hasDeal !== "undefined") {
+        filter.isDeal = String(hasDeal) === "true";
     }
 
     const products = await Product.find(filter)
