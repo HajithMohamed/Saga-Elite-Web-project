@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { forgotPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
-import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -74,19 +74,14 @@ const ForgotPassword = () => {
             onBlur={() => setTouched(true)}
             placeholder="your.name@email.com"
             aria-invalid={Boolean(touched && error)}
-            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-              touched && error
-                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                : "border-[#4d4635] focus:border-[#f2ca50]"
-            }`}
+            className={`mt-2 ${AUTH_INPUT} ${touched && error ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
           />
           <FieldError>{touched ? error : null}</FieldError>
         </div>
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}

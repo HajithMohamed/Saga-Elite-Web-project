@@ -5,7 +5,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
-import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, Hairline, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -218,11 +218,7 @@ const Login = () => {
             onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             placeholder="your.name@email.com"
             aria-invalid={Boolean(touched.email && errors.email)}
-            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-              touched.email && errors.email
-                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                : "border-[#4d4635] focus:border-[#f2ca50]"
-            }`}
+            className={`mt-2 ${AUTH_INPUT} ${touched.email && errors.email ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
           />
           <FieldError>{touched.email ? errors.email : null}</FieldError>
         </div>
@@ -246,11 +242,7 @@ const Login = () => {
               onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               placeholder="••••••••••"
               aria-invalid={Boolean(touched.password && errors.password)}
-              className={`w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-                touched.password && errors.password
-                  ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                  : "border-[#4d4635] focus:border-[#f2ca50]"
-              }`}
+              className={`mt-2 ${AUTH_INPUT} pr-10 ${touched.password && errors.password ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
             />
             <button
               type="button"
@@ -270,8 +262,7 @@ const Login = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}
@@ -280,9 +271,9 @@ const Login = () => {
         </Btn>
       </form>
 
-      <div className="mt-10 flex items-center gap-5">
+      <div className="flex items-center gap-4 my-6">
         <Hairline />
-        <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">or</span>
+        <span className="se-label text-[9px] tracking-[0.24em] text-[#574500] shrink-0">or</span>
         <Hairline />
       </div>
 

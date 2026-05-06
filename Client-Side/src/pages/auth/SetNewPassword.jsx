@@ -6,7 +6,7 @@ import { resetPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const validateReset = (data, touched = {}) => {
   const errs = {};
@@ -95,8 +95,7 @@ const SetNewPassword = () => {
     }
   };
 
-  const inputBase =
-    "w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";
+  const inputBase = AUTH_INPUT;
   const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
   const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
 
@@ -123,9 +122,7 @@ const SetNewPassword = () => {
               onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
               placeholder="Choose with care"
               aria-invalid={Boolean(touched.newPassword && errors.newPassword)}
-              className={`${inputBase} ${
-                touched.newPassword && errors.newPassword ? inputErr : inputOk
-              }`}
+              className={`${inputBase} pr-10 ${touched.newPassword && errors.newPassword ? inputErr : inputOk}`}
             />
             <button
               type="button"
@@ -157,9 +154,7 @@ const SetNewPassword = () => {
               onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
               placeholder="Once more"
               aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
-              className={`${inputBase} ${
-                touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk
-              }`}
+              className={`${inputBase} ${touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk}`}
             />
             <button
               type="button"
@@ -179,8 +174,7 @@ const SetNewPassword = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}

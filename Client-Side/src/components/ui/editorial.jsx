@@ -1112,3 +1112,10 @@ export function SeDivider({ className = "" }) {
 // Aliases for redesign brief compatibility
 export const SePullQuote = PullQuote;
 export const SeMarquee = Marquee;
+
+// Standardized auth styles (used by auth pages)
+export const AUTH_INPUT =
+  "w-full bg-transparent border-b border-[#4d4635] focus:border-[#f2ca50] py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors duration-200";
+
+export const AUTH_PRIMARY_BTN =
+  "w-full h-12 bg-[#f2ca50] hover:bg-[#ffe088] text-[#1b1c1c] se-label text-[11px] tracking-[0.28em] transition-colors disabled:opacity-50 disabled:pointer-events-none";

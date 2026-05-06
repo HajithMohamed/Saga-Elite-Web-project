@@ -5,6 +5,7 @@ import CommonForm from "@/components/common-components/CommonForm";
 import { resetPasswordOtpFormControls } from "@/config";
 import { useDispatch, useSelector } from "react-redux";
 import { resetPasswordAction, resendResetPasswordOtpAction } from "@/store/auth-slice";
+import { AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const ResetPasswordOtp = () => {
   const { isLoading } = useSelector((state) => state.auth);
@@ -150,10 +151,10 @@ const ResetPasswordOtp = () => {
     });
   };
 
-  // shared classes for inputs/buttons to mimic SetNewPassword styling
-  const inputClasses = "bg-transparent border-b border-gray-700 text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-0 font-sans";
+  // use centralized auth classes
+  const inputClasses = AUTH_INPUT;
   const labelClasses = "text-white";
-  const buttonClasses = "bg-[#D4AF37] text-black font-bold uppercase tracking-wide py-2 rounded shadow w-full";
+  const buttonClasses = AUTH_PRIMARY_BTN;
 
   return (
     <div className="min-h-screen bg-[#080808] flex items-center justify-center px-4">

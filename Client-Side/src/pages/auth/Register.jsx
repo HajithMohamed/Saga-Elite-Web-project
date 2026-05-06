@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, Hairline, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -221,10 +221,7 @@ const Register = () => {
     });
   };
 
-  const inputBase =
-    "w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";
-  const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
-  const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
+  // use centralized auth input/button classes from editorial
 
   return (
     <div>
@@ -251,9 +248,7 @@ const Register = () => {
             onBlur={() => setTouched((t) => ({ ...t, email: true }))}
             placeholder="your.name@email.com"
             aria-invalid={Boolean(touched.email && errors.email)}
-            className={`mt-2 ${inputBase} ${
-              touched.email && errors.email ? inputErr : inputOk
-            }`}
+            className={`mt-2 ${AUTH_INPUT} ${touched.email && errors.email ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
           />
           <FieldError>{touched.email ? errors.email : null}</FieldError>
         </div>
@@ -269,9 +264,7 @@ const Register = () => {
               onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               placeholder="Choose with care"
               aria-invalid={Boolean(touched.password && errors.password)}
-              className={`pr-10 ${inputBase} ${
-                touched.password && errors.password ? inputErr : inputOk
-              }`}
+              className={`mt-2 pr-10 ${AUTH_INPUT} ${touched.password && errors.password ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
             />
             <button
               type="button"
@@ -303,9 +296,7 @@ const Register = () => {
               onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
               placeholder="Once more"
               aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
-              className={`pr-10 ${inputBase} ${
-                touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk
-              }`}
+              className={`mt-2 pr-10 ${AUTH_INPUT} ${touched.confirmPassword && errors.confirmPassword ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
             />
             <button
               type="button"
@@ -325,8 +316,7 @@ const Register = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}
@@ -335,9 +325,9 @@ const Register = () => {
         </Btn>
       </form>
 
-      <div className="mt-10 flex items-center gap-5">
+      <div className="flex items-center gap-4 my-6">
         <Hairline />
-        <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">or</span>
+        <span className="se-label text-[9px] tracking-[0.24em] text-[#574500] shrink-0">or</span>
         <Hairline />
       </div>
 
