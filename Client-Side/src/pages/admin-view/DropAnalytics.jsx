@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { AdminPage } from "@/components/admin-components/AdminUI";
-import { PageLoader } from "@/components/common-components/Loaders";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const COLORS = {
@@ -114,7 +113,11 @@ export default function DropAnalytics() {
           </div>
         </div>
 
-        {loading && <div className="py-20"><PageLoader /></div>}
+        {loading && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          </div>
+        )}
 
         {!loading && analytics && (
           <>
