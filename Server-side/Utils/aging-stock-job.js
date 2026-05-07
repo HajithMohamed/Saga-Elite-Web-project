@@ -1,4 +1,11 @@
-const cron = require('node-cron');
+let cron = null;
+try {
+  cron = require("node-cron");
+} catch (_error) {
+  // Keep API bootable even when optional scheduler dependency
+  // is missing in local environments.
+  console.warn("[aging-stock-job] node-cron is not installed; scheduler disabled.");
+}
 const Product = require('../Models/Product');
 const Offer = require('../Models/Offer');
 
@@ -66,6 +73,9 @@ const checkAgingStock = async () => {
 };
 
 const initAgingStockJob = () => {
+  if (!cron) {
+    return;
+  }
   // Run every day at midnight
   cron.schedule('0 0 * * *', checkAgingStock);
 };

@@ -7,10 +7,15 @@ import usePageMeta from "@/hooks/use-page-meta";
 import {
   HeroCarousel,
   CountdownWidget,
-  IdentityCategoryGrid,
-  MysteryGiftSection,
   ProductSlider,
   TrustBar,
+  OffersSlider,
+  DropCountdownBand,
+  CategoryLockup,
+  MysteryGiftStrip,
+  RecommendationsSection,
+  LiveDropSection,
+  NewsletterSection
 } from "@/components/landing/LandingSections";
 
 const PLACEHOLDER_URLS = {
@@ -84,9 +89,13 @@ const Home = () => {
 
   return (
     <div className="bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
+      <DropCountdownBand activeDrop={null} />
+      
       <HeroCarousel slides={heroSlides} />
       
       <TrustBar />
+
+      <LiveDropSection activeDrop={null} />
 
       {nextDrop && nextDrop.releaseDate && (
          <CountdownWidget 
@@ -96,14 +105,17 @@ const Home = () => {
          />
       )}
 
-      <IdentityCategoryGrid categories={identityCategories} />
+      {payload.offers && payload.offers.length > 0 && (
+         <OffersSlider offers={payload.offers} />
+      )}
 
-      <MysteryGiftSection />
+      <CategoryLockup />
+
+      <MysteryGiftStrip />
 
       {payload.trending && payload.trending.length > 0 && (
-         <ProductSlider 
-            title="Trending Fits" 
-            subtitle="WHAT'S HOT RIGHT NOW" 
+         <RecommendationsSection 
+            title="Highly Recommended" 
             products={payload.trending} 
          />
       )}
@@ -124,8 +136,10 @@ const Home = () => {
          />
       )}
 
+      <NewsletterSection />
+
       {/* Basic Footer spacer for now */}
-      <div className="h-20 bg-[#131313] mt-12" />
+      <div className="h-20 bg-[#131313]" />
     </div>
   );
 };

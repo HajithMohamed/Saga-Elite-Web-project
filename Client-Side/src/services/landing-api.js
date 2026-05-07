@@ -233,6 +233,7 @@ export const getLandingData = async () => {
 
   return {
     heroSlides,
+    offers: [],
     ladiesArrivals: ladiesArrivals.status === "fulfilled" ? ladiesArrivals.value : [],
     ladiesDeals,
     gentsArrivals: gentsArrivals.status === "fulfilled" ? gentsArrivals.value : [],

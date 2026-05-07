@@ -11,6 +11,7 @@ import {
   Box,
   Gift,
   Sparkles,
+  Mail,
 } from "lucide-react";
 import { formatLkr } from "@/utils/currency";
 import { getRemainingTime } from "@/utils/time";
@@ -76,7 +77,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
   if (dropIsLive) {
     const heroImage = activeDrop.coverImageUrl || slides[0]?.imageUrl || '';
     return (
-      <section className="relative h-[60vh] md:h-[85vh] max-h-[720px] overflow-hidden bg-[#0a0a0a]">
+      <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
         <img src={heroImage} alt={activeDrop.name}
              className="w-full h-full object-cover"
              loading="eager"
@@ -112,7 +113,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
   // STATE B: Upcoming drop
   if (dropIsUpcoming) {
     return (
-      <section className="relative h-[60vh] md:h-[85vh] max-h-[720px] overflow-hidden bg-[#0a0a0a]">
+      <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
         <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-px opacity-40">
           {(nextDrop.products || []).slice(0, 4).map((p, i) => (
             <div key={i} className="relative overflow-hidden">
@@ -151,7 +152,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
   // STATE C: Standard catalogue
   return (
     <section 
-      className="relative h-[60vh] md:h-[85vh] max-h-[720px] w-full overflow-hidden bg-[#050505]"
+      className="relative h-[50vh] md:h-[70vh] max-h-[600px] w-full overflow-hidden bg-[#050505]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -274,7 +275,7 @@ export const CountdownWidget = ({ targetDate, title, description }) => {
 // 👕 COLLECTION ENTRY (3 MASSIVE LUXURY CARDS)
 export const IdentityCategoryGrid = ({ categories = [] }) => {
   return (
-    <section className={`${sectionContainer} py-20`}>
+    <section className={`${sectionContainer} py-10`}>
       <div className="text-center mb-12">
         <h3 className="font-display text-[32px] md:text-[42px] text-[#e5e2e1] uppercase">Choose Your Identity</h3>
         <p className="font-mono text-[11px] text-[#d0c5af] tracking-[0.3em] uppercase mt-2">Elevated Aesthetics</p>
@@ -307,7 +308,7 @@ export const MysteryGiftSection = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <section className="bg-[#0a0a0a] border-y border-[#1f1f1f] py-24 relative overflow-hidden">
+    <section className="bg-[#0a0a0a] border-y border-[#1f1f1f] py-12 relative overflow-hidden">
       {/* Background radial gradient */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#d4af37]/5 blur-[100px] rounded-full pointer-events-none" />
       
@@ -368,7 +369,7 @@ export const ProductSlider = ({ title, subtitle, products = [], deal = false }) 
   const scrollBy = (distance) => scrollerRef.current?.scrollBy({ left: distance, behavior: "smooth" });
 
   return (
-    <section className={`${sectionContainer} py-16`}>
+    <section className={`${sectionContainer} py-8`}>
       <div className="flex justify-between items-end mb-8 border-b border-[#2a2a2a] pb-4">
         <div>
           <h3 className="font-display text-[28px] md:text-[36px] text-[#e5e2e1] uppercase">{title}</h3>
@@ -410,6 +411,235 @@ export const TrustBar = () => {
             {item.text}
           </div>
         ))}
+      </div>
+    </section>
+  );
+};
+
+// 🎪 OFFERS SYSTEM HOMEPAGE SECTION
+export const OffersSlider = ({ offers = [] }) => {
+  const scrollerRef = useRef(null);
+  const scrollBy = (d) => scrollerRef.current?.scrollBy({ left: d, behavior: 'smooth' });
+
+  return (
+    <section className="py-10 bg-[#0e0e0e] border-y border-[#4d4635]/40">
+      <div className={sectionContainer}>
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">
+              Active Offers
+            </p>
+            <h3 className="font-display text-[28px] text-[#e5e2e1] mt-1">
+              Limited-Time Deals
+            </h3>
+            <p className="text-[13px] text-[#d0c5af]">
+              Selected pieces at special prices — for a short time only
+            </p>
+          </div>
+          <Link to="/shopping/product-list?filter=offers"
+                className="text-[#f2ca50] text-sm hover:text-[#ffe088] transition-colors">
+            View All Offers →
+          </Link>
+        </div>
+
+        <div className="relative">
+          <button className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"
+                  onClick={() => scrollBy(-300)} aria-label="Scroll left">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          <div ref={scrollerRef} className="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-2 scrollbar-hide">
+            {offers.map((offer) =>
+              offer.products.map((product) => (
+                <OfferCard key={`${offer._id}-${product._id || product.id}`} product={product} offer={offer} />
+              ))
+            )}
+          </div>
+
+          <button className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"
+                  onClick={() => scrollBy(300)} aria-label="Scroll right">
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// 🎁 OFFER CARD
+const OfferCard = ({ product, offer }) => {
+  const discountedPrice = Math.round(product.basePrice * (1 - offer.discountPercent / 100));
+  const [timeLeft, setTimeLeft] = useState(getRemainingTime(offer.endsAt));
+
+  useEffect(() => {
+    const iv = setInterval(() => setTimeLeft(getRemainingTime(offer.endsAt)), 1000);
+    return () => clearInterval(iv);
+  }, [offer.endsAt]);
+
+  return (
+    <Link to={`/shopping/product/${product.slug}`} className="w-[200px] md:w-[220px] shrink-0 snap-start group border border-[#4d4635] bg-[#131313] hover:border-[#f2ca50] transition-colors overflow-hidden block">
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#1c1b1b]">
+        {product.images?.[0]?.url && (
+          <img src={product.images[0].url} alt={product.name} loading="lazy" width={220} height={293} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        )}
+        <span className="absolute top-3 left-3 bg-[#ffb4ab] text-[#0a0a0a] font-sans text-[10px] px-2 py-0.5 tracking-[0.1em]">
+          {offer.badgeText || `SAVE ${offer.discountPercent}%`}
+        </span>
+        <div className="absolute bottom-0 left-0 right-0 bg-[#0a0a0a]/90 py-1.5 text-center">
+          <span className="font-mono text-[#f2ca50] text-[11px]">
+            ⏱ {timeLeft.hh || timeLeft.h || '00'}:{timeLeft.mm || timeLeft.m || '00'}:{timeLeft.ss || timeLeft.s || '00'}
+          </span>
+        </div>
+      </div>
+      <div className="p-3">
+        <h4 className="font-sans text-sm text-[#e5e2e1] truncate">{product.name}</h4>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <span className="text-[#f2ca50] font-medium text-sm">{formatLkr(discountedPrice)}</span>
+          <span className="text-[#d0c5af] line-through text-xs">{formatLkr(product.basePrice)}</span>
+          <span className="bg-[#ffb4ab]/20 text-[#ffb4ab] text-[10px] px-1.5 py-0.5">-{offer.discountPercent}%</span>
+        </div>
+        <p className="font-sans text-[10px] text-[#99907c] mt-1">{offer.description || 'Limited time offer'}</p>
+      </div>
+    </Link>
+  );
+};
+
+// 📣 PERSISTENT DROP NOTIFICATION BAND
+export const DropCountdownBand = ({ activeDrop }) => {
+  if (!activeDrop) return null;
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(activeDrop.endDate));
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(getRemainingTime(activeDrop.endDate)), 1000);
+    return () => clearInterval(timer);
+  }, [activeDrop.endDate]);
+
+  return (
+    <div className="bg-[#f2ca50] text-[#0a0a0a] py-2 px-4 text-center">
+      <Link to={`/shopping/drop/${activeDrop.slug}`} className="flex flex-wrap items-center justify-center gap-2 md:gap-4 font-mono text-[10px] md:text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
+        <span className="font-bold flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+          LIVE NOW: {activeDrop.name}
+        </span>
+        <span className="hidden md:inline">|</span>
+        <span>ENDS IN: {timeLeft.d}D {timeLeft.h}H {timeLeft.m}M {timeLeft.s}S</span>
+        <span className="underline underline-offset-4 font-bold ml-2">SHOP DROP →</span>
+      </Link>
+    </div>
+  );
+};
+
+// 👕 CATEGORY LOCKUP
+export const CategoryLockup = () => {
+  const categories = [
+    { name: "Ladies", link: "/shopping/product-list?category=Ladies", img: "/assets/categories/ladies.jpg" },
+    { name: "Gents", link: "/shopping/product-list?category=Gents", img: "/assets/categories/gents.jpg" },
+    { name: "Unisex", link: "/shopping/product-list?category=Unisex", img: "/assets/categories/unisex.jpg" }
+  ];
+
+  return (
+    <section className={`${sectionContainer} py-12`}>
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+         {categories.map((cat) => (
+           <Link key={cat.name} to={cat.link} className="relative aspect-[4/5] group overflow-hidden bg-[#131313]">
+             {/* Using fallback gradient if img fails or is missing initially */}
+             <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
+             {cat.img && <img src={cat.img} alt={cat.name} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700" loading="lazy" />}
+             <div className="absolute inset-0 flex items-center justify-center">
+               <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest group-hover:text-[#f2ca50] transition-colors">{cat.name}</h3>
+             </div>
+           </Link>
+         ))}
+       </div>
+    </section>
+  );
+};
+
+// 🎁 MYSTERY GIFT STRIP
+export const MysteryGiftStrip = () => {
+  return (
+    <section className="border-y border-[#2a2a2a] bg-[#0a0a0a] py-6 relative overflow-hidden group cursor-pointer">
+      <div className="absolute inset-0 bg-gradient-to-r from-[#f2ca50]/0 via-[#f2ca50]/10 to-[#f2ca50]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+      <div className="max-w-[1440px] mx-auto px-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center md:text-left">
+        <Gift className="w-6 h-6 text-[#f2ca50] animate-pulse" />
+        <p className="font-mono text-[11px] tracking-[0.2em] text-[#FAF7F2] uppercase">
+          Spend LKR 15,000+ to unlock a <span className="text-[#f2ca50] font-bold">Mystery Reward</span> at checkout.
+        </p>
+      </div>
+    </section>
+  );
+};
+
+// 🎯 RECOMMENDATIONS SECTION
+export const RecommendationsSection = ({ title = "Recommended For You", products = [] }) => {
+  if (!products || products.length === 0) return null;
+  return (
+    <section className={`${sectionContainer} py-8`}>
+      <div className="text-center mb-10">
+        <h3 className="font-display text-[28px] md:text-[36px] text-[#e5e2e1] uppercase">{title}</h3>
+        <div className="w-12 h-0.5 bg-[#f2ca50] mx-auto mt-4" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        {products.slice(0, 4).map((product) => (
+          <ProductCard key={product._id || product.id} product={product} />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// 🔥 LIVE DROP DEDICATED SECTION
+export const LiveDropSection = ({ activeDrop }) => {
+  if (!activeDrop) return null;
+  
+  return (
+    <section className="py-10 bg-[#050505]">
+      <div className={`${sectionContainer}`}>
+        <div className="border border-[#2a2a2a] p-8 md:p-12 relative overflow-hidden bg-[#0a0a0a]">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#f2ca50] opacity-5 blur-[100px] pointer-events-none" />
+          <div className="flex flex-col md:flex-row gap-12 items-center relative z-10">
+             <div className="flex-1">
+               <span className="bg-[#f2ca50] text-[#0a0a0a] font-mono text-[10px] px-3 py-1 uppercase tracking-widest font-bold">Live Selected Drop</span>
+               <h2 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase mt-6 mb-4 leading-none">{activeDrop.name}</h2>
+               <p className="font-sans text-[#FAF7F2]/70 text-sm mb-8 leading-relaxed max-w-md">{activeDrop.description}</p>
+               <InlineDropCountdown endDate={activeDrop.endDate} />
+               <Link to={`/shopping/drop/${activeDrop.slug}`} className="inline-block mt-8 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-mono text-[11px] tracking-[0.2em] font-bold hover:bg-[#ffe088] transition-colors uppercase">
+                 View The Collection
+               </Link>
+             </div>
+             {activeDrop.coverImageUrl && (
+               <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-[#131313]">
+                  <img src={activeDrop.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
+               </div>
+             )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ✉️ NEWSLETTER SECTION
+export const NewsletterSection = () => {
+  return (
+    <section className="bg-[#050505] py-12 border-t border-[#1a1a1a]">
+      <div className="max-w-2xl mx-auto px-6 text-center">
+        <Mail className="w-8 h-8 text-[#f2ca50] mx-auto mb-6" />
+        <h3 className="font-display text-4xl text-[#FAF7F2] uppercase mb-4">Join The Elite</h3>
+        <p className="font-sans text-sm text-[#99907c] mb-8">
+          Subscribe for early access to drops, exclusive offers, and insider news.
+        </p>
+        <form className="flex flex-col md:flex-row gap-4 max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
+          <input 
+            type="email" 
+            placeholder="ENTER YOUR EMAIL" 
+            className="flex-1 bg-[#131313] border border-[#2a2a2a] text-[#FAF7F2] px-4 py-3 font-mono text-[11px] outline-none focus:border-[#f2ca50] transition-colors"
+            required
+          />
+          <button type="submit" className="bg-[#FAF7F2] text-[#0a0a0a] px-8 py-3 font-mono text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[#f2ca50] transition-colors">
+            Subscribe
+          </button>
+        </form>
       </div>
     </section>
   );

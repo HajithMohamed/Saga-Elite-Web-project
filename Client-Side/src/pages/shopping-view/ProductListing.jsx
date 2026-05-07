@@ -46,6 +46,7 @@ const PILL_KEYS = [
   { value: "gents", label: "Gents" },
   { value: "unisex", label: "Unisex" },
   { value: "drops", label: "Drops" },
+  { value: "offers", label: "Offers" },
   { value: "archive", label: "Archive" },
 ];
 

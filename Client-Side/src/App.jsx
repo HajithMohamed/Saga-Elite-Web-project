@@ -14,7 +14,8 @@ import TermsConditionsPage from "./pages/Legal/TermsConditionsPage";
 import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
 import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
-import AboutPage from "./pages/Legal/AboutPage";import OffersPage from "./pages/user/OffersPage";
+import AboutPage from "./pages/Legal/AboutPage";
+import OffersPage from "./pages/user/OffersPage";
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
