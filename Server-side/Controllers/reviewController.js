@@ -676,6 +676,149 @@ const getDropAnalytics = catchAsync(async (req, res, next) => {
   });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Brand reply on a review (admin)
+|--------------------------------------------------------------------------
+*/
+const replyToReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { brandReply } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const trimmed = typeof brandReply === "string" ? brandReply.trim() : "";
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  review.brandReply = trimmed;
+  review.brandReplyAt = trimmed ? new Date() : null;
+  await review.save({ validateBeforeSave: false });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-replied",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: trimmed ? "Brand reply published" : "Brand reply removed",
+    review,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Toggle/Set isFeatured on a review (admin)
+|--------------------------------------------------------------------------
+*/
+const featureReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { isFeatured } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (typeof isFeatured === "boolean") {
+    review.isFeatured = isFeatured;
+  } else {
+    review.isFeatured = !review.isFeatured;
+  }
+  await review.save({ validateBeforeSave: false });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-featured",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: review.isFeatured ? "Review featured" : "Feature flag removed",
+    review,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reviews analytics (admin)
+|--------------------------------------------------------------------------
+*/
+const getReviewsAnalytics = catchAsync(async (_req, res) => {
+  const [totals, sentiment, avgRating] = await Promise.all([
+    Review.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      {
+        $group: {
+          _id: "$sentiment",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      {
+        $group: {
+          _id: null,
+          avg: { $avg: "$rating" },
+          total: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const totalsByStatus = { pending: 0, approved: 0, rejected: 0 };
+  totals.forEach((entry) => {
+    if (entry._id) totalsByStatus[entry._id] = entry.count;
+  });
+
+  const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
+  sentiment.forEach((entry) => {
+    if (entry._id) sentimentBreakdown[entry._id] = entry.count;
+  });
+
+  const [totalFlagged, totalFeatured] = await Promise.all([
+    Review.countDocuments({ isFlagged: true }),
+    Review.countDocuments({ isFeatured: true }),
+  ]);
+
+  const avg = avgRating[0] || { avg: 0, total: 0 };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      totalApproved: totalsByStatus.approved,
+      totalPending: totalsByStatus.pending,
+      totalRejected: totalsByStatus.rejected,
+      totalFlagged,
+      totalFeatured,
+      averageRating: Math.round((avg.avg || 0) * 10) / 10,
+      totalApprovedReviews: avg.total,
+      sentimentBreakdown,
+    },
+  });
+});
+
 module.exports = {
   createReview,
   getFeaturedReviews,
@@ -691,4 +834,7 @@ module.exports = {
   recalculateProductRating,
   getRatingStats,
   getDropAnalytics,
+  replyToReview,
+  featureReview,
+  getReviewsAnalytics,
 };

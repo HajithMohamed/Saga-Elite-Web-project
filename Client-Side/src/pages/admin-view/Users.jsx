@@ -5,6 +5,8 @@ import {
   BellRing,
   Clock3,
   CreditCard,
+  Crown,
+  KeyRound,
   Mail,
   MapPin,
   RefreshCcw,
@@ -21,6 +23,7 @@ import {
   deleteAdminUser,
   fetchAdminUserDetail,
   fetchAdminUsers,
+  triggerAdminPasswordReset,
   updateAdminUserStatus,
 } from "@/store/admin/user-slice";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +31,34 @@ import { pageVariants, containerVariants, itemVariants } from "@/components/admi
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
+
+const MEMBERSHIP_FILTER_TABS = [
+  { value: "all", label: "All" },
+  { value: "vip", label: "VIP" },
+  { value: "legend", label: "Legend" },
+  { value: "rare", label: "Rare" },
+  { value: "elite", label: "Elite" },
+  { value: "standard", label: "Standard" },
+  { value: "blocked", label: "Blocked" },
+];
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "spent_desc", label: "Total spent ↓" },
+  { value: "orders_desc", label: "Order count ↓" },
+  { value: "last_active", label: "Last active" },
+];
+
+const MEMBERSHIP_STYLES = {
+  vip: "border-[#f2ca50] bg-[#f2ca50]/15 text-[#f2ca50]",
+  legend: "border-purple-400/40 bg-purple-400/10 text-purple-300",
+  rare: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300",
+  elite: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
+  standard: "border-white/10 bg-white/5 text-gray-300",
+};
+
+const membershipBadgeClasses = (membership) =>
+  MEMBERSHIP_STYLES[membership] || MEMBERSHIP_STYLES.standard;
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -122,7 +153,10 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [membershipFilter, setMembershipFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("newest");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAdminUsers());
@@ -149,21 +183,48 @@ const UsersPage = () => {
     }
   }, [dispatch, selectedUserId]);
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.provider.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsers = users
+    .filter((user) => {
+      const matchesSearch =
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.provider.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && user.isActive) ||
-      (statusFilter === "inactive" && !user.isActive);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && user.isActive) ||
+        (statusFilter === "inactive" && !user.isActive);
 
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
 
-    return matchesSearch && matchesStatus && matchesRole;
-  });
+      const matchesMembership = (() => {
+        if (membershipFilter === "all") return true;
+        if (membershipFilter === "blocked") return !user.isActive;
+        return (user.membership || "standard") === membershipFilter;
+      })();
+
+      return matchesSearch && matchesStatus && matchesRole && matchesMembership;
+    })
+    .sort((a, b) => {
+      switch (sortMode) {
+        case "spent_desc":
+          return (
+            (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
+          );
+        case "orders_desc":
+          return (
+            (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
+          );
+        case "last_active": {
+          const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
+          const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
+          return bDate - aDate;
+        }
+        case "newest":
+        default:
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      }
+    });
 
   const handleRefresh = async () => {
     try {
@@ -207,6 +268,51 @@ const UsersPage = () => {
       toast({
         title: "Status update failed",
         description: statusError || "Could not update this account.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMembershipChange = async (nextMembership) => {
+    if (!selectedUser) return;
+    if ((selectedUser.membership || "standard") === nextMembership) return;
+
+    try {
+      await dispatch(
+        updateAdminUserStatus({
+          userId: selectedUser._id,
+          membership: nextMembership,
+        })
+      ).unwrap();
+      toast({
+        title: "Membership updated",
+        description: `${selectedUser.email} is now ${nextMembership}.`,
+        variant: "success",
+      });
+      await dispatch(fetchAdminUsers()).unwrap();
+    } catch (membershipError) {
+      toast({
+        title: "Membership update failed",
+        description: membershipError || "Could not update membership.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const executeResetPasswordConfirmed = async () => {
+    if (!selectedUser) return;
+    setResetConfirmOpen(false);
+    try {
+      await dispatch(triggerAdminPasswordReset(selectedUser._id)).unwrap();
+      toast({
+        title: "Password reset email sent",
+        description: `OTP delivered to ${selectedUser.email}.`,
+        variant: "success",
+      });
+    } catch (resetError) {
+      toast({
+        title: "Reset failed",
+        description: resetError || "Could not send password reset.",
         variant: "destructive",
       });
     }
@@ -349,6 +455,38 @@ const UsersPage = () => {
                     <option value="superadmin">Superadmins</option>
                   </select>
                 </div>
+
+                <select
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      Sort by — {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {MEMBERSHIP_FILTER_TABS.map((tab) => {
+                    const active = membershipFilter === tab.value;
+                    return (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        onClick={() => setMembershipFilter(tab.value)}
+                        className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
+                          active
+                            ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
+                            : "border-white/10 text-white/60 hover:text-white hover:border-white/30"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -398,6 +536,16 @@ const UsersPage = () => {
                           >
                             {user.provider}
                           </span>
+                          {user.membership && user.membership !== "standard" ? (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(user.membership)}`}
+                            >
+                              {user.membership === "vip" ? (
+                                <Crown className="h-3 w-3" />
+                              ) : null}
+                              {user.membership}
+                            </span>
+                          ) : null}
                         </div>
                         <div className="mt-4 flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-bold text-black">
@@ -462,6 +610,14 @@ const UsersPage = () => {
                         <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-gray-300">
                           {selectedUser.isVerified ? "Verified" : "Unverified"}
                         </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(selectedUser.membership)}`}
+                        >
+                          {selectedUser.membership === "vip" ? (
+                            <Crown className="h-3 w-3" />
+                          ) : null}
+                          {selectedUser.membership || "standard"}
+                        </span>
                       </div>
 
                       <h2 className="mt-5 break-all text-3xl font-serif font-semibold text-white">
@@ -492,6 +648,15 @@ const UsersPage = () => {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setResetConfirmOpen(true)}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-5 py-3 text-sm font-semibold text-[#D4AF37] transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset Password
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setDeleteConfirmOpen(true)}
                           disabled={!canManageSelectedUser || isMutating}
                           className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
@@ -499,6 +664,18 @@ const UsersPage = () => {
                           <Trash2 className="h-4 w-4" />
                           Delete User
                         </button>
+                        <select
+                          value={selectedUser.membership || "standard"}
+                          onChange={(e) => handleMembershipChange(e.target.value)}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition focus:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="standard">Membership: Standard</option>
+                          <option value="elite">Membership: Elite</option>
+                          <option value="rare">Membership: Rare</option>
+                          <option value="legend">Membership: Legend</option>
+                          <option value="vip">Membership: VIP</option>
+                        </select>
                       </div>
                       <ConfirmInline
                         show={deleteConfirmOpen && !!selectedUser}
@@ -509,6 +686,17 @@ const UsersPage = () => {
                         }
                         onCancel={() => setDeleteConfirmOpen(false)}
                         onConfirm={executeDeleteConfirmed}
+                        className="w-full max-w-md"
+                      />
+                      <ConfirmInline
+                        show={resetConfirmOpen && !!selectedUser}
+                        message={
+                          selectedUser
+                            ? `Send a password reset OTP to ${selectedUser.email}?`
+                            : ""
+                        }
+                        onCancel={() => setResetConfirmOpen(false)}
+                        onConfirm={executeResetPasswordConfirmed}
                         className="w-full max-w-md"
                       />
                     </div>

@@ -100,6 +100,28 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    membership: {
+      type: String,
+      enum: ["standard", "elite", "rare", "legend", "vip"],
+      default: "standard",
+      index: true,
+    },
+
+    totalSpent: {
+      type: Number,
+      default: 0,
+    },
+
+    orderCount: {
+      type: Number,
+      default: 0,
+    },
+
+    lastOrderAt: {
+      type: Date,
+      default: null,
+    },
+
     otp: String,
     otpExpires: Date,
 

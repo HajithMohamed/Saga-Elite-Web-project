@@ -9,6 +9,9 @@ import {
   moderateReviewApi,
   updateReviewApi,
   flagReviewApi,
+  replyToReviewApi,
+  featureReviewApi,
+  fetchReviewAnalyticsApi,
 } from "@/api/reviewAPI";
 
 const unwrapError = (error, fallback) => {
@@ -23,6 +26,7 @@ const initialState = {
   userReviews: [],
   adminReviews: [],
   adminPagination: null,
+  adminAnalytics: null,
   activeFilters: {
     productId: null,
     rating: null,
@@ -170,6 +174,48 @@ export const moderateReview = createAsyncThunk(
   }
 );
 
+export const replyToReview = createAsyncThunk(
+  "review/replyToReview",
+  async ({ reviewId, brandReply }, thunkAPI) => {
+    try {
+      const response = await replyToReviewApi(reviewId, brandReply);
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to publish reply")
+      );
+    }
+  }
+);
+
+export const featureReview = createAsyncThunk(
+  "review/featureReview",
+  async ({ reviewId, isFeatured }, thunkAPI) => {
+    try {
+      const response = await featureReviewApi(reviewId, isFeatured);
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to update featured flag")
+      );
+    }
+  }
+);
+
+export const fetchReviewAnalytics = createAsyncThunk(
+  "review/fetchReviewAnalytics",
+  async (_, thunkAPI) => {
+    try {
+      const response = await fetchReviewAnalyticsApi();
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to load review analytics")
+      );
+    }
+  }
+);
+
 const reviewSlice = createSlice({
   name: "review",
   initialState,
@@ -304,6 +350,25 @@ const reviewSlice = createSlice({
       .addCase(moderateReview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
+      })
+      .addCase(replyToReview.fulfilled, (state, action) => {
+        const updated = action.payload?.review;
+        if (updated) {
+          state.adminReviews = state.adminReviews.map((review) =>
+            review._id === updated._id ? updated : review
+          );
+        }
+      })
+      .addCase(featureReview.fulfilled, (state, action) => {
+        const updated = action.payload?.review;
+        if (updated) {
+          state.adminReviews = state.adminReviews.map((review) =>
+            review._id === updated._id ? updated : review
+          );
+        }
+      })
+      .addCase(fetchReviewAnalytics.fulfilled, (state, action) => {
+        state.adminAnalytics = action.payload?.data || null;
       });
   },
 });

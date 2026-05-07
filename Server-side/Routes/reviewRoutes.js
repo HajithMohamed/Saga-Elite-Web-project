@@ -22,6 +22,9 @@ const {
   updateReview,
   flagReview,
   getDropAnalytics,
+  replyToReview,
+  featureReview,
+  getReviewsAnalytics,
 } = require("../Controllers/reviewController");
 
 const userRouter = express.Router();
@@ -38,7 +41,10 @@ userRouter.patch("/:reviewId", authMiddleware, validateObjectIdParam("reviewId",
 userRouter.delete("/:reviewId", authMiddleware, validateObjectIdParam("reviewId", "review id"), deleteReview);
 
 adminRouter.get("/", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getAllReviews);
+adminRouter.get("/analytics", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getReviewsAnalytics);
 adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requirePermission("analytics"), validateObjectIdParam("dropId", "drop id"), getDropAnalytics);
 adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewModeration, moderateReview);
+adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), replyToReview);
+adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), featureReview);
 
 module.exports = { userRouter, adminRouter };

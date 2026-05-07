@@ -9,6 +9,7 @@ const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const ManualPayment = require("../Models/ManualPayment");
 const Review = require("../Models/Review");
+const { computeMembershipTier } = require("../Utils/membership-tier");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
@@ -612,6 +613,42 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     if (hasGift && !order.gift.revealed) {
       order.gift.revealed = true;
       await order.save({ validateModifiedOnly: true });
+    }
+
+    // Update customer membership totals (skip guest orders).
+    if (order.user) {
+      try {
+        const updatedUser = await User.findByIdAndUpdate(
+          order.user,
+          {
+            $inc: {
+              totalSpent: order.totalAmount || 0,
+              orderCount: 1,
+            },
+            $set: { lastOrderAt: new Date() },
+          },
+          { new: true }
+        ).select("totalSpent membership");
+
+        if (updatedUser) {
+          const nextTier = computeMembershipTier(
+            updatedUser.totalSpent,
+            updatedUser.membership
+          );
+          if (nextTier !== updatedUser.membership) {
+            await User.updateOne(
+              { _id: order.user },
+              { $set: { membership: nextTier } }
+            );
+          }
+        }
+      } catch (membershipErr) {
+        logger.error("Membership recompute failed", {
+          orderId: order._id,
+          userId: order.user,
+          error: membershipErr?.message,
+        });
+      }
     }
 
     const deliveredOrder = await Order.findById(order._id)

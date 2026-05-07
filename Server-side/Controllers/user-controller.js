@@ -5,6 +5,8 @@ const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
 const { isAdminRole } = require("../Utils/admin-roles");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -75,6 +77,7 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   profilePicture: user.profilePicture || null,
   isVerified: user.isVerified,
   isActive: user.isActive,
+  membership: user.membership || "standard",
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -82,11 +85,11 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
     cartCount: user.cart?.length || 0,
     wishlistCount: user.wishlist?.length || 0,
     addressesCount: user.addresses?.length || 0,
-    orderCount: orderStats.orderCount || 0,
+    orderCount: orderStats.orderCount || user.orderCount || 0,
     deliveredOrders: orderStats.deliveredOrders || 0,
     pendingOrders: orderStats.pendingOrders || 0,
-    totalSpent: orderStats.totalSpent || 0,
-    lastOrderAt: orderStats.lastOrderAt || null,
+    totalSpent: orderStats.totalSpent || user.totalSpent || 0,
+    lastOrderAt: orderStats.lastOrderAt || user.lastOrderAt || null,
     lastOrderStatus: orderStats.lastOrderStatus || null,
     notificationCount: notificationStats.notificationCount || 0,
     unreadNotifications: notificationStats.unreadNotifications || 0,
@@ -230,7 +233,7 @@ const escapeCsvValue = (value) => {
 const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = await User.find()
     .select(
-      "email role provider profilePicture isVerified isActive savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .sort({ createdAt: -1 })
     .lean();
@@ -285,7 +288,7 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
 const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id)
     .select(
-      "email role provider profilePicture isVerified isActive savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .lean();
 
@@ -298,8 +301,8 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const [recentOrders, recentNotifications] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
-      .limit(5)
-      .select("items totalAmount status paymentStatus paymentMethod createdAt")
+      .limit(10)
+      .select("items totalAmount status paymentStatus paymentMethod referenceNumber createdAt")
       .lean(),
     Notification.find({ user: user._id })
       .sort({ createdAt: -1 })
@@ -332,10 +335,12 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 });
 
 const updateAdminUserStatus = catchAsync(async (req, res, next) => {
-  const { isActive } = req.body;
+  const { isActive, membership } = req.body;
 
-  if (typeof isActive !== "boolean") {
-    return next(new AppError("isActive must be provided as true or false", 400));
+  if (typeof isActive === "undefined" && typeof membership === "undefined") {
+    return next(
+      new AppError("isActive or membership must be provided", 400)
+    );
   }
 
   const user = await User.findById(req.params.id);
@@ -352,19 +357,91 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Only customer accounts can be updated from user management", 403));
   }
 
-  user.isActive = isActive;
+  const changes = [];
+  if (typeof isActive === "boolean") {
+    user.isActive = isActive;
+    changes.push(isActive ? "activated" : "deactivated");
+  }
+  if (typeof membership === "string") {
+    user.membership = membership;
+    changes.push(`membership → ${membership}`);
+  }
+
   await user.save({ validateBeforeSave: false });
 
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
   res.status(200).json({
     success: true,
-    message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+    message: changes.length ? `User ${changes.join(", ")}` : "User updated",
     data: buildAdminUserSummary(
       user.toObject(),
       orderStatsMap.get(user._id.toString()),
       notificationStatsMap.get(user._id.toString())
     ),
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin-triggered password reset (sends OTP email — same as forgotPassword)
+|--------------------------------------------------------------------------
+*/
+const triggerAdminPasswordReset = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.params.id).select(
+    "email role provider isActive resetPasswordOtp resetPasswordOtpExpires"
+  );
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (isAdminRole(user.role)) {
+    return next(
+      new AppError(
+        "Admin accounts must reset their password through the auth flow",
+        403
+      )
+    );
+  }
+
+  if (user.provider && user.provider !== "local") {
+    return next(
+      new AppError(
+        `User signed in with ${user.provider}; they cannot reset a local password`,
+        400
+      )
+    );
+  }
+
+  if (!user.email) {
+    return next(new AppError("User has no email on file", 400));
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const otpExpiryMinutes = Number(process.env.OTP_EXPIRY_MINUTES) || 10;
+  user.resetPasswordOtp = otp;
+  user.resetPasswordOtpExpires = new Date(Date.now() + otpExpiryMinutes * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  const html = buildEmailTemplate(
+    "Password Reset Request",
+    `<p>Hi,</p>
+     <p>An admin at Saga Elite has triggered a password reset for your account.</p>
+     <p>Your one-time code is:</p>
+     <p style="font-size:28px;letter-spacing:6px;font-weight:bold;text-align:center;color:#f2ca50;">${otp}</p>
+     <p>This code expires in ${otpExpiryMinutes} minutes. If you did not request this, you can safely ignore this email.</p>`
+  );
+
+  await sendEmail({
+    email: user.email,
+    subject: "Saga Elite — password reset requested",
+    html,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Password reset email sent to ${user.email}`,
   });
 });
 
@@ -874,6 +951,7 @@ module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  triggerAdminPasswordReset,
   deleteAdminUser,
   getAllUsers,
   exportCustomersCsv,

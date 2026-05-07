@@ -84,6 +84,21 @@ const reviewSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    brandReply: {
+      type: String,
+      maxlength: 1000,
+      trim: true,
+      default: "",
+    },
+    brandReplyAt: {
+      type: Date,
+      default: null,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     slug: {
       type: String,
       unique: true,

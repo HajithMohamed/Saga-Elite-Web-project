@@ -636,9 +636,25 @@ const validateNotificationUpdate = createValidationMiddleware((req) => {
   req.body = body;
 });
 
+const MEMBERSHIP_TIERS = ["standard", "elite", "rare", "legend", "vip"];
+
 const validateAdminUserStatus = createValidationMiddleware((req) => {
+  const hasIsActive = typeof req.body.isActive !== "undefined";
+  const hasMembership = typeof req.body.membership !== "undefined";
+
+  if (!hasIsActive && !hasMembership) {
+    fail("isActive or membership must be provided");
+  }
+
   req.body = {
-    isActive: sanitizeBoolean(req.body.isActive, "isActive", { required: true }),
+    isActive: hasIsActive
+      ? sanitizeBoolean(req.body.isActive, "isActive", { required: true })
+      : undefined,
+    membership: hasMembership
+      ? sanitizeEnum(req.body.membership, MEMBERSHIP_TIERS, "membership", {
+          required: true,
+        })
+      : undefined,
   };
 });
 
