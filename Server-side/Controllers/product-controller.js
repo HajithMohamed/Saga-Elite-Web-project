@@ -117,18 +117,17 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
-    // Validate Drop ID — required by schema
-    if (!productData.drop) {
-        return next(new AppError("Drop is required", 400));
-    }
-
-    if (!mongoose.isValidObjectId(productData.drop)) {
-        return next(new AppError("Invalid drop id", 400));
-    }
-
-    const dropExists = await Drop.exists({ _id: productData.drop });
-    if (!dropExists) {
-        return next(new AppError("Drop not found", 404));
+    // Drop is optional. Products without a drop fall back to "Independent Release".
+    if (productData.drop) {
+        if (!mongoose.isValidObjectId(productData.drop)) {
+            return next(new AppError("Invalid drop id", 400));
+        }
+        const dropExists = await Drop.exists({ _id: productData.drop });
+        if (!dropExists) {
+            return next(new AppError("Drop not found", 404));
+        }
+    } else {
+        productData.drop = null;
     }
 
     const existingProduct = await Product.findOne({ artNo: productData.artNo });
@@ -202,11 +201,18 @@ const updateProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("At least one field is required to update", 400));
     }
 
-    // Validate Drop exists if being updated
-    if (productData.drop) {
-        const dropExists = await Drop.exists({ _id: productData.drop });
-        if (!dropExists) {
-            return next(new AppError("Drop not found", 404));
+    // Validate Drop only if being attached. Allow detaching to standalone via "" / null.
+    if (Object.prototype.hasOwnProperty.call(productData, "drop")) {
+        if (productData.drop) {
+            if (!mongoose.isValidObjectId(productData.drop)) {
+                return next(new AppError("Invalid drop id", 400));
+            }
+            const dropExists = await Drop.exists({ _id: productData.drop });
+            if (!dropExists) {
+                return next(new AppError("Drop not found", 404));
+            }
+        } else {
+            productData.drop = null;
         }
     }
 

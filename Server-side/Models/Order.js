@@ -226,12 +226,12 @@ orderSchema.index({ expiresAt: 1 });
 // Single-field { user: 1 } index already declared via `index: true` on the field above.
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 
-orderSchema.pre("save", function (next) {
+orderSchema.pre("save", function () {
   if (!this.slug) {
     const base = this.referenceNumber || String(this._id);
     this.slug = slugify(`order-${base}`, { lower: true, strict: true });
   }
-  next();
+
 });
 
 module.exports = mongoose.model("Order", orderSchema);

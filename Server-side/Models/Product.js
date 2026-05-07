@@ -123,7 +123,7 @@ const productSchema = new mongoose.Schema(
     drop: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Drop",
-      required: true,
+      default: null,
       index: true,
     },
 
