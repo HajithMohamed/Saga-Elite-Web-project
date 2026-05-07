@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_BACKEND_TARGET ||
     localEnv.VITE_BACKEND_TARGET ||
     rootEnv.VITE_BACKEND_TARGET ||
-    'http://127.0.0.1:5001'
+    'http://localhost:5001'
 
   return {
     plugins: [react()],

@@ -114,7 +114,14 @@ function App() {
     : "/shopping/home";
 
   useEffect(() => {
-    dispatch(checkAuthAction());
+    const hasLocalToken =
+      typeof window !== "undefined" && Boolean(localStorage.getItem("authToken"));
+    const hasCookieToken =
+      typeof document !== "undefined" && document.cookie.includes("token=");
+
+    if (hasLocalToken || hasCookieToken) {
+      dispatch(checkAuthAction());
+    }
   }, [dispatch]);
 
   useEffect(() => {

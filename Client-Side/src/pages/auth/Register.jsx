@@ -276,7 +276,7 @@ const Register = () => {
           className={AUTH_INPUT}
         />
 
-        <Btn className={AUTH_PRIMARY_BTN} disabled={isLoading}>
+        <Btn type="submit" className={AUTH_PRIMARY_BTN} disabled={isLoading}>
           {isLoading ? "Opening account..." : "Open account"}
         </Btn>
       </form>

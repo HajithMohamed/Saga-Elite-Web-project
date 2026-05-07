@@ -259,6 +259,7 @@ const Login = () => {
         />
 
         <Btn
+          type="submit"
           className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           disabled={isLoading}

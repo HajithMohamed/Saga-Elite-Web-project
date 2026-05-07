@@ -11,9 +11,21 @@ const connectToDB = async () => {
 
   let mongoUri = process.env.MONGO_DB_URI;
 
-  if (!mongoUri) {
-    logger.error("MONGO_DB_URI is not defined in environment variables");
-    process.exit(1);
+  const looksLikePlaceholder = (uri) =>
+    typeof uri === "string" && /<.*>|<credentials>|<username>|<password>/.test(uri);
+
+  if (!mongoUri || looksLikePlaceholder(mongoUri)) {
+    if (process.env.NODE_ENV !== "production") {
+      const fallback = "mongodb://127.0.0.1:27017/sagaelite";
+      logger.warn(
+        "MONGO_DB_URI is missing or looks like a placeholder; falling back to local MongoDB for development",
+        { fallback }
+      );
+      mongoUri = fallback;
+    } else {
+      logger.error("MONGO_DB_URI is not defined in environment variables");
+      process.exit(1);
+    }
   }
 
   const hasDatabase = /\/[^\/?]+(\?.*)?$/.test(mongoUri);
