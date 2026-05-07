@@ -133,7 +133,17 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"],
+      enum: [
+        "pending",
+        "pending_payment",
+        "verification_pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "refund_requested",
+        "refunded",
+      ],
       default: "pending",
       index: true,
     },
@@ -146,6 +156,27 @@ const orderSchema = new mongoose.Schema(
       type: Date,
     },
     cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
+    },
+    refundReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    refundNote: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+    refundedAt: {
+      type: Date,
+    },
+    refundedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },

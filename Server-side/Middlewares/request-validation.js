@@ -4,7 +4,7 @@ const AppError = require("../Utils/appError");
 
 const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
-const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
+const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled", "refund_requested", "refunded"];
 const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "system"];
 const IMAGE_REF_MODELS = ["Product", "Drop", "System", "Review"];
 const IMAGE_SYSTEM_TYPES = ["hero", "ad", "logo", "category-logo"];

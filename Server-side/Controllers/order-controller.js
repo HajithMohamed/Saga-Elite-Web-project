@@ -8,6 +8,7 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const ManualPayment = require("../Models/ManualPayment");
+const Review = require("../Models/Review");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
@@ -35,9 +36,18 @@ const ORDER_STATUS_FLOW = {
   verification_pending: ["confirmed", "cancelled"],
   confirmed: ["shipped", "cancelled"],
   shipped: ["delivered"],
-  delivered: [],
+  delivered: ["refund_requested", "refunded"],
   cancelled: [],
+  refund_requested: ["refunded", "delivered"],
+  refunded: [],
 };
+
+const REFUND_REASONS = new Set([
+  "wrong_item",
+  "damaged",
+  "customer_request",
+  "other",
+]);
 
 const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
 
@@ -721,6 +731,104 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Refund Order (admin — gated by verifyPayments permission)
+|--------------------------------------------------------------------------
+*/
+const refundOrder = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { amount, reason, note } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid order id", 400));
+  }
+
+  const order = await Order.findById(id).populate("user", "email userName");
+
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (!["delivered", "refund_requested"].includes(order.status)) {
+    return next(
+      new AppError(
+        `Refunds are only available for delivered orders. Current status: ${order.status}`,
+        409
+      )
+    );
+  }
+
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return next(new AppError("Refund amount must be a positive number", 400));
+  }
+  if (numericAmount > order.totalAmount) {
+    return next(
+      new AppError(
+        `Refund amount (${numericAmount}) cannot exceed order total (${order.totalAmount})`,
+        400
+      )
+    );
+  }
+
+  const normalizedReason = String(reason || "").toLowerCase().trim();
+  if (!REFUND_REASONS.has(normalizedReason)) {
+    return next(
+      new AppError(
+        `Refund reason must be one of: ${[...REFUND_REASONS].join(", ")}`,
+        400
+      )
+    );
+  }
+
+  order.status = "refunded";
+  order.refundAmount = numericAmount;
+  order.refundReason = normalizedReason;
+  order.refundNote = typeof note === "string" ? note.trim().slice(0, 1000) : "";
+  order.refundedAt = new Date();
+  order.refundedBy = req.userInfo?._id || req.userInfo?.id || null;
+
+  await order.save({ validateModifiedOnly: true });
+
+  // Customer email
+  const customerEmail = order.user?.email || order.guestEmail;
+  if (customerEmail) {
+    sendEmail({
+      to: customerEmail,
+      subject: `Refund issued for your Saga Elite order ${order.referenceNumber || order._id}`,
+      html: buildEmailTemplate(
+        "Your refund is on its way",
+        `<p>We have processed a refund of <strong>LKR ${numericAmount.toLocaleString("en-LK")}</strong> for your order <strong>${escapeHtml(order.referenceNumber || String(order._id))}</strong>.</p>
+         <p><strong>Reason:</strong> ${escapeHtml(normalizedReason.replace(/_/g, " "))}</p>
+         ${order.refundNote ? `<p><strong>Note:</strong> ${escapeHtml(order.refundNote)}</p>` : ""}
+         <p>Refunds typically reflect on your original payment method within 5–10 business days. If you have any questions, reply to this email or message us on WhatsApp.</p>`
+      ),
+    }).catch((err) =>
+      logger.error("Refund email notify failed", {
+        orderId: order._id,
+        error: err?.message,
+      })
+    );
+  }
+
+  // Socket emit
+  const io = req.app.get("io");
+  if (io) {
+    io.emit("order:refresh", {
+      orderId: order._id,
+      status: order.status,
+      refundAmount: numericAmount,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Order refunded successfully",
+    data: await Order.findById(order._id),
+  });
+});
+
 const getDashboardStats = catchAsync(async (req, res, next) => {
   const now = new Date();
   const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
@@ -747,6 +855,9 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     topDrops,
     salesTrendRaw,
     nextScheduledDropDoc,
+    pendingReviewsCount,
+    pendingPaymentsCount,
+    agingProductsRaw,
   ] = await Promise.all([
     Order.aggregate([
       { $match: revenueMatch },
@@ -901,7 +1012,24 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       .sort({ releaseDate: 1 })
       .select("name slug releaseDate isPublished isArchived")
       .lean(),
+    Review.countDocuments({ status: "pending" }),
+    ManualPayment.countDocuments({ status: "proof_submitted" }),
+    Product.find({
+      isActive: true,
+      $or: [
+        { lastSoldAt: { $lte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+        { lastSoldAt: null, createdAt: { $lte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+      ],
+    })
+      .select("totalStock variants")
+      .lean(),
   ]);
+
+  const agingProductsCount = (agingProductsRaw || []).filter((p) => {
+    if (typeof p.totalStock === "number" && p.totalStock > 0) return true;
+    if (!Array.isArray(p.variants)) return false;
+    return p.variants.some((v) => (v?.stock || 0) > 0);
+  }).length;
 
   const revenueStats = revenueSummary[0] || {
     totalRevenue: 0,
@@ -997,6 +1125,9 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         averageOrderValue: revenueStats.nonCancelledOrders
           ? revenueStats.totalRevenue / revenueStats.nonCancelledOrders
           : 0,
+        pendingReviews: pendingReviewsCount || 0,
+        pendingPayments: pendingPaymentsCount || 0,
+        agingProductsCount,
       },
       highlights: {
         bestSellingProduct: bestSellingProductDoc,
@@ -1021,5 +1152,6 @@ module.exports = {
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  refundOrder,
   getDashboardStats,
 };

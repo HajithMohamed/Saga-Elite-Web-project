@@ -5,9 +5,10 @@ const processes = [
   {
     name: "BACKEND",
     color: "\x1b[34m",
-    cwd: "Server-side",
+    cwd: ".",
     command: process.execPath,
-    args: ["--watch", "server.js"],
+    args: ["scripts/backend-watch.cjs"],
+    waitFor: "http://localhost:5001/health",
   },
   {
     name: "FRONTEND",
@@ -44,6 +45,26 @@ function stopAll(exitCode = 0) {
 }
 
 for (const proc of processes) {
+  if (proc.waitFor) {
+    startProcess(proc);
+    waitForHttp(proc.waitFor)
+      .then(() => {
+        const nextProcess = processes[processes.indexOf(proc) + 1];
+        if (nextProcess && !shuttingDown) {
+          startProcess(nextProcess);
+        }
+      })
+      .catch((error) => {
+        console.error(`${proc.color}[${proc.name}]${reset} ${error.message}`);
+        stopAll(1);
+      });
+    break;
+  }
+
+  startProcess(proc);
+}
+
+function startProcess(proc) {
   const child = spawn(proc.command, proc.args, {
     cwd: proc.cwd,
     env: process.env,
@@ -71,6 +92,25 @@ for (const proc of processes) {
       stopAll(code || 1);
     }
   });
+}
+
+async function waitForHttp(url, timeoutMs = 60_000) {
+  const startedAt = Date.now();
+
+  while (!shuttingDown) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return;
+    } catch {
+      // The backend is still connecting to MongoDB or restarting.
+    }
+
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`Timed out waiting for ${url}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 }
 
 process.on("SIGINT", () => stopAll(0));

@@ -528,6 +528,12 @@ const addToCart = catchAsync(async (req, res, next) => {
       variant: selectedVariant._id,
       quantity,
     });
+    // Track add-to-cart events on the product (only on first add per user, to mirror
+    // viewCount semantics — increasing quantity later does not re-fire).
+    Product.updateOne(
+      { _id: product._id },
+      { $inc: { cartAddCount: 1 } }
+    ).catch(() => {});
   }
 
   await user.save({ validateBeforeSave: false });

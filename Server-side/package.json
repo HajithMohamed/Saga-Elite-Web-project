@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
+    "dev": "node ../scripts/backend-watch.cjs",
     "seed:demo-admins": "node scripts/seed-demo-admins.js",
     "lint": "eslint . --ext .js --ignore-path ../.gitignore",
     "test": "echo \"No tests implemented yet\" && exit 0"

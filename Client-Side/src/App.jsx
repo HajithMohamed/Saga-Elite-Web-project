@@ -211,6 +211,7 @@ function App() {
             <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
             <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
             <Route path="offers-management" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
+            <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
             <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
