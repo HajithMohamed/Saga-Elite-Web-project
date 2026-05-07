@@ -106,6 +106,60 @@ exports.createGift = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.getGiftAnalytics = catchAsync(async (_req, res) => {
+  const [totals, breakdown] = await Promise.all([
+    Order.aggregate([
+      { $match: { "gift.giftId": { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          totalAttached: { $sum: 1 },
+          totalRevealed: {
+            $sum: { $cond: [{ $eq: ["$gift.revealed", true] }, 1, 0] },
+          },
+        },
+      },
+    ]),
+    Order.aggregate([
+      { $match: { "gift.giftId": { $ne: null } } },
+      { $group: { _id: "$gift.giftId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: "gifts",
+          localField: "_id",
+          foreignField: "_id",
+          as: "gift",
+        },
+      },
+      { $unwind: { path: "$gift", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          giftId: "$_id",
+          name: "$gift.name",
+          count: 1,
+        },
+      },
+    ]),
+  ]);
+
+  const summary = totals[0] || { totalAttached: 0, totalRevealed: 0 };
+  res.status(200).json({
+    success: true,
+    data: {
+      totalAttached: summary.totalAttached,
+      totalRevealed: summary.totalRevealed,
+      revealRate:
+        summary.totalAttached > 0
+          ? Number((summary.totalRevealed / summary.totalAttached).toFixed(4))
+          : 0,
+      mostCommon: breakdown[0] || null,
+    },
+  });
+});
+
 exports.updateGift = catchAsync(async (req, res, next) => {
   const { giftId } = req.params;
 

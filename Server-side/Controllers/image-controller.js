@@ -75,12 +75,20 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   // Validate type for System images
   if (imageData.refModel === "System") {
-    const validSystemTypes = ["hero", "ad", "logo", "category-logo"];
+    const validSystemTypes = [
+      "hero",
+      "ad",
+      "logo",
+      "category-logo",
+      "social-ugc",
+      "editorial-quote",
+      "testimonial",
+    ];
 
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
       return next(
         new AppError(
-          "System images require type: hero, ad, logo, or category-logo",
+          `System images require type: ${validSystemTypes.join(", ")}`,
           400
         )
       );
@@ -487,6 +495,60 @@ const getReviewImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const getSocialUgcImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "social-ugc",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No social UGC images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
+const getEditorialQuoteImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "editorial-quote",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No editorial quote images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
+const getTestimonialImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "testimonial",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No testimonial images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
 /* ==============================
    Set Primary Image
 ============================== */
@@ -775,6 +837,9 @@ module.exports = {
   getLogoImages,
   getCategoryLogoImages,
   getReviewImages,
+  getSocialUgcImages,
+  getEditorialQuoteImages,
+  getTestimonialImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,

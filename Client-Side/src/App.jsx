@@ -34,6 +34,9 @@ import AdminOffers from "./pages/admin-view/Offers";
 import AdminCoupons from "./pages/admin-view/Coupons";
 import AdminCollections from "./pages/admin-view/Collections";
 import AdminMediaLibrary from "./pages/admin-view/MediaLibrary";
+import AdminSeoSettings from "./pages/admin-view/SeoSettings";
+import AdminCommunity from "./pages/admin-view/CommunityPage";
+import AdminShipping from "./pages/admin-view/ShippingPage";
 import AdminOrders from "./pages/admin-view/Orders";
 import GiftManager from "./pages/admin-view/GiftManager";
 import AdminProduct from "./pages/admin-view/Product";
@@ -218,6 +221,9 @@ function App() {
             <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
             <Route path="collections" element={<PermissionGuard permission="products"><AdminCollections /></PermissionGuard>} />
             <Route path="media" element={<PermissionGuard permission="products"><AdminMediaLibrary /></PermissionGuard>} />
+            <Route path="seo" element={<PermissionGuard superAdminOnly><AdminSeoSettings /></PermissionGuard>} />
+            <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
+            <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
             <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />

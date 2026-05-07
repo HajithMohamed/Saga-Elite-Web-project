@@ -257,7 +257,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/shipping",
       icon: <Truck className="h-5 w-5" />,
       permission: "manageInventory",
-      comingSoon: true,
     },
 
     // Customers
@@ -294,7 +293,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/community",
       icon: <Globe className="h-5 w-5" />,
       permission: "sendCampaigns",
-      comingSoon: true,
     },
 
     // Marketing
@@ -331,7 +329,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <Globe className="h-5 w-5" />,
       permission: null,
       superAdminOnly: true,
-      comingSoon: true,
     },
     {
       label: "Analytics",

@@ -19,6 +19,7 @@ const {
   generalLimiter,
 } = require("./Middlewares/rateLimitinMiddleware");
 const { requestLogger } = require("./Middlewares/customMiddleware");
+const maintenanceMode = require("./Middlewares/maintenance-mode");
 const globalErrorController = require("./Controllers/errorController");
 const {
   setSocketServer,
@@ -54,6 +55,8 @@ const siteConfigRoutes = require("./Routes/siteConfigRoutes");
 const offerRoutes = require("./Routes/offer-routes");
 const couponRoutes = require("./Routes/coupon-routes");
 const collectionRoutes = require("./Routes/collection-routes");
+const influencerRoutes = require("./Routes/influencer-routes");
+const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 
 app.use(
@@ -74,6 +77,7 @@ app.use(
 app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
+app.use(maintenanceMode);
 
 // Allow popup-based OAuth flows to close child windows without being
 // blocked by strict Cross-Origin-Opener-Policy during local development
@@ -114,6 +118,8 @@ app.use("/api/v1/site-config", siteConfigRoutes);
 app.use("/api/v1/offers", offerRoutes);
 app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/collections", collectionRoutes);
+app.use("/api/v1/influencers", influencerRoutes);
+app.use("/api/v1/shipping-zones", shippingZoneRoutes);
 
 app.use(globalErrorController);
 

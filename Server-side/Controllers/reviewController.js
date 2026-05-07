@@ -4,12 +4,123 @@ const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 const reviewFilterConfig = require("../Config/review-filter-config");
+
+const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+const generateRewardCode = (prefix = "REVIEW") => {
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) {
+    suffix += REWARD_CODE_CHARS.charAt(
+      Math.floor(Math.random() * REWARD_CODE_CHARS.length)
+    );
+  }
+  return `${(prefix || "REVIEW").toUpperCase()}-${suffix}`;
+};
+
+/*
+ * If the reward_review_discount SiteConfig is enabled, issue a one-time
+ * coupon for the review's user. Idempotent: skips if review.rewardCouponIssued.
+ * Failures are logged, never bubbled — review approval must succeed regardless.
+ */
+const tryIssueReviewReward = async (review) => {
+  if (review.rewardCouponIssued) return null;
+
+  let config;
+  try {
+    const doc = await SiteConfig.findOne({ key: "reward_review_discount" }).lean();
+    config = doc?.value;
+  } catch (err) {
+    logger.warn("Review reward config lookup failed", { error: err?.message });
+    return null;
+  }
+
+  if (!config?.enabled) return null;
+
+  const discountType = config.discountType === "fixed" ? "fixed" : "percent";
+  const discountValue = Number(config.discountValue);
+  if (!Number.isFinite(discountValue) || discountValue <= 0) return null;
+  if (discountType === "percent" && discountValue > 100) return null;
+
+  const expiryDays = Number.isFinite(Number(config.expiryDays))
+    ? Math.max(1, Number(config.expiryDays))
+    : 30;
+  const maxUses = Number.isFinite(Number(config.maxUses))
+    ? Math.max(1, Number(config.maxUses))
+    : 1;
+
+  // Generate a unique code (retry up to 5 times on collision)
+  let code = generateRewardCode(config.codePrefix);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const exists = await Coupon.exists({ code });
+    if (!exists) break;
+    code = generateRewardCode(config.codePrefix);
+  }
+
+  const startsAt = new Date();
+  const endsAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
+  try {
+    const coupon = await Coupon.create({
+      code,
+      description: `Thanks-for-reviewing reward for review ${review._id}`,
+      discountType,
+      discountValue,
+      maxUses,
+      startsAt,
+      endsAt,
+      isActive: true,
+      issuedFor: "review_reward",
+    });
+
+    review.rewardCouponIssued = true;
+    review.rewardCouponCode = code;
+    await review.save({ validateBeforeSave: false });
+
+    // Best-effort email to the customer
+    const user = await User.findById(review.userId).select("email").lean();
+    if (user?.email) {
+      const human =
+        discountType === "percent"
+          ? `${discountValue}% off`
+          : `LKR ${discountValue.toLocaleString("en-LK")} off`;
+      sendEmail({
+        email: user.email,
+        subject: "A thank-you from Saga Elite",
+        html: buildEmailTemplate(
+          "Your review reward",
+          `<p>Thanks for sharing your thoughts.</p>
+           <p>Use this one-time code at checkout for ${human}:</p>
+           <p style="font-size:28px;letter-spacing:6px;font-weight:bold;text-align:center;color:#f2ca50;">${code}</p>
+           <p>The code expires on ${endsAt.toLocaleDateString("en-LK")}.</p>`
+        ),
+      }).catch((err) =>
+        logger.warn("Review reward email failed", {
+          reviewId: review._id,
+          error: err?.message,
+        })
+      );
+    }
+
+    return coupon;
+  } catch (err) {
+    logger.warn("Review reward issuance failed", {
+      reviewId: review._id,
+      error: err?.message,
+    });
+    return null;
+  }
+};
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -526,6 +637,8 @@ const moderateReview = catchAsync(async (req, res, next) => {
     review.rejectionReason = null;
     await review.save({ validateBeforeSave: false });
     await recalculateProductRating(review.productId);
+    // Fire-and-forget reward issuance — never blocks moderation
+    tryIssueReviewReward(review).catch(() => {});
   } else {
     review.status = "rejected";
     review.rejectionReason = rejectionReason?.trim() || "Rejected by admin";

@@ -99,6 +99,16 @@ const reviewSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    rewardCouponIssued: {
+      type: Boolean,
+      default: false,
+    },
+    rewardCouponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     slug: {
       type: String,
       unique: true,
