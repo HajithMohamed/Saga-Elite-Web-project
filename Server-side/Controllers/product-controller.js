@@ -16,6 +16,17 @@ const { broadcastNotification } = require("../Utils/notification-service");
 */
 
 const getAllProducts = catchAsync(async (req, res, next) => {
+    const isAdmin = req.user && req.user.role === 'admin';
+    
+    // Safety: Strip costPrice for non-admins if present in paginated results
+    if (!isAdmin && res.paginatedResults && res.paginatedResults.data) {
+        res.paginatedResults.data = res.paginatedResults.data.map(p => {
+            const productObj = p.toObject ? p.toObject({ virtuals: true }) : { ...p };
+            delete productObj.costPrice;
+            return productObj;
+        });
+    }
+
     res.status(200).json({
         success: true,
         message: "Products fetched successfully",
@@ -49,10 +60,17 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
+    const isAdmin = req.user && req.user.role === 'admin';
+    let productResponse = product.toObject({ virtuals: true });
+    
+    if (!isAdmin) {
+        delete productResponse.costPrice;
+    }
+
     res.status(200).json({
         success: true,
         message: "Product fetched successfully",
-        product
+        product: productResponse
     });
 });
 

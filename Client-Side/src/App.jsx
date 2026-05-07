@@ -29,7 +29,8 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 import AdminLayout from "./components/admin-components/Layout";
 import PermissionGuard from "./components/admin-components/PermissionGuard";
 import AdminDashboard from "./pages/admin-view/Dashboard";
-import AdminFeatures from "./pages/admin-view/Features";
+import AdminFeatures
+import AdminOffers from './pages/admin/AdminOffers'; from "./pages/admin-view/Features";
 import AdminOrders from "./pages/admin-view/Orders";
 import GiftManager from "./pages/admin-view/GiftManager";
 import AdminProduct from "./pages/admin-view/Product";
@@ -164,6 +165,7 @@ function App() {
             <Route path="/legal/terms-and-conditions" element={<TermsConditionsPage />} />
             <Route path="/legal/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/legal/delivery-policy" element={<DeliveryPolicyPage />} />
+            <Route path="/offers" element={<OffersPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/product/:productId/reviews" element={<ProductReviewsPage />} />
@@ -208,6 +210,7 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
             <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
+            <Route path="offers-management" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
             <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />

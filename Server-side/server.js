@@ -27,7 +27,8 @@ const {
 const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
 const connectToDB = require("./DataBase/db");
 
-validateRuntimeConfig();
+validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
+
 
 const app = express();
 
@@ -185,6 +186,7 @@ const startServer = async () => {
     startManualPaymentCleanupJob();
 
     server.listen(PORT, () => {
+      initAgingStockJob();
       logger.info("Server is listening", { port: PORT });
     });
   } catch (error) {
