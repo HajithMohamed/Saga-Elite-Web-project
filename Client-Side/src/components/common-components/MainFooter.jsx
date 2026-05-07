@@ -89,7 +89,7 @@ const MainFooter = () => {
                   <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
                 </motion.button>
               </Link>
-              <Link to="/shopping/product-list?category=drops">
+              <Link to="/shopping/drops">
                 <motion.button 
                   whileHover={{ color: "#ffffff", borderColor: "#ffffff" }}
                   className="px-8 py-3 bg-transparent border border-[#555] text-[#ccc] font-bold uppercase tracking-wider rounded-sm transition-colors hover:bg-white/5"

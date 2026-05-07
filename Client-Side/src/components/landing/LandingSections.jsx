@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,11 +13,28 @@ import {
   Gift,
   Sparkles,
   Mail,
+  Zap,
+  ShieldCheck,
+  Crown,
+  Star,
+  Instagram,
+  Quote,
+  CheckCircle2,
+  Flame,
+  Award,
+  Diamond,
 } from "lucide-react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Points, PointMaterial } from "@react-three/drei";
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
 import { formatLkr } from "@/utils/currency";
 import { getRemainingTime } from "@/utils/time";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
+
+// Spline runtime is heavy (~200KB). Lazy-load only when a scene URL is provided.
+const Spline = React.lazy(() => import("@splinetool/react-spline"));
 
 const sectionContainer = "max-w-[1440px] mx-auto px-6";
 
@@ -102,7 +119,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
                   className="bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#ffe088] transition-colors font-bold">
               SHOP THE DROP
             </Link>
-            <Link to="/shopping/product-list?category=drops"
+            <Link to="/shopping/drops"
                   className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold">
               VIEW ALL PIECES
             </Link>
@@ -702,9 +719,11 @@ export const NewsletterSection = () => {
     <section className="bg-[#050505] py-12 border-t border-[#1a1a1a]">
       <div className="max-w-2xl mx-auto px-6 text-center">
         <Mail className="w-8 h-8 text-[#f2ca50] mx-auto mb-6" />
-        <h3 className="font-display text-4xl text-[#FAF7F2] uppercase mb-4">Join The Elite</h3>
+        <h3 className="font-display text-4xl text-[#FAF7F2] uppercase mb-4">
+          Unlock Future Drops
+        </h3>
         <p className="font-sans text-sm text-[#99907c] mb-8">
-          Subscribe for early access to drops, exclusive offers, and insider news.
+          Be first when a drop goes live. Members only — no spam.
         </p>
         <form
           className="flex flex-col md:flex-row gap-4 max-w-md mx-auto"
@@ -737,7 +756,821 @@ export const NewsletterSection = () => {
             {errorMessage}
           </p>
         ) : null}
+
+        <div className="mt-8 pt-6 border-t border-[#1a1a1a]">
+          <p className="font-mono text-[10px] text-[#99907c] tracking-widest uppercase mb-3">
+            Prefer WhatsApp? Get drop alerts in your chat.
+          </p>
+          <a
+            href="https://wa.me/+94770704274?text=Add%20me%20to%20the%20Saga%20Elite%20drop%20alerts%20list"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-[#25D366]/40 hover:border-[#25D366] text-[#25D366] px-6 py-2.5 font-mono text-[10px] tracking-[0.24em] uppercase transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Join WhatsApp Alerts
+          </a>
+        </div>
       </div>
     </section>
   );
 };
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ANNOUNCEMENT BAR — thin animated marquee at top of homepage.
+   When a drop is live, it shows the live drop + countdown.
+   Otherwise it cycles through static hype messages.
+   ────────────────────────────────────────────────────────────────────────── */
+const ANNOUNCEMENT_MESSAGES = [
+  "🚀 LATEST DROP LIVE NOW",
+  "🎁 EVERY ORDER UNLOCKS A MYSTERY REWARD",
+  "⚡ LIMITED STOCK · RARE FIT FOREVER",
+  "🔥 FREE DELIVERY OVER LKR 10,000",
+  "💎 MEMBERS GET EARLY DROP ACCESS",
+];
+
+export const AnnouncementBar = ({ activeDrop = null }) => {
+  const [timeLeft, setTimeLeft] = useState(() =>
+    activeDrop?.endDate ? getRemainingTime(activeDrop.endDate) : null
+  );
+
+  useEffect(() => {
+    if (!activeDrop?.endDate) return undefined;
+    const iv = setInterval(
+      () => setTimeLeft(getRemainingTime(activeDrop.endDate)),
+      1000
+    );
+    return () => clearInterval(iv);
+  }, [activeDrop?.endDate]);
+
+  // Drop-aware mode: show live drop with countdown.
+  if (activeDrop && timeLeft && (timeLeft.total ?? 1) > 0) {
+    const d = timeLeft.days ?? timeLeft.d ?? 0;
+    const h = timeLeft.hh ?? timeLeft.h ?? "00";
+    const m = timeLeft.mm ?? timeLeft.m ?? "00";
+    const s = timeLeft.ss ?? timeLeft.s ?? "00";
+    return (
+      <Link
+        to={`/shopping/drop/${activeDrop.slug}`}
+        className="block w-full bg-[#0a0a0a] border-b border-[#f2ca50]/40 relative overflow-hidden group"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-[#f2ca50]/0 via-[#f2ca50]/15 to-[#f2ca50]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[2000ms] ease-out pointer-events-none" />
+        <div className="relative z-10 max-w-[1440px] mx-auto px-6 py-2 flex items-center justify-center gap-3 md:gap-6 font-mono text-[10px] md:text-[11px] tracking-[0.28em] uppercase">
+          <span className="flex items-center gap-2 text-[#f2ca50] font-bold">
+            <span className="w-2 h-2 rounded-full bg-[#f2ca50] animate-pulse shadow-[0_0_8px_#f2ca50]" />
+            LIVE NOW · {activeDrop.name}
+          </span>
+          <span className="hidden md:inline text-[#574500]">|</span>
+          <span className="text-[#e5e2e1] tabular-nums">
+            ENDS IN {d > 0 ? `${d}D ` : ""}
+            <span className="text-[#f2ca50]">{String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}</span>
+          </span>
+          <span className="hidden md:inline text-[#f2ca50] underline underline-offset-4 font-bold">
+            SHOP DROP →
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  // Marquee mode: infinite scroll of hype messages.
+  const messages = [...ANNOUNCEMENT_MESSAGES, ...ANNOUNCEMENT_MESSAGES];
+  return (
+    <div className="w-full bg-[#0a0a0a] border-b border-[#1a1a1a] py-2 overflow-hidden relative">
+      <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+      <motion.div
+        className="flex gap-12 whitespace-nowrap"
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+      >
+        {messages.map((msg, i) => (
+          <span
+            key={i}
+            className="font-mono text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-[#d0c5af] flex items-center gap-3"
+          >
+            {msg}
+            <span className="text-[#574500]">·</span>
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+   HERO BACKDROP FX — Three.js floating gold particles behind the hero.
+   Renders absolutely positioned. WebGL required; gracefully no-op if not.
+   ────────────────────────────────────────────────────────────────────────── */
+const ParticleField = () => {
+  const ref = useRef(null);
+  const positions = useMemo(() => {
+    const arr = new Float32Array(900); // 300 particles × 3 coords
+    for (let i = 0; i < arr.length; i += 3) {
+      arr[i] = (Math.random() - 0.5) * 6;
+      arr[i + 1] = (Math.random() - 0.5) * 4;
+      arr[i + 2] = (Math.random() - 0.5) * 4;
+    }
+    return arr;
+  }, []);
+
+  useFrame((state, delta) => {
+    if (!ref.current) return;
+    ref.current.rotation.x += delta * 0.02;
+    ref.current.rotation.y += delta * 0.03;
+  });
+
+  return (
+    <Points ref={ref} positions={positions} stride={3} frustumCulled>
+      <PointMaterial
+        transparent
+        color="#f2ca50"
+        size={0.012}
+        sizeAttenuation
+        depthWrite={false}
+      />
+    </Points>
+  );
+};
+
+export const HeroBackdropFX = () => (
+  <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
+    <Canvas
+      camera={{ position: [0, 0, 1.5], fov: 75 }}
+      gl={{ antialias: false, powerPreference: "low-power" }}
+      dpr={[1, 1.5]}
+    >
+      <ParticleField />
+    </Canvas>
+  </div>
+);
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LIVE DROP COUNTDOWN XL — full-bleed cinematic countdown.
+   GSAP letter-reveal on the headline; pulsing glow on digits; particles bg.
+   ────────────────────────────────────────────────────────────────────────── */
+export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", description }) => {
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(targetDate));
+  const headlineRef = useRef(null);
+
+  useEffect(() => {
+    const iv = setInterval(() => setTimeLeft(getRemainingTime(targetDate)), 1000);
+    return () => clearInterval(iv);
+  }, [targetDate]);
+
+  useGSAP(
+    () => {
+      if (!headlineRef.current) return;
+      const letters = headlineRef.current.querySelectorAll("[data-letter]");
+      gsap.fromTo(
+        letters,
+        { opacity: 0, y: 30, rotateX: -90 },
+        {
+          opacity: 1,
+          y: 0,
+          rotateX: 0,
+          stagger: 0.04,
+          duration: 0.8,
+          ease: "power3.out",
+        }
+      );
+    },
+    { scope: headlineRef }
+  );
+
+  const headline = `Drops in ${title}`;
+  const days = timeLeft.days ?? timeLeft.d ?? 0;
+  const hours = timeLeft.hh ?? timeLeft.h ?? "00";
+  const mins = timeLeft.mm ?? timeLeft.m ?? "00";
+  const secs = timeLeft.ss ?? timeLeft.s ?? "00";
+
+  return (
+    <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
+      {/* Radial gold + violet ambient glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#a855f7]/8 blur-[140px] rounded-full pointer-events-none" />
+
+      {/* Floating particle accents */}
+      {[...Array(18)].map((_, i) => (
+        <motion.span
+          key={i}
+          className="absolute w-1 h-1 rounded-full bg-[#f2ca50]/60"
+          style={{
+            top: `${Math.random() * 100}%`,
+            left: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -25, 0],
+            opacity: [0.2, 0.8, 0.2],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: Math.random() * 2,
+          }}
+        />
+      ))}
+
+      <div className="relative z-10 max-w-[1100px] mx-auto px-6 text-center">
+        <p className="font-mono text-[11px] tracking-[0.4em] uppercase text-[#a855f7] mb-3 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse shadow-[0_0_10px_#a855f7]" />
+          Hold Ready
+        </p>
+        <h2
+          ref={headlineRef}
+          className="font-display text-[40px] md:text-[80px] leading-none uppercase text-[#FAF7F2] mb-3 tracking-tight"
+          style={{ perspective: "600px" }}
+        >
+          {headline.split("").map((ch, i) => (
+            <span
+              key={i}
+              data-letter
+              className="inline-block"
+              style={{ whiteSpace: ch === " " ? "pre" : "normal" }}
+            >
+              {ch}
+            </span>
+          ))}
+        </h2>
+        {description && (
+          <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-2xl mx-auto mb-12">
+            {description}
+          </p>
+        )}
+
+        <div className="flex flex-wrap justify-center gap-3 md:gap-6">
+          {[
+            ["Days", days],
+            ["Hours", hours],
+            ["Mins", mins],
+            ["Secs", secs],
+          ].map(([label, value]) => (
+            <div key={label} className="flex flex-col items-center">
+              <div className="relative w-20 h-20 md:w-28 md:h-28 bg-[#0e0e0e] border border-[#4d4635] flex items-center justify-center">
+                <div className="absolute inset-0 bg-[#f2ca50]/5 blur-md" />
+                <span className="relative font-mono tabular-nums text-3xl md:text-5xl text-[#f2ca50] font-bold drop-shadow-[0_0_12px_rgba(242,202,80,0.4)]">
+                  {String(value).padStart(2, "0")}
+                </span>
+              </div>
+              <span className="font-mono text-[10px] tracking-[0.3em] text-[#99907c] mt-3 uppercase">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+   MYSTERY GIFT — Spline 3D box (when sceneUrl is provided), with a pure-CSS
+   fallback that always works. The fallback is a glowing rotating box icon.
+   ────────────────────────────────────────────────────────────────────────── */
+const MysteryFallbackBox = () => {
+  const [opened, setOpened] = useState(false);
+  return (
+    <div className="relative h-[360px] w-full flex items-center justify-center">
+      <motion.div
+        className="absolute w-[280px] h-[280px] rounded-full border border-[#f2ca50]/20"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+      />
+      <motion.div
+        className="absolute w-[200px] h-[200px] rounded-full border border-[#a855f7]/25"
+        animate={{ rotate: -360 }}
+        transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+      />
+      <div className="absolute w-[400px] h-[400px] bg-[#f2ca50]/8 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute w-[300px] h-[300px] bg-[#a855f7]/10 blur-[80px] rounded-full pointer-events-none translate-x-12 -translate-y-8" />
+
+      <motion.button
+        type="button"
+        onClick={() => setOpened((v) => !v)}
+        whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 group"
+      >
+        <Box
+          className={`w-40 h-40 transition-colors duration-700 ${
+            opened ? "text-[#a855f7]" : "text-[#f2ca50]"
+          }`}
+          strokeWidth={1}
+          style={{
+            filter: opened
+              ? "drop-shadow(0 0 24px rgba(168, 85, 247, 0.6))"
+              : "drop-shadow(0 0 18px rgba(242, 202, 80, 0.4))",
+          }}
+        />
+        <AnimatePresence>
+          {opened && (
+            <motion.div
+              initial={{ scale: 0, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: -50, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 220, damping: 18 }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f2ca50] text-[#0a0a0a] font-display text-2xl px-6 py-3 whitespace-nowrap shadow-[0_0_30px_#f2ca50] flex items-center gap-2"
+            >
+              <Sparkles className="w-5 h-5" />
+              UNLOCKED
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    </div>
+  );
+};
+
+export const MysteryGiftSpline = ({ sceneUrl = null }) => (
+  <section className="relative bg-[#0a0a0a] border-y border-[#1a1a1a] py-16 md:py-24 overflow-hidden">
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] bg-[#a855f7]/5 blur-[120px] rounded-full pointer-events-none" />
+
+    <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
+      <div className="text-center md:text-left">
+        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#a855f7] mb-3">
+          Signature Feature
+        </p>
+        <h2 className="font-display text-[40px] md:text-[60px] leading-none text-[#FAF7F2] uppercase mb-6">
+          Every order <br />
+          <span className="text-[#f2ca50]">unlocks a reward.</span>
+        </h2>
+        <p className="font-sans text-base text-[#d0c5af] leading-relaxed max-w-md mx-auto md:mx-0 mb-8">
+          Could be an unreleased piece. Could be a discount code for the next drop.
+          Could be access to a closed community channel. You won't know until your
+          parcel lands.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto md:mx-0">
+          <div className="flex items-center gap-3 border border-[#4d4635] bg-[#131313] px-4 py-3">
+            <Gift className="w-4 h-4 text-[#f2ca50] shrink-0" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#e5e2e1]">
+              Guaranteed on every order
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative h-[400px] md:h-[480px] w-full">
+        {sceneUrl ? (
+          <Suspense fallback={<MysteryFallbackBox />}>
+            <Spline scene={sceneUrl} />
+          </Suspense>
+        ) : (
+          <MysteryFallbackBox />
+        )}
+      </div>
+    </div>
+  </section>
+);
+
+/* ──────────────────────────────────────────────────────────────────────────
+   WHY CHOOSE SAGA — 5 feature cards with cursor-following tilt + glow.
+   ────────────────────────────────────────────────────────────────────────── */
+const TILT_FEATURES = [
+  {
+    icon: Flame,
+    title: "Limited Drops",
+    desc: "Capsule releases. Once gone, never restocked.",
+  },
+  {
+    icon: Diamond,
+    title: "Premium Quality",
+    desc: "Hand-finished pieces. Made in Sri Lanka.",
+  },
+  {
+    icon: Gift,
+    title: "Mystery Rewards",
+    desc: "Every order ships with an unannounced extra.",
+  },
+  {
+    icon: Truck,
+    title: "Islandwide Delivery",
+    desc: "Anywhere in Sri Lanka. Free over LKR 10,000.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Secure Checkout",
+    desc: "Encrypted payments. Cash or card. Your call.",
+  },
+];
+
+const TiltCard = ({ Icon, title, desc, index }) => {
+  const ref = useRef(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const onMove = (e) => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    setTilt({ x: (py - 0.5) * -10, y: (px - 0.5) * 10 });
+  };
+  const onLeave = () => setTilt({ x: 0, y: 0 });
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ delay: index * 0.06, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: "transform 0.2s ease-out",
+      }}
+      className="group relative bg-[#0e0e0e] border border-[#1f1f1f] p-6 md:p-8 hover:border-[#f2ca50]/50 transition-colors"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-[#f2ca50]/0 via-[#f2ca50]/5 to-[#a855f7]/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="relative z-10">
+        <div className="w-12 h-12 mb-5 flex items-center justify-center border border-[#4d4635] bg-[#131313] group-hover:border-[#f2ca50] transition-colors">
+          <Icon className="w-5 h-5 text-[#f2ca50] group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+        </div>
+        <h3 className="font-display text-xl md:text-2xl text-[#FAF7F2] uppercase mb-2 tracking-wider">
+          {title}
+        </h3>
+        <p className="font-sans text-sm text-[#99907c] leading-relaxed">{desc}</p>
+      </div>
+    </motion.div>
+  );
+};
+
+export const WhyChooseSaga = () => (
+  <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
+    <div className="max-w-[1440px] mx-auto px-6">
+      <div className="text-center mb-12">
+        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+          Why Saga Elite
+        </p>
+        <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
+          Built for those who notice
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+        {TILT_FEATURES.map((f, i) => (
+          <TiltCard
+            key={f.title}
+            Icon={f.icon}
+            title={f.title}
+            desc={f.desc}
+            index={i}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TRENDING FITS MARQUEE — two rows scrolling in opposite directions.
+   ────────────────────────────────────────────────────────────────────────── */
+const TRENDING_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80",
+  "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80",
+  "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=600&q=80",
+  "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&q=80",
+  "https://images.unsplash.com/photo-1551803091-e20673f15770?w=600&q=80",
+  "https://images.unsplash.com/photo-1492447166138-50c3889fccb1?w=600&q=80",
+  "https://images.unsplash.com/photo-1485518882345-15568b007407?w=600&q=80",
+  "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=600&q=80",
+];
+
+const MarqueeProductTile = ({ product, fallbackImage }) => {
+  const url =
+    product?.images?.[0]?.url ||
+    product?.imageUrl ||
+    fallbackImage;
+  const slug = product?.slug || product?._id;
+  const Wrapper = slug ? Link : "div";
+  const wrapperProps = slug ? { to: `/shopping/product/${slug}` } : {};
+
+  return (
+    <Wrapper
+      {...wrapperProps}
+      className="relative shrink-0 w-[200px] md:w-[260px] aspect-[3/4] overflow-hidden border border-[#1f1f1f] bg-[#131313] group block"
+    >
+      <img
+        src={url}
+        alt={product?.name || "Trending fit"}
+        loading="lazy"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-transparent" />
+      {product?.name && (
+        <div className="absolute bottom-3 left-3 right-3">
+          <p className="font-sans text-xs text-[#FAF7F2] truncate">{product.name}</p>
+          {product.basePrice ? (
+            <p className="font-mono text-[10px] text-[#f2ca50] mt-1">
+              {formatLkr(
+                Math.round(
+                  product.basePrice * (1 - (product.discountPercent || 0) / 100)
+                )
+              )}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </Wrapper>
+  );
+};
+
+const MarqueeRow = ({ products, direction = "left", duration = 40 }) => {
+  const items = products.length > 0 ? products : TRENDING_FALLBACK_IMAGES.map((u) => ({ images: [{ url: u }] }));
+  const doubled = [...items, ...items];
+  return (
+    <div className="overflow-hidden relative">
+      <motion.div
+        className="flex gap-4 md:gap-5"
+        animate={{ x: direction === "left" ? ["0%", "-50%"] : ["-50%", "0%"] }}
+        transition={{ duration, repeat: Infinity, ease: "linear" }}
+      >
+        {doubled.map((p, i) => (
+          <MarqueeProductTile
+            key={i}
+            product={p}
+            fallbackImage={
+              TRENDING_FALLBACK_IMAGES[i % TRENDING_FALLBACK_IMAGES.length]
+            }
+          />
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+export const TrendingFitsMarquee = ({ products = [] }) => {
+  const half = Math.ceil(products.length / 2);
+  const rowA = products.slice(0, half);
+  const rowB = products.slice(half);
+  return (
+    <section className="bg-[#0a0a0a] py-16 md:py-20 overflow-hidden">
+      <div className="max-w-[1440px] mx-auto px-6 mb-10 text-center">
+        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#a855f7] mb-3">
+          Most Wanted
+        </p>
+        <h2 className="font-display text-[36px] md:text-[56px] leading-none text-[#FAF7F2] uppercase mb-3">
+          Trending Fits
+        </h2>
+        <p className="font-sans text-sm text-[#99907c] max-w-md mx-auto">
+          The pieces every other Saga is wearing this week.
+        </p>
+      </div>
+      <div className="space-y-4 md:space-y-5">
+        <MarqueeRow products={rowA} direction="left" duration={50} />
+        <MarqueeRow products={rowB} direction="right" duration={55} />
+      </div>
+    </section>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+   COMMUNITY FEED — masonry-ish grid of placeholder community shots.
+   ────────────────────────────────────────────────────────────────────────── */
+const COMMUNITY_FALLBACK = [
+  { url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80", span: "row" },
+  { url: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80", span: "" },
+  { url: "https://images.unsplash.com/photo-1492447166138-50c3889fccb1?w=800&q=80", span: "" },
+  { url: "https://images.unsplash.com/photo-1551803091-e20673f15770?w=800&q=80", span: "col" },
+  { url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&q=80", span: "" },
+  { url: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=80", span: "" },
+];
+
+export const CommunityFeed = ({ images = [] }) => {
+  const tiles = images.length > 0
+    ? images.map((url, i) => ({ url, span: COMMUNITY_FALLBACK[i % COMMUNITY_FALLBACK.length].span }))
+    : COMMUNITY_FALLBACK;
+
+  return (
+    <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
+      <div className="max-w-[1440px] mx-auto px-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+              The Community
+            </p>
+            <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
+              #SagaElite
+            </h2>
+            <p className="font-sans text-sm text-[#99907c] mt-3 max-w-lg">
+              Tag us. The best fits get featured here and on our story.
+            </p>
+          </div>
+          <a
+            href="https://instagram.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-[#4d4635] hover:border-[#f2ca50] text-[#d0c5af] hover:text-[#f2ca50] px-6 py-3 font-mono text-[10px] tracking-[0.28em] uppercase transition-colors shrink-0"
+          >
+            <Instagram className="w-4 h-4" />
+            Follow on Instagram
+          </a>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[160px] md:auto-rows-[200px] gap-3 md:gap-4">
+          {tiles.slice(0, 6).map((tile, i) => (
+            <motion.a
+              key={i}
+              href="https://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.06, duration: 0.5 }}
+              className={`relative overflow-hidden bg-[#131313] border border-[#1f1f1f] group ${
+                tile.span === "row" ? "row-span-2" : ""
+              } ${tile.span === "col" ? "col-span-2" : ""}`}
+            >
+              <img
+                src={tile.url}
+                alt="Saga Elite community"
+                loading="lazy"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Instagram className="absolute top-3 right-3 w-4 h-4 text-[#FAF7F2] opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TESTIMONIALS — auto-rotating glassmorphism review cards.
+   ────────────────────────────────────────────────────────────────────────── */
+const TESTIMONIALS = [
+  {
+    name: "Nadeesha P.",
+    handle: "@nadeesha.p",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80",
+    rating: 5,
+    text: "The mystery gift in my last drop was a hand-numbered patch I've never seen anywhere else. This brand actually feels rare.",
+    verified: true,
+  },
+  {
+    name: "Tharindu K.",
+    handle: "@tharik.fits",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80",
+    rating: 5,
+    text: "Cop. Wear. Get DMs about it. The fits sit different — and the drop hype is real.",
+    verified: true,
+  },
+  {
+    name: "Sashini R.",
+    handle: "@sash.r",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80",
+    rating: 5,
+    text: "Premium feel without the import shipping headache. Got my piece in two days, in Galle. Boxed like a gift.",
+    verified: true,
+  },
+];
+
+export const Testimonials = () => {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((v) => (v + 1) % TESTIMONIALS.length), 6000);
+    return () => clearInterval(t);
+  }, []);
+  const t = TESTIMONIALS[i];
+
+  return (
+    <section className="relative bg-[#0a0a0a] py-16 md:py-24 overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[#f2ca50]/5 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="max-w-[900px] mx-auto px-6 relative z-10">
+        <div className="text-center mb-12">
+          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+            Verified Pieces
+          </p>
+          <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
+            What members say
+          </h2>
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={t.handle}
+            initial={{ opacity: 0, y: 30, rotateX: -4 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="relative bg-[#131313]/70 backdrop-blur-md border border-[#4d4635]/60 p-8 md:p-12"
+            style={{ perspective: "1000px" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-[#f2ca50]/5 via-transparent to-[#a855f7]/5 pointer-events-none" />
+            <Quote className="absolute top-6 right-6 w-8 h-8 text-[#f2ca50]/30" strokeWidth={1} />
+
+            <div className="relative">
+              <div className="flex gap-1 mb-5">
+                {Array.from({ length: t.rating }).map((_, k) => (
+                  <Star
+                    key={k}
+                    className="w-4 h-4 text-[#f2ca50]"
+                    fill="#f2ca50"
+                  />
+                ))}
+              </div>
+              <p className="font-display text-xl md:text-2xl text-[#FAF7F2] leading-snug mb-8">
+                "{t.text}"
+              </p>
+              <div className="flex items-center gap-4">
+                <img
+                  src={t.avatar}
+                  alt={t.name}
+                  loading="lazy"
+                  className="w-12 h-12 rounded-full object-cover border border-[#4d4635]"
+                />
+                <div>
+                  <p className="font-sans text-sm text-[#FAF7F2] font-medium flex items-center gap-2">
+                    {t.name}
+                    {t.verified && (
+                      <CheckCircle2
+                        className="w-4 h-4 text-[#f2ca50]"
+                        fill="#f2ca50"
+                        stroke="#0a0a0a"
+                        strokeWidth={2.5}
+                      />
+                    )}
+                  </p>
+                  <p className="font-mono text-[10px] tracking-[0.2em] text-[#99907c] uppercase mt-0.5">
+                    {t.handle}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="flex justify-center gap-2 mt-8">
+          {TESTIMONIALS.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setI(idx)}
+              className={`h-0.5 transition-all duration-500 ${
+                i === idx ? "w-10 bg-[#f2ca50]" : "w-6 bg-[#4d4635] hover:bg-[#99907c]"
+              }`}
+              aria-label={`Show testimonial ${idx + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+   VIP MEMBERSHIP — full-bleed gradient CTA.
+   ────────────────────────────────────────────────────────────────────────── */
+export const VipMembership = () => (
+  <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
+    {/* Layered glow */}
+    <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
+    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#a855f7]/10 blur-[140px] rounded-full pointer-events-none" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(242,202,80,0.06),transparent_60%)] pointer-events-none" />
+
+    <div className="relative z-10 max-w-[900px] mx-auto px-6 text-center">
+      <div className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#f2ca50]/5 px-4 py-2 mb-6">
+        <Crown className="w-3.5 h-3.5 text-[#f2ca50]" />
+        <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-[#f2ca50]">
+          Members Only
+        </span>
+      </div>
+      <h2 className="font-display text-[44px] md:text-[80px] leading-none text-[#FAF7F2] uppercase mb-6">
+        Become <span className="text-[#f2ca50]">Elite</span>
+      </h2>
+      <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
+        Get early drop access, members-only mystery rewards, and a private channel
+        where the next chapter previews 48 hours before anyone else.
+      </p>
+
+      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 max-w-2xl mx-auto">
+        {[
+          ["Early drop access", Zap],
+          ["Members-only rewards", Gift],
+          ["Closed community channel", Award],
+          ["Founders-list status", Crown],
+        ].map(([label, Icon]) => (
+          <div key={label} className="flex items-center gap-2 text-[#d0c5af]">
+            <Icon className="w-4 h-4 text-[#f2ca50]" strokeWidth={1.5} />
+            <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <Link
+        to="/auth/register"
+        className="inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group"
+        style={{ boxShadow: "0 0 32px rgba(242,202,80,0.25)" }}
+      >
+        Claim Elite Access
+        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+      </Link>
+    </div>
+  </section>
+);
+

@@ -102,7 +102,7 @@ const Header = () => {
             Home
           </Link>
           <Link
-            to="/shopping/product-list?category=drops"
+            to="/shopping/drops"
             className="hover:text-[#D4AF37] transition-colors"
           >
             Latest Drop
@@ -254,7 +254,7 @@ const Header = () => {
             Home
           </Link>
           <Link
-            to="/shopping/product-list?category=drops"
+            to="/shopping/drops"
             onClick={() => setMenuOpen(false)}
             className="hover:text-[#D4AF37] transition-colors"
           >

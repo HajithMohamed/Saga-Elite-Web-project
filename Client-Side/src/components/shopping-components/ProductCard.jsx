@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Heart } from "lucide-react";
+import { ArrowRight, Eye, Heart, ShoppingBag } from "lucide-react";
 import {
   addToWishlistAction,
   removeFromWishlistAction,
@@ -105,6 +105,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     >
       {/* Image Container */}
       <Link to={productHref} className="relative aspect-[3/4] w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
+        {/* Primary image */}
         <img
           src={product?.images?.[0]?.url || "/LOGO.png"}
           alt={product?.name || "Piece"}
@@ -112,6 +113,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           width={220} height={293}
           className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.02]"
         />
+        {/* Alt image — fades in on hover when a second image exists */}
+        {product?.images?.[1]?.url ? (
+          <img
+            src={product.images[1].url}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            width={220}
+            height={293}
+            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          />
+        ) : null}
 
         {/* Hype Badges */}
         {showDealBadge && discountPct > 0 ? (
@@ -149,33 +162,45 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           </div>
         ) : null}
 
-        {/* Bottom-right: wishlist */}
-        <motion.button
-          type="button"
-          onClick={handleWishlist}
-          whileTap={{ scale: 0.7 }}
-          transition={{ type: "spring", stiffness: 500, damping: 12, mass: 1.5 }}
-          aria-pressed={inWishlist}
-          aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
-          className={cn(
-            "absolute bottom-3 right-3 w-9 h-9 flex items-center justify-center border transition-colors se-focus z-10",
-            inWishlist
-              ? "bg-[#0a0a0a]/90 border-[#f2ca50] text-[#f2ca50]"
-              : "bg-[#0a0a0a]/85 backdrop-blur-sm border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-          )}
-        >
-          <motion.div
-            initial={false}
-            animate={{ scale: inWishlist ? [1, 1.4, 1] : 1 }}
-            transition={{ type: "spring", stiffness: 600, damping: 10, mass: 1 }}
+        {/* Slide-up quick actions — appear on hover */}
+        <div className="absolute inset-x-0 bottom-0 flex translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
+          <span
+            className="flex-1 bg-[#0a0a0a]/85 backdrop-blur-sm text-[#d0c5af] py-2.5 text-[10px] tracking-[0.22em] uppercase font-mono group-hover:bg-[#131313] group-hover:text-[#e5e2e1] transition-colors flex items-center justify-center gap-1.5"
           >
-            <Heart
-              size={14}
-              strokeWidth={1.75}
-              className={inWishlist ? "fill-[#f2ca50]" : ""}
-            />
-          </motion.div>
-        </motion.button>
+            <Eye size={12} strokeWidth={1.75} />
+            View
+          </span>
+          <button
+            type="button"
+            onClick={handleWishlist}
+            aria-pressed={inWishlist}
+            aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+            className={cn(
+              "px-4 py-2.5 backdrop-blur-sm transition-colors flex items-center justify-center border-x border-[#4d4635]/40 se-focus",
+              inWishlist
+                ? "bg-[#0a0a0a]/90 text-[#f2ca50]"
+                : "bg-[#0a0a0a]/85 text-[#d0c5af] hover:text-[#e5e2e1]"
+            )}
+          >
+            <motion.div
+              initial={false}
+              animate={{ scale: inWishlist ? [1, 1.4, 1] : 1 }}
+              transition={{ type: "spring", stiffness: 600, damping: 10, mass: 1 }}
+            >
+              <Heart
+                size={14}
+                strokeWidth={1.75}
+                className={inWishlist ? "fill-[#f2ca50]" : ""}
+              />
+            </motion.div>
+          </button>
+          <span
+            className="flex-1 bg-[#f2ca50] text-[#0a0a0a] py-2.5 text-[10px] tracking-[0.22em] uppercase font-mono font-bold group-hover:bg-[#ffe088] transition-colors flex items-center justify-center gap-1.5"
+          >
+            <ShoppingBag size={12} strokeWidth={2} />
+            Add
+          </span>
+        </div>
       </Link>
 
       {/* Metadata */}

@@ -1,29 +1,28 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
-import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import {
+  AnnouncementBar,
   HeroCarousel,
-  CountdownWidget,
-  ProductSlider,
-  TrustBar,
-  OffersSlider,
-  DropCountdownBand,
+  HeroBackdropFX,
   CategoryLockup,
-  MysteryGiftStrip,
-  RecommendationsSection,
   LiveDropSection,
-  NewsletterSection
+  LiveDropCountdownXL,
+  ProductSlider,
+  OffersSlider,
+  MysteryGiftSpline,
+  WhyChooseSaga,
+  TrendingFitsMarquee,
+  CommunityFeed,
+  Testimonials,
+  VipMembership,
+  NewsletterSection,
+  TrustBar,
 } from "@/components/landing/LandingSections";
 
-const PLACEHOLDER_URLS = {
-  hero: "https://images.unsplash.com/photo-1550614000-4b95dd245ed6?w=1600&q=80",
-  ladies: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80",
-  gents: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=600&q=80",
-  unisex: "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=600&q=80",
-};
+const PLACEHOLDER_HERO =
+  "https://images.unsplash.com/photo-1550614000-4b95dd245ed6?w=1600&q=80";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -36,6 +35,7 @@ const Home = () => {
     gentsArrivals: [],
     trending: [],
     categoryImages: { ladies: {}, gents: {}, unisex: {} },
+    socialImages: [],
   });
 
   useEffect(() => {
@@ -50,7 +50,10 @@ const Home = () => {
         setNextDrop(upcomingDrop);
       } catch (error) {
         console.error(error);
-        toast({ title: "Failed to load", description: "Could not fetch latest drops." });
+        toast({
+          title: "Failed to load",
+          description: "Could not fetch the latest drops.",
+        });
       } finally {
         setLoading(false);
       }
@@ -62,90 +65,116 @@ const Home = () => {
 
   const heroSlides = useMemo(() => {
     if (payload.heroSlides && payload.heroSlides.length > 0) {
-      return payload.heroSlides.map(slide => ({
+      return payload.heroSlides.map((slide) => ({
         ...slide,
-        imageUrl: slide.imageUrl || PLACEHOLDER_URLS.hero
+        imageUrl: slide.imageUrl || PLACEHOLDER_HERO,
       }));
     }
-    // Default fallback
-    return [{
-      id: "1",
-      label: "Exclusive Collection",
-      headline: "OWN THE DROP\\nLIMITED EDITION",
-      subheadline: "Premium streetwear for the elite. Unlock early access and exclusive drops.",
-      ctaText: "EXPLORE DROP",
-      ctaLink: "/shopping/product-list",
-      imageUrl: PLACEHOLDER_URLS.hero
-    }];
+    return [
+      {
+        id: "default-1",
+        label: "Saga Elite",
+        headline: "OWN THE DROP\\nLIMITED EDITION",
+        subheadline:
+          "Premium streetwear for the elite. Unlock early access and exclusive drops.",
+        ctaText: "EXPLORE DROP",
+        ctaLink: "/shopping/product-list",
+        imageUrl: PLACEHOLDER_HERO,
+      },
+    ];
   }, [payload.heroSlides]);
 
-  const identityCategories = useMemo(() => [
-    { name: "Gents", link: "/shopping/product-list?category=gents", image: PLACEHOLDER_URLS.gents },
-    { name: "Ladies", link: "/shopping/product-list?category=ladies", image: PLACEHOLDER_URLS.ladies },
-    { name: "Unisex", link: "/shopping/product-list?category=unisex", image: PLACEHOLDER_URLS.unisex },
-  ], []);
+  // Combine arrivals + trending into a single marquee feed.
+  const trendingFeed = useMemo(
+    () => [
+      ...(payload.gentsArrivals || []),
+      ...(payload.ladiesArrivals || []),
+      ...(payload.trending || []),
+    ],
+    [payload.gentsArrivals, payload.ladiesArrivals, payload.trending]
+  );
 
   if (loading) {
-    return <div className="min-h-screen bg-[#0e0e0e] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-t-2 border-[#f2ca50] animate-spin" /></div>;
+    return (
+      <div className="min-h-screen bg-[#0e0e0e] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-t-2 border-[#f2ca50] animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
-      <DropCountdownBand activeDrop={payload.activeDrop} />
+    <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
+      {/* Ambient Three.js particle backdrop — fixed behind everything,
+          gives the page a subtle cinematic depth. */}
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
+        <HeroBackdropFX />
+      </div>
 
-      <HeroCarousel
-        slides={heroSlides}
-        activeDrop={payload.activeDrop}
-        nextDrop={nextDrop}
-      />
+      <div className="relative z-10">
+        {/* 1. Announcement bar — drop-aware marquee at the top */}
+        <AnnouncementBar activeDrop={payload.activeDrop} />
 
-      <TrustBar />
+        {/* 2. Hero — cinematic, drop-aware (live → upcoming → catalogue) */}
+        <HeroCarousel
+          slides={heroSlides}
+          activeDrop={payload.activeDrop}
+          nextDrop={nextDrop}
+        />
 
-      <LiveDropSection activeDrop={payload.activeDrop} />
+        {/* 3. Trust bar — quick credibility strip */}
+        <TrustBar />
 
-      {!payload.activeDrop && nextDrop && nextDrop.releaseDate && (
-         <CountdownWidget
+        {/* 4. Collection selector — 3 identity cards */}
+        <CategoryLockup categoryImages={payload.categoryImages} />
+
+        {/* 5. Live drop showcase OR Next drop countdown */}
+        {payload.activeDrop ? (
+          <LiveDropSection activeDrop={payload.activeDrop} />
+        ) : nextDrop?.releaseDate ? (
+          <LiveDropCountdownXL
             targetDate={nextDrop.releaseDate}
             title={nextDrop.name}
-            description="The next elite collection drops soon. Do not miss out."
-         />
-      )}
+            description="The next chapter opens soon. Members enter first."
+          />
+        ) : null}
 
-      {payload.offers && payload.offers.length > 0 && (
-         <OffersSlider offers={payload.offers} />
-      )}
+        {/* 6. Featured / Rare Pieces — uses trending products */}
+        {payload.trending && payload.trending.length > 0 && (
+          <ProductSlider
+            title="Rare Pieces"
+            subtitle="Elite Picks · Most Wanted"
+            products={payload.trending}
+          />
+        )}
 
-      <CategoryLockup categoryImages={payload.categoryImages} />
+        {/* 7. Active offers slider (when present) */}
+        {payload.offers && payload.offers.length > 0 && (
+          <OffersSlider offers={payload.offers} />
+        )}
 
-      <MysteryGiftStrip />
+        {/* 8. Mystery gift — Spline 3D box (with CSS fallback when no scene URL) */}
+        <MysteryGiftSpline />
 
-      {payload.trending && payload.trending.length > 0 && (
-         <RecommendationsSection 
-            title="Highly Recommended" 
-            products={payload.trending} 
-         />
-      )}
-      
-      {payload.gentsArrivals && payload.gentsArrivals.length > 0 && (
-         <ProductSlider 
-            title="Gents Exclusives" 
-            subtitle="NEW ARRIVALS" 
-            products={payload.gentsArrivals} 
-         />
-      )}
-      
-      {payload.ladiesArrivals && payload.ladiesArrivals.length > 0 && (
-         <ProductSlider 
-            title="Ladies Signature" 
-            subtitle="LATEST PIECES" 
-            products={payload.ladiesArrivals} 
-         />
-      )}
+        {/* 9. Why Saga Elite — feature tilt cards */}
+        <WhyChooseSaga />
 
-      <NewsletterSection />
+        {/* 10. Trending fits — infinite scroll marquee */}
+        {trendingFeed.length > 0 && (
+          <TrendingFitsMarquee products={trendingFeed} />
+        )}
 
-      {/* Basic Footer spacer for now */}
-      <div className="h-20 bg-[#131313]" />
+        {/* 11. Community / social proof */}
+        <CommunityFeed images={payload.socialImages} />
+
+        {/* 12. Testimonials — auto-rotating glassmorphism cards */}
+        <Testimonials />
+
+        {/* 13. VIP / membership CTA */}
+        <VipMembership />
+
+        {/* 14. Newsletter — closes the page */}
+        <NewsletterSection />
+      </div>
     </div>
   );
 };

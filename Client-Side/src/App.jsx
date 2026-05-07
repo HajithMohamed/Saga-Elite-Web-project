@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import usePageMeta from "./hooks/use-page-meta";
+import { useLenis } from "./hooks/use-lenis";
 import AppLoader from "@/components/ui/AppLoader";
 
 // public layout import
@@ -65,6 +66,7 @@ import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
 import DropDetails from "./pages/shopping-view/DropDetails";
+import DropsIndex from "./pages/shopping-view/DropsIndex";
 import ProductReviewsPage from "./pages/ProductReviewsPage";
 import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
@@ -112,6 +114,7 @@ function App() {
     (state) => state.auth
   );
   const dispatch = useDispatch();
+  useLenis();
 
   const ADMIN_ROLES = ["admin", "super_admin", "superadmin", "sub_admin"];
   const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
@@ -259,6 +262,7 @@ function App() {
             <Route path="checkout" element={<Checkout />} />
             <Route path="product-list" element={<ProductListing />} />
             <Route path="product/:slug" element={<ProductDetails />} />
+            <Route path="drops" element={<DropsIndex />} />
             <Route path="drop/:slug" element={<DropDetails />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="checkout-success" element={<OrderSuccess />} />
