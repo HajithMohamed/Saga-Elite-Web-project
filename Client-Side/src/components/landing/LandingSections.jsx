@@ -18,22 +18,143 @@ import ProductCard from "@/components/shopping-components/ProductCard";
 
 const sectionContainer = "max-w-[1440px] mx-auto px-6";
 
+// ⏱ INLINE DROP COUNTDOWN
+export const InlineDropCountdown = ({ endDate }) => {
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(endDate));
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(getRemainingTime(endDate)), 1000);
+    return () => clearInterval(timer);
+  }, [endDate]);
+
+  return (
+    <div className="flex items-center gap-4 text-[#e5e2e1] font-mono text-[11px] md:text-[13px] tracking-widest mt-4">
+      {[['D', timeLeft.days ?? timeLeft.d], ['H', timeLeft.hh ?? timeLeft.h], ['M', timeLeft.mm ?? timeLeft.m], ['S', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
+        <div key={label} className="flex items-baseline gap-1">
+          <span className="text-[#f2ca50] font-bold text-lg md:text-xl">
+            {value !== undefined ? value.toString().padStart(2, '0') : '00'}
+          </span>
+          <span className="text-[#99907c]">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // 🎬 HERO SECTION (MAIN IMPACT ZONE)
-export const HeroCarousel = ({ slides = [] }) => {
+export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const navigate = useNavigate();
 
+  const dropIsLive = activeDrop && new Date(activeDrop.releaseDate) <= new Date() && new Date(activeDrop.endDate) >= new Date();
+  const dropIsUpcoming = nextDrop && new Date(nextDrop.releaseDate) > new Date();
+
+  // Gesture handling for mobile
+  const touchStartX = useRef(null);
+  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0) setActiveIndex(prev => (prev + 1) % slides.length);
+      else setActiveIndex(prev => (prev - 1 + slides.length) % slides.length);
+    }
+    touchStartX.current = null;
+  };
+
   useEffect(() => {
+    if (dropIsLive || dropIsUpcoming) return; // No auto-rotate when drop takes over
     if (paused || slides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % slides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [slides.length, paused]);
+  }, [slides.length, paused, dropIsLive, dropIsUpcoming]);
 
+  // STATE A: Live drop
+  if (dropIsLive) {
+    const heroImage = activeDrop.coverImageUrl || slides[0]?.imageUrl || '';
+    return (
+      <section className="relative h-[60vh] md:h-[85vh] max-h-[720px] overflow-hidden bg-[#0a0a0a]">
+        <img src={heroImage} alt={activeDrop.name}
+             className="w-full h-full object-cover"
+             loading="eager"
+             srcSet={`${heroImage}?w=640 640w, ${heroImage}?w=1280 1280w, ${heroImage}?w=1920 1920w`}
+             sizes="100vw" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 px-6 md:px-16 pb-16">
+          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-3">
+            🔴 LIVE DROP
+          </p>
+          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4">
+            {activeDrop.name}
+          </h1>
+          <p className="font-sans text-base text-[#FAF7F2]/80 max-w-lg mb-6">
+            {activeDrop.description}
+          </p>
+          <InlineDropCountdown endDate={activeDrop.endDate} />
+          <div className="flex flex-wrap gap-4 mt-6">
+            <Link to={`/shopping/drop/${activeDrop.slug}`}
+                  className="bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#ffe088] transition-colors font-bold">
+              SHOP THE DROP
+            </Link>
+            <Link to="/shopping/product-list?category=drops"
+                  className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold">
+              VIEW ALL PIECES
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // STATE B: Upcoming drop
+  if (dropIsUpcoming) {
+    return (
+      <section className="relative h-[60vh] md:h-[85vh] max-h-[720px] overflow-hidden bg-[#0a0a0a]">
+        <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-px opacity-40">
+          {(nextDrop.products || []).slice(0, 4).map((p, i) => (
+            <div key={i} className="relative overflow-hidden">
+              {p.images?.[0]?.url && (
+                <img src={p.images[0].url} alt=""
+                     className="w-full h-full object-cover filter blur-2xl scale-110 brightness-50"
+                     aria-hidden="true" loading="lazy" />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-[#0a0a0a]/70" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4">
+            ⚡ COMING SOON
+          </p>
+          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4 uppercase">
+            {nextDrop.name}
+          </h1>
+          <p className="font-sans text-base text-[#FAF7F2]/70 max-w-md mb-6">
+            {nextDrop.description || 'Something rare is being prepared. Stay ready.'}
+          </p>
+          <p className="font-sans text-sm text-[#d0c5af] mb-8 uppercase tracking-widest">
+            DROPS {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <a href={`https://wa.me/+94770704274?text=Notify me when ${nextDrop.name} drops`}
+             target="_blank" rel="noopener noreferrer"
+             className="flex items-center gap-2 bg-[#25D366] text-white px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#20bd5a] transition-colors font-bold">
+            <MessageCircle className="w-4 h-4" /> NOTIFY ME ON WHATSAPP
+          </a>
+        </div>
+      </section>
+    );
+  }
+
+  // STATE C: Standard catalogue
   return (
-    <section className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden bg-[#050505]">
+    <section 
+      className="relative h-[60vh] md:h-[85vh] max-h-[720px] w-full overflow-hidden bg-[#050505]"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <AnimatePresence initial={false} custom={activeIndex}>
         {slides.map((slide, index) => {
           if (index !== activeIndex) return null;
@@ -49,57 +170,48 @@ export const HeroCarousel = ({ slides = [] }) => {
               onMouseLeave={() => setPaused(false)}
             >
               {slide.imageUrl ? (
-                <img src={slide.imageUrl} alt={slide.headline} className="w-full h-full object-cover" />
+                <img src={slide.imageUrl} alt={slide.headline} 
+                     className="w-full h-full object-cover"
+                     loading="eager"
+                     srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
+                     sizes="100vw" />
               ) : (
                 <div className="w-full h-full" style={{ background: slide.fallback }} />
               )}
-              {/* Cinematic Dark Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
-              <div className="absolute inset-0 bg-black/30" />
-
-              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center items-center md:items-start text-center md:text-left`}>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
+              
+              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center md:items-start text-center md:text-left`}>
                 <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3, duration: 0.8 }}
-                  className="font-mono text-[11px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
+                  className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
                 >
                   {slide.label || "Exclusive"}
                 </motion.p>
                 <motion.h2
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.8 }}
-                  className="font-display text-[42px] md:text-[72px] lg:text-[86px] leading-[0.9] text-[#e5e2e1] uppercase tracking-tighter"
+                  initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}
+                  className="font-display text-[42px] md:text-[80px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter"
                 >
                   {slide.headline.split('\\n').map((line, i) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      <br />
-                    </React.Fragment>
+                    <React.Fragment key={i}>{line}<br /></React.Fragment>
                   ))}
                 </motion.h2>
                 <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.8 }}
-                  className="font-body text-[15px] md:text-[18px] text-[#d0c5af] mt-6 max-w-lg leading-relaxed"
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7, duration: 0.8 }}
+                  className="font-sans text-base text-[#FAF7F2]/80 mt-6 max-w-lg leading-relaxed"
                 >
                   {slide.subheadline}
                 </motion.p>
                 
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.8 }}
-                  className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9, duration: 0.8 }}
+                  className="mt-10 flex flex-wrap justify-center md:justify-start gap-4"
                 >
                   <button
                     onClick={() => navigate(slide.ctaLink)}
-                    className="relative overflow-hidden group bg-[#f2ca50] text-[#0e0e0e] px-8 py-4 font-mono text-[12px] uppercase tracking-widest font-bold"
+                    className="relative overflow-hidden group bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.28em] font-bold"
                   >
                     <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
-                    <div className="absolute inset-0 bg-white scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+                    <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                   </button>
                 </motion.div>
               </div>
@@ -108,13 +220,14 @@ export const HeroCarousel = ({ slides = [] }) => {
         })}
       </AnimatePresence>
 
-      {/* Modern Dots */}
+      {/* Modern Dots - lines instead of circles */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => setActiveIndex(index)}
-            className={`h-[2px] transition-all duration-300 ${activeIndex === index ? "w-8 bg-[#f2ca50]" : "w-4 bg-[#e5e2e1]/30 hover:bg-[#e5e2e1]/60"}`}
+            className={`h-0.5 transition-all duration-300 ${activeIndex === index ? "w-8 bg-[#f2ca50]" : "w-6 bg-[#FAF7F2]/40 hover:bg-[#FAF7F2]/60"}`}
+            aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>

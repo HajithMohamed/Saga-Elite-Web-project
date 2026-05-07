@@ -14,8 +14,7 @@ import TermsConditionsPage from "./pages/Legal/TermsConditionsPage";
 import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
 import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
-import AboutPage from "./pages/Legal/AboutPage";
-
+import AboutPage from "./pages/Legal/AboutPage";import OffersPage from "./pages/user/OffersPage";
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
@@ -29,8 +28,8 @@ import VerifyOtp from "./pages/auth/VerifyOtp";
 import AdminLayout from "./components/admin-components/Layout";
 import PermissionGuard from "./components/admin-components/PermissionGuard";
 import AdminDashboard from "./pages/admin-view/Dashboard";
-import AdminFeatures
-import AdminOffers from './pages/admin/AdminOffers'; from "./pages/admin-view/Features";
+import AdminFeatures from "./pages/admin-view/Features";
+import AdminOffers from "./pages/admin-view/Offers";
 import AdminOrders from "./pages/admin-view/Orders";
 import GiftManager from "./pages/admin-view/GiftManager";
 import AdminProduct from "./pages/admin-view/Product";

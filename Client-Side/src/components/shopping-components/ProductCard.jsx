@@ -97,11 +97,12 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       )}
     >
       {/* Image Container */}
-      <Link to={productHref} className="relative aspect-[4/5] overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
+      <Link to={productHref} className="relative aspect-[3/4] w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
         <img
           src={product?.images?.[0]?.url || "/LOGO.png"}
           alt={product?.name || "Piece"}
-          loading={index < 4 ? "eager" : "lazy"}
+          loading="lazy"
+          width={220} height={293}
           className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.02]"
         />
 
