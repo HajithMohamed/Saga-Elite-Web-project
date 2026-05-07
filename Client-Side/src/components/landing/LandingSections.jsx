@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatLkr } from "@/utils/currency";
 import { getRemainingTime } from "@/utils/time";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
 
 const sectionContainer = "max-w-[1440px] mx-auto px-6";
@@ -530,11 +532,41 @@ export const DropCountdownBand = ({ activeDrop }) => {
 };
 
 // 👕 CATEGORY LOCKUP
-export const CategoryLockup = () => {
+const CATEGORY_FALLBACK_IMAGES = {
+  ladies: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80",
+  gents: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
+  unisex: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=80",
+};
+
+const pickCategoryImage = (categoryImages, key, fallback) => {
+  const bucket = categoryImages?.[key];
+  if (typeof bucket === "string" && bucket) return bucket;
+  if (bucket && typeof bucket === "object") {
+    const firstUrl = Object.values(bucket).find(
+      (value) => typeof value === "string" && value
+    );
+    if (firstUrl) return firstUrl;
+  }
+  return fallback;
+};
+
+export const CategoryLockup = ({ categoryImages = {} }) => {
   const categories = [
-    { name: "Ladies", link: "/shopping/product-list?category=Ladies", img: "/assets/categories/ladies.jpg" },
-    { name: "Gents", link: "/shopping/product-list?category=Gents", img: "/assets/categories/gents.jpg" },
-    { name: "Unisex", link: "/shopping/product-list?category=Unisex", img: "/assets/categories/unisex.jpg" }
+    {
+      name: "Ladies",
+      link: "/shopping/product-list?category=ladies",
+      img: pickCategoryImage(categoryImages, "ladies", CATEGORY_FALLBACK_IMAGES.ladies),
+    },
+    {
+      name: "Gents",
+      link: "/shopping/product-list?category=gents",
+      img: pickCategoryImage(categoryImages, "gents", CATEGORY_FALLBACK_IMAGES.gents),
+    },
+    {
+      name: "Unisex",
+      link: "/shopping/product-list?category=unisex",
+      img: pickCategoryImage(categoryImages, "unisex", CATEGORY_FALLBACK_IMAGES.unisex),
+    },
   ];
 
   return (
@@ -542,9 +574,19 @@ export const CategoryLockup = () => {
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          {categories.map((cat) => (
            <Link key={cat.name} to={cat.link} className="relative aspect-[4/5] group overflow-hidden bg-[#131313]">
-             {/* Using fallback gradient if img fails or is missing initially */}
              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
-             {cat.img && <img src={cat.img} alt={cat.name} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700" loading="lazy" />}
+             {cat.img && (
+               <img
+                 src={cat.img}
+                 alt={cat.name}
+                 width={400}
+                 height={500}
+                 srcSet={`${cat.img} 400w, ${cat.img} 800w`}
+                 sizes="(max-width: 768px) 100vw, 33vw"
+                 className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700"
+                 loading="lazy"
+               />
+             )}
              <div className="absolute inset-0 flex items-center justify-center">
                <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest group-hover:text-[#f2ca50] transition-colors">{cat.name}</h3>
              </div>
@@ -621,6 +663,41 @@ export const LiveDropSection = ({ activeDrop }) => {
 
 // ✉️ NEWSLETTER SECTION
 export const NewsletterSection = () => {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (status === "loading") return;
+    setStatus("loading");
+    setErrorMessage("");
+    try {
+      await axios.post(`${API_BASE}/newsletter/subscribe`, {
+        email,
+        source: "homepage",
+      });
+      setStatus("success");
+      setEmail("");
+      setTimeout(() => setStatus("idle"), 5000);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Subscription failed. Try again.";
+      setErrorMessage(msg);
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
+  };
+
+  const buttonLabel =
+    status === "loading"
+      ? "Joining…"
+      : status === "success"
+        ? "✓ Joined"
+        : "Subscribe";
+
   return (
     <section className="bg-[#050505] py-12 border-t border-[#1a1a1a]">
       <div className="max-w-2xl mx-auto px-6 text-center">
@@ -629,17 +706,37 @@ export const NewsletterSection = () => {
         <p className="font-sans text-sm text-[#99907c] mb-8">
           Subscribe for early access to drops, exclusive offers, and insider news.
         </p>
-        <form className="flex flex-col md:flex-row gap-4 max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
-          <input 
-            type="email" 
-            placeholder="ENTER YOUR EMAIL" 
-            className="flex-1 bg-[#131313] border border-[#2a2a2a] text-[#FAF7F2] px-4 py-3 font-mono text-[11px] outline-none focus:border-[#f2ca50] transition-colors"
+        <form
+          className="flex flex-col md:flex-row gap-4 max-w-md mx-auto"
+          onSubmit={handleSubmit}
+        >
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="ENTER YOUR EMAIL"
+            disabled={status === "loading"}
+            className="flex-1 bg-[#131313] border border-[#2a2a2a] text-[#FAF7F2] px-4 py-3 font-mono text-[11px] outline-none focus:border-[#f2ca50] transition-colors disabled:opacity-60"
             required
           />
-          <button type="submit" className="bg-[#FAF7F2] text-[#0a0a0a] px-8 py-3 font-mono text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[#f2ca50] transition-colors">
-            Subscribe
+          <button
+            type="submit"
+            disabled={status === "loading" || status === "success"}
+            className="bg-[#FAF7F2] text-[#0a0a0a] px-8 py-3 font-mono text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[#f2ca50] transition-colors disabled:opacity-60"
+          >
+            {buttonLabel}
           </button>
         </form>
+        {status === "success" ? (
+          <p className="mt-4 text-[#f2ca50] text-xs font-mono uppercase tracking-widest">
+            You're on the list. Watch your inbox.
+          </p>
+        ) : null}
+        {status === "error" ? (
+          <p className="mt-4 text-[#ffb4ab] text-xs font-mono">
+            {errorMessage}
+          </p>
+        ) : null}
       </div>
     </section>
   );

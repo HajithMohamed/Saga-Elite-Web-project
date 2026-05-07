@@ -30,6 +30,8 @@ const Home = () => {
   const [nextDrop, setNextDrop] = useState(null);
   const [payload, setPayload] = useState({
     heroSlides: [],
+    offers: [],
+    activeDrop: null,
     ladiesArrivals: [],
     gentsArrivals: [],
     trending: [],
@@ -89,17 +91,21 @@ const Home = () => {
 
   return (
     <div className="bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
-      <DropCountdownBand activeDrop={null} />
-      
-      <HeroCarousel slides={heroSlides} />
-      
+      <DropCountdownBand activeDrop={payload.activeDrop} />
+
+      <HeroCarousel
+        slides={heroSlides}
+        activeDrop={payload.activeDrop}
+        nextDrop={nextDrop}
+      />
+
       <TrustBar />
 
-      <LiveDropSection activeDrop={null} />
+      <LiveDropSection activeDrop={payload.activeDrop} />
 
-      {nextDrop && nextDrop.releaseDate && (
-         <CountdownWidget 
-            targetDate={nextDrop.releaseDate} 
+      {!payload.activeDrop && nextDrop && nextDrop.releaseDate && (
+         <CountdownWidget
+            targetDate={nextDrop.releaseDate}
             title={nextDrop.name}
             description="The next elite collection drops soon. Do not miss out."
          />
@@ -109,7 +115,7 @@ const Home = () => {
          <OffersSlider offers={payload.offers} />
       )}
 
-      <CategoryLockup />
+      <CategoryLockup categoryImages={payload.categoryImages} />
 
       <MysteryGiftStrip />
 

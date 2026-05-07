@@ -75,15 +75,18 @@ const ProductListing = () => {
   const inStockOnly = searchParams.get("stock") === "in";
   const limitedOnly = searchParams.get("limited") === "1";
   const isDropListing = categoryParam === "drops" || filterParam === "drops";
+  const isOffersListing = categoryParam === "offers" || filterParam === "offers";
 
   const activePill =
     categoryParam === "drops" || filterParam === "drops"
       ? "drops"
-      : categoryParam === "archive" || filterParam === "archive"
-        ? "archive"
-        : CATEGORY_LABELS[categoryParam]
-          ? categoryParam
-          : "all";
+      : categoryParam === "offers" || filterParam === "offers"
+        ? "offers"
+        : categoryParam === "archive" || filterParam === "archive"
+          ? "archive"
+          : CATEGORY_LABELS[categoryParam]
+            ? categoryParam
+            : "all";
 
   const updateParams = (mutator) => {
     const next = new URLSearchParams(searchParams);
@@ -94,7 +97,7 @@ const ProductListing = () => {
 
   const setCategoryFilter = (key) => {
     const next = new URLSearchParams();
-    if (key === "archive") next.set("filter", key);
+    if (key === "archive" || key === "offers") next.set("filter", key);
     else if (key !== "all") next.set("category", key);
     if (sortParam !== "new") next.set("sort", sortParam);
     if (inStockOnly) next.set("stock", "in");
@@ -190,6 +193,32 @@ const ProductListing = () => {
           return;
         }
 
+        if (isOffersListing) {
+          const response = await axios.get(`${API_BASE}/offers`);
+          if (cancelled) return;
+          const offers = response.data?.data?.offers || [];
+          // Flatten unique products across all live offers, attach offer
+          // discount + endsAt so cards can show savings.
+          const seen = new Set();
+          const offerProducts = [];
+          for (const offer of offers) {
+            for (const product of offer.products || []) {
+              const key = String(product?._id || product?.id || "");
+              if (!key || seen.has(key)) continue;
+              seen.add(key);
+              offerProducts.push({
+                ...product,
+                discountPercent: offer.discountPercent ?? product.discountPercent,
+                offerEndsAt: offer.endsAt,
+                offerBadge: offer.badgeText,
+              });
+            }
+          }
+          setProducts(offerProducts);
+          setDrops([]);
+          return;
+        }
+
         const query = new URLSearchParams({ limit: "30" });
         if (categoryParam === "archive" || filterParam === "archive") {
           query.set("status", "archive");
@@ -224,7 +253,7 @@ const ProductListing = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryParam, filterParam, isDropListing]);
+  }, [categoryParam, filterParam, isDropListing, isOffersListing]);
 
   useEffect(() => {
     if (!products.length) return;

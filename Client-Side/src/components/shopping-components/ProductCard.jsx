@@ -81,11 +81,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     if (!product?.dropId && !product?.drop) return null;
     const drop = product.drop || {};
     const ended = drop.endDate && new Date(drop.endDate) < new Date();
-    if (!ended) return { label: "Drop · Live", color: "gold" };
+    if (!ended) return { label: "Drop Exclusive", color: "gold" };
     return { label: `Drop · ${drop.name || "Archive"}`, color: "muted" };
   };
 
   const dropBadge = getDropBadge(product);
+
+  // Hype badges — pick the strongest signal. Order is meaningful:
+  // sold-out > low-stock > drop-exclusive > bestseller > most-wished > limited.
+  const soldCount = Number(product?.soldCount || 0);
+  const wishCount = Number(product?.wishCount || 0);
+  const isBestseller = soldCount > 100;
+  const isMostWished = wishCount > 50;
 
   return (
     <motion.div
@@ -122,15 +129,23 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         ) : dropBadge ? (
           <div className={cn(
             "absolute top-3 left-3 px-3 py-1 se-label text-[9px] tracking-[0.28em] border backdrop-blur-sm",
-            dropBadge.color === "gold" 
-              ? "bg-[#D4AF37]/90 text-[#0a0a0a] border-[#D4AF37]" 
+            dropBadge.color === "gold"
+              ? "bg-[#D4AF37]/90 text-[#0a0a0a] border-[#D4AF37]"
               : "bg-[#0a0a0a]/90 text-[#99907c] border-[#4d4635]"
           )}>
             {dropBadge.label}
           </div>
+        ) : isBestseller ? (
+          <div className="absolute top-3 left-3 bg-[#f2ca50] text-[#0a0a0a] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#f2ca50] backdrop-blur-sm">
+            Bestseller
+          </div>
+        ) : isMostWished ? (
+          <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#f2ca50] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#f2ca50]/60 backdrop-blur-sm">
+            Most Wished
+          </div>
         ) : isLimited ? (
           <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#e5e2e1] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#4d4635] backdrop-blur-sm">
-            Limited Drop
+            Limited Edition
           </div>
         ) : null}
 

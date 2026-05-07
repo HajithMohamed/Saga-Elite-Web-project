@@ -68,6 +68,18 @@ const computeMarginAfterDiscount = (product, discountPercent) => {
   return Math.round(((sale - cost) / sale) * 100);
 };
 
+// Largest integer % discount that still leaves margin >= MIN_HEALTHY_MARGIN.
+// Falls back to 15% when costPrice is unknown (conservative, no margin info).
+const computeSuggestedDiscount = (product) => {
+  const cost = Number(product?.costPrice || 0);
+  const base = Number(product?.basePrice || 0);
+  if (base <= 0) return { discount: 0, fallback: true };
+  if (cost <= 0) return { discount: 15, fallback: true };
+  const floor = 1 - MIN_HEALTHY_MARGIN / 100;
+  const max = Math.floor(100 * (1 - cost / (base * floor)));
+  return { discount: Math.max(5, Math.min(50, max)), fallback: false };
+};
+
 const AdminOffers = () => {
   const dispatch = useDispatch();
   const productList = useSelector(
@@ -464,14 +476,12 @@ const AdminOffers = () => {
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {agingStock.map((item) => {
-                    const suggestedDiscount = 20;
+                    const { discount: suggestedDiscount, fallback } =
+                      computeSuggestedDiscount(item);
                     const suggestedMargin = computeMarginAfterDiscount(
                       item,
                       suggestedDiscount
                     );
-                    const lowMargin =
-                      suggestedMargin !== null &&
-                      suggestedMargin < MIN_HEALTHY_MARGIN;
                     return (
                       <div
                         key={item._id}
@@ -487,19 +497,19 @@ const AdminOffers = () => {
                           <p className="mt-1 text-xs text-[#ffb4ab]">
                             Idle: {item.daysUnsold ?? "90+"} days
                           </p>
+                          <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#f2ca50]">
+                            Suggested: {suggestedDiscount}% off
+                            {fallback ? " (no cost on file)" : ""}
+                          </p>
                           {suggestedMargin !== null ? (
-                            <p
-                              className={`mt-1 text-[10px] uppercase tracking-[0.18em] ${
-                                lowMargin ? "text-[#ffb4ab]" : "text-emerald-400"
-                              }`}
-                            >
-                              Margin @ {suggestedDiscount}% off:{" "}
-                              {suggestedMargin}%
-                              {lowMargin
-                                ? ` ⚠ below ${MIN_HEALTHY_MARGIN}%`
-                                : ""}
+                            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-emerald-400">
+                              Margin after discount: {suggestedMargin}%
                             </p>
-                          ) : null}
+                          ) : (
+                            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#666]">
+                              Margin: unknown — set costPrice for safety check
+                            </p>
+                          )}
                           <button
                             type="button"
                             onClick={() =>

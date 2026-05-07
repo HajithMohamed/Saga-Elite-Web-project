@@ -184,6 +184,31 @@ export const fetchUpcomingDrop = async () => {
     .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))[0] || null;
 };
 
+const fetchActiveDrop = async () => {
+  const res = await axios.get(`${API_BASE}/drops/get-all-drops`);
+  const drops = Array.isArray(res?.data?.drops) ? res.data.drops : [];
+  const now = Date.now();
+  return (
+    drops.find((d) => {
+      const release = d?.releaseDate ? new Date(d.releaseDate).getTime() : null;
+      const end = d?.endDate ? new Date(d.endDate).getTime() : null;
+      const started = !release || release <= now;
+      const ongoing = !end || end >= now;
+      return started && ongoing;
+    }) || null
+  );
+};
+
+const fetchHomepageOffers = async () => {
+  const res = await axios.get(`${API_BASE}/offers`, {
+    params: { featured: "true" },
+  });
+  const offers = res?.data?.data?.offers || [];
+  return offers
+    .filter((offer) => offer.showOnHomepage)
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+};
+
 const normalizeSystemHeroImage = (image, index) => ({
   id: image?._id || `system-hero-${index + 1}`,
   label: image?.label || "Saga Elite",
@@ -197,7 +222,19 @@ const normalizeSystemHeroImage = (image, index) => ({
 });
 
 export const getLandingData = async () => {
-  const [bannersRes, heroImagesRes, ladiesArrivals, dealProductsRes, ladiesDealsFallback, gentsArrivals, trending, categoryLogosRes, adImagesRes] = await Promise.allSettled([
+  const [
+    bannersRes,
+    heroImagesRes,
+    ladiesArrivals,
+    dealProductsRes,
+    ladiesDealsFallback,
+    gentsArrivals,
+    trending,
+    categoryLogosRes,
+    adImagesRes,
+    offersRes,
+    activeDropRes,
+  ] = await Promise.allSettled([
     axios.get(`${API_BASE}/banners/active`),
     axios.get(`${API_BASE}/image/get-hero-images`),
     fetchProducts({ category: "Ladies", tag: "new-arrival", limit: 8 }),
@@ -207,6 +244,8 @@ export const getLandingData = async () => {
     fetchProducts({ tag: "trending", limit: 8 }),
     fetchCategoryLogoImages(),
     fetchAdImages(),
+    fetchHomepageOffers(),
+    fetchActiveDrop(),
   ]);
 
   const bannerPayload = bannersRes.status === "fulfilled" ? bannersRes.value?.data?.data?.banners || [] : [];
@@ -233,7 +272,8 @@ export const getLandingData = async () => {
 
   return {
     heroSlides,
-    offers: [],
+    offers: offersRes.status === "fulfilled" ? offersRes.value : [],
+    activeDrop: activeDropRes.status === "fulfilled" ? activeDropRes.value : null,
     ladiesArrivals: ladiesArrivals.status === "fulfilled" ? ladiesArrivals.value : [],
     ladiesDeals,
     gentsArrivals: gentsArrivals.status === "fulfilled" ? gentsArrivals.value : [],

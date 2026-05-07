@@ -655,6 +655,22 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       await order.save({ validateModifiedOnly: true });
     }
 
+    // Stamp lastSoldAt on every product in the order — feeds the aging-stock job.
+    const productIds = (order.items || [])
+      .map((it) => it?.product)
+      .filter(Boolean);
+    if (productIds.length > 0) {
+      Product.updateMany(
+        { _id: { $in: productIds } },
+        { $set: { lastSoldAt: new Date() } }
+      ).catch((err) =>
+        logger.error("[order:delivered] failed to stamp lastSoldAt", {
+          orderId: order._id,
+          error: err?.message,
+        })
+      );
+    }
+
     // Update customer membership totals (skip guest orders).
     if (order.user) {
       try {
