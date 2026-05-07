@@ -17,7 +17,12 @@ export const getAllDrops = createAsyncThunk(
       });
       return response.data.drops;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -30,12 +35,27 @@ export const createDrop = createAsyncThunk(
       return rejectWithValue("Name and release date are required");
     }
     try {
-      const response = await axios.post(`${API_BASE}/drops/create-drop`, dropData, {
+      // Send only fields the backend's validateDropCreate accepts. Extras
+      // (isPublished/isArchived) are stripped by the validator anyway, but
+      // sending them obscures the payload during debugging.
+      const payload = {
+        name: dropData.name,
+        description: dropData.description || undefined,
+        releaseDate: dropData.releaseDate,
+        endDate: dropData.endDate || undefined,
+      };
+      const response = await axios.post(`${API_BASE}/drops/create-drop`, payload, {
         withCredentials: true,
       });
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      // Always reject with a string so callers get a useful toast.
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to create drop";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -57,7 +77,12 @@ export const updateDrop = createAsyncThunk(
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -75,7 +100,12 @@ export const archiveDrop = createAsyncThunk(
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -89,7 +119,12 @@ export const deleteDrop = createAsyncThunk(
       });
       return response.data.deletedDropSlug || slug;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );

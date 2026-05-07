@@ -219,7 +219,41 @@ const Drops = () => {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
+  function validateDropForm() {
+    const name = formData.name.trim();
+    if (name.length < 3) {
+      return "Drop name must be at least 3 characters.";
+    }
+    if (name.length > 200) {
+      return "Drop name must be 200 characters or fewer.";
+    }
+    if (!formData.releaseDate) {
+      return "Release date is required.";
+    }
+    if (formData.endDate) {
+      const release = new Date(formData.releaseDate);
+      const end = new Date(formData.endDate);
+      if (Number.isNaN(release.getTime()) || Number.isNaN(end.getTime())) {
+        return "Invalid date selection.";
+      }
+      if (end <= release) {
+        return "End date must be strictly after the release date.";
+      }
+    }
+    return null;
+  }
+
   async function onSubmit() {
+    const validationError = validateDropForm();
+    if (validationError) {
+      toast({
+        title: "Check the form",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       let result;
       if (currentEditedSlug) {
@@ -246,9 +280,14 @@ const Drops = () => {
       setShowDropSaved(true);
       resetForm();
     } catch (e) {
+      // Thunk rejects with a string; older callers may pass an object — handle both.
+      const description =
+        typeof e === "string"
+          ? e
+          : e?.message || e?.error || "Something went wrong while saving.";
       toast({
         title: "Failed to save drop",
-        description: e?.message,
+        description,
         variant: "destructive",
       });
     }
