@@ -46,3 +46,26 @@ export const flagReviewApi = (reviewId, reason) =>
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
+
+export const replyToReviewApi = (reviewId, brandReply) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/${reviewId}/reply`,
+    { brandReply },
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+export const featureReviewApi = (reviewId, isFeatured) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/${reviewId}/feature`,
+    typeof isFeatured === "boolean" ? { isFeatured } : {},
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+export const fetchReviewAnalyticsApi = () =>
+  axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });

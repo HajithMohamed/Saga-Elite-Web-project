@@ -12,6 +12,7 @@ const {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  triggerAdminPasswordReset,
   deleteAdminUser,
   getCart,
   addToCart,
@@ -29,6 +30,7 @@ router.use(authMiddleware);
 router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
 router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, updateAdminUserStatus);
+router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), triggerAdminPasswordReset);
 router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), deleteAdminUser);
 
 router.get("/cart", getCart);
