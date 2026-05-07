@@ -209,7 +209,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/collections",
       icon: <Layers3 className="h-5 w-5" />,
       permission: "products",
-      comingSoon: true,
     },
     {
       label: "Offers & Deals",
@@ -224,7 +223,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/coupons",
       icon: <Tag className="h-5 w-5" />,
       permission: "sendCampaigns",
-      comingSoon: true,
     },
     {
       label: "Gifts",
@@ -290,7 +288,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/media",
       icon: <FolderOpen className="h-5 w-5" />,
       permission: "products",
-      comingSoon: true,
     },
     {
       label: "Community",

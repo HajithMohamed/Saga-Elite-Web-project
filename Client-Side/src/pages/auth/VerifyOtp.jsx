@@ -6,7 +6,6 @@ import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
 
-import AuthLayout from "@/components/auth-components/AuthLayout";
 import { motion, AnimatePresence } from "framer-motion";
 
 const VerifyOtp = () => {
@@ -109,7 +108,7 @@ const VerifyOtp = () => {
   const currentStep = 1; // Verify
 
   return (
-    <AuthLayout isImageRight={false}>
+    <div>
       <div className="w-full max-w-sm mx-auto relative overflow-hidden">
         <AnimatePresence mode="wait">
           {!showSuccess ? (
@@ -228,7 +227,7 @@ const VerifyOtp = () => {
           )}
         </AnimatePresence>
       </div>
-    </AuthLayout>
+    </div>
   );
 };
 

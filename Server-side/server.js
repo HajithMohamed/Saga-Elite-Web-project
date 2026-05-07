@@ -51,6 +51,9 @@ const superAdminRoutes = require("./Routes/super-admin-routes");
 const adminRoutes = require("./Routes/admin-routes");
 const newsletterRoutes = require("./Routes/newsletterRoutes");
 const siteConfigRoutes = require("./Routes/siteConfigRoutes");
+const offerRoutes = require("./Routes/offer-routes");
+const couponRoutes = require("./Routes/coupon-routes");
+const collectionRoutes = require("./Routes/collection-routes");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 
 app.use(
@@ -108,6 +111,9 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/super-admin", superAdminRoutes);
 app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/site-config", siteConfigRoutes);
+app.use("/api/v1/offers", offerRoutes);
+app.use("/api/v1/coupons", couponRoutes);
+app.use("/api/v1/collections", collectionRoutes);
 
 app.use(globalErrorController);
 

@@ -99,7 +99,6 @@ const FieldLabel = ({ children, hint }) => (
   </div>
 );
 
-import AuthLayout from "@/components/auth-components/AuthLayout";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Register = () => {
@@ -246,7 +245,7 @@ const Register = () => {
   };
 
   return (
-    <AuthLayout isImageRight={true}>
+    <div>
       <div className="w-full max-w-sm mx-auto relative overflow-hidden">
         <AnimatePresence mode="wait">
           {step === 1 ? (
@@ -376,7 +375,7 @@ const Register = () => {
 
               <p className="text-center text-sm text-gray-500 mt-6">
                 Already Elite?{" "}
-                <Link to="/login" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
+                <Link to="/auth/login" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
                   ENTER HERE
                 </Link>
               </p>
@@ -468,7 +467,7 @@ const Register = () => {
           )}
         </AnimatePresence>
       </div>
-    </AuthLayout>
+    </div>
   );
 };
 

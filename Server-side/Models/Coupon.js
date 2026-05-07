@@ -1,44 +1,47 @@
 const mongoose = require("mongoose");
 
-const offerSchema = new mongoose.Schema(
+const couponSchema = new mongoose.Schema(
   {
-    name: {
+    code: {
       type: String,
       required: true,
+      unique: true,
+      uppercase: true,
       trim: true,
-    },
-    badgeText: {
-      type: String,
-      trim: true,
-      maxlength: 60,
-      default: "",
+      minlength: 3,
+      maxlength: 40,
     },
     description: {
       type: String,
       trim: true,
+      maxlength: 200,
     },
-    type: {
+    discountType: {
       type: String,
-      enum: [
-        "clearance",
-        "tier-discount",
-        "mystery-box",
-        "aging_stock",
-        "new_product",
-        "seasonal",
-        "flash",
-      ],
+      enum: ["percent", "fixed"],
       required: true,
     },
-    discountPercent: {
+    discountValue: {
       type: Number,
-      required: function () {
-        return this.type !== "mystery-box";
-      },
+      required: true,
       min: 0,
-      max: 100,
     },
-    products: [
+    minOrderValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    maxUses: {
+      type: Number,
+      default: null, // null = unlimited
+      min: 0,
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    applicableProducts: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
@@ -57,25 +60,15 @@ const offerSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
-    showOnHomepage: {
-      type: Boolean,
-      default: false,
-    },
-    displayOrder: {
-      type: Number,
-      default: 0,
-    },
     isActive: {
       type: Boolean,
       default: true,
       index: true,
     },
-    isSystemGenerated: {
-      type: Boolean,
-      default: false,
-    },
-    estimatedMarginAfterDiscount: {
-      type: Number,
+    issuedFor: {
+      type: String,
+      enum: ["review_reward", "vip", "campaign", "manual", "referral", "birthday"],
+      default: "manual",
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -90,16 +83,19 @@ const offerSchema = new mongoose.Schema(
   }
 );
 
-offerSchema.index({ type: 1 });
-offerSchema.index({ showOnHomepage: 1, displayOrder: 1 });
+couponSchema.virtual("isExhausted").get(function () {
+  if (this.maxUses == null) return false;
+  return this.usedCount >= this.maxUses;
+});
 
-offerSchema.virtual("isLive").get(function () {
+couponSchema.virtual("isLive").get(function () {
   if (!this.isActive) return false;
+  if (this.maxUses != null && this.usedCount >= this.maxUses) return false;
   const now = Date.now();
   if (this.startsAt && new Date(this.startsAt).getTime() > now) return false;
   if (this.endsAt && new Date(this.endsAt).getTime() < now) return false;
   return true;
 });
 
-const Offer = mongoose.model("Offer", offerSchema);
-module.exports = Offer;
+const Coupon = mongoose.model("Coupon", couponSchema);
+module.exports = Coupon;

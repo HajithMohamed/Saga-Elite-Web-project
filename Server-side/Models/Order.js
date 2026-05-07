@@ -201,6 +201,16 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    couponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0,
+    },
     expiresAt: {
       type: Date,
     },

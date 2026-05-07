@@ -9,7 +9,11 @@ const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const ManualPayment = require("../Models/ManualPayment");
 const Review = require("../Models/Review");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
 const { computeMembershipTier } = require("../Utils/membership-tier");
+const { evaluateCoupon } = require("./coupon-controller");
+const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
@@ -110,6 +114,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     paymentProofUrl,
     notes,
     guestEmail,
+    couponCode,
   } = req.body;
 
   logger.debug("Order creation request received", {
@@ -243,6 +248,39 @@ const createOrder = catchAsync(async (req, res, next) => {
         totalAmount += itemTotal;
       }
 
+      // Coupon evaluation (optional). Throws AppError on validation failure,
+      // which will roll back the transaction.
+      let appliedCoupon = null;
+      let appliedDiscount = 0;
+      if (couponCode && String(couponCode).trim()) {
+        const productIds = items.map((it) => it.productId);
+        const result = await evaluateCoupon({
+          code: couponCode,
+          subtotal: totalAmount,
+          productIds,
+        });
+        if (result) {
+          appliedCoupon = result.coupon;
+          appliedDiscount = result.discount;
+          totalAmount = Math.max(0, totalAmount - appliedDiscount);
+          // Increment usage atomically; respect maxUses if defined.
+          const updateResult = await Coupon.updateOne(
+            {
+              _id: appliedCoupon._id,
+              $or: [
+                { maxUses: null },
+                { $expr: { $lt: ["$usedCount", "$maxUses"] } },
+              ],
+            },
+            { $inc: { usedCount: 1 } },
+            { session }
+          );
+          if (updateResult.modifiedCount === 0) {
+            throw new AppError("Coupon usage limit reached", 400);
+          }
+        }
+      }
+
       const dropId = req.body.dropId || null;
       let selectedGift = null;
 
@@ -266,6 +304,8 @@ const createOrder = catchAsync(async (req, res, next) => {
         paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
         referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
         notes: notes?.trim(),
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: appliedDiscount || 0,
         status: isBankTransferPayment
           ? "pending_payment"
           : ["manual", "cash"].includes(paymentMethod)
@@ -1183,6 +1223,44 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Stream order invoice as PDF (admin)
+|--------------------------------------------------------------------------
+*/
+const getOrderInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid order id", 400));
+  }
+
+  const order = await Order.findById(id)
+    .populate("user", "email userName name")
+    .lean();
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  // Pull bank details from SiteConfig (key: bank_details). If not set yet
+  // (Wave 8 will surface the editor), pass undefined to render the fallback.
+  let bankConfig;
+  try {
+    const doc = await SiteConfig.findOne({ key: "bank_details" }).lean();
+    bankConfig = doc?.value && typeof doc.value === "object" ? doc.value : undefined;
+  } catch {
+    bankConfig = undefined;
+  }
+
+  const fileName = `saga-elite-invoice-${order.referenceNumber || order._id}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${fileName.replace(/[^A-Za-z0-9_.-]/g, "_")}"`
+  );
+
+  streamInvoicePdf({ order, bankConfig, stream: res });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -1190,5 +1268,6 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   refundOrder,
+  getOrderInvoice,
   getDashboardStats,
 };
