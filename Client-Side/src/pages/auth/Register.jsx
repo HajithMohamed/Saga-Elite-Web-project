@@ -7,14 +7,6 @@ import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import {
-  Btn,
-  Eyebrow,
-  FieldError,
-  Hairline,
-  AUTH_INPUT,
-  AUTH_PRIMARY_BTN,
-} from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -107,12 +99,20 @@ const FieldLabel = ({ children, hint }) => (
   </div>
 );
 
+import AuthLayout from "@/components/auth-components/AuthLayout";
+import { motion, AnimatePresence } from "framer-motion";
+
 const Register = () => {
   const [formData, setFormData] = useState({
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
+    stylePreference: "",
+    gender: "",
+    dropInterest: "",
   });
+  const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -142,9 +142,8 @@ const Register = () => {
     setErrors(validateRegister(formData, touched));
   }, [formData, touched]);
 
-  const handleSubmit = async (e) => {
+  const handleNextStep = (e) => {
     e.preventDefault();
-
     const allTouched = { email: true, password: true, confirmPassword: true };
     setTouched(allTouched);
 
@@ -158,7 +157,15 @@ const Register = () => {
         description: blockingMsg,
         variant: "destructive",
       });
-      console.warn("[register] blocked by validation", fresh);
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (step === 1) {
+      handleNextStep(e);
       return;
     }
 
@@ -239,48 +246,229 @@ const Register = () => {
   };
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">Become a member</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] text-4xl md:text-6xl">
-        Open an account.
-      </h1>
+    <AuthLayout isImageRight={true}>
+      <div className="w-full max-w-sm mx-auto relative overflow-hidden">
+        <AnimatePresence mode="wait">
+          {step === 1 ? (
+            <motion.div
+              key="step-1"
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col w-full"
+            >
+              <div className="text-center md:text-left mb-8">
+                <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse">
+                  Join The Elite
+                </p>
+                <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
+                  UNLOCK ACCESS
+                </h1>
+                <p className="text-gray-400 text-sm">
+                  Create your profile to access exclusive drops.
+                </p>
+              </div>
 
-      <form onSubmit={handleSubmit} className="mt-10 space-y-6">
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) =>
-            setFormData((p) => ({ ...p, email: e.target.value }))
-          }
-          className={AUTH_INPUT}
-        />
+              <form onSubmit={handleNextStep} className="space-y-4">
+                <div className="space-y-1 group">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Username (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData((p) => ({ ...p, username: e.target.value }))}
+                    placeholder="savage_kid"
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+                  />
+                </div>
 
-        <input
-          type={showPassword ? "text" : "password"}
-          value={formData.password}
-          onChange={(e) =>
-            setFormData((p) => ({ ...p, password: e.target.value }))
-          }
-          className={AUTH_INPUT}
-        />
+                <div className="space-y-1 group">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData((p) => ({ ...p, email: e.target.value }));
+                      setTouched((p) => ({ ...p, email: true }));
+                    }}
+                    placeholder="your@email.com"
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+                  />
+                  {touched.email && errors.email && (
+                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.email}</p>
+                  )}
+                </div>
 
-        <input
-          type={showConfirm ? "text" : "password"}
-          value={formData.confirmPassword}
-          onChange={(e) =>
-            setFormData((p) => ({
-              ...p,
-              confirmPassword: e.target.value,
-            }))
-          }
-          className={AUTH_INPUT}
-        />
+                <div className="space-y-1 group">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={(e) => {
+                        setFormData((p) => ({ ...p, password: e.target.value }));
+                        setTouched((p) => ({ ...p, password: true }));
+                      }}
+                      placeholder="••••••••"
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {touched.password && errors.password && (
+                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.password}</p>
+                  )}
+                </div>
 
-        <Btn type="submit" className={AUTH_PRIMARY_BTN} disabled={isLoading}>
-          {isLoading ? "Opening account..." : "Open account"}
-        </Btn>
-      </form>
-    </div>
+                <div className="space-y-1 group">
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Confirm Password</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirm ? "text" : "password"}
+                      value={formData.confirmPassword}
+                      onChange={(e) => {
+                        setFormData((p) => ({ ...p, confirmPassword: e.target.value }));
+                        setTouched((p) => ({ ...p, confirmPassword: true }));
+                      }}
+                      placeholder="••••••••"
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+                    />
+                  </div>
+                  {touched.confirmPassword && errors.confirmPassword && (
+                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-6 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    NEXT STEP
+                    <ArrowRight size={18} />
+                  </span>
+                  <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
+                </motion.button>
+              </form>
+
+              <div className="mt-8 mb-6 flex items-center justify-center gap-4 text-xs font-semibold text-gray-600 uppercase tracking-widest">
+                <div className="h-px bg-white/10 flex-1" />
+                Or
+                <div className="h-px bg-white/10 flex-1" />
+              </div>
+
+              {GOOGLE_ENABLED && (
+                <div className="google-auth-wrapper grayscale hover:grayscale-0 transition-all duration-500 opacity-80 hover:opacity-100">
+                  <GoogleAuthButton
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    text="Quick Access with Google"
+                  />
+                </div>
+              )}
+
+              <p className="text-center text-sm text-gray-500 mt-6">
+                Already Elite?{" "}
+                <Link to="/login" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
+                  ENTER HERE
+                </Link>
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="step-2"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col w-full"
+            >
+              <div className="text-center md:text-left mb-8 relative">
+                <button 
+                  onClick={() => setStep(1)} 
+                  className="absolute -top-6 left-0 text-gray-500 hover:text-white transition-colors text-xs font-bold tracking-widest uppercase flex items-center gap-1"
+                >
+                  ← Back
+                </button>
+                <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse mt-6">
+                  Personalize
+                </p>
+                <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
+                  ELITE PROFILE
+                </h1>
+                <p className="text-gray-400 text-sm">
+                  Customize your feed.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Style Preferences */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 mb-2 block">Style Preference</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Streetwear", "Oversized", "Minimal", "Luxury", "Sporty"].map((style) => (
+                      <button
+                        key={style}
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, stylePreference: style }))}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
+                          formData.stylePreference === style 
+                            ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]" 
+                            : "bg-black/50 text-gray-400 border-white/10 hover:border-white/30"
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Drop Interest */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 mb-2 block">Drop Interest</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Limited Drops", "Sneakers", "Accessories", "Mystery"].map((interest) => (
+                      <button
+                        key={interest}
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, dropInterest: interest }))}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border ${
+                          formData.dropInterest === interest 
+                            ? "bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]" 
+                            : "bg-black/50 text-gray-400 border-white/10 hover:border-white/30"
+                        }`}
+                      >
+                        {interest}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-8 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    {isLoading ? "CREATING PROFILE..." : "JOIN THE ELITE"}
+                  </span>
+                  <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
+                </motion.button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </AuthLayout>
   );
 };
 
