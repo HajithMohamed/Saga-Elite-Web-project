@@ -65,12 +65,23 @@ const initialProductForm = {
   drop: "",
   basePrice: "",
   discountPercent: "0",
+  costPrice: "",
+  maxPerUser: "",
   stockThreshold: "5",
   isFeatured: false,
   isActive: true,
   isLimited: false,
+  tags: [],
   variants: [defaultVariant],
 };
+
+const PRODUCT_TAG_OPTIONS = [
+  "LIMITED",
+  "RARE",
+  "TRENDING",
+  "NEW DROP",
+  "BESTSELLER",
+];
 
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
@@ -102,8 +113,9 @@ const Product = () => {
       getAllProducts({
         page: currentPage,
         limit: LIMIT,
-        isActive: statusFilter === "all" ? undefined : statusFilter,
+        isActive: statusFilter === "all" || statusFilter === "low_stock" ? undefined : statusFilter,
         search: searchQuery,
+        maxStock: statusFilter === "low_stock" ? 5 : undefined,
       })
     );
   }, [dispatch, currentPage, statusFilter, searchQuery]);
@@ -169,14 +181,27 @@ const Product = () => {
       drop: product.drop?._id || "",
       basePrice: product.basePrice || "",
       discountPercent: product.discountPercent || "0",
+      costPrice: product.costPrice ?? "",
+      maxPerUser: product.maxPerUser ?? "",
       stockThreshold: "5",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
+      tags: Array.isArray(product.tags) ? product.tags : [],
       variants: product.variants?.length ? product.variants : [defaultVariant],
     });
     setShowForm(true);
     fetchProductImages(product._id);
+  };
+
+  const toggleTag = (tag) => {
+    setFormData((prev) => {
+      const current = Array.isArray(prev.tags) ? prev.tags : [];
+      const next = current.includes(tag)
+        ? current.filter((t) => t !== tag)
+        : [...current, tag];
+      return { ...prev, tags: next };
+    });
   };
 
   const handleSubmit = async () => {
@@ -449,6 +474,44 @@ const Product = () => {
                       className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
                     />
                   </div>
+                  <div className="md:col-span-3">
+                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
+                      Cost / Wholesale Price (LKR) — Admin Only
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.costPrice}
+                      onChange={e => setFormData({ ...formData, costPrice: e.target.value })}
+                      placeholder="0"
+                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
+                    />
+                    <p className="mt-2 text-[10px] tracking-[0.1em] text-on-surface-variant/60">
+                      Never shown to customers. Used for margin calculations and offer suggestions.
+                    </p>
+                    {Number(formData.costPrice) > 0 && Number(formData.basePrice) > 0 ? (
+                      <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-[#99907c]">
+                        Current margin:{" "}
+                        <span className="text-[#f2ca50] font-bold">
+                          {Math.round(
+                            ((Number(formData.basePrice) - Number(formData.costPrice)) / Number(formData.basePrice)) * 100
+                          )}
+                          %
+                        </span>
+                        {Number(formData.discountPercent) > 0 ? (
+                          <>
+                            {" "}→ at {formData.discountPercent}% off:{" "}
+                            <span className="text-[#f2ca50] font-bold">
+                              {(() => {
+                                const sale = Number(formData.basePrice) * (1 - Number(formData.discountPercent) / 100);
+                                if (sale <= 0) return "—";
+                                return `${Math.round(((sale - Number(formData.costPrice)) / sale) * 100)}%`;
+                              })()}
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </section>
 
@@ -540,6 +603,36 @@ const Product = () => {
                 </div>
               </section>
 
+              {/* Tags & Identity */}
+              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
+                <div className="flex items-baseline gap-4 mb-8">
+                  <span className="font-serif text-4xl text-saga-primary opacity-20">04</span>
+                  <h2 className="font-serif text-2xl text-on-surface">Tags & Identity</h2>
+                </div>
+                <p className="mb-6 text-xs text-on-surface-variant/70">
+                  Tags drive merchandising — applied tags surface on the storefront and in filters.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {PRODUCT_TAG_OPTIONS.map((tag) => {
+                    const active = Array.isArray(formData.tags) && formData.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`px-4 py-1.5 text-[10px] tracking-[0.22em] uppercase border transition-colors ${
+                          active
+                            ? "border-[#f2ca50] text-[#f2ca50] bg-[#f2ca50]/10"
+                            : "border-[#4d4635] text-[#99907c] hover:border-[#d0c5af] hover:text-[#d0c5af]"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
             </div>
           </div>
         </main>
@@ -621,6 +714,12 @@ const Product = () => {
                 className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "false" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
               >
                 Inactive
+              </button>
+              <button
+                onClick={() => setStatusFilter("low_stock")}
+                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "low_stock" ? 'bg-[#ffb4ab]/20 text-[#ffb4ab]' : 'text-on-surface opacity-50 hover:opacity-100'}`}
+              >
+                Low Stock (≤5)
               </button>
             </div>
             <button

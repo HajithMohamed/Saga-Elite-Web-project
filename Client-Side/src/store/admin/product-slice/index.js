@@ -78,6 +78,7 @@ export const getAllProducts = createAsyncThunk(
         drop,
         minPrice,
         maxPrice,
+        maxStock,
         size,
         color,
       } = params;
@@ -93,6 +94,9 @@ export const getAllProducts = createAsyncThunk(
       if (drop) query.set("drop", drop);
       if (minPrice) query.set("minPrice", minPrice);
       if (maxPrice) query.set("maxPrice", maxPrice);
+      if (typeof maxStock !== "undefined" && maxStock !== "" && maxStock !== null) {
+        query.set("maxStock", maxStock);
+      }
       if (size) query.set("size", size);
       if (color) query.set("color", color);
 

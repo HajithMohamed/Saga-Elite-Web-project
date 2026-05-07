@@ -174,6 +174,16 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+
+    cartAddCount: {
+      type: Number,
+      default: 0,
+    },
+
     averageRating: {
       type: Number,
       default: 0,

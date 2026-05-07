@@ -15,6 +15,7 @@ const paginatedResult = (Model) =>
       color,
       minPrice,
       maxPrice,
+      maxStock,
       search,
       sort,
       isActive,
@@ -76,6 +77,15 @@ const paginatedResult = (Model) =>
       matchStage.basePrice = {};
       if (minPrice) matchStage.basePrice.$gte = Number(minPrice);
       if (maxPrice) matchStage.basePrice.$lte = Number(maxPrice);
+    }
+
+    /* ========= Stock Ceiling Filter ========= */
+    if (typeof maxStock !== "undefined" && maxStock !== "") {
+      const parsedMaxStock = Number(maxStock);
+      if (Number.isNaN(parsedMaxStock)) {
+        return next(new AppError("maxStock must be a number", 400));
+      }
+      matchStage.totalStock = { $lte: parsedMaxStock };
     }
 
     /* ========= Search ========= */

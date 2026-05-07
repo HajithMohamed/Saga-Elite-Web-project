@@ -8,6 +8,9 @@ const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
 
+const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
+const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
+
 
 /*
 |--------------------------------------------------------------------------
@@ -16,8 +19,8 @@ const { broadcastNotification } = require("../Utils/notification-service");
 */
 
 const getAllProducts = catchAsync(async (req, res, next) => {
-    const isAdmin = req.user && req.user.role === 'admin';
-    
+    const isAdmin = isAdminUser(req.user);
+
     // Safety: Strip costPrice for non-admins if present in paginated results
     if (!isAdmin && res.paginatedResults && res.paginatedResults.data) {
         res.paginatedResults.data = res.paginatedResults.data.map(p => {
@@ -60,11 +63,13 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
-    const isAdmin = req.user && req.user.role === 'admin';
+    const isAdmin = isAdminUser(req.user);
     let productResponse = product.toObject({ virtuals: true });
-    
+
     if (!isAdmin) {
         delete productResponse.costPrice;
+        // Fire-and-forget viewCount increment (only for non-admin reads)
+        Product.updateOne({ _id: product._id }, { $inc: { viewCount: 1 } }).catch(() => {});
     }
 
     res.status(200).json({
@@ -100,6 +105,11 @@ const addProduct = catchAsync(async (req, res, next) => {
         "originalPrice",
         "salePrice",
         "discountPercent",
+        "costPrice",
+        "isFeatured",
+        "isLimited",
+        "isActive",
+        "maxPerUser",
         "variants"
     );
 
@@ -178,6 +188,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
         "originalPrice",
         "salePrice",
         "discountPercent",
+        "costPrice",
         "isFeatured",
         "isActive",
         "maxPerUser",
@@ -283,6 +294,106 @@ const getAdminAnalytics = catchAsync(async (req, res, next) => {
             bestSellers,
             mostWished
         }
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Aging Products (HTTP twin of aging-stock-job.js)
+|--------------------------------------------------------------------------
+*/
+
+const getAgingProducts = catchAsync(async (req, res) => {
+    const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const agingProducts = await Product.find({
+        isActive: true,
+        $or: [
+            { lastSoldAt: { $lte: ninetyDaysAgo } },
+            { lastSoldAt: null, createdAt: { $lte: ninetyDaysAgo } },
+        ],
+    })
+        .select("name slug artNo basePrice salePrice costPrice totalStock variants soldCount lastSoldAt createdAt drop")
+        .populate("drop", "name slug")
+        .lean();
+
+    const productsWithStock = agingProducts.filter((p) => {
+        if (typeof p.totalStock === "number" && p.totalStock > 0) return true;
+        if (!Array.isArray(p.variants)) return false;
+        return p.variants.some((v) => (v?.stock || 0) > 0);
+    });
+
+    if (countOnly) {
+        return res.status(200).json({
+            success: true,
+            data: { count: productsWithStock.length },
+        });
+    }
+
+    const enriched = productsWithStock.map((p) => {
+        const referenceDate = p.lastSoldAt || p.createdAt;
+        const daysUnsold = referenceDate
+            ? Math.floor((Date.now() - new Date(referenceDate).getTime()) / (1000 * 60 * 60 * 24))
+            : null;
+        return {
+            ...p,
+            daysUnsold,
+            dropName: p.drop?.name || "Independent Release",
+        };
+    });
+
+    res.status(200).json({
+        success: true,
+        data: {
+            count: enriched.length,
+            products: enriched,
+        },
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Product Analytics (per-product counters for the admin editor)
+|--------------------------------------------------------------------------
+*/
+
+const getProductAnalytics = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    const productQuery = mongoose.Types.ObjectId.isValid(id)
+        ? { _id: id }
+        : { slug: id };
+
+    const product = await Product.findOne(productQuery)
+        .select("name slug viewCount cartAddCount wishCount soldCount totalStock lastSoldAt")
+        .lean();
+
+    if (!product) {
+        return next(new AppError("Product not found", 404));
+    }
+
+    const conversionRate = product.viewCount > 0
+        ? Number(((product.soldCount || 0) / product.viewCount).toFixed(4))
+        : 0;
+
+    res.status(200).json({
+        success: true,
+        data: {
+            productId: product._id,
+            slug: product.slug,
+            name: product.name,
+            viewCount: product.viewCount || 0,
+            cartAddCount: product.cartAddCount || 0,
+            wishCount: product.wishCount || 0,
+            soldCount: product.soldCount || 0,
+            totalStock: product.totalStock || 0,
+            lastSoldAt: product.lastSoldAt,
+            conversionRate,
+        },
     });
 });
 
@@ -450,6 +561,8 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getAdminAnalytics,
+    getAgingProducts,
+    getProductAnalytics,
     getRecommendations,
     searchProducts,
 };

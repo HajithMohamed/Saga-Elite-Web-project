@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  AlertTriangle,
   ArrowRight,
   Boxes,
   Clock3,
+  CreditCard,
   DollarSign,
   Layers3,
   Package,
@@ -13,6 +15,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Sparkles,
+  StarHalf,
   Truck,
   Users,
   Wallet,
@@ -232,7 +235,33 @@ const Dashboard = () => {
       icon: ShieldAlert,
       tone: "text-amber-400",
     },
+    {
+      label: "Avg Order Value",
+      numericValue: Number(overview.averageOrderValue) || 0,
+      formatter: (v) => currencyFormatter.format(Math.round(v)),
+      hint: `${formatNumber(overview.totalOrders)} non-cancelled orders`,
+      icon: Wallet,
+      tone: "text-[#f2ca50]",
+    },
+    {
+      label: "Pending Payments",
+      numericValue: Number(overview.pendingPayments) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
+      hint: `${formatNumber(overview.pendingVerification)} orders awaiting verification`,
+      icon: CreditCard,
+      tone: "text-orange-400",
+    },
+    {
+      label: "Pending Reviews",
+      numericValue: Number(overview.pendingReviews) || 0,
+      formatter: (v) => numberFormatter.format(Math.round(v)),
+      hint: "Awaiting moderation",
+      icon: StarHalf,
+      tone: "text-rose-300",
+    },
   ];
+
+  const agingCount = Number(overview.agingProductsCount) || 0;
 
   const statusCards = [
     { key: "pending", icon: Clock3 },
@@ -315,6 +344,38 @@ const Dashboard = () => {
           <div className="mt-6 rounded-[24px] border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
             Dashboard data could not be loaded completely: {orderError}
           </div>
+        ) : null}
+
+        {agingCount > 0 ? (
+          <motion.section
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 rounded-[24px] border border-[#ffb4ab]/30 bg-[#ffb4ab]/5 p-5"
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-[#ffb4ab]" />
+                <div>
+                  <p className="font-sans text-[10px] uppercase tracking-[0.26em] text-[#ffb4ab]">
+                    Aging Stock Alert — {formatNumber(agingCount)} product
+                    {agingCount === 1 ? "" : "s"} need attention
+                  </p>
+                  <p className="mt-2 max-w-xl text-sm text-[#d0c5af]">
+                    These products have been unsold for 90+ days. Consider
+                    applying an offer to move them.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/admin/offers"
+                className="inline-flex items-center gap-2 self-start rounded-full bg-[#f2ca50] px-4 py-2 font-sans text-[10px] uppercase tracking-[0.26em] text-[#0a0a0a] transition hover:bg-[#f2ca50]/90 md:self-auto"
+              >
+                Review in offers panel
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </motion.section>
         ) : null}
 
         <motion.section
