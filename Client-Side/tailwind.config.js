@@ -10,13 +10,13 @@ export default {
     extend: {
       /* ── Typography System ───────────────────────── */
       fontFamily: {
-        display: ['Playfair Display', 'serif'],
+        display: ['Cinzel', 'Playfair Display', 'serif'],
         serif: ['Playfair Display', 'serif'],
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
-        mono: ['DM Mono', 'ui-monospace', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
         headline: ['Playfair Display', 'serif'],
-        body: ['DM Sans', 'system-ui', 'sans-serif'],
-        label: ['DM Sans', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
+        label: ['Inter', 'system-ui', 'sans-serif'],
       },
 
       /* ── Radius System ───────────────────────── */
@@ -27,57 +27,64 @@ export default {
         full: '9999px',
       },
 
-      /* ── Color System (Luxury Theme) ─────────── */
+      /* ── Color System (Saga Gold Dark Theme) ─────────── */
       colors: {
-        background: '#FAF7F2',
-        foreground: '#2C2C2A',
+        background: '#0e0e0e',
+        foreground: '#e5e2e1',
 
-        surface: '#F0EBE3',
+        surface: '#131313',
+        'surface-1': '#1f1f1f',
+        'surface-2': '#2a2a2a',
+        'surface-3': '#393939',
+
+        'admin-shell': '#050505',
+        'admin-card': '#0b0b0b',
 
         primary: {
-          DEFAULT: '#6B1A2A',
-          hover: '#8C2D40',
-          foreground: '#FAF7F2',
+          DEFAULT: '#f2ca50',
+          hover: '#d4af37',
+          foreground: '#0e0e0e',
+          container: '#d4af37',
         },
 
         accent: {
-          DEFAULT: '#C9A96E',
-          foreground: '#2C2C2A',
+          DEFAULT: '#d4af37',
+          foreground: '#0e0e0e',
         },
 
         secondary: {
-          DEFAULT: '#E8D5C4',
-          foreground: '#2C2C2A',
+          DEFAULT: '#1f1f1f',
+          foreground: '#e5e2e1',
         },
 
         muted: {
-          DEFAULT: '#888780',
-          foreground: '#FAF7F2',
+          DEFAULT: '#d0c5af',
+          foreground: '#131313',
         },
 
-        border: '#E8D5C4',
-        input: '#E8D5C4',
-        ring: '#C9A96E',
+        border: '#4d4635',
+        input: '#4d4635',
+        ring: '#f2ca50',
 
         card: {
-          DEFAULT: '#F0EBE3',
-          foreground: '#2C2C2A',
+          DEFAULT: '#131313',
+          foreground: '#e5e2e1',
         },
 
         popover: {
-          DEFAULT: '#F0EBE3',
-          foreground: '#2C2C2A',
+          DEFAULT: '#131313',
+          foreground: '#e5e2e1',
         },
 
         destructive: {
-          DEFAULT: '#D4736A',
-          foreground: '#FAF7F2',
+          DEFAULT: '#ffb4ab',
+          foreground: '#0e0e0e',
         },
 
         /* ── Status Colors ───────────────── */
-        sale: '#D4736A',
+        sale: '#ffb4ab',
         new: '#1D9E75',
-        deal: '#BA7517',
+        deal: '#f2ca50',
       },
     },
   },

@@ -1,57 +1,61 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-// eslint-disable-next-line no-unused-vars -- `motion.*` JSX is used in this file
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronRight,
-  Heart,
-  LogOut,
-  Menu,
-  Search,
-  ShoppingBag,
-  User,
-  X,
-  Dot,
-} from "lucide-react";
-
+import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame } from "lucide-react";
 import { logoutUserAction } from "@/store/auth-slice";
-import { QuickActions } from "@/components/landing/LandingSections";
 import { fetchUpcomingDrop } from "@/services/landing-api";
 import { getRemainingTime } from "@/utils/time";
 
-const AnnouncementBar = ({ items }) => {
+const AnnouncementBar = ({ items, nextDrop, countdown }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % items.length);
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [items]);
 
   return (
-    <div className="bg-primary text-[#FAF7F2] text-center text-xs py-1.5">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {items[currentIndex]}
-        </motion.div>
-      </AnimatePresence>
+    <div className="bg-[#131313] text-[#e5e2e1] border-b border-[#2a2a2a] text-center text-[11px] uppercase tracking-[0.2em] py-2 relative overflow-hidden">
+      {/* Subtle glow pulse effect behind the bar */}
+      <div className="absolute inset-0 bg-[#f2ca50]/5 animate-pulse" />
+      
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        {nextDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date() ? (
+          <span className="text-[#f2ca50] mb-1 font-mono text-[10px]">
+            <Flame className="inline w-3 h-3 text-[#ffb4ab] mb-0.5" /> DROP DROPS IN {countdown.d}D {countdown.h}H {countdown.m}M
+          </span>
+        ) : nextDrop && nextDrop.releaseDate ? (
+          <span className="text-[#ffb4ab] mb-1 font-mono text-[10px] animate-pulse">
+            🔴 LIVE NOW — SHOP BEFORE IT CLOSES
+          </span>
+        ) : null}
+        
+        <div className="h-[16px] overflow-hidden w-full max-w-lg mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentIndex}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="text-[#d0c5af]"
+            >
+              {items[currentIndex]}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 };
 
-
 const AnimatedBadge = ({ count }) => {
   if (!count || count <= 0) return null;
   return (
-    <span className="absolute -top-2 -right-2 bg-sale text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full grid place-items-center">
+    <span className="absolute -top-2 -right-2 bg-[#ffb4ab] shadow-[0_0_8px_#ffb4ab] text-[#0e0e0e] text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -62,14 +66,11 @@ const MainHeader = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const homePath = "/shopping/home";
-
+  
   const isAdminView = location.pathname.startsWith("/admin");
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [megaOpen, setMegaOpen] = useState(null);
-  const megaCloseTimer = useRef(null);
   const [scrolled, setScrolled] = useState(false);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState(getRemainingTime(new Date(Date.now() + 1000).toISOString()));
@@ -77,12 +78,11 @@ const MainHeader = () => {
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
-
   const cartCount = totalQuantity || 0;
   const wishlistCount = wishlistItems?.length || 0;
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -92,22 +92,17 @@ const MainHeader = () => {
     const loadNextDrop = async () => {
       try {
         const drop = await fetchUpcomingDrop();
-        if (!cancelled) {
-          setNextDrop(drop);
-        }
+        if (!cancelled) setNextDrop(drop);
       } catch {
         if (!cancelled) setNextDrop(null);
       }
     };
     loadNextDrop();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     if (!nextDrop?.releaseDate) return undefined;
-
     const tick = () => setCountdown(getRemainingTime(nextDrop.releaseDate));
     tick();
     const timer = window.setInterval(tick, 1000);
@@ -118,36 +113,24 @@ const MainHeader = () => {
     try {
       await dispatch(logoutUserAction()).unwrap();
       navigate("/auth/login");
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) {}
   };
 
-  const navItems = useMemo(
-    () => [
-      { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies", children: ["Dresses", "Tops", "Bottoms", "Sarees", "Lingerie", "Accessories"] },
-      { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents", children: ["Shirts", "Trousers", "Casual", "Formal", "Accessories"] },
-      { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
-      { key: "sale", label: "Sale", to: "/shopping/product-list?sale=true", accent: "sale", children: ["Ladies' Sale", "Gents' Sale", "Unisex Sale", "Up to 70% Off"] },
-      { key: "newin", label: "New In", to: "/shopping/product-list?sort=newest", accent: "new" },
-    ],
-    []
-  );
-
-  const openMega = (key) => {
-    if (megaCloseTimer.current) clearTimeout(megaCloseTimer.current);
-    setMegaOpen(key);
-  };
-  const closeMega = () => {
-    megaCloseTimer.current = setTimeout(() => setMegaOpen(null), 200);
-  };
+  const navItems = [
+    { key: "home", label: "Home", to: "/shopping/home" },
+    { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents" },
+    { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies" },
+    { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
+    { key: "drops", label: "Drops", to: "/shopping/product-list?isDrop=true", isHot: true },
+    { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
+  ];
 
   if (isAdminView) {
     return (
-      <header className="h-20 flex justify-between items-center px-6 border-b">
-        <h2>Admin Panel</h2>
-        <button onClick={handleLogout}>
-          <LogOut />
+      <header className="h-[72px] flex justify-between items-center px-8 border-b border-[#2a2a2a] bg-[#0a0a0a]">
+        <h2 className="se-label text-[#e5e2e1]">Saga Admin Connect</h2>
+        <button onClick={handleLogout} className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors">
+          <LogOut className="w-4 h-4" />
         </button>
       </header>
     );
@@ -155,156 +138,168 @@ const MainHeader = () => {
 
   return (
     <>
-      {nextDrop ? (
-        <div className="sticky top-0 z-[60] bg-[#f2ca50] text-[#1b1c1c] py-2 px-4 text-center">
-          <span className="se-label text-[10px] tracking-[0.28em]">
-            {nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date()
-              ? `⚡ ${String(nextDrop.name || "NEXT DROP").toUpperCase()} DROPS IN ${countdown.d}D ${countdown.h}H ${countdown.m}M`
-              : `🔴 LIVE NOW — ${String(nextDrop.name || "NEXT DROP").toUpperCase()} — SHOP BEFORE IT CLOSES`}
-          </span>
-        </div>
-      ) : null}
       <AnnouncementBar
+        nextDrop={nextDrop}
+        countdown={countdown}
         items={[
-          "Free delivery on orders over LKR 2,000",
-          "Easy 14-day returns — no questions asked",
-          "Secure checkout and member-first drops",
+          "🎁 MYSTERY GIFT ON EVERY ORDER OVER LKR 10,000",
+          "⚡ LIMITED STOCK AVAILABLE ON NEW DROPS",
+          "🚀 ISLANDWIDE EXPRESS DELIVERY",
         ]}
       />
 
-      <header role="banner" className="sticky top-10 z-50">
-        <div className={`bg-background border-b border-border transition-all duration-300 ${scrolled ? "py-2" : "py-3"}`}>
-          <div className="relative w-full px-6 flex items-center justify-between gap-3">
-            <div className="hidden md:block">
-              <Link to={homePath} className="flex items-center gap-3">
-                <img src="/LOGO.png" alt="Saga Elite" className="h-9 w-9 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <div className="hidden sm:block">
-                  <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
-                  <p className="text-[10px] text-[#99907c]">Rare Fit. Forever.</p>
-                </div>
-              </Link>
+      <header
+        role="banner"
+        className={`sticky top-0 z-50 w-full transition-all duration-500 ${
+          scrolled
+            ? "bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#2a2a2a]/50 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+            : "bg-[#0e0e0e] border-b border-transparent py-5"
+        }`}
+      >
+        <div className="max-w-[1600px] w-full mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
+          
+          {/* LEFT: Branding */}
+          <Link to={homePath} className="flex items-center gap-4 group">
+            <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain opacity-90 group-hover:opacity-100 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <div className="hidden sm:flex flex-col justify-center">
+              <span className="font-display font-medium text-[20px] tracking-[0.12em] text-[#e5e2e1] leading-none">
+                SAGA ELITE
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#d0c5af] mt-1 opacity-60">
+                Rare Fit Forever
+              </span>
             </div>
+          </Link>
 
-            <Link to={homePath} className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-              <img src="/LOGO.png" alt="Saga Elite" className="h-6 w-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              <p className="font-display text-[18px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
+          {/* CENTER: Navigation */}
+          <nav className="hidden lg:flex items-center gap-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.key}
+                to={item.to}
+                className="relative group se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1"
+              >
+                <span className={`block transition-all duration-300 group-hover:-translate-y-full ${item.isHot ? 'text-[#f2ca50]' : ''}`}>
+                  {item.label}
+                </span>
+                <span className={`absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 ${item.isHot ? 'text-[#f2ca50] drop-shadow-[0_0_8px_rgba(242,202,80,0.8)]' : 'text-[#f2ca50]'}`}>
+                  {item.label}
+                </span>
+                {/* Hover glow line */}
+                <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]`} />
+              </Link>
+            ))}
+          </nav>
+
+          {/* RIGHT: Actions */}
+          <div className="flex items-center gap-5 sm:gap-6">
+            <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+              <Search className="w-[18px] h-[18px]" />
+            </button>
+            <Link to="/shopping/wishlist" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300 hidden sm:block">
+              <Heart className="w-[18px] h-[18px]" />
+              <AnimatedBadge count={wishlistCount} />
+            </Link>
+            <div className="relative">
+              <button aria-label="Account" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+                <User className="w-[18px] h-[18px]" />
+              </button>
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-[140%] min-w-[200px] border border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md shadow-2xl p-2 z-50 overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/[0.02] before:to-transparent before:pointer-events-none"
+                  >
+                    <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
+                      {user ? (
+                        <>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders">My Fits</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist">Wishlist</Link>
+                          <div className="h-[1px] bg-[#2a2a2a] my-1" />
+                          <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
+                        </>
+                      ) : (
+                        <>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/auth/login">Access Vault</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors text-[#f2ca50]" to="/auth/register">Request Access</Link>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+              <ShoppingBag className="w-[18px] h-[18px]" />
+              <AnimatedBadge count={cartCount} />
             </Link>
 
-            <nav className="hidden md:flex items-center gap-7 text-[13px]">
-              {navItems.map((item) => (
-                <div
-                  key={item.key}
-                  onMouseEnter={() => item.children && openMega(item.key)}
-                  onMouseLeave={closeMega}
-                  className="relative"
-                >
-                  <Link
-                    to={item.to}
-                    className={`pb-1 border-b-2 border-transparent hover:border-[#C9A96E] transition-all ${item.accent === "sale" ? "text-sale" : item.accent === "new" ? "text-new" : "text-[#2C2C2A]"}`}
-                  >
-                    {item.label} {item.key === "sale" ? <Dot className="inline h-4 w-4 text-sale" /> : null}
-                  </Link>
-                </div>
-              ))}
-            </nav>
-
-            <div className="hidden md:flex items-center gap-4">
-              <button aria-label="Open search" onClick={() => setSearchOpen((prev) => !prev)} className="text-[#2C2C2A] hover:text-primary transition">
-                <Search className="h-5 w-5" />
-              </button>
-              <Link to="/shopping/wishlist" className="relative text-[#2C2C2A] hover:text-primary">
-                <Heart className="h-5 w-5" />
-                <AnimatedBadge count={wishlistCount} />
-              </Link>
-              <Link to="/shopping/cart" className="relative text-[#2C2C2A] hover:text-primary">
-                <ShoppingBag className="h-5 w-5" />
-                <AnimatedBadge count={cartCount} />
-              </Link>
-              <div className="relative">
-                <button aria-label="Account menu" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#2C2C2A] hover:text-primary">
-                  <User className="h-5 w-5" />
-                </button>
-                {userMenuOpen ? (
-                  <div className="absolute right-0 mt-3 w-44 rounded-lg border border-border bg-background shadow-lg p-2 z-50 text-sm">
-                    {user ? (
-                      <>
-                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/shopping/orders">My Orders</Link>
-                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/shopping/wishlist">Wishlist</Link>
-                        <button className="w-full text-left px-3 py-2 hover:bg-surface rounded text-sale" onClick={handleLogout}>Sign Out</button>
-                      </>
-                    ) : (
-                      <>
-                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/auth/login">Sign In</Link>
-                        <Link className="block px-3 py-2 hover:bg-surface rounded" to="/auth/register">Register</Link>
-                      </>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
             <button
-              className="md:hidden p-2"
+              className="lg:hidden p-1 text-[#e5e2e1]"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
             >
-              {mobileOpen ? <X /> : <Menu />}
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
+
+        {/* Search Bar Dropdown */}
         <AnimatePresence>
           {searchOpen ? (
-            <motion.div initial={{ y: -16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -16, opacity: 0 }} className="border-b border-border bg-background">
-              <div className="w-full px-6 py-3">
-                <input
-                  autoFocus
-                  type="search"
-                  placeholder="Search products..."
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-[#C9A96E]"
-                />
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="absolute top-full left-0 w-full border-b border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md overflow-hidden">
+              <div className="max-w-[800px] mx-auto p-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d0c5af]" />
+                  <input
+                    autoFocus
+                    type="search"
+                    placeholder="SEARCH CATALOG OR DROPS..."
+                    className="w-full bg-[#1f1f1f] text-[#e5e2e1] placeholder:text-[#d0c5af]/50 pl-12 pr-6 py-4 outline-none font-mono text-[12px] tracking-widest border border-[#2a2a2a] focus:border-[#f2ca50] transition-colors shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#d0c5af]/40">ESC</div>
+                </div>
               </div>
             </motion.div>
           ) : null}
         </AnimatePresence>
-
-        {megaOpen ? (
-          <div className="hidden md:block border-t-2 border-primary bg-background shadow-sm" onMouseEnter={() => openMega(megaOpen)} onMouseLeave={closeMega}>
-            <div className="w-full px-6 py-5 grid grid-cols-3 gap-6">
-              {(navItems.find((n) => n.key === megaOpen)?.children || []).map((entry) => (
-                <Link key={entry} to="/shopping/product-list" className="text-sm text-[#2C2C2A] hover:text-primary inline-flex items-center">
-                  {entry} <ChevronRight className="h-4 w-4 ml-1" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </header>
 
+      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileOpen ? (
           <motion.aside
-            initial={{ x: "-100%" }}
+            initial={{ x: "100%" }}
             animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-y-0 left-0 w-[84%] max-w-[320px] z-[60] bg-background border-r border-border p-5 md:hidden overflow-y-auto"
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
+            className="fixed inset-0 z-[60] bg-[#0e0e0e] flex flex-col pt-20 px-8 pb-12 lg:hidden"
           >
-            <div className="flex justify-between items-center mb-6">
-              <Link to={homePath} className="flex items-center gap-3">
-                <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <p className="font-display text-[22px] tracking-[0.08em] text-[#e5e2e1]">SAGA ELITE</p>
-              </Link>
-              <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="text-[#e5e2e1]"><X /></button>
-            </div>
-            <div className="space-y-2">
-              {navItems.map((item) => (
-                <Link key={item.key} to={item.to} className="block rounded-lg px-3 py-2 hover:bg-surface">
-                  {item.label}
-                </Link>
+            <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="absolute top-8 right-8 text-[#d0c5af] hover:text-[#e5e2e1]"><X className="w-8 h-8" /></button>
+            <div className="flex flex-col gap-6 mt-12 flex-grow">
+              {navItems.map((item, i) => (
+                <motion.div
+                  key={item.key}
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 + i * 0.05 }}
+                >
+                  <Link to={item.to} className={`font-display text-4xl block ${item.isHot ? 'text-[#f2ca50]' : 'text-[#e5e2e1] hover:text-[#d0c5af]'}`}>
+                    {item.label}
+                  </Link>
+                </motion.div>
               ))}
             </div>
-            <div className="mt-8 pt-4 border-t border-border">
-              <QuickActions />
+            
+            <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
+               <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Support & Service</p>
+               <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
+                  <Link to="/about">Brand Story</Link>
+                  <Link to="/contact">Reach Out</Link>
+                  <Link to="/faq">Track Order</Link>
+               </div>
             </div>
           </motion.aside>
         ) : null}

@@ -1,19 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
   Heart,
   Lock,
   MessageCircle,
-  ShoppingCart,
   Truck,
+  Box,
+  Gift,
+  Sparkles,
 } from "lucide-react";
 import { formatLkr } from "@/utils/currency";
 import { getRemainingTime } from "@/utils/time";
+import ProductCard from "@/components/shopping-components/ProductCard";
 
-const sectionContainer = "max-w-[1280px] mx-auto px-6";
+const sectionContainer = "max-w-[1440px] mx-auto px-6";
 
+// 🎬 HERO SECTION (MAIN IMPACT ZONE)
 export const HeroCarousel = ({ slides = [] }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -23,68 +28,254 @@ export const HeroCarousel = ({ slides = [] }) => {
     if (paused || slides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % slides.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(timer);
   }, [slides.length, paused]);
 
   return (
-    <section className="relative h-[280px] md:h-[420px] overflow-hidden">
-      <div
-        className="h-full w-full flex transition-transform duration-700 ease-out"
-        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        {slides.map((slide) => (
+    <section className="relative h-[65vh] md:h-[80vh] w-full overflow-hidden bg-[#050505]">
+      <AnimatePresence initial={false} custom={activeIndex}>
+        {slides.map((slide, index) => {
+          if (index !== activeIndex) return null;
+          return (
+            <motion.div
+              key={slide.id || index}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: [0.19, 1, 0.22, 1] }}
+              className="absolute inset-0"
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+            >
+              {slide.imageUrl ? (
+                <img src={slide.imageUrl} alt={slide.headline} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full" style={{ background: slide.fallback }} />
+              )}
+              {/* Cinematic Dark Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
+              <div className="absolute inset-0 bg-black/30" />
+
+              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center items-center md:items-start text-center md:text-left`}>
+                <motion.p
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.8 }}
+                  className="font-mono text-[11px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
+                >
+                  {slide.label || "Exclusive"}
+                </motion.p>
+                <motion.h2
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.8 }}
+                  className="font-display text-[42px] md:text-[72px] lg:text-[86px] leading-[0.9] text-[#e5e2e1] uppercase tracking-tighter"
+                >
+                  {slide.headline.split('\\n').map((line, i) => (
+                    <React.Fragment key={i}>
+                      {line}
+                      <br />
+                    </React.Fragment>
+                  ))}
+                </motion.h2>
+                <motion.p
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.7, duration: 0.8 }}
+                  className="font-body text-[15px] md:text-[18px] text-[#d0c5af] mt-6 max-w-lg leading-relaxed"
+                >
+                  {slide.subheadline}
+                </motion.p>
+                
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.8 }}
+                  className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+                >
+                  <button
+                    onClick={() => navigate(slide.ctaLink)}
+                    className="relative overflow-hidden group bg-[#f2ca50] text-[#0e0e0e] px-8 py-4 font-mono text-[12px] uppercase tracking-widest font-bold"
+                  >
+                    <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
+                    <div className="absolute inset-0 bg-white scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+                  </button>
+                </motion.div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
+      {/* Modern Dots */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+        {slides.map((_, index) => (
           <button
-            type="button"
-            key={slide.id}
-            data-href={slide.ctaLink}
-            onClick={() => navigate(slide.ctaLink)}
-            className="relative min-w-full h-full text-left"
-            aria-label={`Open ${slide.headline}`}
-          >
-            {slide.imageUrl ? (
-              <img src={slide.imageUrl} alt={slide.headline} className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full" style={{ background: slide.fallback }} />
-            )}
-            <div className="absolute inset-0 bg-[#2C2C2A]/35" />
-            <div className={`${sectionContainer} absolute left-0 right-0 bottom-8`}>
-              <p className="font-sans text-[11px] tracking-[0.2em] uppercase text-[#C9A96E]">{slide.label}</p>
-              <h2 className="font-display text-[24px] md:text-[38px] text-[#FAF7F2]">{slide.headline}</h2>
-              <p className="font-sans text-base text-[#FAF7F2]/80">{slide.subheadline}</p>
-              <span className="inline-flex mt-4 rounded-lg bg-primary px-6 py-3 text-[#FAF7F2] hover:bg-primary-hover transition-all duration-200">
-                {slide.ctaText} <ArrowRight className="ml-2 h-4 w-4" />
-              </span>
-            </div>
-          </button>
+            key={index}
+            onClick={() => setActiveIndex(index)}
+            className={`h-[2px] transition-all duration-300 ${activeIndex === index ? "w-8 bg-[#f2ca50]" : "w-4 bg-[#e5e2e1]/30 hover:bg-[#e5e2e1]/60"}`}
+          />
         ))}
       </div>
+    </section>
+  );
+};
 
-      <button
-        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-primary transition-all"
-        onClick={() => setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length)}
-        aria-label="Previous slide"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </button>
-      <button
-        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white hover:bg-primary transition-all"
-        onClick={() => setActiveIndex((prev) => (prev + 1) % slides.length)}
-        aria-label="Next slide"
-      >
-        <ArrowRight className="h-4 w-4" />
-      </button>
+// ⏳ LIVE DROP COUNTDOWN (HYPE ENGINE)
+export const CountdownWidget = ({ targetDate, title, description }) => {
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(targetDate));
 
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-        {slides.map((slide, index) => (
-          <button
-            key={slide.id}
-            onClick={() => setActiveIndex(index)}
-            aria-label={`Go to slide ${index + 1}`}
-            className={`h-2.5 w-2.5 rounded-full ${activeIndex === index ? "bg-[#FAF7F2]" : "bg-[#FAF7F2]/40"}`}
-          />
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(getRemainingTime(targetDate)), 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="bg-[#0b0b0b] border-y border-[#4d4635]/40 py-12 relative overflow-hidden">
+      {/* Glow effects */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-1/2 bg-[#f2ca50]/5 blur-[120px] rounded-full pointer-events-none" />
+      
+      <div className="max-w-[800px] mx-auto px-6 text-center relative z-10">
+        <h3 className="font-mono text-[12px] tracking-[0.4em] uppercase text-[#ffb4ab] mb-3 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#ffb4ab] animate-pulse" />
+          {title || "Next Drop"}
+        </h3>
+        <p className="font-display text-2xl text-[#e5e2e1] mb-8">{description}</p>
+        
+        <div className="flex justify-center gap-4 text-[#e5e2e1]">
+          {[['Days', timeLeft.d], ['Hours', timeLeft.h], ['Mins', timeLeft.m], ['Secs', timeLeft.s]].map(([label, value]) => (
+            <div key={label} className="flex flex-col items-center">
+               <div className="w-16 h-16 md:w-20 md:h-20 bg-[#131313] border border-[#2a2a2a] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                 <span className="font-mono text-3xl md:text-4xl text-[#f2ca50]">{value.toString().padStart(2, '0')}</span>
+               </div>
+               <span className="font-body text-[10px] uppercase tracking-widest text-[#d0c5af] mt-2">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 👕 COLLECTION ENTRY (3 MASSIVE LUXURY CARDS)
+export const IdentityCategoryGrid = ({ categories = [] }) => {
+  return (
+    <section className={`${sectionContainer} py-20`}>
+      <div className="text-center mb-12">
+        <h3 className="font-display text-[32px] md:text-[42px] text-[#e5e2e1] uppercase">Choose Your Identity</h3>
+        <p className="font-mono text-[11px] text-[#d0c5af] tracking-[0.3em] uppercase mt-2">Elevated Aesthetics</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        {categories.map((cat) => (
+          <Link key={cat.name} to={cat.link} className="group block relative aspect-[3/4] overflow-hidden bg-[#131313]">
+            <img src={cat.image} alt={cat.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-[0.19,1,0.22,1] group-hover:scale-105" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/90 via-[#0e0e0e]/20 to-transparent" />
+            
+            {/* Outline box that draws on hover */}
+            <div className="absolute inset-4 border border-[#f2ca50]/0 group-hover:border-[#f2ca50]/50 transition-colors duration-500 rounded-sm pointer-events-none" />
+
+            <div className="absolute bottom-8 w-full text-center transform transition-transform duration-500 group-hover:-translate-y-4">
+              <h4 className="font-display text-4xl text-[#e5e2e1] uppercase tracking-wider">{cat.name}</h4>
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#f2ca50] mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+                Explore Collection
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// 🎁 MYSTERY GIFT SIGNATURE SECTION
+export const MysteryGiftSection = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <section className="bg-[#0a0a0a] border-y border-[#1f1f1f] py-24 relative overflow-hidden">
+      {/* Background radial gradient */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#d4af37]/5 blur-[100px] rounded-full pointer-events-none" />
+      
+      <div className={`${sectionContainer} flex flex-col md:flex-row items-center gap-12 relative z-10`}>
+        <div className="flex-1 md:pr-12 text-center md:text-left">
+          <h2 className="font-display text-[40px] md:text-[56px] leading-[1.1] text-[#e5e2e1] uppercase">
+            The Saga <br/> Mystery Box
+          </h2>
+          <p className="font-body text-[#d0c5af] text-base lg:text-lg mt-6 max-w-md mx-auto md:mx-0">
+             Every order over LKR 10,000 unlocks a surprise reward. It could be an unreleased drop, a rare accessory, or a discount code for the future.
+          </p>
+          <div className="mt-8 flex flex-col gap-4 max-w-sm mx-auto md:mx-0">
+             <div className="flex items-center gap-4 border border-[#2a2a2a] bg-[#131313] p-4">
+                <Gift className="text-[#f2ca50]" />
+                <span className="font-mono text-[11px] text-[#e5e2e1] tracking-widest uppercase">Guaranteed on eligible orders</span>
+             </div>
+          </div>
+        </div>
+
+        <div className="flex-1 relative flex justify-center items-center h-[400px] w-full">
+           <motion.div 
+              whileHover={!isOpen ? { scale: 1.05, rotate: [0, -2, 2, -2, 0] } : {}}
+              transition={{ duration: 0.5 }}
+              onClick={() => setIsOpen(true)}
+              className="cursor-pointer relative z-20"
+           >
+              <div className="relative">
+                <Box className={`w-40 h-40 ${isOpen ? 'text-[#393939]' : 'text-[#f2ca50]'} transition-colors duration-1000`} strokeWidth={1} />
+                
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ scale: 0, y: 20, opacity: 0 }}
+                      animate={{ scale: 1, y: -40, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f2ca50] text-[#0e0e0e] font-display text-2xl px-6 py-3 whitespace-nowrap shadow-[0_0_30px_#f2ca50]"
+                    >
+                      <Sparkles className="inline mr-2 w-5 h-5 mb-1" />
+                      UNLOCKED
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+           </motion.div>
+
+           {/* Particle ring */}
+           <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full border border-[#f2ca50]/20 pointer-events-none transition-all duration-1000 ${isOpen ? 'scale-150 opacity-0' : 'animate-[spin_10s_linear_infinite]'}`} />
+        </div>
+      </div>
+    </section>
+  );
+};
+
+
+// 🔥 FEATURED DROPS / TRENDING (Horizontal Scroll)
+export const ProductSlider = ({ title, subtitle, products = [], deal = false }) => {
+  const scrollerRef = useRef(null);
+  const scrollBy = (distance) => scrollerRef.current?.scrollBy({ left: distance, behavior: "smooth" });
+
+  return (
+    <section className={`${sectionContainer} py-16`}>
+      <div className="flex justify-between items-end mb-8 border-b border-[#2a2a2a] pb-4">
+        <div>
+          <h3 className="font-display text-[28px] md:text-[36px] text-[#e5e2e1] uppercase">{title}</h3>
+          <p className="font-mono text-[10px] tracking-[0.2em] text-[#d0c5af] uppercase mt-2">{subtitle}</p>
+        </div>
+        <div className="flex gap-2">
+          <button className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors" onClick={() => scrollBy(-300)} aria-label="Scroll left">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <button className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors" onClick={() => scrollBy(300)} aria-label="Scroll right">
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      
+      <div ref={scrollerRef} className="flex gap-6 overflow-x-auto snap-x scroll-smooth pb-8 hide-scrollbar">
+        {products.map((product) => (
+           <div key={product.id} className="snap-start shrink-0">
+             <ProductCard product={product} badge={deal ? "deal" : "new"} />
+           </div>
         ))}
       </div>
     </section>
@@ -93,17 +284,16 @@ export const HeroCarousel = ({ slides = [] }) => {
 
 export const TrustBar = () => {
   const items = [
-    { icon: Truck, text: "Free delivery over LKR 2,000" },
-    { icon: ArrowLeft, text: "Easy 14-day returns" },
-    { icon: Lock, text: "Secure checkout" },
-    { icon: MessageCircle, text: "WhatsApp support" },
+    { icon: Truck, text: "ISLANDWIDE DELIVERY" },
+    { icon: Lock, text: "SECURE CHECKOUT" },
+    { icon: Gift, text: "MYSTERY REWARDS" },
   ];
   return (
-    <section className="bg-[#131313] border-y border-[#4d4635]/40 py-3 overflow-x-auto">
-      <div className={`${sectionContainer} min-w-[760px] md:min-w-0 flex justify-around gap-4`}>
+    <section className="bg-[#0b0b0b] border-y border-[#1f1f1f] py-4">
+      <div className="max-w-[1000px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-center gap-4">
         {items.map((item) => (
-          <div key={item.text} className="flex items-center gap-2 whitespace-nowrap text-[#d0c5af] text-xs font-sans">
-            <item.icon className="h-4 w-4" />
+          <div key={item.text} className="flex items-center gap-3 text-[#d0c5af] font-mono text-[10px] tracking-[0.2em] uppercase">
+            <item.icon className="h-4 w-4 text-[#f2ca50]" />
             {item.text}
           </div>
         ))}
@@ -111,228 +301,3 @@ export const TrustBar = () => {
     </section>
   );
 };
-
-const ProductCard = ({ product, badge = "new" }) => {
-  const [activeImage, setActiveImage] = useState(0);
-  const [wishlisted, setWishlisted] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const inViewRef = useRef(null);
-  const [inView, setInView] = useState(false);
-
-  const variantImages = useMemo(() => {
-    const variantImageList = product.variants.flatMap((v) => v.images || []);
-    const imageList = product.images.map((img) => img.url).filter(Boolean);
-    return (variantImageList.length ? variantImageList : imageList).slice(0, 5);
-  }, [product.images, product.variants]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.25 }
-    );
-    if (inViewRef.current) observer.observe(inViewRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!inView || hovered || variantImages.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveImage((prev) => (prev + 1) % variantImages.length);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [inView, hovered, variantImages.length]);
-
-  return (
-    <article className="w-[220px] rounded-[12px] border border-[#4d4635]/50 bg-[#131313] shrink-0 overflow-hidden">
-      <div
-        ref={inViewRef}
-        className="relative h-[280px] bg-[#1f1f1f] overflow-hidden"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {variantImages[activeImage] ? (
-          <img src={variantImages[activeImage]} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-        ) : null}
-
-        <span className={`absolute top-3 left-3 text-[11px] px-3 py-1 rounded-full ${badge === "deal" ? "bg-[#ffb4ab] text-[#0e0e0e]" : "bg-[#d4af37] text-[#0e0e0e]"}`}>
-          {badge === "deal" ? `SALE -${product.discountPercent || 0}%` : "New"}
-        </span>
-        <button
-          type="button"
-          aria-label="Toggle wishlist"
-          onClick={() => setWishlisted((prev) => !prev)}
-          className="absolute top-3 right-3 rounded-full bg-[#0e0e0e]/80 p-1.5"
-        >
-          <Heart className={`h-4 w-4 ${wishlisted ? "fill-[#ffb4ab] text-[#ffb4ab]" : "text-[#e5e2e1]"}`} />
-        </button>
-
-        <button className={`absolute left-0 right-0 bottom-0 h-9 bg-[#f2ca50] text-[#0e0e0e] text-sm transition-all duration-300 ${hovered ? "translate-y-0" : "translate-y-full"}`}>
-          Quick Add
-        </button>
-        {hovered ? (
-          <div className="absolute bottom-11 left-1/2 -translate-x-1/2 flex gap-1">
-            {variantImages.map((_, index) => (
-              <button
-                key={`${product.id}-dot-${index}`}
-                className={`h-2.5 w-2.5 rounded-full border ${activeImage === index ? "bg-primary border-primary" : "bg-white border-[#C9A96E]"}`}
-                onClick={() => setActiveImage(index)}
-                aria-label={`Select image ${index + 1}`}
-              />
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="p-3">
-        <h4 className="text-sm font-medium text-[#e5e2e1] truncate">{product.name}</h4>
-        <p className="text-xs text-[#d0c5af]">{product.category}</p>
-        <div className="mt-2 flex items-center gap-2 flex-wrap">
-          <span className="text-[#f2ca50] font-medium text-sm">{formatLkr(product.salePrice)}</span>
-          <span className="text-[#d0c5af] line-through text-xs">{formatLkr(product.originalPrice)}</span>
-          {product.discountPercent > 0 ? (
-            <span className="rounded-full bg-[#ffb4ab]/20 px-2 py-0.5 text-[11px] text-[#ffb4ab]">-{product.discountPercent}%</span>
-          ) : null}
-        </div>
-        {product.dealEndsAt ? <DealTimerInline dealEndsAt={product.dealEndsAt} /> : null}
-      </div>
-    </article>
-  );
-};
-
-const DealTimerInline = ({ dealEndsAt }) => {
-  const [value, setValue] = useState(() => getRemainingTime(dealEndsAt));
-  useEffect(() => {
-    const timer = setInterval(() => setValue(getRemainingTime(dealEndsAt)), 1000);
-    return () => clearInterval(timer);
-  }, [dealEndsAt]);
-  const hours = Math.floor(value.totalMs / 3600000);
-  const minutes = Math.floor((value.totalMs % 3600000) / 60000);
-  return <p className="mt-1 text-[11px] text-deal">Ends in {hours}h {minutes}m</p>;
-};
-
-export const ProductSlider = ({ title, subtitle, products = [], deal = false }) => {
-  const scrollerRef = useRef(null);
-  const scrollBy = (distance) => scrollerRef.current?.scrollBy({ left: distance, behavior: "smooth" });
-
-  return (
-    <section className={`${sectionContainer} py-10`}>
-      <div className="flex justify-between items-end mb-4">
-        <div>
-          <h3 className="font-display text-[28px] text-[#e5e2e1]">{title}</h3>
-          <p className="text-[13px] text-[#d0c5af]">{subtitle}</p>
-        </div>
-        <Link className="text-[#f2ca50] text-sm" to="/shopping/product-list">View All →</Link>
-      </div>
-      <div className="relative">
-        <button className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2" onClick={() => scrollBy(-300)} aria-label="Scroll left">
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div ref={scrollerRef} className="flex gap-4 overflow-x-auto snap-x scroll-smooth pb-2">
-          {products.map((product) => <ProductCard key={product.id} product={product} badge={deal ? "deal" : "new"} />)}
-        </div>
-        <button className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2" onClick={() => scrollBy(300)} aria-label="Scroll right">
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-    </section>
-  );
-};
-
-export const CategoryGrid = ({ title, subtitle, categories = [] }) => (
-  <section className={`${sectionContainer} py-8`}>
-    <h3 className="font-display text-[26px] text-[#e5e2e1]">{title}</h3>
-    <p className="text-[13px] text-[#d0c5af] mb-4">{subtitle}</p>
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {categories.map((category) => (
-        <Link key={category.name} to={category.link} className="group relative rounded-[12px] overflow-hidden bg-surface aspect-[3/4]">
-          {category.image ? (
-            <img src={category.image} alt={category.name} className="h-full w-full object-cover group-hover:scale-105 transition-all duration-300" loading="lazy" />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-[#0e0e0e] via-[#1f1f1f] to-[#393939]" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-          <div className="absolute bottom-3 left-3">
-            <p className="font-display text-[#FAF7F2] text-lg">{category.name}</p>
-            <p className="text-[#FAF7F2] text-sm opacity-0 group-hover:opacity-100 transition">Shop Now →</p>
-          </div>
-        </Link>
-      ))}
-    </div>
-  </section>
-);
-
-export const TrendingGrid = ({ products = [] }) => (
-  <section className={`${sectionContainer} py-10`}>
-    <h3 className="font-display text-[26px] text-[#e5e2e1]">Trending Now</h3>
-    <p className="text-sm text-[#d0c5af]">Based on what Sri Lanka is buying</p>
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
-      {products.map((product, index) => (
-        <div key={product.id} className="relative">
-          <span className="absolute top-2 left-2 z-10 h-6 w-6 rounded-full bg-[#C9A96E] text-[#2C2C2A] text-xs grid place-items-center">
-            {index + 1}
-          </span>
-          <ProductCard product={product} badge="new" />
-        </div>
-      ))}
-    </div>
-  </section>
-);
-
-export const BrandStoryStrip = () => (
-  <section className="bg-[#0b0b0b] py-12 mt-6 border-y border-[#4d4635]/40">
-    <div className={`${sectionContainer} grid md:grid-cols-3 gap-6 text-[#FAF7F2]`}>
-      <div>
-        <h3 className="font-display text-[28px]">Made in Sri Lanka</h3>
-        <p className="text-[#FAF7F2]/70 text-sm">Designed for modern Sri Lankan style with premium craftsmanship.</p>
-      </div>
-      <div className="font-display text-3xl space-y-2">
-        <p>500+ Styles</p>
-        <p>50,000+ Happy Customers</p>
-        <p>15+ Stores</p>
-      </div>
-      <div className="flex items-center md:justify-end">
-        <Link to="/contact" className="border border-[#d4af37] px-5 py-3 text-[#d4af37] hover:bg-[#d4af37] hover:text-[#0e0e0e] rounded-lg transition-all">
-          Visit Our Stores
-        </Link>
-      </div>
-    </div>
-  </section>
-);
-
-export const SocialProofStrip = ({ images = [] }) => (
-  <section className={`${sectionContainer} py-10`}>
-    <h4 className="text-sm text-[#d0c5af]">As seen on Instagram</h4>
-    <div className="mt-4 flex gap-3 overflow-x-auto">
-      {(images.length ? images : Array.from({ length: 6 }).map(() => "")).slice(0, 6).map((image, index) => (
-        <div key={index} className="group relative h-[120px] w-[120px] rounded-lg bg-surface shrink-0 overflow-hidden">
-          {image ? (
-            <img src={image} alt={`Saga Elite social preview ${index + 1}`} className="h-full w-full object-cover" loading="lazy" />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-[#0e0e0e] via-[#131313] to-[#2a2a2a]" />
-          )}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/60 text-white text-xs grid place-items-center transition">
-            @sagaelite
-          </div>
-        </div>
-      ))}
-    </div>
-    <p className="mt-3 text-[#f2ca50] text-sm">Follow us @sagaelite →</p>
-  </section>
-);
-
-export const FlashDealHeaderTimer = ({ endsAt }) => {
-  const [timer, setTimer] = useState(() => getRemainingTime(endsAt));
-  useEffect(() => {
-    const interval = setInterval(() => setTimer(getRemainingTime(endsAt)), 1000);
-    return () => clearInterval(interval);
-  }, [endsAt]);
-  return <span className="bg-[#f2ca50] text-[#0e0e0e] px-3 py-1 rounded text-sm font-mono">{timer.hh}:{timer.mm}:{timer.ss}</span>;
-};
-
-export const QuickActions = () => (
-  <div className="flex items-center gap-2">
-    <Link to="/shopping/wishlist" className="p-2 border rounded-full"><Heart className="h-4 w-4" /></Link>
-    <Link to="/shopping/cart" className="p-2 border rounded-full"><ShoppingCart className="h-4 w-4" /></Link>
-  </div>
-);
-

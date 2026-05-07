@@ -5,6 +5,7 @@ const giftSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     drop: { type: mongoose.Schema.Types.ObjectId, ref: "Drop", default: null },
     isActive: { type: Boolean, default: true },
+    probability: { type: Number, default: 100, min: 0, max: 100 }, // Chance % (0.1-100) to trigger
     condition: {
       type: String,
       enum: ["always", "min_order_value", "per_drop"],

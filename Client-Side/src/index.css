@@ -4,9 +4,10 @@
 
 @layer components {
   /* ── Editorial type system ────────────────────────────────
-     Display / Headlines: Playfair Display
-     Body / labels: DM Sans
-     Numerics: DM Mono */
+     Display / Brand: Cinzel
+     Headlines: Playfair Display
+     Body / labels: Inter
+     Numerics: JetBrains Mono */
 
   .se-serif {
     font-family: 'Playfair Display', Georgia, serif;
@@ -23,7 +24,7 @@
   }
 
   .se-display {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Cinzel', serif;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -31,7 +32,7 @@
   }
 
   .se-wordmark {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Cinzel', serif;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -39,19 +40,19 @@
   }
 
   .se-body {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-weight: 400;
     letter-spacing: -0.005em;
     line-height: 1.6;
   }
 
   .se-mono {
-    font-family: 'DM Mono', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
   }
 
   .se-label {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     text-transform: uppercase;
     letter-spacing: 0.18em;
     font-weight: 500;
@@ -74,7 +75,7 @@
 
   /* Image fallback */
   .se-img-fallback {
-    background: #1c1b1b;
+    background: #131313;
     border: 1px solid #4d4635;
     display: flex;
     align-items: center;
@@ -91,7 +92,7 @@
   /* ── ADMIN UI ──────────────────────────────── */
 
   .admin-page-shell {
-    @apply min-h-screen w-full bg-[#050505] text-white p-4 md:p-6;
+    @apply min-h-screen w-full bg-[#050505] text-[#e5e2e1] p-4 md:p-6;
   }
 
   .admin-page-header {
@@ -103,11 +104,11 @@
   }
 
   .admin-page-title {
-    @apply mt-2 text-3xl font-black tracking-tight text-white;
+    @apply mt-2 text-3xl font-black tracking-tight text-[#e5e2e1];
   }
 
   .admin-page-description {
-    @apply mt-3 max-w-3xl text-sm leading-6 text-gray-400;
+    @apply mt-3 max-w-3xl text-sm leading-6 text-[#d0c5af];
   }
 
   .admin-panel {
@@ -115,27 +116,27 @@
   }
 
   .admin-panel-title {
-    @apply text-lg font-semibold text-white;
+    @apply text-lg font-semibold text-[#e5e2e1];
   }
 
   .admin-panel-description {
-    @apply mt-2 text-sm text-gray-400;
+    @apply mt-2 text-sm text-[#d0c5af];
   }
 
   .admin-stat-card {
-    @apply rounded-3xl border border-white/10 bg-[#0d0d0d] p-5;
+    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
   }
 
   .admin-stat-label {
-    @apply text-[11px] uppercase tracking-[0.22em] text-gray-500;
+    @apply text-[11px] uppercase tracking-[0.22em] text-[#d0c5af];
   }
 
   .admin-stat-value {
-    @apply mt-2 text-3xl font-semibold tracking-tight text-white;
+    @apply mt-2 text-3xl font-semibold tracking-tight text-[#e5e2e1];
   }
 
   .admin-stat-hint {
-    @apply mt-2 text-xs text-gray-500;
+    @apply mt-2 text-xs text-[#d0c5af];
   }
 }
 
@@ -143,6 +144,13 @@
   body {
     background-color: theme('colors.background');
     color: theme('colors.foreground');
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.25s;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
   }
 }
