@@ -5,14 +5,6 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
-import {
-  Btn,
-  Eyebrow,
-  FieldError,
-  Hairline,
-  AUTH_INPUT,
-  AUTH_PRIMARY_BTN,
-} from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -112,6 +104,9 @@ const resolveUserFromPayload = (payload) => {
     null
   );
 };
+
+import AuthLayout from "@/components/auth-components/AuthLayout";
+import { motion } from "framer-motion";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -221,60 +216,113 @@ const Login = () => {
   };
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">
-        Welcome back
-      </Eyebrow>
-
-      <h1 className="mt-4 se-serif text-[#e5e2e1] text-4xl md:text-6xl">
-        Sign in.
-      </h1>
-
-      <form
-        onSubmit={handleSubmit}
-        className="mt-10 space-y-6"
+    <AuthLayout isImageRight={false}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="flex flex-col w-full max-w-sm mx-auto"
       >
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) =>
-            setFormData((p) => ({
-              ...p,
-              email: e.target.value,
-            }))
-          }
-          className={AUTH_INPUT}
-        />
+        <div className="text-center md:text-left mb-10">
+          <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse">
+            Access Exclusive Drops
+          </p>
+          <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
+            ENTER THE ELITE
+          </h1>
+          <p className="text-gray-400 text-sm">
+            Sign in to unlock premium streetwear and early access.
+          </p>
+        </div>
 
-        <input
-          type={showPassword ? "text" : "password"}
-          value={formData.password}
-          onChange={(e) =>
-            setFormData((p) => ({
-              ...p,
-              password: e.target.value,
-            }))
-          }
-          className={AUTH_INPUT}
-        />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-1 relative group">
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => {
+                setFormData((p) => ({ ...p, email: e.target.value }));
+                setTouched((p) => ({ ...p, email: true }));
+              }}
+              placeholder="your@email.com"
+              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+            />
+            {touched.email && errors.email && (
+              <p className="text-red-500 text-xs mt-1 pl-1">{errors.email}</p>
+            )}
+          </div>
 
-        <Btn
-          type="submit"
-          className={AUTH_PRIMARY_BTN}
-          iconRight={ArrowRight}
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing in..." : "Sign in"}
-        </Btn>
-      </form>
+          <div className="space-y-1 relative group">
+            <div className="flex justify-between items-center pl-1 pr-1">
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Password</label>
+              <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-red-400 transition-colors uppercase tracking-wider">
+                Recover Elite Access
+              </Link>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => {
+                  setFormData((p) => ({ ...p, password: e.target.value }));
+                  setTouched((p) => ({ ...p, password: true }));
+                }}
+                placeholder="••••••••"
+                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {touched.password && errors.password && (
+              <p className="text-red-500 text-xs mt-1 pl-1">{errors.password}</p>
+            )}
+          </div>
 
-      {GOOGLE_ENABLED && (
-        <GoogleAuthButton
-          onSuccess={handleGoogleSuccess}
-          onError={handleGoogleError}
-        />
-      )}
-    </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            disabled={isLoading}
+            className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-4 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              {isLoading ? "Authenticating..." : "ENTER THE ELITE"}
+              {!isLoading && <ArrowRight size={18} />}
+            </span>
+            <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
+          </motion.button>
+        </form>
+
+        <div className="mt-8 mb-6 flex items-center justify-center gap-4 text-xs font-semibold text-gray-600 uppercase tracking-widest">
+          <div className="h-px bg-white/10 flex-1" />
+          Or
+          <div className="h-px bg-white/10 flex-1" />
+        </div>
+
+        {GOOGLE_ENABLED && (
+          <div className="google-auth-wrapper grayscale hover:grayscale-0 transition-all duration-500 opacity-80 hover:opacity-100">
+            <GoogleAuthButton
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="Quick Access with Google"
+            />
+          </div>
+        )}
+
+        <p className="text-center text-sm text-gray-500 mt-8">
+          New Here?{" "}
+          <Link to="/register" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
+            JOIN THE ELITE
+          </Link>
+        </p>
+      </motion.div>
+    </AuthLayout>
   );
 };
 
