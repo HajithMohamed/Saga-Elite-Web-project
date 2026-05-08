@@ -1,20 +1,15 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Eye, Heart, ShoppingBag } from "lucide-react";
+import { Eye, Heart, ShoppingBag, X } from "lucide-react";
 import {
+  addToCartAction,
   addToWishlistAction,
   removeFromWishlistAction,
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
-import {
-  Btn,
-  ColorSwatch,
-  Eyebrow,
-  Hairline,
-  StatusBadge,
-} from "@/components/ui/editorial";
+import { useCountdown } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 
 const formatLKR = (value = 0) =>
@@ -39,6 +34,19 @@ const stockTone = (product) => {
   if (total <= 5) return { color: "#f2ca50", label: `${total} left` };
   return { color: "#a8d8b6", label: "In stock" };
 };
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+function DropEndingBadge({ target }) {
+  const c = useCountdown(target);
+  if (c.expired) return null;
+  return (
+    <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-[#93000a] text-[#ffb4ab] px-2.5 py-1 se-label text-[9px] tracking-[0.22em] backdrop-blur-sm animate-pulse">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#ffb4ab]" />
+      ENDS · {pad2(c.h)}:{pad2(c.m)}:{pad2(c.s)}
+    </div>
+  );
+}
 
 const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false }) => {
   const dispatch = useDispatch();
@@ -87,12 +95,91 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
   const dropBadge = getDropBadge(product);
 
-  // Hype badges — pick the strongest signal. Order is meaningful:
-  // sold-out > low-stock > drop-exclusive > bestseller > most-wished > limited.
+  // Hype signals — feed the priority-ordered badge stack below.
   const soldCount = Number(product?.soldCount || 0);
   const wishCount = Number(product?.wishCount || 0);
   const isBestseller = soldCount > 100;
   const isMostWished = wishCount > 50;
+  const isNew = isNewProduct(product);
+  const isRare = Boolean(product?.isRare);
+
+  // Stacked badges — up to 2 visible, top-left.
+  const badges = [];
+  if (isSoldOut) badges.push({ key: "sold", label: "SOLD OUT", tone: "dead" });
+  else if (totalStock > 0 && totalStock <= 5)
+    badges.push({ key: "low", label: `${totalStock} LEFT`, tone: "alert" });
+  if (isLimited) badges.push({ key: "lim", label: "LIMITED", tone: "bone" });
+  if (isRare) badges.push({ key: "rare", label: "RARE", tone: "bone" });
+  if (dropBadge && !isSoldOut)
+    badges.push({
+      key: "drop",
+      label: dropBadge.label.toUpperCase(),
+      tone: dropBadge.color === "gold" ? "gold" : "bone",
+    });
+  if (isNew && !isSoldOut) badges.push({ key: "new", label: "NEW DROP", tone: "gold" });
+  if (isBestseller) badges.push({ key: "best", label: "BESTSELLER", tone: "gold" });
+  if (isMostWished) badges.push({ key: "wish", label: "MOST WISHED", tone: "goldOutline" });
+  if (showDealBadge && discountPct > 0)
+    badges.push({ key: "deal", label: `${discountPct}% OFF`, tone: "bone" });
+  const visibleBadges = badges.slice(0, 2);
+
+  // Drop ending soon (< 24h, > 0).
+  const dropEnd = product?.drop?.endDate ? new Date(product.drop.endDate) : null;
+  const dropEndingSoon =
+    dropEnd && !Number.isNaN(dropEnd.getTime()) &&
+    dropEnd.getTime() - Date.now() > 0 &&
+    dropEnd.getTime() - Date.now() < 86_400_000;
+
+  // Quick Add overlay state.
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const overlayRef = useRef(null);
+  const inStockVariants = useMemo(
+    () => variants.filter((v) => Number(v?.stock || 0) > 0),
+    [variants]
+  );
+  const singleVariant = inStockVariants.length === 1;
+
+  useEffect(() => {
+    if (!quickAddOpen) return;
+    const onClick = (e) => {
+      if (!overlayRef.current?.contains(e.target)) setQuickAddOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setQuickAddOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [quickAddOpen]);
+
+  const handleQuickAdd = (e, variantId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!product?._id) return;
+    if (isSoldOut) {
+      toast({ title: "Sold out", variant: "destructive" });
+      return;
+    }
+    if (inStockVariants.length === 0) {
+      toast({ title: "No stock available", variant: "destructive" });
+      return;
+    }
+    const vId = variantId || (singleVariant ? inStockVariants[0]._id : null);
+    if (!vId) {
+      setQuickAddOpen(true);
+      return;
+    }
+    dispatch(addToCartAction({ productId: product._id, variantId: vId, quantity: 1 }))
+      .unwrap()
+      .then(() => toast({ title: "Added to bag", variant: "success" }))
+      .catch((msg) =>
+        toast({ title: msg || "Couldn't add to bag", variant: "destructive" })
+      );
+    setQuickAddOpen(false);
+  };
 
   return (
     <motion.div
@@ -126,41 +213,74 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           />
         ) : null}
 
-        {/* Hype Badges */}
-        {showDealBadge && discountPct > 0 ? (
-          <div className="absolute top-3 left-3 bg-[#0a0a0a] border border-[#4d4635] px-2 py-1 se-label text-[9px] tracking-[0.2em] text-[#d0c5af] backdrop-blur-sm">
-            DROP ARCHIVE · {discountPct}% OFF
+        {/* Stacked Hype Badges (top-left) */}
+        {visibleBadges.length > 0 && (
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 max-w-[70%]">
+            {visibleBadges.map((b) => (
+              <span
+                key={b.key}
+                className={cn(
+                  "px-3 py-1 se-label text-[9px] tracking-[0.28em] border backdrop-blur-sm w-fit",
+                  b.tone === "gold" && "bg-[#D4AF37]/90 text-[#0a0a0a] border-[#D4AF37]",
+                  b.tone === "goldOutline" && "bg-[#0a0a0a]/90 text-[#f2ca50] border-[#f2ca50]/60",
+                  b.tone === "bone" && "bg-[#0a0a0a]/90 text-[#e5e2e1] border-[#4d4635]",
+                  b.tone === "alert" && "bg-[#93000a] text-[#ffb4ab] border-[#93000a]",
+                  b.tone === "dead" && "bg-[#0a0a0a]/90 text-[#99907c] border-[#4d4635]"
+                )}
+              >
+                {b.label}
+              </span>
+            ))}
           </div>
-        ) : isSoldOut ? (
-          <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#e5e2e1] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#4d4635] backdrop-blur-sm">
-            Archived
+        )}
+
+        {/* Drop Ending Soon (top-right, only when drop ends within 24h) */}
+        {dropEndingSoon && <DropEndingBadge target={dropEnd} />}
+
+        {/* Quick Add overlay — sits above the slide-up actions */}
+        {quickAddOpen && inStockVariants.length > 1 && (
+          <div
+            ref={overlayRef}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className="absolute inset-x-3 bottom-16 z-20 bg-[#0a0a0a]/95 border border-[#4d4635] backdrop-blur-md p-3 rounded-sm shadow-[0_8px_30px_rgb(0,0,0,0.9)]"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="se-label text-[9px] tracking-[0.28em] text-[#99907c]">
+                SELECT SIZE
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setQuickAddOpen(false);
+                }}
+                className="text-[#99907c] hover:text-[#e5e2e1] se-focus"
+                aria-label="Close size selector"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {inStockVariants.map((v) => (
+                <button
+                  key={v._id}
+                  type="button"
+                  onClick={(e) => handleQuickAdd(e, v._id)}
+                  className="px-2 py-2 border border-[#4d4635] hover:border-[#f2ca50] hover:bg-[#1c1b1b] text-[#e5e2e1] se-mono text-[10px] flex flex-col items-center transition-colors se-focus"
+                >
+                  <span className="font-semibold tracking-wider">{v.size || "—"}</span>
+                  <span className="text-[8px] text-[#99907c] mt-0.5">
+                    {v.stock} left
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        ) : totalStock > 0 && totalStock <= 5 ? (
-          <div className="absolute top-3 left-3 bg-[#93000a] text-[#ffb4ab] px-3 py-1 se-label text-[9px] tracking-[0.28em] backdrop-blur-sm">
-            {totalStock} Pieces Left
-          </div>
-        ) : dropBadge ? (
-          <div className={cn(
-            "absolute top-3 left-3 px-3 py-1 se-label text-[9px] tracking-[0.28em] border backdrop-blur-sm",
-            dropBadge.color === "gold"
-              ? "bg-[#D4AF37]/90 text-[#0a0a0a] border-[#D4AF37]"
-              : "bg-[#0a0a0a]/90 text-[#99907c] border-[#4d4635]"
-          )}>
-            {dropBadge.label}
-          </div>
-        ) : isBestseller ? (
-          <div className="absolute top-3 left-3 bg-[#f2ca50] text-[#0a0a0a] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#f2ca50] backdrop-blur-sm">
-            Bestseller
-          </div>
-        ) : isMostWished ? (
-          <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#f2ca50] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#f2ca50]/60 backdrop-blur-sm">
-            Most Wished
-          </div>
-        ) : isLimited ? (
-          <div className="absolute top-3 left-3 bg-[#0a0a0a]/90 text-[#e5e2e1] px-3 py-1 se-label text-[9px] tracking-[0.28em] border border-[#4d4635] backdrop-blur-sm">
-            Limited Edition
-          </div>
-        ) : null}
+        )}
 
         {/* Slide-up quick actions — appear on hover */}
         <div className="absolute inset-x-0 bottom-0 flex translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
@@ -194,12 +314,15 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
               />
             </motion.div>
           </button>
-          <span
-            className="flex-1 bg-[#f2ca50] text-[#0a0a0a] py-2.5 text-[10px] tracking-[0.22em] uppercase font-mono font-bold group-hover:bg-[#ffe088] transition-colors flex items-center justify-center gap-1.5"
+          <button
+            type="button"
+            onClick={handleQuickAdd}
+            aria-label={singleVariant ? "Add to bag" : "Quick add — choose size"}
+            className="flex-1 bg-[#f2ca50] text-[#0a0a0a] py-2.5 text-[10px] tracking-[0.22em] uppercase font-mono font-bold group-hover:bg-[#ffe088] transition-colors flex items-center justify-center gap-1.5 se-focus"
           >
             <ShoppingBag size={12} strokeWidth={2} />
-            Add
-          </span>
+            {singleVariant ? "Add" : "Quick Add"}
+          </button>
         </div>
       </Link>
 

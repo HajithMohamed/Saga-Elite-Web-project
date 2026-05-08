@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
@@ -7,10 +8,25 @@ import {
   Plus,
   Trash2,
   Copy,
-  CheckCircle,
   Calendar,
   Users,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
+import {
+  AdminFormShell,
+  StickyActionBar,
+  FormSection,
+  FormField,
+  LuxuryInput,
+  LuxuryTextarea,
+  LuxurySelect,
+  LuxuryDateInput,
+  StatusPill,
+  RightRailPanel,
+  RailToggleRow,
+  ProgressBar,
+} from "@/components/admin-components/_form";
 
 const ISSUED_FOR_OPTIONS = [
   { value: "manual", label: "Manual" },
@@ -57,7 +73,7 @@ const AdminCoupons = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("list");
+  const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(initialForm);
 
@@ -88,10 +104,16 @@ const AdminCoupons = () => {
     [coupons]
   );
 
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData(initialForm);
+  };
+
   const startCreate = () => {
     setEditingId(null);
     setFormData(initialForm);
-    setActiveTab("create");
+    setShowForm(true);
   };
 
   const startEdit = (coupon) => {
@@ -113,11 +135,11 @@ const AdminCoupons = () => {
       isActive: coupon.isActive ?? true,
       issuedFor: coupon.issuedFor || "manual",
     });
-    setActiveTab("create");
+    setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
 
     if (!formData.code.trim()) {
       toast({ title: "Code required", variant: "destructive" });
@@ -156,7 +178,6 @@ const AdminCoupons = () => {
     try {
       setSubmitting(true);
       if (editingId) {
-        // Code is immutable post-create — strip from update payload.
         const { code: _drop, ...rest } = payload;
         void _drop;
         await axios.patch(`${API_BASE}/coupons/admin/${editingId}`, rest, {
@@ -169,9 +190,7 @@ const AdminCoupons = () => {
         });
         toast({ title: "Coupon created" });
       }
-      setFormData(initialForm);
-      setEditingId(null);
-      setActiveTab("list");
+      resetForm();
       fetchCoupons();
     } catch (err) {
       toast({
@@ -224,141 +243,490 @@ const AdminCoupons = () => {
       ? `${c.discountValue}% off`
       : `LKR ${formatCurrency(c.discountValue)} off`;
 
+  // Computed status for the right rail preview / pill.
+  const computedStatus = (() => {
+    if (!formData.isActive) return "inactive";
+    const now = Date.now();
+    if (formData.startsAt) {
+      const start = new Date(formData.startsAt).getTime();
+      if (!Number.isNaN(start) && start > now) return "scheduled";
+    }
+    if (formData.endsAt) {
+      const end = new Date(formData.endsAt).getTime();
+      if (!Number.isNaN(end) && end < now) return "archived";
+    }
+    return "active";
+  })();
+
+  // Completion progress: code, discountValue, issuedFor are required-ish; rest are bonuses.
+  const completedCount = [
+    formData.code?.trim().length >= 3,
+    Number(formData.discountValue) > 0,
+    Boolean(formData.issuedFor),
+    formData.description?.trim().length > 0,
+    Boolean(formData.startsAt) || Boolean(formData.endsAt),
+  ].filter(Boolean).length;
+  const progressValue = completedCount / 5;
+
+  const previewDiscount =
+    formData.discountType === "percent"
+      ? `${Number(formData.discountValue) || 0}%`
+      : `LKR ${formatCurrency(formData.discountValue)}`;
+
+  const couponFormPanel = (
+    <AdminFormShell
+      onClose={resetForm}
+      header={
+        <StickyActionBar
+          eyebrow={editingId ? "Coupon · Editing" : "Coupon · New Issue"}
+          title={formData.code?.trim() || (editingId ? "Untitled coupon" : "New Coupon")}
+          subtitle={
+            formData.discountValue
+              ? `${previewDiscount} · ${ISSUED_FOR_OPTIONS.find((o) => o.value === formData.issuedFor)?.label || ""}`
+              : "Set a discount to continue"
+          }
+          onCancel={resetForm}
+          onPublish={handleSubmit}
+          publishLabel={editingId ? "Save Changes" : "Issue Coupon"}
+          isSubmitting={submitting}
+        />
+      }
+      rightRail={
+        <>
+          <RightRailPanel
+            tone="accent"
+            title="Live Preview"
+            description="The badge that customers see at checkout."
+          >
+            <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="font-mono text-lg font-bold tracking-[0.18em] text-white">
+                  {formData.code?.trim() || "YOUR-CODE"}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(formData.code || "")}
+                  className="text-white/40 hover:text-[#D4AF37]"
+                  title="Copy"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="mt-3 inline-flex rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37]">
+                {previewDiscount} off
+              </div>
+              <dl className="mt-4 space-y-1.5 border-t border-white/[0.05] pt-3 text-[11px]">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-white/40 uppercase tracking-wider">Status</dt>
+                  <dd>
+                    <StatusPill status={computedStatus} size="sm" />
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-white/40 uppercase tracking-wider">Issued for</dt>
+                  <dd className="text-white/80 capitalize">
+                    {formData.issuedFor.replace(/_/g, " ")}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-white/40 uppercase tracking-wider">Window</dt>
+                  <dd className="text-white/80 text-right">
+                    {formatDate(formData.startsAt)} → {formatDate(formData.endsAt)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-white/40 uppercase tracking-wider">Min order</dt>
+                  <dd className="text-white/80 tabular-nums">
+                    {Number(formData.minOrderValue) > 0
+                      ? `LKR ${formatCurrency(formData.minOrderValue)}`
+                      : "None"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-white/40 uppercase tracking-wider">Max uses</dt>
+                  <dd className="text-white/80 tabular-nums">
+                    {formData.maxUses === "" || formData.maxUses === null
+                      ? "Unlimited"
+                      : formData.maxUses}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </RightRailPanel>
+
+          <RightRailPanel title="Status & Visibility">
+            <RailToggleRow
+              label="Active"
+              helper="Inactive coupons cannot be redeemed at checkout."
+              checked={formData.isActive}
+              onChange={(v) => setFormData({ ...formData, isActive: v })}
+            />
+          </RightRailPanel>
+
+          <RightRailPanel title="Setup Progress">
+            <ProgressBar
+              label="Coupon completion"
+              value={progressValue}
+              segments={5}
+              filledCount={completedCount}
+            />
+            <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+              Required: code and discount. Add a description and validity window for
+              campaign clarity.
+            </p>
+          </RightRailPanel>
+
+          <RightRailPanel title="Tips">
+            <ul className="space-y-2 text-[11px] leading-relaxed text-white/50">
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Codes are immutable after issue. Use the auto-generator for clean,
+                unguessable codes.
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                For percent discounts, the value cannot exceed 100.
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Limit to specific categories when running tier-only campaigns.
+              </li>
+            </ul>
+          </RightRailPanel>
+        </>
+      }
+    >
+      <FormSection
+        number="01"
+        title="Code & Audience"
+        description="Who is this coupon for and how should it appear at checkout?"
+      >
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <FormField
+            label="Code"
+            required
+            helper="Uppercase letters and numbers only. Codes are immutable after issue."
+            hint={`${formData.code.length} / 40`}
+          >
+            <div className="flex gap-2">
+              <LuxuryInput
+                type="text"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    code: e.target.value.toUpperCase(),
+                  })
+                }
+                disabled={!!editingId}
+                placeholder="REVIEW-7B2X"
+                maxLength={40}
+                className="font-mono uppercase"
+              />
+              {!editingId ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      code: generateRandomCode(""),
+                    }))
+                  }
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-white/70 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition"
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  Auto
+                </button>
+              ) : null}
+            </div>
+          </FormField>
+
+          <FormField
+            label="Issued For"
+            required
+            helper="Categorises the coupon for reporting and audit."
+          >
+            <LuxurySelect
+              value={formData.issuedFor}
+              onChange={(e) =>
+                setFormData({ ...formData, issuedFor: e.target.value })
+              }
+            >
+              {ISSUED_FOR_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </LuxurySelect>
+          </FormField>
+        </div>
+
+        <FormField
+          label="Description"
+          optional
+          helper="Internal note. Shown to admins in the coupon ledger."
+        >
+          <LuxuryTextarea
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            placeholder="What is this coupon for?"
+            rows={2}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection
+        number="02"
+        title="Discount"
+        description="Choose between a percentage or fixed-amount discount."
+      >
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <FormField label="Discount Type" required>
+            <LuxurySelect
+              value={formData.discountType}
+              onChange={(e) =>
+                setFormData({ ...formData, discountType: e.target.value })
+              }
+            >
+              <option value="percent">Percent (%)</option>
+              <option value="fixed">Fixed (LKR)</option>
+            </LuxurySelect>
+          </FormField>
+
+          <FormField
+            label="Discount Value"
+            required
+            helper={
+              formData.discountType === "percent"
+                ? "0 to 100"
+                : "Amount in LKR"
+            }
+          >
+            <LuxuryInput
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.discountValue}
+              onChange={(e) =>
+                setFormData({ ...formData, discountValue: e.target.value })
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Minimum Order"
+            optional
+            helper="Order must reach this value (LKR) to redeem."
+          >
+            <LuxuryInput
+              type="number"
+              min="0"
+              value={formData.minOrderValue}
+              onChange={(e) =>
+                setFormData({ ...formData, minOrderValue: e.target.value })
+              }
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      <FormSection
+        number="03"
+        title="Validity Window"
+        description="Restrict when this coupon can be redeemed and how often."
+      >
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <FormField
+            label="Max Uses"
+            optional
+            helper="Leave blank for unlimited."
+          >
+            <LuxuryInput
+              type="number"
+              min="0"
+              value={formData.maxUses}
+              onChange={(e) =>
+                setFormData({ ...formData, maxUses: e.target.value })
+              }
+              placeholder="∞"
+            />
+          </FormField>
+
+          <FormField
+            label="Starts At"
+            optional
+            helper="Coupon becomes redeemable from this time."
+          >
+            <LuxuryDateInput
+              type="datetime-local"
+              value={formData.startsAt}
+              onChange={(e) =>
+                setFormData({ ...formData, startsAt: e.target.value })
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Ends At"
+            optional
+            helper="Coupon expires at this time."
+          >
+            <LuxuryDateInput
+              type="datetime-local"
+              value={formData.endsAt}
+              onChange={(e) =>
+                setFormData({ ...formData, endsAt: e.target.value })
+              }
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      <FormSection
+        number="04"
+        title="Category Restriction"
+        description="Optionally restrict this coupon to one or more categories. Leave empty to apply to all."
+      >
+        <div className="flex flex-wrap gap-2">
+          {["Ladies", "Gents", "Unisex"].map((cat) => {
+            const active = formData.applicableCategories.includes(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => handleToggleCategory(cat)}
+                className={`rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] border transition ${
+                  active
+                    ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
+                    : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+      </FormSection>
+    </AdminFormShell>
+  );
+
   return (
-    <div className="mx-auto max-w-7xl p-6 text-[#e5e2e1]">
-      <div className="mb-8 flex items-center justify-between border-b border-[#2a2a2a] pb-4">
+    <div className="mx-auto max-w-7xl p-6 text-white">
+      <div className="mb-8 flex items-center justify-between border-b border-white/[0.06] pb-4">
         <div>
-          <h1 className="font-display text-4xl uppercase tracking-widest text-[#FAF7F2]">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">
             Coupons
           </h1>
-          <p className="mt-2 font-sans text-sm text-[#99907c]">
+          <p className="mt-2 text-sm text-white/50">
             Promo codes for campaigns, VIPs, review rewards, and one-off perks.
           </p>
         </div>
         <button
           type="button"
           onClick={startCreate}
-          className="flex items-center gap-2 bg-[#f2ca50] px-6 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#ffe088]"
+          className="inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-[#0A0A0A] shadow-[0_4px_14px_rgba(212,175,55,0.35)] hover:bg-[#E2BD45] transition"
         >
           <Plus className="h-4 w-4" /> New Coupon
         </button>
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
             Total coupons
           </p>
-          <p className="mt-2 text-2xl font-bold text-[#e5e2e1]">
+          <p className="mt-2 text-3xl font-semibold text-white tabular-nums">
             {coupons.length}
           </p>
         </div>
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
             Total redemptions
           </p>
-          <p className="mt-2 text-2xl font-bold text-[#f2ca50]">
+          <p className="mt-2 text-3xl font-semibold text-[#D4AF37] tabular-nums">
             {totalRedemptions}
           </p>
         </div>
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
             Active right now
           </p>
-          <p className="mt-2 text-2xl font-bold text-emerald-400">
+          <p className="mt-2 text-3xl font-semibold text-emerald-400 tabular-nums">
             {coupons.filter((c) => c.isLive).length}
           </p>
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-3">
-        {[
-          { key: "list", label: "All Coupons", icon: Tag },
-          { key: "create", label: editingId ? "Editing" : "Create", icon: Plus },
-        ].map((tab) => {
-          const TabIcon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 border px-6 py-3 font-mono text-[11px] uppercase tracking-[0.2em] transition-colors ${
-                activeTab === tab.key
-                  ? "border-[#f2ca50] bg-[#131313] text-[#f2ca50]"
-                  : "border-[#2a2a2a] text-[#888] hover:text-[#e5e2e1]"
-              }`}
-            >
-              <TabIcon className="h-4 w-4" /> {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
       {loading ? (
         <div className="flex justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-t-2 border-[#f2ca50]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-t-2 border-[#D4AF37]" />
         </div>
-      ) : activeTab === "list" ? (
-        <div className="overflow-hidden rounded-sm border border-[#2a2a2a] bg-[#131313]">
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0F0F0F]">
           {coupons.length === 0 ? (
-            <div className="p-12 text-center font-mono text-xs uppercase tracking-widest text-[#888]">
+            <div className="p-12 text-center text-xs uppercase tracking-[0.2em] text-white/40">
+              <Tag className="mx-auto mb-3 h-8 w-8 text-white/20" />
               No coupons yet — click "New Coupon" to issue one.
             </div>
           ) : (
-            <div className="divide-y divide-[#2a2a2a]">
+            <div className="divide-y divide-white/[0.05]">
               {coupons.map((c) => (
                 <div
                   key={c._id}
-                  className="flex flex-col gap-4 p-6 hover:bg-[#1a1a1a] md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-4 p-6 hover:bg-white/[0.02] md:flex-row md:items-center md:justify-between"
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-mono text-xl font-bold tracking-[0.18em] text-[#FAF7F2]">
+                      <h3 className="font-mono text-lg font-bold tracking-[0.18em] text-white">
                         {c.code}
                       </h3>
                       <button
                         type="button"
                         onClick={() => handleCopy(c.code)}
-                        className="text-[#99907c] hover:text-[#f2ca50]"
+                        className="text-white/40 hover:text-[#D4AF37]"
                         title="Copy code"
                       >
                         <Copy className="h-4 w-4" />
                       </button>
-                      <span className="rounded-full border border-[#f2ca50]/40 bg-[#f2ca50]/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#f2ca50]">
-                        {formatDiscount(c)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${
+                      <StatusPill status="published" label={formatDiscount(c)} size="sm" />
+                      <StatusPill
+                        status={
                           c.isLive
-                            ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                            ? "active"
                             : c.isActive
-                              ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-                              : "border-white/10 bg-white/5 text-white/60"
-                        }`}
-                      >
-                        {c.isLive
-                          ? "Live"
-                          : c.isActive
-                            ? "Pending / Expired"
-                            : "Inactive"}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/70">
-                        {c.issuedFor}
-                      </span>
+                              ? "scheduled"
+                              : "inactive"
+                        }
+                        label={
+                          c.isLive
+                            ? "Live"
+                            : c.isActive
+                              ? "Pending / Expired"
+                              : "Inactive"
+                        }
+                        size="sm"
+                      />
+                      <StatusPill
+                        tone="draft"
+                        label={c.issuedFor}
+                        size="sm"
+                      />
                     </div>
                     {c.description ? (
-                      <p className="mt-2 text-sm text-[#99907c]">
+                      <p className="mt-2 text-sm text-white/60">
                         {c.description}
                       </p>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-widest text-[#888]">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-[#f2ca50]" />
+                    <div className="mt-3 flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.15em] text-white/40">
+                      <span className="flex items-center gap-1.5">
+                        <Users className="h-3 w-3 text-[#D4AF37]" />
                         {c.usedCount || 0}
                         {c.maxUses != null ? ` / ${c.maxUses}` : " / ∞"}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 text-[#f2ca50]" />
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3 text-[#D4AF37]" />
                         {formatDate(c.startsAt)} → {formatDate(c.endsAt)}
                       </span>
                       {c.minOrderValue ? (
@@ -369,11 +737,11 @@ const AdminCoupons = () => {
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => startEdit(c)}
-                      className="border border-[#4d4635] px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white/80 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition"
                     >
                       Edit
                     </button>
@@ -381,14 +749,14 @@ const AdminCoupons = () => {
                       type="button"
                       onClick={() => handleDelete(c._id)}
                       disabled={c.usedCount > 0}
-                      className="border border-red-500/20 p-2 text-red-500 hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-full border border-rose-500/20 p-2 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40 transition"
                       title={
                         c.usedCount > 0
                           ? "Used coupons can't be deleted — deactivate instead"
                           : "Delete"
                       }
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -396,254 +764,11 @@ const AdminCoupons = () => {
             </div>
           )}
         </div>
-      ) : (
-        <div className="rounded-sm border border-[#f2ca50]/30 bg-[#131313] p-6 md:p-8">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-[#f2ca50]">
-              <Plus className="h-4 w-4" />{" "}
-              {editingId ? "Edit Coupon" : "Create New Coupon"}
-            </h2>
-            {editingId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setFormData(initialForm);
-                  setActiveTab("list");
-                }}
-                className="text-xs uppercase tracking-[0.22em] text-[#99907c] hover:text-[#e5e2e1]"
-              >
-                Cancel edit
-              </button>
-            ) : null}
-          </div>
-
-          <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Code
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        code: e.target.value.toUpperCase(),
-                      })
-                    }
-                    disabled={!!editingId}
-                    required
-                    className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 font-mono text-sm uppercase text-[#FAF7F2] outline-none focus:border-[#f2ca50] disabled:opacity-60"
-                    placeholder="REVIEW-7B2X"
-                  />
-                  {!editingId ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          code: generateRandomCode(""),
-                        }))
-                      }
-                      className="border border-[#4d4635] px-3 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
-                    >
-                      Auto
-                    </button>
-                  ) : null}
-                </div>
-                {editingId ? (
-                  <p className="mt-2 text-[10px] text-[#666]">
-                    Codes are immutable after creation.
-                  </p>
-                ) : null}
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Issued for
-                </label>
-                <select
-                  value={formData.issuedFor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, issuedFor: e.target.value })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                >
-                  {ISSUED_FOR_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={2}
-                className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Discount type
-                </label>
-                <select
-                  value={formData.discountType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, discountType: e.target.value })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                >
-                  <option value="percent">Percent (%)</option>
-                  <option value="fixed">Fixed (LKR)</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Discount value
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.discountValue}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      discountValue: e.target.value,
-                    })
-                  }
-                  required
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Min order (LKR)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.minOrderValue}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      minOrderValue: e.target.value,
-                    })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Max uses (blank = ∞)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.maxUses}
-                  onChange={(e) =>
-                    setFormData({ ...formData, maxUses: e.target.value })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Starts at
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.startsAt}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startsAt: e.target.value })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                  Ends at
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.endsAt}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endsAt: e.target.value })
-                  }
-                  className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] outline-none focus:border-[#f2ca50]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-xs uppercase tracking-widest text-[#888]">
-                Apply to categories (optional)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {["Ladies", "Gents", "Unisex"].map((cat) => {
-                  const active = formData.applicableCategories.includes(cat);
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => handleToggleCategory(cat)}
-                      className={`px-4 py-1.5 text-[10px] uppercase tracking-[0.22em] border transition-colors ${
-                        active
-                          ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                          : "border-[#4d4635] text-[#99907c] hover:border-[#d0c5af]"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <label className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#d0c5af]">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.checked })
-                }
-              />
-              Active
-            </label>
-
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex w-full items-center justify-center gap-2 bg-[#f2ca50] px-6 py-4 font-mono text-[13px] font-bold uppercase tracking-widest text-[#0a0a0a] transition-colors hover:bg-[#ffe088] disabled:opacity-60"
-              >
-                <CheckCircle className="h-5 w-5" />
-                {submitting
-                  ? "Saving…"
-                  : editingId
-                    ? "Save Changes"
-                    : "Issue Coupon"}
-              </button>
-            </div>
-          </form>
-        </div>
       )}
+
+      <AnimatePresence mode="wait">
+        {showForm ? couponFormPanel : null}
+      </AnimatePresence>
     </div>
   );
 };
