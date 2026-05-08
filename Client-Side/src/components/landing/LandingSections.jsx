@@ -67,6 +67,22 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
   const [paused, setPaused] = useState(false);
   const navigate = useNavigate();
 
+  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
+  const sectionRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    const rect = sectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    setMouseOffset({
+      x: ((e.clientX - cx) / rect.width) * 14,
+      y: ((e.clientY - cy) / rect.height) * 8,
+    });
+  };
+
+  const handleMouseLeave = () => setMouseOffset({ x: 0, y: 0 });
+
   const dropIsLive = activeDrop && new Date(activeDrop.releaseDate) <= new Date() && new Date(activeDrop.endDate) >= new Date();
   const dropIsUpcoming = nextDrop && new Date(nextDrop.releaseDate) > new Date();
 
@@ -171,6 +187,9 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
   // STATE C: Standard catalogue
   return (
     <section 
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       className="relative h-[50vh] md:h-[70vh] max-h-[600px] w-full overflow-hidden bg-[#050505]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -189,15 +208,24 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
             >
-              {slide.imageUrl ? (
-                <img src={slide.imageUrl} alt={slide.headline} 
-                     className="w-full h-full object-cover"
-                     loading="eager"
-                     srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
-                     sizes="100vw" />
-              ) : (
-                <div className="w-full h-full" style={{ background: slide.fallback }} />
-              )}
+              <div
+                className="w-full h-full"
+                style={{
+                  transform: `translate(${mouseOffset.x}px, ${mouseOffset.y}px)`,
+                  transition: 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
+                  willChange: 'transform',
+                }}
+              >
+                {slide.imageUrl ? (
+                  <img src={slide.imageUrl} alt={slide.headline} 
+                       className="w-full h-full object-cover"
+                       loading="eager"
+                       srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
+                       sizes="100vw" />
+                ) : (
+                  <div className="w-full h-full" style={{ background: slide.fallback }} />
+                )}
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
               
               <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center md:items-start text-center md:text-left`}>
@@ -589,8 +617,10 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
   return (
     <section className={`${sectionContainer} py-12`}>
        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         {categories.map((cat) => (
-           <Link key={cat.name} to={cat.link} className="relative aspect-[4/5] group overflow-hidden bg-[#131313]">
+         {categories.map((cat) => {
+           const label = cat.name;
+           return (
+           <Link key={cat.name} to={cat.link} className="group relative overflow-hidden aspect-[3/4] cursor-pointer border border-[#4d4635]/60 transition-all duration-500 hover:border-[#f2ca50]/60 hover:[box-shadow:0_0_30px_rgba(242,202,80,0.20),inset_0_0_0_1px_rgba(242,202,80,0.15)] bg-[#131313]">
              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
              {cat.img && (
                <img
@@ -604,11 +634,18 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
                  loading="lazy"
                />
              )}
-             <div className="absolute inset-0 flex items-center justify-center">
-               <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest group-hover:text-[#f2ca50] transition-colors">{cat.name}</h3>
+             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent" />
+             <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center text-center justify-end">
+               <div className="transition-transform duration-500 group-hover:-translate-y-2">
+                 <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest">{cat.name}</h3>
+               </div>
+               <p className="mt-1 se-label font-bold text-[9px] tracking-[0.3em] text-[#d0c5af]/80 opacity-0 translate-y-2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
+                 {label === 'Gents' ? 'BOLD · OVERSIZED · RARE' : label === 'Ladies' ? 'ICONIC · EDITORIAL · ELEGANT' : 'NO RULES · SHARED · UNLIMITED'}
+               </p>
              </div>
            </Link>
-         ))}
+           );
+         })}
        </div>
     </section>
   );
@@ -1346,11 +1383,11 @@ export const CommunityFeed = ({ images = [] }) => {
       <div className="max-w-[1440px] mx-auto px-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
-            <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
-              The Community
+            <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.4em]">
+              COMMUNITY · THE STREETS SPEAK
             </p>
-            <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
-              #SagaElite
+            <h2 className="se-serif text-[#e5e2e1] text-4xl md:text-6xl mt-3">
+              Worn by the bold.
             </h2>
             <p className="font-sans text-sm text-[#99907c] mt-3 max-w-lg">
               Tag us. The best fits get featured here and on our story.
@@ -1367,30 +1404,31 @@ export const CommunityFeed = ({ images = [] }) => {
           </a>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[160px] md:auto-rows-[200px] gap-3 md:gap-4">
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
           {tiles.slice(0, 6).map((tile, i) => (
-            <motion.a
+            <motion.div
               key={i}
-              href="https://instagram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ delay: i * 0.06, duration: 0.5 }}
-              className={`relative overflow-hidden bg-[#131313] border border-[#1f1f1f] group ${
-                tile.span === "row" ? "row-span-2" : ""
-              } ${tile.span === "col" ? "col-span-2" : ""}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ delay: i * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="break-inside-avoid group relative overflow-hidden cursor-pointer"
+              style={{
+                aspectRatio: i % 5 === 0 ? '3/4' : i % 5 === 1 ? '1/1' : i % 5 === 2 ? '2/3' : i % 5 === 3 ? '4/5' : '3/5',
+              }}
             >
               <img
-                src={tile.url}
-                alt="Saga Elite community"
+                src={tile.url || tile}
+                alt={`Community look ${i + 1}`}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Instagram className="absolute top-3 right-3 w-4 h-4 text-[#FAF7F2] opacity-0 group-hover:opacity-100 transition-opacity" />
-            </motion.a>
+              <div className="absolute inset-0 bg-[#0a0a0a]/0 group-hover:bg-[#0a0a0a]/30 transition-all duration-400 flex items-end p-3">
+                <span className="se-label text-[9px] tracking-[0.3em] text-white/0 group-hover:text-white/70 transition-all duration-300">
+                  SAGA ELITE
+                </span>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>

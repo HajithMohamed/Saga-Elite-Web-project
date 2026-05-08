@@ -22,6 +22,7 @@ import {
   NewsletterSection,
   TrustBar,
 } from "@/components/landing/LandingSections";
+import Footer from "@/components/landing/Footer";
 
 const PLACEHOLDER_HERO =
   "https://images.unsplash.com/photo-1550614000-4b95dd245ed6?w=1600&q=80";
@@ -198,6 +199,8 @@ const Home = () => {
 
         {/* 14. Newsletter — closes the page */}
         <NewsletterSection />
+
+        <Footer />
       </div>
     </div>
   );
