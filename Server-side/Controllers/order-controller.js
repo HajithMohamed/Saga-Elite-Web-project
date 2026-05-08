@@ -400,7 +400,7 @@ const createOrder = catchAsync(async (req, res, next) => {
       currency: "LKR",
     });
 
-    const paymentLink = `${process.env.FRONTEND_URL}/shopping/manual-payment/${manualPayment.slug}`;
+    const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
     const customerEmail = user?.email || guestEmailNormalized;
     const customerPhone = cleanPhoneNumber(contactNumber);
 

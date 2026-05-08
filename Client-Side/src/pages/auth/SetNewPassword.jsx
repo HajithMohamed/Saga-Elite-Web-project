@@ -101,16 +101,24 @@ const SetNewPassword = () => {
 
   return (
     <div>
-      <Eyebrow tone="gold" size="md">Reset · step three</Eyebrow>
+      <Eyebrow tone="gold" size="md">Reset · final step</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Choose a new<br />password.
+        Set your<br />new key.
       </h1>
       <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
         Eight characters, with at least one uppercase letter, one number, and one symbol from{" "}
         <span className="se-mono text-[#e5e2e1]">@$!%*?&</span>.
       </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+      <div className="mt-6 mb-2 flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#a8d8b6] animate-pulse" />
+        <span className="se-label text-[10px] tracking-[0.28em] text-[#a8d8b6]">
+          Secure session · encrypted
+        </span>
+        <div className="flex-1 h-px bg-[#4d4635]" />
+      </div>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-6 md:mt-8 space-y-6">
         <div>
           <Eyebrow tone="muted" size="xs">New password</Eyebrow>
           <div className="relative mt-2">
@@ -179,7 +187,7 @@ const SetNewPassword = () => {
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? "Updating" : "Update password"}
+          {isLoading ? "Securing" : "Set new key"}
         </Btn>
       </form>
 
@@ -188,7 +196,7 @@ const SetNewPassword = () => {
         className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
-        Cancel and return to sign in
+        Cancel · return to sign in
       </Link>
     </div>
   );

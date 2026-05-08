@@ -6,6 +6,7 @@ import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame } from "lucide
 import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
 import { getRemainingTime } from "@/utils/time";
+import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 
 const AnnouncementBar = ({ items, nextDrop, countdown }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -122,6 +123,7 @@ const MainHeader = () => {
     { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies" },
     { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
     { key: "drops", label: "Drops", to: "/shopping/product-list?isDrop=true", isHot: true },
+    { key: "catalog", label: "Catalog", to: "/shopping/product-list" },
     { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
   ];
 
@@ -200,6 +202,7 @@ const MainHeader = () => {
               <Heart className="w-[18px] h-[18px]" />
               <AnimatedBadge count={wishlistCount} />
             </Link>
+            {user && <NotificationsDropdown />}
             <div className="relative">
               <button aria-label="Account" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
                 <User className="w-[18px] h-[18px]" />

@@ -173,16 +173,6 @@ const listAdminCoupons = catchAsync(async (_req, res) => {
 const createCoupon = catchAsync(async (req, res, next) => {
   const data = filterObj(req.body, ...CREATE_FIELDS);
 
-  if (!data.code) return next(new AppError("Code is required", 400));
-  if (!data.discountType) return next(new AppError("Discount type required", 400));
-  if (typeof data.discountValue !== "number" || data.discountValue < 0) {
-    return next(new AppError("Discount value must be a non-negative number", 400));
-  }
-  if (data.discountType === "percent" && data.discountValue > 100) {
-    return next(new AppError("Percent discount cannot exceed 100", 400));
-  }
-
-  data.code = String(data.code).trim().toUpperCase();
   const existing = await Coupon.findOne({ code: data.code });
   if (existing) {
     return next(new AppError(`Coupon code ${data.code} already exists`, 409));

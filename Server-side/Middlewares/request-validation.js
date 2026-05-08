@@ -407,6 +407,12 @@ const validateDropCreate = createValidationMiddleware((req) => {
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
     releaseDate,
     endDate,
+    isPublished: req.body.isPublished !== undefined
+      ? sanitizeBoolean(req.body.isPublished, "isPublished")
+      : undefined,
+    isArchived: req.body.isArchived !== undefined
+      ? sanitizeBoolean(req.body.isArchived, "isArchived")
+      : undefined,
   };
 });
 
@@ -445,7 +451,7 @@ const validateProductCreate = createValidationMiddleware((req) => {
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
     brand: sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 }),
     category: sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true }),
-    drop: sanitizeObjectId(req.body.drop, "drop"),
+    drop: req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null,
     basePrice: sanitizeNumber(req.body.basePrice, "basePrice", { required: true, min: 0 }),
     originalPrice: sanitizeNumber(req.body.originalPrice ?? req.body.basePrice, "originalPrice", { min: 0 }),
     salePrice: sanitizeNumber(req.body.salePrice ?? req.body.basePrice, "salePrice", { min: 0 }),
@@ -495,6 +501,443 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   }
 
   req.body = body;
+});
+
+const COUPON_DISCOUNT_TYPES = ["percent", "fixed"];
+const COUPON_ISSUED_FOR = [
+  "manual",
+  "campaign",
+  "vip",
+  "review_reward",
+  "referral",
+  "birthday",
+];
+
+const sanitizeCouponPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (!isUpdate) {
+    const code = sanitizeString(body.code, "code", {
+      required: true,
+      minLength: 3,
+      maxLength: 40,
+    });
+    out.code = code.toUpperCase();
+  }
+
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 200,
+    });
+  }
+
+  const discountType = sanitizeEnum(
+    body.discountType,
+    COUPON_DISCOUNT_TYPES,
+    "discountType",
+    { required: !isUpdate }
+  );
+  if (discountType !== undefined) out.discountType = discountType;
+
+  if (body.discountValue !== undefined || !isUpdate) {
+    const value = sanitizeNumber(body.discountValue, "discountValue", {
+      required: !isUpdate,
+      min: 0,
+    });
+    if (value !== undefined) {
+      const effectiveType = discountType || body.discountType;
+      if (effectiveType === "percent" && value > 100) {
+        fail("Percent discount cannot exceed 100");
+      }
+      out.discountValue = value;
+    }
+  }
+
+  if (body.minOrderValue !== undefined) {
+    out.minOrderValue = sanitizeNumber(body.minOrderValue, "minOrderValue", {
+      min: 0,
+    });
+  }
+
+  if (body.maxUses !== undefined && body.maxUses !== null && body.maxUses !== "") {
+    out.maxUses = sanitizeNumber(body.maxUses, "maxUses", {
+      min: 0,
+      integer: true,
+    });
+  } else if (body.maxUses === null || body.maxUses === "") {
+    out.maxUses = null;
+  }
+
+  if (body.startsAt !== undefined && body.startsAt !== null && body.startsAt !== "") {
+    out.startsAt = sanitizeDate(body.startsAt, "startsAt");
+  } else if (body.startsAt === null || body.startsAt === "") {
+    out.startsAt = null;
+  }
+
+  if (body.endsAt !== undefined && body.endsAt !== null && body.endsAt !== "") {
+    out.endsAt = sanitizeDate(body.endsAt, "endsAt");
+  } else if (body.endsAt === null || body.endsAt === "") {
+    out.endsAt = null;
+  }
+
+  if (out.startsAt && out.endsAt && out.endsAt <= out.startsAt) {
+    fail("endsAt must be after startsAt");
+  }
+
+  if (body.applicableProducts !== undefined) {
+    if (!Array.isArray(body.applicableProducts)) {
+      fail("applicableProducts must be an array");
+    }
+    out.applicableProducts = body.applicableProducts.map((id, index) =>
+      sanitizeObjectId(id, `applicableProducts[${index}]`)
+    );
+  }
+
+  if (body.applicableCategories !== undefined) {
+    if (!Array.isArray(body.applicableCategories)) {
+      fail("applicableCategories must be an array");
+    }
+    out.applicableCategories = body.applicableCategories.map((cat, index) =>
+      sanitizeEnum(cat, PRODUCT_CATEGORIES, `applicableCategories[${index}]`, {
+        required: true,
+      })
+    );
+  }
+
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  if (body.issuedFor !== undefined) {
+    out.issuedFor = sanitizeEnum(body.issuedFor, COUPON_ISSUED_FOR, "issuedFor");
+  }
+
+  return out;
+};
+
+const validateCouponCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeCouponPayload(req.body, { isUpdate: false });
+});
+
+const validateCouponUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeCouponPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const SRI_LANKAN_PROVINCES = [
+  "Western",
+  "Central",
+  "Southern",
+  "Northern",
+  "Eastern",
+  "North Western",
+  "North Central",
+  "Uva",
+  "Sabaragamuwa",
+];
+
+const sanitizeBannerPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.title !== undefined || !isUpdate) {
+    out.title = sanitizeString(body.title, "title", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.imageUrl !== undefined || !isUpdate) {
+    out.imageUrl = sanitizeUrl(body.imageUrl, "imageUrl", { required: !isUpdate });
+  }
+  if (body.headline !== undefined) {
+    out.headline = sanitizeOptionalPlainText(body.headline, "headline", {
+      maxLength: 200,
+    });
+  }
+  if (body.ctaText !== undefined) {
+    out.ctaText = sanitizeOptionalPlainText(body.ctaText, "ctaText", { maxLength: 60 });
+  }
+  if (body.redirectUrl !== undefined || !isUpdate) {
+    out.redirectUrl = sanitizeUrl(body.redirectUrl, "redirectUrl", {
+      required: !isUpdate,
+    });
+  }
+  if (body.activeFrom !== undefined && body.activeFrom !== null && body.activeFrom !== "") {
+    out.activeFrom = sanitizeDate(body.activeFrom, "activeFrom");
+  }
+  if (body.activeTo !== undefined && body.activeTo !== null && body.activeTo !== "") {
+    out.activeTo = sanitizeDate(body.activeTo, "activeTo");
+  } else if (body.activeTo === null || body.activeTo === "") {
+    out.activeTo = null;
+  }
+  if (out.activeFrom && out.activeTo && out.activeTo <= out.activeFrom) {
+    fail("activeTo must be after activeFrom");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  return out;
+};
+
+const validateBannerCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeBannerPayload(req.body, { isUpdate: false });
+});
+
+const validateBannerUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeBannerPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const OFFER_TYPES = [
+  "clearance",
+  "tier-discount",
+  "mystery-box",
+  "aging_stock",
+  "new_product",
+  "seasonal",
+  "flash",
+];
+
+const sanitizeOfferPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.badgeText !== undefined) {
+    out.badgeText = sanitizeOptionalPlainText(body.badgeText, "badgeText", { maxLength: 60 });
+  }
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 2000,
+    });
+  }
+  const type = sanitizeEnum(body.type, OFFER_TYPES, "type", { required: !isUpdate });
+  if (type !== undefined) out.type = type;
+
+  if (body.discountPercent !== undefined) {
+    out.discountPercent = sanitizeNumber(body.discountPercent, "discountPercent", {
+      min: 0,
+      max: 100,
+    });
+  }
+
+  if (body.products !== undefined) {
+    if (!Array.isArray(body.products)) fail("products must be an array");
+    out.products = body.products.map((id, index) =>
+      sanitizeObjectId(id, `products[${index}]`)
+    );
+  }
+
+  if (body.applicableCategories !== undefined) {
+    if (!Array.isArray(body.applicableCategories)) {
+      fail("applicableCategories must be an array");
+    }
+    out.applicableCategories = body.applicableCategories.map((cat, index) =>
+      sanitizeEnum(cat, PRODUCT_CATEGORIES, `applicableCategories[${index}]`, {
+        required: true,
+      })
+    );
+  }
+
+  if (body.startsAt !== undefined && body.startsAt !== null && body.startsAt !== "") {
+    out.startsAt = sanitizeDate(body.startsAt, "startsAt");
+  } else if (body.startsAt === null || body.startsAt === "") {
+    out.startsAt = null;
+  }
+  if (body.endsAt !== undefined && body.endsAt !== null && body.endsAt !== "") {
+    out.endsAt = sanitizeDate(body.endsAt, "endsAt");
+  } else if (body.endsAt === null || body.endsAt === "") {
+    out.endsAt = null;
+  }
+  if (out.startsAt && out.endsAt && out.endsAt <= out.startsAt) {
+    fail("endsAt must be after startsAt");
+  }
+
+  if (body.showOnHomepage !== undefined) {
+    out.showOnHomepage = sanitizeBoolean(body.showOnHomepage, "showOnHomepage");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+  if (body.estimatedMarginAfterDiscount !== undefined) {
+    out.estimatedMarginAfterDiscount = sanitizeNumber(
+      body.estimatedMarginAfterDiscount,
+      "estimatedMarginAfterDiscount"
+    );
+  }
+
+  return out;
+};
+
+const validateOfferCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeOfferPayload(req.body, { isUpdate: false });
+});
+
+const validateOfferUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeOfferPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const sanitizeCollectionPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 2000,
+    });
+  }
+  if (body.bannerImageUrl !== undefined && body.bannerImageUrl !== "") {
+    out.bannerImageUrl = sanitizeUrl(body.bannerImageUrl, "bannerImageUrl");
+  }
+  if (body.products !== undefined) {
+    if (!Array.isArray(body.products)) fail("products must be an array");
+    out.products = body.products.map((id, index) =>
+      sanitizeObjectId(id, `products[${index}]`)
+    );
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+  if (body.isFeatured !== undefined) {
+    out.isFeatured = sanitizeBoolean(body.isFeatured, "isFeatured");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+
+  return out;
+};
+
+const validateCollectionCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeCollectionPayload(req.body, { isUpdate: false });
+});
+
+const validateCollectionUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeCollectionPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const validateCollectionReorder = createValidationMiddleware((req) => {
+  if (!Array.isArray(req.body.orders) || req.body.orders.length === 0) {
+    fail("orders must be a non-empty array");
+  }
+  req.body = {
+    orders: req.body.orders.map((entry, index) => {
+      if (!entry || typeof entry !== "object") {
+        fail(`orders[${index}] must be an object`);
+      }
+      return {
+        id: sanitizeObjectId(entry.id, `orders[${index}].id`),
+        displayOrder: sanitizeNumber(
+          entry.displayOrder,
+          `orders[${index}].displayOrder`,
+          { required: true, integer: true, min: 0 }
+        ),
+      };
+    }),
+  };
+});
+
+const sanitizeShippingZonePayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 120,
+    });
+  }
+  if (body.provinces !== undefined) {
+    if (!Array.isArray(body.provinces)) fail("provinces must be an array");
+    out.provinces = body.provinces.map((p, index) =>
+      sanitizeEnum(p, SRI_LANKAN_PROVINCES, `provinces[${index}]`, { required: true })
+    );
+  }
+  if (body.deliveryFee !== undefined || !isUpdate) {
+    out.deliveryFee = sanitizeNumber(body.deliveryFee, "deliveryFee", {
+      required: !isUpdate,
+      min: 0,
+    });
+  }
+  if (body.estimatedDays !== undefined) {
+    out.estimatedDays = sanitizeOptionalPlainText(body.estimatedDays, "estimatedDays", {
+      maxLength: 80,
+    });
+  }
+  if (body.freeAbove !== undefined) {
+    out.freeAbove = sanitizeNumber(body.freeAbove, "freeAbove", { min: 0 });
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  return out;
+};
+
+const validateShippingZoneCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeShippingZonePayload(req.body, { isUpdate: false });
+});
+
+const validateShippingZoneUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeShippingZonePayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const validateNewsletterSubscribe = createValidationMiddleware((req) => {
+  req.body = {
+    email: sanitizeEmail(req.body.email),
+    source: sanitizeOptionalPlainText(req.body.source, "source", { maxLength: 120 }),
+  };
 });
 
 const validateOrderCreate = createValidationMiddleware((req) => {
@@ -725,6 +1168,18 @@ module.exports = {
   validateDropUpdate,
   validateProductCreate,
   validateProductUpdate,
+  validateCouponCreate,
+  validateCouponUpdate,
+  validateBannerCreate,
+  validateBannerUpdate,
+  validateOfferCreate,
+  validateOfferUpdate,
+  validateCollectionCreate,
+  validateCollectionUpdate,
+  validateCollectionReorder,
+  validateShippingZoneCreate,
+  validateShippingZoneUpdate,
+  validateNewsletterSubscribe,
   validateOrderCreate,
   validateOrderStatusUpdate,
   validateManualPaymentReference,

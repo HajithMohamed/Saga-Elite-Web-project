@@ -10,6 +10,10 @@ const {
   createZone,
   updateZone,
 } = require("../Controllers/shipping-zone-controller");
+const {
+  validateShippingZoneCreate,
+  validateShippingZoneUpdate,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
@@ -29,6 +33,7 @@ router.post(
   authMiddleware,
   requireAdmin,
   requirePermission("manageInventory"),
+  validateShippingZoneCreate,
   createZone
 );
 router.patch(
@@ -36,6 +41,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("manageInventory"),
+  validateShippingZoneUpdate,
   updateZone
 );
 

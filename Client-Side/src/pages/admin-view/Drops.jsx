@@ -99,7 +99,7 @@ const initialFormData = {
   description: "",
   releaseDate: "",
   endDate: "",
-  isPublished: false,
+  isPublished: true,
   isArchived: false,
 };
 

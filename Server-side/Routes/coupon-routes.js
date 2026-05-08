@@ -12,6 +12,10 @@ const {
   updateCoupon,
   deleteCoupon,
 } = require("../Controllers/coupon-controller");
+const {
+  validateCouponCreate,
+  validateCouponUpdate,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
@@ -31,6 +35,7 @@ router.post(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  validateCouponCreate,
   createCoupon
 );
 router.patch(
@@ -38,6 +43,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  validateCouponUpdate,
   updateCoupon
 );
 router.delete(

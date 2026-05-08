@@ -91,19 +91,27 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
 
   const fetchCounts = useCallback(async () => {
     try {
+      // Each badge is a silent best-effort fetch — a sub-admin without one
+      // permission shouldn't break the others. Catch per-request so a 403
+      // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
+      const fallback = { data: { success: true, data: { count: 0 } } };
       const [paymentRes, reviewRes, agingRes] = await Promise.all([
-        axios.get(
-          `${API_V1_URL}/admin/manual-payments?status=proof_submitted&countOnly=true`,
-          { withCredentials: true }
-        ),
-        axios.get(`${API_V1_URL}/admin/reviews?status=pending&countOnly=true`, {
-          withCredentials: true,
-        }),
+        axios
+          .get(
+            `${API_V1_URL}/admin/manual-payments?status=proof_submitted&countOnly=true`,
+            { withCredentials: true }
+          )
+          .catch(() => fallback),
+        axios
+          .get(`${API_V1_URL}/admin/reviews?status=pending&countOnly=true`, {
+            withCredentials: true,
+          })
+          .catch(() => fallback),
         axios
           .get(`${API_V1_URL}/admin/products/aging?countOnly=true`, {
             withCredentials: true,
           })
-          .catch(() => ({ data: { success: true, data: { count: 0 } } })),
+          .catch(() => fallback),
       ]);
 
       if (paymentRes.data?.success) {

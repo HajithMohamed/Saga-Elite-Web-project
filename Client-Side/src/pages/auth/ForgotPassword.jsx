@@ -54,9 +54,9 @@ const ForgotPassword = () => {
 
   return (
     <div>
-      <Eyebrow tone="gold" size="md">Forgotten</Eyebrow>
+      <Eyebrow tone="gold" size="md">Lost access</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Reset your<br />password.
+        Recover<br />elite access.
       </h1>
       <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed max-w-md">
         Tell us the email tied to your account. We'll send a four-digit code to confirm it's
@@ -86,7 +86,7 @@ const ForgotPassword = () => {
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? "Sending code" : "Send the code"}
+          {isLoading ? "Sending code" : "Send access code"}
         </Btn>
       </form>
 
@@ -95,7 +95,7 @@ const ForgotPassword = () => {
         className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
-        Back to sign in
+        Return to sign in
       </Link>
     </div>
   );

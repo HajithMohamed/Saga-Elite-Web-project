@@ -35,14 +35,15 @@ export const createDrop = createAsyncThunk(
       return rejectWithValue("Name and release date are required");
     }
     try {
-      // Send only fields the backend's validateDropCreate accepts. Extras
-      // (isPublished/isArchived) are stripped by the validator anyway, but
-      // sending them obscures the payload during debugging.
       const payload = {
         name: dropData.name,
         description: dropData.description || undefined,
         releaseDate: dropData.releaseDate,
         endDate: dropData.endDate || undefined,
+        isPublished:
+          typeof dropData.isPublished === "boolean" ? dropData.isPublished : undefined,
+        isArchived:
+          typeof dropData.isArchived === "boolean" ? dropData.isArchived : undefined,
       };
       const response = await axios.post(`${API_BASE}/drops/create-drop`, payload, {
         withCredentials: true,
@@ -89,11 +90,11 @@ export const updateDrop = createAsyncThunk(
 
 export const archiveDrop = createAsyncThunk(
   "drop/archiveDrop",
-  async ({ slug, isArchived }, { rejectWithValue }) => {
+  async (slug, { rejectWithValue }) => {
     try {
       const response = await axios.patch(
         `${API_BASE}/drops/archive-drop/${slug}`,
-        { isArchived },
+        {},
         {
           withCredentials: true,
         }

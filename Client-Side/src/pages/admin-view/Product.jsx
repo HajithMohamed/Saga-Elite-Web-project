@@ -67,7 +67,6 @@ const initialProductForm = {
   discountPercent: "0",
   costPrice: "",
   maxPerUser: "",
-  stockThreshold: "5",
   isFeatured: false,
   isActive: true,
   isLimited: false,
@@ -183,7 +182,6 @@ const Product = () => {
       discountPercent: product.discountPercent || "0",
       costPrice: product.costPrice ?? "",
       maxPerUser: product.maxPerUser ?? "",
-      stockThreshold: "5",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
@@ -204,10 +202,52 @@ const Product = () => {
     });
   };
 
+  const validateProductForm = () => {
+    if (!formData.name.trim()) return "Product name is required.";
+    if (!formData.artNo.trim()) return "Art No is required.";
+    if (!formData.basePrice || Number(formData.basePrice) < 0) {
+      return "Base price must be 0 or greater.";
+    }
+    const validVariants = formData.variants.filter(
+      (v) =>
+        v.sku?.trim() &&
+        v.size?.trim() &&
+        v.color?.trim() &&
+        v.stock !== "" &&
+        v.stock !== null &&
+        v.stock !== undefined
+    );
+    if (validVariants.length === 0) {
+      return "At least one variant with SKU, size, color, and stock is required.";
+    }
+    const partialCount = formData.variants.length - validVariants.length;
+    if (partialCount > 0) {
+      return "Each variant needs SKU, size, color, and stock. Remove or complete partial rows.";
+    }
+    return null;
+  };
+
   const handleSubmit = async () => {
+    const validationError = validateProductForm();
+    if (validationError) {
+      toast({ title: "Check the form", description: validationError, variant: "destructive" });
+      return;
+    }
+
     try {
       let result;
-      const cleanData = { ...formData, variants: formData.variants.filter(v => v.sku) };
+      const cleanData = {
+        ...formData,
+        variants: formData.variants.filter(
+          (v) =>
+            v.sku?.trim() &&
+            v.size?.trim() &&
+            v.color?.trim() &&
+            v.stock !== "" &&
+            v.stock !== null &&
+            v.stock !== undefined
+        ),
+      };
 
       if (selectedProductSlug) {
         result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: cleanData })).unwrap();

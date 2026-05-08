@@ -11,6 +11,10 @@ const {
   updateOffer,
   deleteOffer,
 } = require("../Controllers/offer-controller");
+const {
+  validateOfferCreate,
+  validateOfferUpdate,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
@@ -30,6 +34,7 @@ router.post(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  validateOfferCreate,
   createOffer
 );
 router.patch(
@@ -37,6 +42,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  validateOfferUpdate,
   updateOffer
 );
 router.delete(

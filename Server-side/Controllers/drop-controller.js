@@ -18,7 +18,15 @@ const { broadcastNotification } = require("../Utils/notification-service");
 */
 
 const createDrop = catchAsync(async (req, res, next) => {
-    const dropData = filterObj(req.body, "name", "description", "releaseDate", "endDate");
+    const dropData = filterObj(
+        req.body,
+        "name",
+        "description",
+        "releaseDate",
+        "endDate",
+        "isPublished",
+        "isArchived"
+    );
 
     if (Object.keys(dropData).length === 0) {
         return next(new AppError("At least name and releaseDate are required", 400));
@@ -40,8 +48,8 @@ const createDrop = catchAsync(async (req, res, next) => {
 
     const newDrop = await Drop.create({
         ...dropData,
-        isPublished: true,
-        isArchived: false,
+        isPublished: dropData.isPublished ?? true,
+        isArchived: dropData.isArchived ?? false,
     });
 
     await broadcastNotification({

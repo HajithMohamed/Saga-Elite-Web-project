@@ -13,6 +13,11 @@ const {
   reorderCollections,
   deleteCollection,
 } = require("../Controllers/collection-controller");
+const {
+  validateCollectionCreate,
+  validateCollectionUpdate,
+  validateCollectionReorder,
+} = require("../Middlewares/request-validation");
 
 const router = express.Router();
 
@@ -33,6 +38,7 @@ router.post(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  validateCollectionCreate,
   createCollection
 );
 router.patch(
@@ -40,6 +46,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  validateCollectionReorder,
   reorderCollections
 );
 router.patch(
@@ -47,6 +54,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  validateCollectionUpdate,
   updateCollection
 );
 router.delete(

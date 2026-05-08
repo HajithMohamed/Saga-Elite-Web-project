@@ -325,7 +325,7 @@ const Login = () => {
             <GoogleAuthButton
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              text="Continue with Google"
+              label="Quick Access with Google"
             />
           </div>
         </>

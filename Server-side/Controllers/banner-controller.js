@@ -1,5 +1,18 @@
 const Banner = require("../Models/Banner");
 const catchAsync = require("../Utils/catchAsync");
+const filterObj = require("../Utils/filter-object");
+
+const BANNER_FIELDS = [
+  "title",
+  "imageUrl",
+  "headline",
+  "ctaText",
+  "redirectUrl",
+  "activeFrom",
+  "activeTo",
+  "displayOrder",
+  "isActive",
+];
 
 exports.getActiveBanners = catchAsync(async (req, res, next) => {
   const now = new Date();
@@ -32,7 +45,7 @@ exports.getBannerFeed = catchAsync(async (req, res) => {
 });
 
 exports.createBanner = catchAsync(async (req, res, next) => {
-  const banner = await Banner.create(req.body);
+  const banner = await Banner.create(filterObj(req.body, ...BANNER_FIELDS));
 
   res.status(201).json({
     status: "success",
@@ -41,10 +54,14 @@ exports.createBanner = catchAsync(async (req, res, next) => {
 });
 
 exports.updateBanner = catchAsync(async (req, res, next) => {
-  const banner = await Banner.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const banner = await Banner.findByIdAndUpdate(
+    req.params.id,
+    filterObj(req.body, ...BANNER_FIELDS),
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   res.status(200).json({
     status: "success",

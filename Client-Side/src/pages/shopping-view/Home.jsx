@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
@@ -146,6 +148,28 @@ const Home = () => {
             products={payload.trending}
           />
         )}
+
+        {/* 6.5 Catalog CTA — bridge from featured to the full collection */}
+        <section className="relative bg-[#0a0a0a] border-y border-[#2a2a2a]">
+          <div className="max-w-[1600px] mx-auto px-6 lg:px-12 py-16 md:py-20 flex flex-col items-center text-center">
+            <span className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+              EVERY CHAPTER · EVERY PIECE
+            </span>
+            <h2 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-5xl leading-[1.05] max-w-2xl">
+              Browse the full<br />Saga catalog.
+            </h2>
+            <p className="mt-4 se-body text-sm md:text-base text-[#d0c5af] max-w-xl leading-relaxed">
+              One scroll, no compromise — this season's drop and the archived edits, side by side.
+            </p>
+            <Link
+              to="/shopping/product-list"
+              className="mt-8 inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] hover:shadow-[0_0_20px_rgba(242,202,80,0.35)] text-[#1b1c1c] se-label text-[11px] tracking-[0.28em] px-8 py-4 transition-all duration-200"
+            >
+              Shop the full catalog
+              <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+            </Link>
+          </div>
+        </section>
 
         {/* 7. Active offers slider (when present) */}
         {payload.offers && payload.offers.length > 0 && (
