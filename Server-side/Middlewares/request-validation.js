@@ -473,7 +473,7 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
   if (req.body.brand !== undefined) body.brand = sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 });
   if (req.body.category !== undefined) body.category = sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true });
-  if (req.body.drop !== undefined) body.drop = sanitizeObjectId(req.body.drop, "drop");
+  if (req.body.drop !== undefined) body.drop = req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null;
   if (req.body.basePrice !== undefined) body.basePrice = sanitizeNumber(req.body.basePrice, "basePrice", { min: 0 });
   if (req.body.originalPrice !== undefined) body.originalPrice = sanitizeNumber(req.body.originalPrice, "originalPrice", { min: 0 });
   if (req.body.salePrice !== undefined) body.salePrice = sanitizeNumber(req.body.salePrice, "salePrice", { min: 0 });
