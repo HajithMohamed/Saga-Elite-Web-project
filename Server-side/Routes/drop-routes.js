@@ -16,7 +16,7 @@ const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware"
 const router = express.Router();
 
 router.get("/get-all-drops", optionalAuthMiddleware, getAllDrops);
-router.get("/get-single-drop/:slug", getSingleDrop);
+router.get("/get-single-drop/:slug", optionalAuthMiddleware, getSingleDrop);
 router.post("/create-drop", authMiddleware, adminMiddleware, requirePermission("drops"), validateDropCreate, adminLogMiddleware, createDrop);
 router.patch("/update-drop/:slug", authMiddleware, adminMiddleware, requirePermission("drops"), validateDropUpdate, adminLogMiddleware, updateDrop);
 router.patch("/archive-drop/:slug", authMiddleware, adminMiddleware, requirePermission("drops"), adminLogMiddleware, archiveDrop);

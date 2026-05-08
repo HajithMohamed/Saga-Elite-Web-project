@@ -422,7 +422,12 @@ const validateDropUpdate = createValidationMiddleware((req) => {
   if (req.body.name !== undefined) body.name = sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 });
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
   if (req.body.releaseDate !== undefined) body.releaseDate = sanitizeDate(req.body.releaseDate, "releaseDate", { required: true });
-  if (req.body.endDate !== undefined) body.endDate = sanitizeDate(req.body.endDate, "endDate");
+  if (req.body.endDate !== undefined) {
+    body.endDate =
+      req.body.endDate === null || req.body.endDate === ""
+        ? null
+        : sanitizeDate(req.body.endDate, "endDate");
+  }
   if (req.body.isPublished !== undefined) body.isPublished = sanitizeBoolean(req.body.isPublished, "isPublished");
   if (req.body.isArchived !== undefined) body.isArchived = sanitizeBoolean(req.body.isArchived, "isArchived");
 
@@ -456,12 +461,17 @@ const validateProductCreate = createValidationMiddleware((req) => {
     originalPrice: sanitizeNumber(req.body.originalPrice ?? req.body.basePrice, "originalPrice", { min: 0 }),
     salePrice: sanitizeNumber(req.body.salePrice ?? req.body.basePrice, "salePrice", { min: 0 }),
     discountPercent: sanitizeNumber(req.body.discountPercent ?? 0, "discountPercent", { min: 0, max: 100 }),
+    costPrice: sanitizeNumber(req.body.costPrice, "costPrice", { min: 0 }),
     categoryPath: sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 }),
     tags,
     relatedProductIds,
     trendScore: sanitizeNumber(req.body.trendScore ?? 0, "trendScore", { min: 0 }),
     isDeal: sanitizeBoolean(req.body.isDeal ?? false, "isDeal"),
     dealEndsAt: req.body.dealEndsAt ? sanitizeDate(req.body.dealEndsAt, "dealEndsAt") : undefined,
+    isFeatured: sanitizeBoolean(req.body.isFeatured ?? false, "isFeatured"),
+    isActive: sanitizeBoolean(req.body.isActive ?? true, "isActive"),
+    isLimited: sanitizeBoolean(req.body.isLimited ?? false, "isLimited"),
+    maxPerUser: sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true }),
     variants: sanitizeVariants(req.body.variants, { required: true }),
   };
 });
@@ -478,6 +488,7 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.originalPrice !== undefined) body.originalPrice = sanitizeNumber(req.body.originalPrice, "originalPrice", { min: 0 });
   if (req.body.salePrice !== undefined) body.salePrice = sanitizeNumber(req.body.salePrice, "salePrice", { min: 0 });
   if (req.body.discountPercent !== undefined) body.discountPercent = sanitizeNumber(req.body.discountPercent, "discountPercent", { min: 0, max: 100 });
+  if (req.body.costPrice !== undefined) body.costPrice = sanitizeNumber(req.body.costPrice, "costPrice", { min: 0 });
   if (req.body.categoryPath !== undefined) body.categoryPath = sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 });
   if (req.body.tags !== undefined) {
     if (!Array.isArray(req.body.tags)) fail("tags must be an array");

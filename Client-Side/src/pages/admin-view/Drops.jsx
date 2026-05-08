@@ -52,9 +52,12 @@ import {
 
 // ── Shared helper components (matches Product page) ──────────────────────────
 
+const MotionSpan = motion.span;
+const MotionDiv = motion.div;
+
 const PulseDot = ({ active }) =>
   active ? (
-    <motion.span
+    <MotionSpan
       key="live"
       layout
       className="block h-2 w-2 shrink-0 rounded-full bg-saga-primary"
@@ -63,7 +66,7 @@ const PulseDot = ({ active }) =>
       transition={{ type: "spring", stiffness: 420, damping: 16 }}
     />
   ) : (
-    <motion.span
+    <MotionSpan
       key="draft"
       layout
       className="block h-2 w-2 shrink-0 rounded-full bg-outline-variant"
@@ -581,7 +584,7 @@ const Drops = () => {
       title="Drop Ledger"
       description="Create, schedule, publish, archive, and monitor collection drops."
     >
-    <motion.div
+    <MotionDiv
       variants={pageVariants}
       initial="hidden"
       animate="visible"
@@ -649,7 +652,7 @@ const Drops = () => {
         </div>
 
         {/* Drop Rows */}
-        <motion.div
+        <MotionDiv
           className="space-y-3"
           variants={containerVariants}
           initial="hidden"
@@ -661,7 +664,7 @@ const Drops = () => {
             drops.map((drop) => {
               const daysAway = daysUntilRelease(drop.releaseDate);
               return (
-              <motion.div
+              <MotionDiv
                 key={drop._id}
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
@@ -828,7 +831,7 @@ const Drops = () => {
                     }}
                   />
                 </div>
-              </motion.div>
+              </MotionDiv>
             );
             })}
 
@@ -848,7 +851,7 @@ const Drops = () => {
               </button>
             </div>
           )}
-        </motion.div>
+        </MotionDiv>
       </main>
 
       {/* Gallery Modal */}
@@ -860,7 +863,7 @@ const Drops = () => {
           onImagesUpdate={handleDropGalleryImagesUpdate}
         />
       ) : null}
-    </motion.div>
+    </MotionDiv>
     </AdminPage>
     <AnimatePresence mode="wait">{showForm ? dropFormPanel : null}</AnimatePresence>
     </Fragment>

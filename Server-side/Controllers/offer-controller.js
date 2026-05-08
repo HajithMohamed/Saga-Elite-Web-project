@@ -64,7 +64,6 @@ const listAdminOffers = catchAsync(async (req, res) => {
   if (status === "active") {
     filter.isActive = true;
     filter.$and = [
-      { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
       { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
     ];
   } else if (status === "history") {

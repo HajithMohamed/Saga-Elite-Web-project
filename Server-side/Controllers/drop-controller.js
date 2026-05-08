@@ -118,7 +118,13 @@ const getSingleDrop = catchAsync(async (req, res, next) => {
         return next(new AppError("Drop slug is required", 400));
     }
 
-    const drop = await Drop.findOne({ slug: dropSlug }).populate("images");
+    const filter = { slug: dropSlug };
+    if (!req.userInfo || !isAdminRole(req.userInfo.role)) {
+        filter.isPublished = true;
+        filter.isArchived = false;
+    }
+
+    const drop = await Drop.findOne(filter).populate("images");
 
     if (!drop) {
         return next(new AppError("Drop not found", 404));
@@ -171,7 +177,9 @@ const updateDrop = catchAsync(async (req, res, next) => {
     }
 
     const finalRelease = dropData.releaseDate || drop.releaseDate;
-    const finalEnd = dropData.endDate || drop.endDate;
+    const finalEnd = Object.prototype.hasOwnProperty.call(dropData, "endDate")
+        ? dropData.endDate
+        : drop.endDate;
 
     if (finalRelease && finalEnd && finalEnd <= finalRelease) {
         return next(new AppError("endDate must be after releaseDate", 400));

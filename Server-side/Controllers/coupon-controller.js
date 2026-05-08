@@ -157,6 +157,26 @@ const validateCoupon = catchAsync(async (req, res, next) => {
 | Admin — list / create / update / delete
 |--------------------------------------------------------------------------
 */
+const serializeCouponStatus = (coupon) => {
+  const now = Date.now();
+  const startsAt = coupon.startsAt ? new Date(coupon.startsAt).getTime() : null;
+  const endsAt = coupon.endsAt ? new Date(coupon.endsAt).getTime() : null;
+  const maxUses = coupon.maxUses;
+  const usedCount = coupon.usedCount || 0;
+  const isExhausted = maxUses != null && usedCount >= maxUses;
+  const isLive =
+    Boolean(coupon.isActive) &&
+    !isExhausted &&
+    (!startsAt || startsAt <= now) &&
+    (!endsAt || endsAt >= now);
+
+  return {
+    ...coupon,
+    isExhausted,
+    isLive,
+  };
+};
+
 const listAdminCoupons = catchAsync(async (_req, res) => {
   const coupons = await Coupon.find()
     .sort({ createdAt: -1 })
@@ -166,7 +186,7 @@ const listAdminCoupons = catchAsync(async (_req, res) => {
 
   res.status(200).json({
     success: true,
-    data: { coupons, count: coupons.length },
+    data: { coupons: coupons.map(serializeCouponStatus), count: coupons.length },
   });
 });
 

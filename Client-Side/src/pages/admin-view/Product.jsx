@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllProducts,
@@ -102,6 +102,11 @@ const PRODUCT_TAG_OPTIONS = [
   "BESTSELLER",
 ];
 
+const getErrorMessage = (error, fallback = "Request failed") => {
+  if (typeof error === "string") return error;
+  return error?.message || error?.error || error?.response?.data?.message || fallback;
+};
+
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialProductForm);
@@ -143,7 +148,7 @@ const Product = () => {
   useEffect(() => {
     dispatch(getAllDrops());
     fetchProducts();
-  }, [fetchProducts]);
+  }, [dispatch, fetchProducts]);
 
   const resetForm = () => {
     setFormData(initialProductForm);
@@ -302,7 +307,11 @@ const Product = () => {
       resetForm();
       fetchProducts();
     } catch (e) {
-      toast({ title: "Failed to save product", description: e?.message, variant: "destructive" });
+      toast({
+        title: "Failed to save product",
+        description: getErrorMessage(e, "Something went wrong while saving the product."),
+        variant: "destructive",
+      });
     }
   };
 
