@@ -123,12 +123,11 @@ const reviewSchema = new mongoose.Schema(
 reviewSchema.index({ productId: 1, status: 1 });
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
 
-reviewSchema.pre("save", function (next) {
+reviewSchema.pre("save", function () {
   if (!this.slug) {
     const idpart = this._id != null ? String(this._id) : `${this.productId}-${Date.now()}`;
     this.slug = slugify(`review-${idpart}`, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model("Review", reviewSchema);

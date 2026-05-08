@@ -14,6 +14,7 @@ const paginatedResult = require("../Middlewares/pagination-middleware");
 const Product = require("../Models/Product");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   validateProductCreate,
   validateProductUpdate,
@@ -27,8 +28,8 @@ router.get("/search", searchProducts);
 router.get("/recommendations", getRecommendations);
 router.get("/get-single-product/:slug", getSingleProduct);
 router.get("/analytics", authMiddleware, adminMiddleware, requirePermission("products"), getAdminAnalytics);
-router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, addProduct);
-router.patch("/update-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), validateProductUpdate, updateProduct);
-router.delete("/delete-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), deleteProduct);
+router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, adminLogMiddleware, addProduct);
+router.patch("/update-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), validateProductUpdate, adminLogMiddleware, updateProduct);
+router.delete("/delete-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), adminLogMiddleware, deleteProduct);
 
 module.exports = router;

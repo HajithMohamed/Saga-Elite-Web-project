@@ -8,6 +8,7 @@ const {
   validateCartUpdate,
   validateWishlistAdd,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   getAdminUsers,
   getAdminUserDetail,
@@ -29,9 +30,9 @@ router.use(authMiddleware);
 
 router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
-router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, updateAdminUserStatus);
-router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), triggerAdminPasswordReset);
-router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), deleteAdminUser);
+router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
+router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);
+router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, deleteAdminUser);
 
 router.get("/cart", getCart);
 router.post("/cart", validateCartAdd, addToCart);

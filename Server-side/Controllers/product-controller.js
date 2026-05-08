@@ -19,7 +19,7 @@ const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 */
 
 const getAllProducts = catchAsync(async (req, res, next) => {
-    const isAdmin = isAdminUser(req.user);
+    const isAdmin = isAdminUser(req.userInfo);
 
     // Safety: Strip costPrice for non-admins if present in paginated results
     if (!isAdmin && res.paginatedResults && res.paginatedResults.data) {
@@ -63,7 +63,7 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
-    const isAdmin = isAdminUser(req.user);
+    const isAdmin = isAdminUser(req.userInfo);
     let productResponse = product.toObject({ virtuals: true });
 
     if (!isAdmin) {

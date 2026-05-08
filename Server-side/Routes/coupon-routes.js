@@ -16,6 +16,7 @@ const {
   validateCouponCreate,
   validateCouponUpdate,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.post(
   requireAdmin,
   requirePermission("sendCampaigns"),
   validateCouponCreate,
+  adminLogMiddleware,
   createCoupon
 );
 router.patch(
@@ -44,6 +46,7 @@ router.patch(
   requireAdmin,
   requirePermission("sendCampaigns"),
   validateCouponUpdate,
+  adminLogMiddleware,
   updateCoupon
 );
 router.delete(
@@ -51,6 +54,7 @@ router.delete(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  adminLogMiddleware,
   deleteCoupon
 );
 

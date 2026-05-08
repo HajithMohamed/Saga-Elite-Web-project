@@ -2,6 +2,7 @@ const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin, requirePermission } = require("../Middlewares/admin-middleware");
 const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
+const { contactLimiter } = require("../Middlewares/rateLimitinMiddleware");
 const {
   validateObjectIdParam,
   validateManualPaymentReference,
@@ -21,7 +22,12 @@ const {
 
 const router = express.Router();
 
-router.post("/manual-payments/:slug/request-extension", requestExtension);
+router.post(
+  "/manual-payments/:slug/request-extension",
+  contactLimiter,
+  authMiddleware,
+  requestExtension
+);
 router.post("/manual-payment/generate", authMiddleware, validateManualPaymentReference, generateReference);
 router.post("/payments/generate-reference", authMiddleware, validateManualPaymentReference, generateReference);
 router.get("/payments/my-pending", authMiddleware, getMyPendingPayments);

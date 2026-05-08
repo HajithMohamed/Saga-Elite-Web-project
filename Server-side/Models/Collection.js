@@ -61,12 +61,11 @@ const collectionSchema = new mongoose.Schema(
 
 collectionSchema.index({ isFeatured: 1, displayOrder: 1 });
 
-collectionSchema.pre("save", function (next) {
+collectionSchema.pre("save", function () {
   if (this.isModified("name") || !this.slug) {
     const base = this.name || String(this._id || Date.now());
     this.slug = slugify(`collection-${base}`, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model("Collection", collectionSchema);

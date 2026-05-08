@@ -15,7 +15,7 @@ const { computeMembershipTier } = require("../Utils/membership-tier");
 const { evaluateCoupon } = require("./coupon-controller");
 const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
-const { isAdminRole } = require("../Utils/admin-roles");
+const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const {
   sendWhatsAppMessage,
@@ -362,7 +362,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     entityRef: createdOrder._id,
     entityType: "Order",
     meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
-    filter: { role: "admin" },
+    filter: { role: { $in: ADMIN_ROLES } },
   });
 
   const orderNotifyPhones = parsePhoneList(
@@ -418,7 +418,7 @@ const createOrder = catchAsync(async (req, res, next) => {
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
       );
       sendEmail({
-        to: customerEmail,
+        email: customerEmail,
         subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
         html: emailHtml,
       }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
@@ -623,7 +623,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: "cancelled" },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status !== "delivered") {
     if (order.user) {
@@ -645,7 +645,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status === "delivered") {
     order.gift = order.gift || { giftId: null, revealed: false };
@@ -811,7 +811,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   }
 
@@ -888,7 +888,7 @@ const refundOrder = catchAsync(async (req, res, next) => {
   const customerEmail = order.user?.email || order.guestEmail;
   if (customerEmail) {
     sendEmail({
-      to: customerEmail,
+      email: customerEmail,
       subject: `Refund issued for your Saga Elite order ${order.referenceNumber || order._id}`,
       html: buildEmailTemplate(
         "Your refund is on its way",

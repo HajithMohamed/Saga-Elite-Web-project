@@ -14,6 +14,7 @@ const {
   validateShippingZoneCreate,
   validateShippingZoneUpdate,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 
 const router = express.Router();
 
@@ -34,6 +35,7 @@ router.post(
   requireAdmin,
   requirePermission("manageInventory"),
   validateShippingZoneCreate,
+  adminLogMiddleware,
   createZone
 );
 router.patch(
@@ -42,6 +44,7 @@ router.patch(
   requireAdmin,
   requirePermission("manageInventory"),
   validateShippingZoneUpdate,
+  adminLogMiddleware,
   updateZone
 );
 

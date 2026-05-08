@@ -4,6 +4,7 @@ const {
   requireAdmin,
   requirePermission,
 } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   listInfluencers,
   createInfluencer,
@@ -25,6 +26,7 @@ router.post(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  adminLogMiddleware,
   createInfluencer
 );
 router.patch(
@@ -32,6 +34,7 @@ router.patch(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  adminLogMiddleware,
   updateInfluencer
 );
 router.delete(
@@ -39,6 +42,7 @@ router.delete(
   authMiddleware,
   requireAdmin,
   requirePermission("sendCampaigns"),
+  adminLogMiddleware,
   deleteInfluencer
 );
 

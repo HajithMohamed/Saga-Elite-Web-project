@@ -15,6 +15,7 @@ const {
   validateOfferCreate,
   validateOfferUpdate,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.post(
   requireAdmin,
   requirePermission("products"),
   validateOfferCreate,
+  adminLogMiddleware,
   createOffer
 );
 router.patch(
@@ -43,6 +45,7 @@ router.patch(
   requireAdmin,
   requirePermission("products"),
   validateOfferUpdate,
+  adminLogMiddleware,
   updateOffer
 );
 router.delete(
@@ -50,6 +53,7 @@ router.delete(
   authMiddleware,
   requireAdmin,
   requirePermission("products"),
+  adminLogMiddleware,
   deleteOffer
 );
 

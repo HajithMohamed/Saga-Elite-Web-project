@@ -5,6 +5,7 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useToast } from "@/hooks/use-toast";
 
 const COLORS = {
   positive: "#10b981", // green-500
@@ -35,10 +36,19 @@ export default function DropAnalytics() {
   const [selectedDrop, setSelectedDrop] = useState("");
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchDropList().then(setDrops).catch(console.error);
-  }, []);
+    fetchDropList()
+      .then(setDrops)
+      .catch((err) =>
+        toast({
+          title: "Failed to load drops",
+          description: err?.response?.data?.message || err?.message,
+          variant: "destructive",
+        })
+      );
+  }, [toast]);
 
   useEffect(() => {
     if (!selectedDrop) {
@@ -48,9 +58,15 @@ export default function DropAnalytics() {
     setLoading(true);
     fetchAnalytics(selectedDrop)
       .then(setAnalytics)
-      .catch(console.error)
+      .catch((err) =>
+        toast({
+          title: "Failed to load drop analytics",
+          description: err?.response?.data?.message || err?.message,
+          variant: "destructive",
+        })
+      )
       .finally(() => setLoading(false));
-  }, [selectedDrop]);
+  }, [selectedDrop, toast]);
 
   const renderDecision = () => {
     if (!analytics || analytics.totalReviews === 0) return "Not enough data to recommend.";

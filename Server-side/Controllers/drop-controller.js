@@ -6,8 +6,7 @@ const Drop = require("../Models/Drop");
 const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
-const validator = require("validator");
-const { isAdminRole } = require("../Utils/admin-roles");
+const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { broadcastNotification } = require("../Utils/notification-service");
 
 
@@ -32,18 +31,9 @@ const createDrop = catchAsync(async (req, res, next) => {
         return next(new AppError("At least name and releaseDate are required", 400));
     }
 
-    // Validate dates
-    if (dropData.releaseDate && !validator.isISO8601(String(dropData.releaseDate))) {
-        return next(new AppError("Invalid releaseDate format", 400));
-    }
-    if (dropData.endDate && !validator.isISO8601(String(dropData.endDate))) {
-        return next(new AppError("Invalid endDate format", 400));
-    }
-
-    if (dropData.releaseDate && dropData.endDate) {
-        if (new Date(dropData.endDate) <= new Date(dropData.releaseDate)) {
-            return next(new AppError("endDate must be after releaseDate", 400));
-        }
+    // Date format already validated and converted to Date instances by validateDropCreate.
+    if (dropData.releaseDate && dropData.endDate && dropData.endDate <= dropData.releaseDate) {
+        return next(new AppError("endDate must be after releaseDate", 400));
     }
 
     const newDrop = await Drop.create({
@@ -71,7 +61,7 @@ const createDrop = catchAsync(async (req, res, next) => {
         entityRef: newDrop._id,
         entityType: "Drop",
         meta: { dropId: newDrop._id, dropSlug: newDrop.slug },
-        filter: { role: "admin" },
+        filter: { role: { $in: ADMIN_ROLES } },
     });
 
     res.status(201).json({
@@ -173,27 +163,15 @@ const updateDrop = catchAsync(async (req, res, next) => {
         return next(new AppError("At least one field is required to update", 400));
     }
 
-    // Validate dates if provided
-    if (dropData.releaseDate && !validator.isISO8601(String(dropData.releaseDate))) {
-        return next(new AppError("Invalid releaseDate format", 400));
-    }
-    if (dropData.endDate && !validator.isISO8601(String(dropData.endDate))) {
-        return next(new AppError("Invalid endDate format", 400));
-    }
-
+    // Date format already validated and converted to Date instances by validateDropUpdate.
     const drop = await Drop.findOne({ slug: dropSlug });
 
     if (!drop) {
         return next(new AppError("Drop not found", 404));
     }
 
-    // Validate date ordering
-    const finalRelease = dropData.releaseDate
-        ? new Date(dropData.releaseDate)
-        : drop.releaseDate;
-    const finalEnd = dropData.endDate
-        ? new Date(dropData.endDate)
-        : drop.endDate;
+    const finalRelease = dropData.releaseDate || drop.releaseDate;
+    const finalEnd = dropData.endDate || drop.endDate;
 
     if (finalRelease && finalEnd && finalEnd <= finalRelease) {
         return next(new AppError("endDate must be after releaseDate", 400));

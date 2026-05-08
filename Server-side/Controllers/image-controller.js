@@ -38,7 +38,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
   // Log upload attempt
   actionLogger.info({
     action: "upload_images_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -202,7 +202,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
         // Log successful upload with URL for debugging
         actionLogger.info({
           action: "image_upload_success",
-          userId: req.user ? req.user._id : null,
+          userId: req.userInfo ? req.userInfo._id : null,
           refModel: imageData.refModel,
           refId: imageData.refId || null,
           publicId: result.public_id,
@@ -230,7 +230,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
     actionLogger.error({
       action: "upload_images",
-      userId: req.user ? req.user._id : null,
+      userId: req.userInfo ? req.userInfo._id : null,
       refModel: imageData.refModel,
       refId: imageData.refId || null,
       type: imageData.type || null,
@@ -246,7 +246,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "upload_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -286,7 +286,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log update attempt
   actionLogger.info({
     action: "update_image_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     oldPublicId: image.publicId,
   });
@@ -323,7 +323,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log successful update
   actionLogger.info({
     action: "update_image_success",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     newPublicId: uploadResult.public_id,
     url: uploadResult.secure_url,
@@ -590,7 +590,7 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "set_primary_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -625,7 +625,7 @@ const deleteImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -723,7 +723,7 @@ const reorderImages = catchAsync(async (req, res, next) => {
   const sampleImage = images[0];
   actionLogger.info({
     action: "reorder_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: sampleImage.refModel,
     refId: sampleImage.refId || null,
     type: sampleImage.type || null,
@@ -778,7 +778,7 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_all_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: normalizedRefModel,
     refId: refId || null,
     type: type || null,

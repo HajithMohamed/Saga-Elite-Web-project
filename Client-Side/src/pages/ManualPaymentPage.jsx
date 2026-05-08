@@ -27,6 +27,7 @@ import {
   submitManualPaymentProof,
 } from "@/store/manualPaymentSlice";
 import { uploadManualPaymentProof } from "@/api/manualPaymentAPI";
+import axiosInstance from "@/api/axiosInstance";
 import ManualPaymentInstructions from "@/components/Payment/ManualPaymentInstructions";
 import ProofSubmission from "@/components/Payment/ProofSubmission";
 import { cn } from "@/lib/utils";
@@ -379,13 +380,10 @@ const ManualPaymentPage = () => {
     if (!activePaymentSlug) return;
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || ""}/api/v1/manual-payments/${activePaymentSlug}/request-extension`,
-        { method: "POST" }
+      const { data } = await axiosInstance.post(
+        `/manual-payments/${activePaymentSlug}/request-extension`
       );
-
-      const data = await response.json();
-      if (data.success) {
+      if (data?.success) {
         toast({
           title: "Extension granted",
           description: "Your payment deadline has been extended by 12 hours.",
@@ -393,12 +391,15 @@ const ManualPaymentPage = () => {
         });
         dispatch(fetchMyManualPaymentStatus(activePaymentSlug));
       } else {
-        throw new Error(data.message || "Failed to request extension");
+        throw new Error(data?.message || "Failed to request extension");
       }
     } catch (extensionError) {
       toast({
         title: "Unable to request extension",
-        description: extensionError?.message || "Could not request extension.",
+        description:
+          extensionError?.response?.data?.message ||
+          extensionError?.message ||
+          "Could not request extension.",
         variant: "destructive",
       });
     }

@@ -389,9 +389,13 @@ const submitProof = catchAsync(async (req, res, next) => {
     logger.error("Failed to send admin payment proof email", { emailError });
   }
 
-  await sendAdminWhatsAppAlert(
-    `Saga Elite: new payment proof submitted for order ${orderId}. Reference ${payment.referenceNumber}.`
-  );
+  try {
+    await sendAdminWhatsAppAlert(
+      `Saga Elite: new payment proof submitted for order ${orderId}. Reference ${payment.referenceNumber}.`
+    );
+  } catch (whatsAppError) {
+    logger.error("Failed to dispatch admin WhatsApp proof alert", { whatsAppError });
+  }
 
   return res.status(200).json({
     success: true,
@@ -764,8 +768,17 @@ const getMyPendingPayments = catchAsync(async (req, res) => {
 });
 
 const requestExtension = catchAsync(async (req, res, next) => {
+  if (!req.userInfo) {
+    return next(new AppError('Please sign in to request an extension.', 401));
+  }
+
   const payment = await ManualPayment.findOne({ slug: req.params.slug });
   if (!payment) return next(new AppError('Payment not found', 404));
+
+  if (String(payment.userId || '') !== String(req.userInfo._id)) {
+    return next(new AppError('You are not authorized to extend this payment.', 403));
+  }
+
   if (payment.extensionGranted) {
     return next(new AppError('Extension already used. Contact support.', 400));
   }
@@ -782,7 +795,7 @@ const requestExtension = catchAsync(async (req, res, next) => {
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@sagaelite.com';
   
   sendEmail({
-    to: adminEmail,
+    email: adminEmail,
     subject: `Payment extension requested for reference: ${payment.referenceNumber}`,
     html: `<p>A customer has requested a 12-hour extension for their manual payment via Bank Transfer.</p>
            <p><strong>Reference:</strong> ${payment.referenceNumber}</p>

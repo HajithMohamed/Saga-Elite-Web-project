@@ -233,16 +233,16 @@ function App() {
             <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
             <Route path="notifications" element={<PermissionGuard permission="notifications"><NotificationsManager /></PermissionGuard>} />
             <Route path="payments/pending" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
-            <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
+            <Route path="manual-payments" element={<Navigate to="/admin/payments/pending" replace />} />
             <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
             <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
             <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
-            <Route path="account" element={<Account />} />
+            <Route path="account" element={<Navigate to="/shopping/account" replace />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
-            <Route path="drop-analytics" element={<PermissionGuard permission="analytics"><DropAnalytics /></PermissionGuard>} />
-            <Route path="analytics" element={<PermissionGuard permission="analytics"><AdminAnalytics /></PermissionGuard>} />
+            <Route path="drop-analytics" element={<PermissionGuard permission="viewAnalytics"><DropAnalytics /></PermissionGuard>} />
+            <Route path="analytics" element={<PermissionGuard permission="viewAnalytics"><AdminAnalytics /></PermissionGuard>} />
           </Route>
 
           {/* SHOPPING */}

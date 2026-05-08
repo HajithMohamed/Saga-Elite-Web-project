@@ -342,13 +342,13 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Analytics",
       path: "/admin/analytics",
       icon: <BarChart3 className="h-5 w-5" />,
-      permission: "analytics",
+      permission: "viewAnalytics",
     },
     {
       label: "Drop Analytics",
       path: "/admin/drop-analytics",
       icon: <BarChart3 className="h-5 w-5" />,
-      permission: "analytics",
+      permission: "viewAnalytics",
     },
     {
       label: "Features",

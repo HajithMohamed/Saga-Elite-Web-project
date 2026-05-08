@@ -1,6 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const { imageUpload } = require("../Middlewares/multer-middleware");
 const {
   validateObjectIdParam,
@@ -42,9 +43,9 @@ userRouter.delete("/:reviewId", authMiddleware, validateObjectIdParam("reviewId"
 
 adminRouter.get("/", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getAllReviews);
 adminRouter.get("/analytics", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getReviewsAnalytics);
-adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requirePermission("analytics"), validateObjectIdParam("dropId", "drop id"), getDropAnalytics);
-adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewModeration, moderateReview);
-adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), replyToReview);
-adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), featureReview);
+adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requirePermission("viewAnalytics"), validateObjectIdParam("dropId", "drop id"), getDropAnalytics);
+adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewModeration, adminLogMiddleware, moderateReview);
+adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, replyToReview);
+adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, featureReview);
 
 module.exports = { userRouter, adminRouter };

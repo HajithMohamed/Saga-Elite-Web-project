@@ -502,7 +502,7 @@ const getCart = catchAsync(async (req, res, next) => {
     return next(new AppError("Authenticated user not found", 404));
   }
 
-  const cart = user.cart
+  const cart = (user.cart || [])
     .map(normalizeCartItem)
     .filter((item) => item !== null);
 
