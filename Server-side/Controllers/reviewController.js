@@ -6,7 +6,6 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Coupon = require("../Models/Coupon");
 const SiteConfig = require("../Models/SiteConfig");
-const ReviewInsight = require("../Models/ReviewInsight");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
@@ -15,7 +14,6 @@ const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 const reviewFilterConfig = require("../Config/review-filter-config");
-const { generateReviewInsights } = require("../Utils/review-insights-job");
 
 const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -975,34 +973,6 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
   });
 });
 
-const getLatestReviewInsights = catchAsync(async (req, res) => {
-  const insight = await ReviewInsight.findOne().sort({ generatedAt: -1 }).lean();
-  res.status(200).json({
-    success: true,
-    data: { insight },
-  });
-});
-
-const regenerateReviewInsights = catchAsync(async (req, res, next) => {
-  try {
-    const insight = await generateReviewInsights();
-    if (!insight) {
-      return next(
-        new AppError(
-          "Not enough approved reviews in the last 90 days to generate insights.",
-          400
-        )
-      );
-    }
-    res.status(200).json({
-      success: true,
-      data: { insight },
-    });
-  } catch (err) {
-    return next(new AppError(err.message || "Failed to generate insights", 500));
-  }
-});
-
 module.exports = {
   createReview,
   getFeaturedReviews,
@@ -1021,6 +991,4 @@ module.exports = {
   replyToReview,
   featureReview,
   getReviewsAnalytics,
-  getLatestReviewInsights,
-  regenerateReviewInsights,
 };

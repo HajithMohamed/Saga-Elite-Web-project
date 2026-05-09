@@ -11,6 +11,7 @@ const ManualPayment = require("../Models/ManualPayment");
 const Review = require("../Models/Review");
 const Coupon = require("../Models/Coupon");
 const SiteConfig = require("../Models/SiteConfig");
+const UserActivityLog = require("../Models/UserActivityLog");
 const { computeMembershipTier } = require("../Utils/membership-tier");
 const { evaluateCoupon } = require("./coupon-controller");
 const { streamInvoicePdf } = require("../Utils/invoice-pdf");
@@ -326,6 +327,18 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
+
+      // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
+      if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
+        const purchaseRows = orderPayload.items.map((item) => ({
+          userId: user ? user._id : null,
+          productId: item.productId,
+          action: "purchase",
+          category: item.category || "",
+          metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
+        }));
+        UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
+      }
 
       if (user && normalizedCheckoutMode === "cart") {
         user.cart = [];

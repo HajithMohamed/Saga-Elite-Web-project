@@ -3,6 +3,7 @@ const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Image = require("../Models/Image");
 const Drop = require("../Models/Drop");
+const UserActivityLog = require("../Models/UserActivityLog");
 const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
@@ -70,6 +71,14 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         delete productResponse.costPrice;
         // Fire-and-forget viewCount increment (only for non-admin reads)
         Product.updateOne({ _id: product._id }, { $inc: { viewCount: 1 } }).catch(() => {});
+        // Per-user activity log for personalized recommendations
+        UserActivityLog.create({
+            userId: req.userInfo?._id || null,
+            sessionId: req.sessionID || null,
+            productId: product._id,
+            action: "view",
+            category: product.category || "",
+        }).catch(() => {});
     }
 
     res.status(200).json({
@@ -492,39 +501,132 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
-| Get Recommendations
+| Get Recommendations — personalized via UserActivityLog when authenticated
 |--------------------------------------------------------------------------
 */
-const getRecommendations = catchAsync(async (req, res, next) => {
-  const { productId, userId } = req.query;
-  let recommendations = [];
+const ACTIVITY_WEIGHTS = { purchase: 5, cart_add: 3, wishlist_add: 2, view: 1 };
+const ACTIVITY_WINDOW_DAYS = 60;
 
+const buildTasteProfile = async (userId) => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - ACTIVITY_WINDOW_DAYS);
+  const UserActivityLog = require("../Models/UserActivityLog");
+  const logs = await UserActivityLog.find({
+    userId,
+    createdAt: { $gte: cutoff },
+    action: { $in: ["view", "wishlist_add", "cart_add", "purchase"] },
+  })
+    .select("productId action category")
+    .lean();
+
+  if (logs.length === 0) return null;
+
+  const categoryWeights = {};
+  const productWeights = {};
+  for (const log of logs) {
+    const w = ACTIVITY_WEIGHTS[log.action] || 1;
+    if (log.category) categoryWeights[log.category] = (categoryWeights[log.category] || 0) + w;
+    productWeights[String(log.productId)] = (productWeights[String(log.productId)] || 0) + w;
+  }
+  const topCategories = Object.entries(categoryWeights)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([category]) => category);
+
+  const purchasedIds = logs
+    .filter((l) => l.action === "purchase")
+    .map((l) => String(l.productId));
+
+  return { topCategories, productWeights, purchasedIds };
+};
+
+const scoreCandidate = (product, profile, maxSold) => {
+  const categoryMatch = profile.topCategories.includes(product.category) ? 1 : 0;
+  const popularity = maxSold > 0 ? (product.soldCount || 0) / maxSold : 0;
+  const ageDays = (Date.now() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+  const recency = Math.max(0, 1 - ageDays / 90);
+  return 0.55 * categoryMatch + 0.25 * popularity + 0.2 * recency;
+};
+
+const getRecommendations = catchAsync(async (req, res, next) => {
+  const { productId, context = "home" } = req.query;
+  const userId = req.userInfo?.id || req.userInfo?._id || null;
+  const limit = Math.min(Number(req.query.limit) || 12, 24);
+
+  // Product-context: keep existing same-category logic but mix in personalization
   if (productId) {
-    // Contextual: find products in the same category or via relatedProductIds
     const product = await Product.findById(productId);
     if (!product) return next(new AppError("Product not found", 404));
 
-    // Combine related products and same category
-    recommendations = await Product.find({
+    const recommendations = await Product.find({
       $or: [
-        { _id: { $in: product.relatedProductIds } },
-        { category: product.category, _id: { $ne: product._id } }
+        { _id: { $in: product.relatedProductIds || [] } },
+        { category: product.category, _id: { $ne: product._id } },
       ],
-      isActive: true
-    }).limit(10).populate("images");
-
-  } else {
-    // Fallback: Trending / Bestsellers
-    recommendations = await Product.find({ isActive: true })
-      .sort({ soldCount: -1 })
-      .limit(10)
+      isActive: true,
+    })
+      .limit(limit)
       .populate("images");
+
+    return res.status(200).json({
+      status: "success",
+      results: recommendations.length,
+      data: { recommendations, mode: "contextual" },
+    });
   }
+
+  // Personalized for authenticated users with on-site activity
+  if (userId) {
+    const profile = await buildTasteProfile(userId);
+    if (profile && profile.topCategories.length > 0) {
+      const candidatePool = await Product.find({
+        isActive: true,
+        category: { $in: profile.topCategories },
+        _id: { $nin: profile.purchasedIds },
+      })
+        .limit(80)
+        .populate("images")
+        .lean();
+
+      if (candidatePool.length > 0) {
+        const maxSold = Math.max(...candidatePool.map((p) => p.soldCount || 0), 1);
+        candidatePool.forEach((p) => {
+          p._score = scoreCandidate(p, profile, maxSold);
+        });
+        candidatePool.sort((a, b) => b._score - a._score);
+        const personalized = candidatePool.slice(0, Math.max(1, limit - 2));
+
+        // Mix in 2 explore picks outside the profile (avoid filter bubble)
+        const explorePool = await Product.find({
+          isActive: true,
+          category: { $nin: profile.topCategories },
+          _id: { $nin: [...profile.purchasedIds, ...personalized.map((p) => p._id)] },
+        })
+          .sort({ soldCount: -1, createdAt: -1 })
+          .limit(2)
+          .populate("images")
+          .lean();
+
+        const mixed = [...personalized, ...explorePool].slice(0, limit);
+        return res.status(200).json({
+          status: "success",
+          results: mixed.length,
+          data: { recommendations: mixed, mode: "personalized" },
+        });
+      }
+    }
+  }
+
+  // Cold-start / anonymous: trending across all categories
+  const trending = await Product.find({ isActive: true })
+    .sort({ soldCount: -1, viewCount: -1, createdAt: -1 })
+    .limit(limit)
+    .populate("images");
 
   res.status(200).json({
     status: "success",
-    results: recommendations.length,
-    data: { recommendations },
+    results: trending.length,
+    data: { recommendations: trending, mode: "trending" },
   });
 });
 

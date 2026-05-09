@@ -22,6 +22,7 @@ import {
   NewsletterSection,
   TrustBar,
 } from "@/components/landing/LandingSections";
+import ForYouRail from "@/components/landing/ForYouRail";
 
 const PLACEHOLDER_HERO =
   "https://images.unsplash.com/photo-1550614000-4b95dd245ed6?w=1600&q=80";
@@ -125,6 +126,9 @@ const Home = () => {
 
         {/* 3. Trust bar — quick credibility strip */}
         <TrustBar />
+
+        {/* 3b. For You — personalized rail (hidden for anon users / cold start) */}
+        <ForYouRail />
 
         {/* 4. Collection selector — 3 identity cards */}
         <CategoryLockup categoryImages={payload.categoryImages} />

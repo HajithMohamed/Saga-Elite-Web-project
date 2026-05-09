@@ -30,7 +30,8 @@ const { startBankInboxWatcher } = require("./Utils/bank-email-watcher");
 const connectToDB = require("./DataBase/db");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
-const { initReviewInsightsJob } = require('./Utils/review-insights-job');
+const { initRecommendationsJobs } = require('./Utils/recommendations-job');
+const recommendationsRoutes = require('./Routes/recommendationsRoutes');
 
 
 const app = express();
@@ -130,6 +131,7 @@ app.use("/api/v1/offers", offerRoutes);
 app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
+app.use("/api/v1/admin/recommendations", recommendationsRoutes);
 
 app.use(globalErrorController);
 
@@ -210,7 +212,7 @@ const startServer = async () => {
 
     server.listen(PORT, () => {
       initAgingStockJob();
-      initReviewInsightsJob();
+      initRecommendationsJobs();
       logger.info("Server is listening", { port: PORT });
     });
   } catch (error) {

@@ -24,7 +24,6 @@ import {
   Tag,
   Truck,
   Bell,
-  FolderOpen,
   Globe,
   Sparkles,
 } from "lucide-react";
@@ -40,9 +39,9 @@ import { API_V1_URL } from "@/lib/api";
 const SECTION_LABELS = {
   Catalog: ["Products", "Drops", "Mystery Gifts"],
   Orders: ["Orders", "Manual Payments", "Shipping"],
-  Customers: ["Users", "Reviews", "Review Insights", "Contact Inquiries"],
+  Customers: ["Users", "Reviews", "Recommendations", "Contact Inquiries"],
   Marketing: ["Offers & Deals", "Coupons", "Newsletter", "Notifications"],
-  Content: ["Home Images", "Media Library", "Site Pages"],
+  Content: ["Home Images", "Site Pages"],
   Insights: ["Analytics"],
   Settings: ["SEO & Branding", "Admin Team"],
 };
@@ -254,8 +253,8 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "manageReviews",
     },
     {
-      label: "Review Insights",
-      path: "/admin/review-insights",
+      label: "Recommendations",
+      path: "/admin/recommendations",
       icon: <Sparkles className="h-5 w-5" />,
       permission: "manageReviews",
     },
@@ -299,12 +298,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Home Images",
       path: "/admin/home-images",
       icon: <ImagePlus className="h-5 w-5" />,
-      permission: "products",
-    },
-    {
-      label: "Media Library",
-      path: "/admin/media",
-      icon: <FolderOpen className="h-5 w-5" />,
       permission: "products",
     },
     {
