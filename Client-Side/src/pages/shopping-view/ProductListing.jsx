@@ -8,7 +8,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { fetchCartAction } from "@/store/cart-slice";
@@ -30,6 +30,7 @@ import RefineRow from "@/components/listing/RefineRow";
 import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 import CommunityStylingStrip from "@/components/listing/CommunityStylingStrip";
 import FeaturedHighlightCard from "@/components/listing/FeaturedHighlightCard";
+import CategorySwitcherCards from "@/components/listing/CategorySwitcherCards";
 import { getCollectionHero } from "@/components/listing/collectionConfig";
 
 const CATEGORY_LABELS = {
@@ -72,6 +73,7 @@ const PAGE_SIZE = 12;
 const FETCH_LIMIT = 60;
 const PRICE_MIN = 0;
 const PRICE_MAX = 50000;
+const MotionDiv = motion.div;
 
 const ProductListing = () => {
   usePageMeta({ title: "Shop" });
@@ -87,6 +89,9 @@ const ProductListing = () => {
   const location = useLocation();
 
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
+  const cartCount = useSelector(
+    (state) => state.cart?.cart?.totalQuantity || 0
+  );
 
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
   const filterParam = (searchParams.get("filter") || "").toLowerCase();
@@ -115,6 +120,8 @@ const ProductListing = () => {
   );
   const priceMinParam = Number(searchParams.get("min") || PRICE_MIN);
   const priceMaxParam = Number(searchParams.get("max") || PRICE_MAX);
+  const colorsKey = colorsParam.join(",");
+  const sizesKey = sizesParam.join(",");
 
   // /shopping/drops is the dedicated drops page now — redirect old links.
   useEffect(() => {
@@ -296,8 +303,8 @@ const ProductListing = () => {
     filterParam,
     inStockOnly,
     limitedOnly,
-    colorsParam.join(","),
-    sizesParam.join(","),
+    colorsKey,
+    sizesKey,
     priceMinParam,
     priceMaxParam,
   ]);
@@ -428,6 +435,8 @@ const ProductListing = () => {
         eyebrow={getCollectionHero(activePill).eyebrow}
         body={COLLECTION_INTROS[activePill]}
       />
+
+      <CategorySwitcherCards activePill={activePill} />
 
       {/* STICKY FILTER RAIL */}
       <div className="sticky top-16 z-30 bg-[#0a0a0a]/90 backdrop-blur-md border-y border-[#4d4635]/40">
@@ -596,6 +605,56 @@ const ProductListing = () => {
                   />
                 ) : null}
 
+                {/* Mystery Gift inline promo */}
+                {filteredProducts.length >= 6 && (
+                  <MotionDiv
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="my-10 md:my-14 relative overflow-hidden border border-[#4d4635]/60 bg-[#0e0e0e]"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #0e0e0e 0%, #1a1200 50%, #0e0e0e 100%)",
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          "radial-gradient(ellipse at 30% 50%, rgba(242,202,80,0.08) 0%, transparent 60%)",
+                      }}
+                    />
+
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 px-6 md:px-16 py-10 md:py-12">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 md:gap-6">
+                        <div className="w-16 h-16 rounded-lg bg-[#1c1b1b] border border-[#f2ca50]/30 flex items-center justify-center shrink-0 [box-shadow:0_0_20px_rgba(242,202,80,0.15)]">
+                          <Gift className="w-7 h-7 text-[#f2ca50]" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.35em] mb-1">
+                            EVERY ORDER
+                          </p>
+                          <h3 className="se-serif text-[#e5e2e1] text-2xl md:text-3xl leading-[1.1]">
+                            Unlocks a mystery gift.
+                          </h3>
+                          <p className="mt-2 se-body text-[#99907c] text-sm max-w-xl">
+                            Stickers, exclusive tees, discount codes, and rare surprise items can arrive with your order.
+                          </p>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/shopping/product-list"
+                        className="shrink-0 inline-flex items-center gap-2 bg-[#f2ca50] hover:bg-[#ffe088] hover:[box-shadow:0_0_20px_rgba(242,202,80,0.35)] text-[#1b1c1c] se-label text-[10px] tracking-[0.28em] px-8 py-4 transition-all duration-200"
+                      >
+                        SHOP NOW
+                        <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+                      </Link>
+                    </div>
+                  </MotionDiv>
+                )}
+
                 {/* Premium product grid */}
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -650,6 +709,34 @@ const ProductListing = () => {
           "Rare fit, forever",
         ]}
       />
+
+      {/* Mobile floating cart */}
+      <Link
+        to="/shopping/cart"
+        className="fixed bottom-6 right-5 z-40 md:hidden w-14 h-14 rounded-full bg-[#f2ca50] flex items-center justify-center [box-shadow:0_4px_20px_rgba(242,202,80,0.40)] hover:[box-shadow:0_4px_30px_rgba(242,202,80,0.60)] transition-all duration-200 active:scale-95"
+        aria-label="Go to cart"
+      >
+        <ShoppingBag size={20} strokeWidth={2} className="text-[#1b1c1c]" />
+        {cartCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#0a0a0a] border border-[#f2ca50] flex items-center justify-center se-mono text-[#f2ca50] text-[9px]">
+            {cartCount > 9 ? "9+" : cartCount}
+          </span>
+        )}
+      </Link>
+
+      {/* Mobile sticky filter pill */}
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 180, behavior: "smooth" })}
+        className="fixed bottom-6 left-5 z-40 md:hidden h-12 px-5 rounded-full bg-[#1c1b1b] border border-[#4d4635] flex items-center gap-2 [box-shadow:0_4px_16px_rgba(0,0,0,0.5)] se-label text-[11px] tracking-[0.18em] text-[#d0c5af] hover:border-[#f2ca50]/50 hover:text-[#f2ca50] transition-all duration-200 active:scale-95"
+        aria-label="Jump to filters"
+      >
+        <SlidersHorizontal size={14} strokeWidth={1.5} />
+        FILTER
+        {hasFilterActive && (
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f2ca50] ml-0.5" />
+        )}
+      </button>
     </div>
   );
 };

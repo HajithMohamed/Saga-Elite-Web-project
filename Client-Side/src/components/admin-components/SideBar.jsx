@@ -15,7 +15,6 @@ import {
   Shield,
   CreditCard,
   StarHalf,
-  Landmark,
   FileText,
   Inbox,
   Newspaper,
@@ -39,26 +38,22 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Commerce: ["Products", "Drops", "Collections", "Offers & Deals", "Coupons", "Gifts"],
-  Fulfilment: ["Orders", "Pending Payments", "Manual Payments", "Shipping"],
-  Customers: ["Users", "Review Moderation"],
-  Content: ["Home Images", "Media Library", "Community"],
-  Marketing: ["Notifications", "Newsletter", "Contact Inquiries"],
-  Settings: [
-    "Site Config",
-    "SEO & Branding",
-    "Analytics",
-    "Drop Analytics",
-    "Features",
-  ],
+  Catalog: ["Products", "Drops", "Collections", "Mystery Gifts"],
+  Orders: ["Orders", "Manual Payments", "Shipping"],
+  Customers: ["Users", "Reviews", "Contact Inquiries"],
+  Marketing: ["Offers & Deals", "Coupons", "Newsletter", "Notifications"],
+  Content: ["Home Images", "Media Library", "Site Pages"],
+  Insights: ["Analytics"],
+  Settings: ["SEO & Branding", "Admin Team"],
 };
 
 const SECTION_ORDER = [
-  "Commerce",
-  "Fulfilment",
+  "Catalog",
+  "Orders",
   "Customers",
-  "Content",
   "Marketing",
+  "Content",
+  "Insights",
   "Settings",
 ];
 
@@ -96,9 +91,11 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
       const fallback = { data: { success: true, data: { count: 0 } } };
       const [paymentRes, reviewRes, agingRes] = await Promise.all([
+        // Count anything that needs admin eyes — both manual-review proofs
+        // and provisional OCR-matches still waiting on bank confirmation.
         axios
           .get(
-            `${API_V1_URL}/admin/manual-payments?status=proof_submitted&countOnly=true`,
+            `${API_V1_URL}/admin/manual-payments?status=proof_submitted,pending_bank_confirmation&countOnly=true`,
             { withCredentials: true }
           )
           .catch(() => fallback),
@@ -199,7 +196,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: null,
     },
 
-    // Commerce
+    // Catalog
     {
       label: "Products",
       path: "/admin/product",
@@ -219,27 +216,13 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "products",
     },
     {
-      label: "Offers & Deals",
-      path: "/admin/offers",
-      icon: <BadgePercent className="h-5 w-5" />,
-      badge: agingAlertCount,
-      bounceKey: agingBounce,
-      permission: "products",
-    },
-    {
-      label: "Coupons",
-      path: "/admin/coupons",
-      icon: <Tag className="h-5 w-5" />,
-      permission: "sendCampaigns",
-    },
-    {
-      label: "Gifts",
+      label: "Mystery Gifts",
       path: "/admin/gifts",
       icon: <Gift className="h-5 w-5" />,
       permission: "products",
     },
 
-    // Fulfilment
+    // Orders
     {
       label: "Orders",
       path: "/admin/order",
@@ -247,17 +230,11 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "orders",
     },
     {
-      label: "Pending Payments",
-      path: "/admin/payments/pending",
+      label: "Manual Payments",
+      path: "/admin/manual-payments",
       icon: <CreditCard className="h-5 w-5" />,
       badge: pendingPaymentCount,
       bounceKey: paymentBounce,
-      permission: "verifyPayments",
-    },
-    {
-      label: "Manual Payments",
-      path: "/admin/manual-payments",
-      icon: <Landmark className="h-5 w-5" />,
       permission: "verifyPayments",
     },
     {
@@ -275,12 +252,46 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "users",
     },
     {
-      label: "Review Moderation",
+      label: "Reviews",
       path: "/admin/reviews",
       icon: <StarHalf className="h-5 w-5" />,
       badge: pendingReviewCount,
       bounceKey: reviewBounce,
       permission: "manageReviews",
+    },
+    {
+      label: "Contact Inquiries",
+      path: "/admin/contact-inquiries",
+      icon: <Inbox className="h-5 w-5" />,
+      permission: null,
+    },
+
+    // Marketing
+    {
+      label: "Offers & Deals",
+      path: "/admin/offers",
+      icon: <BadgePercent className="h-5 w-5" />,
+      badge: agingAlertCount,
+      bounceKey: agingBounce,
+      permission: "products",
+    },
+    {
+      label: "Coupons",
+      path: "/admin/coupons",
+      icon: <Tag className="h-5 w-5" />,
+      permission: "sendCampaigns",
+    },
+    {
+      label: "Newsletter",
+      path: "/admin/newsletter",
+      icon: <Newspaper className="h-5 w-5" />,
+      permission: null,
+    },
+    {
+      label: "Notifications",
+      path: "/admin/notifications",
+      icon: <Bell className="h-5 w-5" />,
+      permission: "notifications",
     },
 
     // Content
@@ -297,64 +308,28 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "products",
     },
     {
-      label: "Community",
-      path: "/admin/community",
-      icon: <Globe className="h-5 w-5" />,
-      permission: "sendCampaigns",
-    },
-
-    // Marketing
-    {
-      label: "Notifications",
-      path: "/admin/notifications",
-      icon: <Bell className="h-5 w-5" />,
-      permission: "notifications",
-    },
-    {
-      label: "Newsletter",
-      path: "/admin/newsletter",
-      icon: <Newspaper className="h-5 w-5" />,
-      permission: null,
-    },
-    {
-      label: "Contact Inquiries",
-      path: "/admin/contact-inquiries",
-      icon: <Inbox className="h-5 w-5" />,
-      permission: null,
-    },
-
-    // Settings
-    {
-      label: "Site Config",
+      label: "Site Pages",
       path: "/admin/about-content",
       icon: <Settings className="h-5 w-5" />,
       permission: null,
       superAdminOnly: true,
     },
-    {
-      label: "SEO & Branding",
-      path: "/admin/seo",
-      icon: <Globe className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
+
+    // Insights
     {
       label: "Analytics",
       path: "/admin/analytics",
       icon: <BarChart3 className="h-5 w-5" />,
       permission: "viewAnalytics",
     },
+
+    // Settings
     {
-      label: "Drop Analytics",
-      path: "/admin/drop-analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      permission: "viewAnalytics",
-    },
-    {
-      label: "Features",
-      path: "/admin/feature",
-      icon: <Star className="h-5 w-5" />,
-      permission: "products",
+      label: "SEO & Branding",
+      path: "/admin/seo",
+      icon: <Globe className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
     },
   ];
 
@@ -369,10 +344,9 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
 
   if (isSuperAdminUser) {
     menuItems.push({
-      label: "Super Admins",
+      label: "Admin Team",
       path: "/admin/super-admin",
       icon: <Shield className="h-5 w-5" />,
-      _section: null,
     });
   }
 

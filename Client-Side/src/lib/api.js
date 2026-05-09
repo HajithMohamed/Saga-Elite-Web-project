@@ -9,7 +9,7 @@ const rawApiUrl =
 export const API_BASE_URL = rawApiUrl;
 export const API_V1_URL = /\/v\d+$/i.test(rawApiUrl) ? rawApiUrl : `${rawApiUrl}/v1`;
 export const API_ROOT_URL = API_V1_URL.replace(/\/v\d+$/i, "");
-export const ORDERS_API_URL = `${API_ROOT_URL}/orders`;
+export const ORDERS_API_URL = `${API_V1_URL}/orders`;
 
 const envSocketUrl = trimTrailingSlash(import.meta.env.VITE_SOCKET_URL || "");
 export const SOCKET_URL =

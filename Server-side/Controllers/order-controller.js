@@ -466,7 +466,21 @@ const getUserOrders = catchAsync(async (req, res, next) => {
 });
 
 const getAllOrders = catchAsync(async (req, res, next) => {
-  const orders = await Order.find()
+  // Bank-transfer orders are kept out of the main admin Orders list while the
+  // payment is still awaiting verification — they live in Pending Payments
+  // until the admin approves the receipt (status flips to confirmed) or the
+  // order is cancelled. Keeps the Orders page focused on orders that actually
+  // need fulfilment.
+  const filter = {
+    $nor: [
+      {
+        paymentMethod: "manual_bank_transfer",
+        status: { $in: ["pending_payment", "verification_pending"] },
+      },
+    ],
+  };
+
+  const orders = await Order.find(filter)
     .populate("user", "email role")
     .sort({ createdAt: -1 })
     .lean();

@@ -26,6 +26,7 @@ const {
   registerSocketHandlers,
 } = require("./Utils/socket-service");
 const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
+const { startBankInboxWatcher } = require("./Utils/bank-email-watcher");
 const connectToDB = require("./DataBase/db");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
@@ -95,6 +96,14 @@ app.get("/health", (_req, res) => {
 
 /* ================== API ROUTES ================== */
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
+app.use("/api/webhooks/bank-sms", require("./Routes/bank-sms-webhook-routes"));
+
+// Dev-only test routes. The router self-blocks production via NODE_ENV
+// checks in every handler, but we also gate the mount itself so we don't
+// even register the routes in prod.
+if (String(process.env.NODE_ENV || "").toLowerCase() !== "production") {
+  app.use("/api/v1/dev", require("./Routes/dev-routes"));
+}
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
@@ -196,6 +205,7 @@ const startServer = async () => {
     await connectToDB();
     await seedAboutSiteDefaults();
     startManualPaymentCleanupJob();
+    startBankInboxWatcher();
 
     server.listen(PORT, () => {
       initAgingStockJob();

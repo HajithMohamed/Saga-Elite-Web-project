@@ -25,19 +25,24 @@ const MotionLink = motion.create(Link);
 
 const statusOptions = [
   { label: "All", value: "all" },
-  { label: "Pending", value: "proof_submitted" },
+  { label: "Pending review", value: "proof_submitted" },
+  { label: "Awaiting bank", value: "pending_bank_confirmation" },
   { label: "Verified", value: "verified" },
   { label: "Rejected", value: "rejected" },
 ];
 
 const statusMeta = {
   proof_submitted: {
-    label: "Pending",
+    label: "Pending review",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-300",
   },
   pending_payment: {
-    label: "Pending",
+    label: "Awaiting receipt",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+  },
+  pending_bank_confirmation: {
+    label: "Awaiting bank",
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-300",
   },
   verified: {
     label: "Verified",

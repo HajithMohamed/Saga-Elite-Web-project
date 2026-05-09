@@ -3,6 +3,7 @@ const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin, requirePermission } = require("../Middlewares/admin-middleware");
 const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const { contactLimiter } = require("../Middlewares/rateLimitinMiddleware");
+const { receiptUpload } = require("../Middlewares/multer-middleware");
 const {
   validateObjectIdParam,
   validateManualPaymentReference,
@@ -12,6 +13,7 @@ const {
 const {
   generateReference,
   submitProof,
+  submitWithReceipt,
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,
@@ -32,6 +34,12 @@ router.post("/manual-payment/generate", authMiddleware, validateManualPaymentRef
 router.post("/payments/generate-reference", authMiddleware, validateManualPaymentReference, generateReference);
 router.get("/payments/my-pending", authMiddleware, getMyPendingPayments);
 router.post("/manual-payment/submit-proof", authMiddleware, validateManualPaymentProof, submitProof);
+router.post(
+  "/manual-payment/submit-with-receipt",
+  authMiddleware,
+  receiptUpload.single("receipt"),
+  submitWithReceipt
+);
 router.get("/manual-payment/status/:paymentIdentifier", authMiddleware, getMyPaymentStatus);
 router.get("/admin/manual-payments", authMiddleware, requireAdmin, requirePermission("verifyPayments"), getPendingPayments);
 router.get("/admin/manual-payments/:id", authMiddleware, requireAdmin, requirePermission("verifyPayments"), validateObjectIdParam("id", "payment id"), getPaymentById);

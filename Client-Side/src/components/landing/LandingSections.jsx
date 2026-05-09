@@ -33,6 +33,12 @@ import { getRemainingTime } from "@/utils/time";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
 
+const MotionDiv = motion.div;
+const seededRandom = (seed) => {
+  const value = Math.sin(seed * 9999) * 10000;
+  return value - Math.floor(value);
+};
+
 // Spline runtime is heavy (~200KB). Lazy-load only when a scene URL is provided.
 const Spline = React.lazy(() => import("@splinetool/react-spline"));
 
@@ -553,13 +559,18 @@ const OfferCard = ({ product, offer }) => {
 
 // 📣 PERSISTENT DROP NOTIFICATION BAND
 export const DropCountdownBand = ({ activeDrop }) => {
-  if (!activeDrop) return null;
-  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(activeDrop.endDate));
+  const endDate = activeDrop?.endDate;
+  const [timeLeft, setTimeLeft] = useState(() =>
+    endDate ? getRemainingTime(endDate) : null
+  );
 
   useEffect(() => {
-    const timer = setInterval(() => setTimeLeft(getRemainingTime(activeDrop.endDate)), 1000);
+    if (!endDate) return undefined;
+    const timer = setInterval(() => setTimeLeft(getRemainingTime(endDate)), 1000);
     return () => clearInterval(timer);
-  }, [activeDrop.endDate]);
+  }, [endDate]);
+
+  if (!activeDrop || !timeLeft) return null;
 
   return (
     <div className="bg-[#f2ca50] text-[#0a0a0a] py-2 px-4 text-center">
@@ -824,6 +835,11 @@ const ANNOUNCEMENT_MESSAGES = [
   "⚡ LIMITED STOCK · RARE FIT FOREVER",
   "🔥 FREE DELIVERY OVER LKR 10,000",
   "💎 MEMBERS GET EARLY DROP ACCESS",
+  "LIMITED TO 1 PIECE PER MEMBER",
+  "SRI LANKA'S MOST EXCLUSIVE STREETWEAR",
+  "NEW CHAPTER DROPS EVERY MONTH",
+  "ISLANDWIDE DELIVERY IN 2-4 DAYS",
+  "MEMBERS SEE DROPS 24H EARLY",
 ];
 
 export const AnnouncementBar = ({ activeDrop = null }) => {
@@ -876,7 +892,7 @@ export const AnnouncementBar = ({ activeDrop = null }) => {
     <div className="w-full bg-[#0a0a0a] border-b border-[#1a1a1a] py-2 overflow-hidden relative">
       <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
       <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
-      <motion.div
+      <MotionDiv
         className="flex gap-12 whitespace-nowrap"
         animate={{ x: ["0%", "-50%"] }}
         transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
@@ -885,12 +901,17 @@ export const AnnouncementBar = ({ activeDrop = null }) => {
           <span
             key={i}
             className="font-mono text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-[#d0c5af] flex items-center gap-3"
+            style={
+              /DROP|MEMBER|MYSTERY|LIMITED|EXCLUSIVE/.test(msg)
+                ? { textShadow: "0 0 12px rgba(242,202,80,0.35)" }
+                : undefined
+            }
           >
             {msg}
             <span className="text-[#574500]">·</span>
           </span>
         ))}
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };
@@ -904,9 +925,9 @@ const ParticleField = () => {
   const positions = useMemo(() => {
     const arr = new Float32Array(900); // 300 particles × 3 coords
     for (let i = 0; i < arr.length; i += 3) {
-      arr[i] = (Math.random() - 0.5) * 6;
-      arr[i + 1] = (Math.random() - 0.5) * 4;
-      arr[i + 2] = (Math.random() - 0.5) * 4;
+      arr[i] = (seededRandom(i + 1) - 0.5) * 6;
+      arr[i + 1] = (seededRandom(i + 2) - 0.5) * 4;
+      arr[i + 2] = (seededRandom(i + 3) - 0.5) * 4;
     }
     return arr;
   }, []);
@@ -993,18 +1014,18 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
           key={i}
           className="absolute w-1 h-1 rounded-full bg-[#f2ca50]/60"
           style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
+            top: `${seededRandom(i + 1) * 100}%`,
+            left: `${seededRandom(i + 19) * 100}%`,
           }}
           animate={{
             y: [0, -25, 0],
             opacity: [0.2, 0.8, 0.2],
           }}
           transition={{
-            duration: 4 + Math.random() * 3,
+            duration: 4 + seededRandom(i + 37) * 3,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: Math.random() * 2,
+            delay: seededRandom(i + 55) * 2,
           }}
         />
       ))}
@@ -1194,6 +1215,7 @@ const TILT_FEATURES = [
 const TiltCard = ({ Icon, title, desc, index }) => {
   const ref = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const FeatureIcon = Icon;
 
   const onMove = (e) => {
     const r = ref.current?.getBoundingClientRect();
@@ -1222,7 +1244,7 @@ const TiltCard = ({ Icon, title, desc, index }) => {
       <div className="absolute inset-0 bg-gradient-to-br from-[#f2ca50]/0 via-[#f2ca50]/5 to-[#a855f7]/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       <div className="relative z-10">
         <div className="w-12 h-12 mb-5 flex items-center justify-center border border-[#4d4635] bg-[#131313] group-hover:border-[#f2ca50] transition-colors">
-          <Icon className="w-5 h-5 text-[#f2ca50] group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+          <FeatureIcon className="w-5 h-5 text-[#f2ca50] group-hover:scale-110 transition-transform" strokeWidth={1.5} />
         </div>
         <h3 className="font-display text-xl md:text-2xl text-[#FAF7F2] uppercase mb-2 tracking-wider">
           {title}
@@ -1590,9 +1612,12 @@ export const VipMembership = () => (
           ["Members-only rewards", Gift],
           ["Closed community channel", Award],
           ["Founders-list status", Crown],
-        ].map(([label, Icon]) => (
+        ].map(([label, IconComponent]) => (
           <div key={label} className="flex items-center gap-2 text-[#d0c5af]">
-            <Icon className="w-4 h-4 text-[#f2ca50]" strokeWidth={1.5} />
+            {React.createElement(IconComponent, {
+              className: "w-4 h-4 text-[#f2ca50]",
+              strokeWidth: 1.5,
+            })}
             <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
               {label}
             </span>
@@ -1611,4 +1636,3 @@ export const VipMembership = () => (
     </div>
   </section>
 );
-

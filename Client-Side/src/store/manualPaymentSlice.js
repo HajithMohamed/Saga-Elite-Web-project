@@ -5,6 +5,7 @@ import {
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
   submitManualPaymentProof as submitManualPaymentProofApi,
+  submitManualPaymentReceipt as submitManualPaymentReceiptApi,
   verifyManualPayment as verifyManualPaymentApi,
 } from "@/api/manualPaymentAPI";
 
@@ -98,6 +99,17 @@ export const submitManualPaymentProof = createAsyncThunk(
       return await submitManualPaymentProofApi({ referenceNumber, proofUrl });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit proof"));
+    }
+  },
+);
+
+export const submitManualPaymentReceipt = createAsyncThunk(
+  "manualPayment/submitReceipt",
+  async ({ referenceNumber, file }, thunkAPI) => {
+    try {
+      return await submitManualPaymentReceiptApi({ referenceNumber, file });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit receipt"));
     }
   },
 );
@@ -229,6 +241,34 @@ const manualPaymentSlice = createSlice({
         persistManualPayment(state);
       })
       .addCase(submitManualPaymentProof.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(submitManualPaymentReceipt.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(submitManualPaymentReceipt.fulfilled, (state, action) => {
+        state.isSubmitting = false;
+        state.currentPayment = action.payload?.data || state.currentPayment;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+        };
+        persistManualPayment(state);
+      })
+      .addCase(submitManualPaymentReceipt.rejected, (state, action) => {
         state.isSubmitting = false;
         state.error = action.payload || action.error.message;
       })

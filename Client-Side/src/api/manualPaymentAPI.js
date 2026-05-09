@@ -46,6 +46,28 @@ export const submitManualPaymentProof = async ({ referenceNumber, proofUrl }) =>
   return response.data;
 };
 
+// New flow: send the receipt file directly. The server OCRs the receipt,
+// validates reference + amount, and auto-verifies / auto-rejects in one
+// round-trip. Replaces the old upload-then-submit two-step flow.
+export const submitManualPaymentReceipt = async ({ referenceNumber, file }) => {
+  const formData = new FormData();
+  formData.append("receipt", file);
+  formData.append("referenceNumber", referenceNumber);
+
+  const response = await axios.post(
+    `${API_BASE}/manual-payment/submit-with-receipt`,
+    formData,
+    {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return response.data;
+};
+
 export const fetchMyManualPaymentStatus = async (paymentIdentifier) => {
   const response = await axios.get(
     `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,

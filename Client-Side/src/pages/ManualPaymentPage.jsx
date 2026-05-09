@@ -24,9 +24,8 @@ import {
   fetchMyManualPaymentStatus,
   generateManualPaymentReference,
   storeManualPaymentContext,
-  submitManualPaymentProof,
+  submitManualPaymentReceipt,
 } from "@/store/manualPaymentSlice";
-import { uploadManualPaymentProof } from "@/api/manualPaymentAPI";
 import axiosInstance from "@/api/axiosInstance";
 import ManualPaymentInstructions from "@/components/Payment/ManualPaymentInstructions";
 import ProofSubmission from "@/components/Payment/ProofSubmission";
@@ -309,23 +308,36 @@ const ManualPaymentPage = () => {
       throw new Error("Payment reference is not ready yet.");
     }
 
-    const proofUrl = await uploadManualPaymentProof(file);
-    if (!proofUrl) {
-      throw new Error("Proof upload failed.");
-    }
-
-    await dispatch(
-      submitManualPaymentProof({
+    const result = await dispatch(
+      submitManualPaymentReceipt({
         referenceNumber: currentPayment.referenceNumber,
-        proofUrl,
+        file,
       })
     ).unwrap();
 
-    toast({
-      title: "Proof submitted",
-      description: "Your payment proof is now awaiting manual verification.",
-      variant: "success",
-    });
+    const decision = result?.data?.decision;
+    if (decision === "ocr_matched") {
+      toast({
+        title: "Receipt accepted",
+        description:
+          "We received your receipt. Your order will be confirmed once your bank notifies us of the credit.",
+        variant: "success",
+      });
+    } else if (decision === "auto_rejected") {
+      toast({
+        title: "Receipt didn't match",
+        description:
+          result?.data?.decisionReason ||
+          "We couldn't match the reference and amount on this receipt. Please upload a clearer or correct receipt.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Proof submitted",
+        description: "Your payment proof is now awaiting manual verification.",
+        variant: "success",
+      });
+    }
   };
 
   const handleGenerateAgain = async () => {
@@ -659,12 +671,51 @@ const ManualPaymentPage = () => {
                   to submit a valid receipt.
                 </p>
               </div>
+            ) : paymentStatus === "pending_bank_confirmation" ? (
+              <div className="rounded-[2rem] border border-sky-500/30 bg-sky-500/10 p-6 text-sm text-sky-100">
+                <div className="se-label flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-sky-200">
+                  <Clock3 className="h-4 w-4" />
+                  Awaiting bank confirmation
+                </div>
+                <p className="se-body mt-3 leading-6">
+                  Your receipt details look right. We're now waiting for your
+                  bank to notify us that the transfer has cleared — usually
+                  within a few minutes. We'll email you the moment it
+                  confirms. No need to upload again.
+                </p>
+                {currentPayment?.proofSubmittedAt ? (
+                  <p className="se-body mt-3 text-xs text-sky-200/80">
+                    Receipt submitted {new Date(currentPayment.proofSubmittedAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                ) : null}
+              </div>
+            ) : paymentStatus === "proof_submitted" ? (
+              <div className="rounded-[2rem] border border-emerald-500/20 bg-emerald-500/10 p-6 text-sm text-emerald-100">
+                <div className="se-label flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-200">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Receipt received
+                </div>
+                <p className="se-body mt-3 leading-6">
+                  We received your transfer proof. Our team will verify it and
+                  email you once the order is confirmed. You don't need to upload
+                  again.
+                </p>
+                {currentPayment?.proofSubmittedAt ? (
+                  <p className="se-body mt-3 text-xs text-emerald-200/80">
+                    Submitted {new Date(currentPayment.proofSubmittedAt).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}
+                  </p>
+                ) : null}
+              </div>
             ) : (
               <ProofSubmission
                 isSubmitting={isSubmitting}
                 onSubmitProof={handleSubmitProof}
-                title="Upload proof of transfer"
-                description="Choose the bank receipt image or PDF that matches the reference shown above."
+                title={paymentStatus === "rejected" ? "Upload a new receipt" : "Upload proof of transfer"}
+                description={
+                  paymentStatus === "rejected"
+                    ? "Your last receipt was rejected. Upload a clearer copy of the bank slip that matches the reference above."
+                    : "Choose the bank receipt image or PDF that matches the reference shown above."
+                }
               />
             )}
 

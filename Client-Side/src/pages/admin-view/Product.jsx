@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllProducts,

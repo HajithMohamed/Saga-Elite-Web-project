@@ -3,12 +3,17 @@ import { useDispatch, useSelector } from "react-redux";
 // eslint-disable-next-line no-unused-vars -- motion JSX
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import { API_V1_URL } from "@/lib/api";
 import {
   ArrowLeft,
+  Banknote,
+  Beaker,
   CheckCircle2,
   Landmark,
   Loader2,
   MessageSquareText,
+  ScanLine,
   ShieldAlert,
   XCircle,
 } from "lucide-react";
@@ -42,6 +47,13 @@ const PaymentVerificationPage = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [proofLightboxOpen, setProofLightboxOpen] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  // The dev endpoint is only mounted when NODE_ENV !== "production". Vite
+  // exposes import.meta.env.PROD/MODE — we render the simulate button only
+  // in non-prod builds. The server has its own guard so a stale build can't
+  // exploit this client-side flag.
+  const isDevBuild = import.meta.env?.MODE !== "production" && !import.meta.env?.PROD;
 
   useEffect(() => {
     if (!paymentId) return;
@@ -72,6 +84,48 @@ const PaymentVerificationPage = () => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [proofLightboxOpen]);
+
+  const handleSimulateBankCredit = async ({ mismatch = false } = {}) => {
+    if (!currentPayment?.referenceNumber) return;
+
+    try {
+      setIsSimulating(true);
+      const amount = mismatch
+        ? Number(currentPayment.amount || 0) + 100 // deliberately wrong
+        : Number(currentPayment.amount || 0);
+      await axios.post(
+        `${API_V1_URL}/dev/simulate-bank-credit`,
+        {
+          referenceNumber: currentPayment.referenceNumber,
+          amount,
+          bankName: "Sampath Bank (simulated)",
+        },
+        { withCredentials: true }
+      );
+
+      toast({
+        title: mismatch ? "Simulated mismatch credit" : "Simulated bank credit",
+        description: mismatch
+          ? "Bank reported a wrong amount — payment should now show amount mismatch."
+          : "Bank confirmation simulated. Status should auto-flip to verified.",
+        variant: "success",
+      });
+
+      // Re-fetch so the UI reflects the new state.
+      await dispatch(fetchManualPaymentById(paymentId));
+    } catch (error) {
+      toast({
+        title: "Simulation failed",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Could not simulate bank credit.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   const handleDecision = async (action) => {
     if (!paymentId) return;
@@ -147,6 +201,7 @@ const PaymentVerificationPage = () => {
   const statusTone = {
     pending_payment: "text-amber-300 border-amber-500/20 bg-amber-500/10",
     proof_submitted: "text-sky-300 border-sky-500/20 bg-sky-500/10",
+    pending_bank_confirmation: "text-sky-300 border-sky-500/20 bg-sky-500/10",
     verified: "text-emerald-300 border-emerald-500/20 bg-emerald-500/10",
     rejected: "text-rose-300 border-rose-500/20 bg-rose-500/10",
     expired: "text-gray-300 border-gray-500/20 bg-gray-500/10",
@@ -320,6 +375,223 @@ const PaymentVerificationPage = () => {
                 </p>
               </div>
             </div>
+
+            {currentPayment.ocr?.processedAt ? (
+              <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <ScanLine className="h-4 w-4 text-[#D4AF37]" /> OCR audit
+                  </div>
+                  {currentPayment.ocr.decision ? (
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] ${
+                        // ocr_matched (current) and auto_verified (legacy
+                        // value from before bank confirmation existed) both
+                        // mean "OCR found everything" — green badge.
+                        currentPayment.ocr.decision === "ocr_matched" ||
+                        currentPayment.ocr.decision === "auto_verified"
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                          : currentPayment.ocr.decision === "auto_rejected"
+                            ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                            : "border-sky-500/30 bg-sky-500/10 text-sky-300"
+                      }`}
+                    >
+                      {currentPayment.ocr.decision.replace(/_/g, " ")}
+                    </span>
+                  ) : null}
+                </div>
+                <p className={`mt-2 ${eyebrow} text-gray-500`}>
+                  Auto-decision based on receipt scan
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <p className={eyebrow}>Extracted reference</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm text-white">
+                        {currentPayment.ocr.extractedReference || "—"}
+                      </span>
+                      {currentPayment.ocr.referenceMatched === true ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                          MATCH
+                        </span>
+                      ) : currentPayment.ocr.referenceMatched === false ? (
+                        <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                          NO MATCH
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <p className={eyebrow}>Extracted amount</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-sm text-white">
+                        {currentPayment.ocr.extractedAmount != null
+                          ? formatCurrency(currentPayment.ocr.extractedAmount)
+                          : "—"}
+                      </span>
+                      {currentPayment.ocr.amountMatched === true ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                          MATCH
+                        </span>
+                      ) : currentPayment.ocr.amountMatched === false ? (
+                        <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                          NO MATCH
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                {currentPayment.ocr.decisionReason ? (
+                  <p className="mt-4 rounded-2xl border border-white/5 bg-black/30 p-3 text-xs leading-5 text-gray-300">
+                    {currentPayment.ocr.decisionReason}
+                  </p>
+                ) : null}
+
+                {currentPayment.ocr.extractedText ? (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-[#D4AF37]">
+                      Show full extracted text
+                    </summary>
+                    <pre className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
+                      {currentPayment.ocr.extractedText}
+                    </pre>
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <Banknote className="h-4 w-4 text-[#D4AF37]" /> Bank confirmation
+                </div>
+                {currentPayment.bankVerification?.confirmed ? (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+                    Confirmed
+                  </span>
+                ) : currentPayment.bankVerification?.amountMismatch ? (
+                  <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-rose-300">
+                    Amount mismatch
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-sky-300">
+                    Awaiting bank
+                  </span>
+                )}
+              </div>
+              <p className={`mt-2 ${eyebrow} text-gray-500`}>
+                Bank-side credit notification — the only proof money landed
+              </p>
+
+              {currentPayment.bankVerification?.confirmed ||
+              currentPayment.bankVerification?.emailMessageId ? (
+                <>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                      <p className={eyebrow}>Bank reference</p>
+                      <p className="mt-1 font-mono text-sm text-white">
+                        {currentPayment.bankVerification?.extractedReference || "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                      <p className={eyebrow}>Bank amount</p>
+                      <p className="mt-1 text-sm text-white">
+                        {currentPayment.bankVerification?.extractedAmount != null
+                          ? formatCurrency(currentPayment.bankVerification.extractedAmount)
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                      <p className={eyebrow}>Source</p>
+                      <p className="mt-1 text-sm text-white">
+                        {currentPayment.bankVerification?.bankName || "—"}
+                        {currentPayment.bankVerification?.source
+                          ? ` · ${currentPayment.bankVerification.source}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                      <p className={eyebrow}>Confirmed at</p>
+                      <p className="mt-1 text-sm text-white">
+                        {formatDateTime(currentPayment.bankVerification?.confirmedAt)}
+                      </p>
+                    </div>
+                    {currentPayment.bankVerification?.transactionId ? (
+                      <div className="rounded-2xl border border-white/5 bg-black/35 p-3 sm:col-span-2">
+                        <p className={eyebrow}>Bank transaction id</p>
+                        <p className="mt-1 break-all font-mono text-sm text-white">
+                          {currentPayment.bankVerification.transactionId}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {currentPayment.bankVerification?.amountMismatch ? (
+                    <p className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs leading-5 text-rose-200">
+                      Bank reported a different amount than the order total.
+                      Compare the values above and verify manually before
+                      confirming.
+                    </p>
+                  ) : null}
+
+                  {currentPayment.bankVerification?.rawSnippet ? (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-[#D4AF37]">
+                        Show bank email snippet
+                      </summary>
+                      <pre className="mt-3 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
+                        {currentPayment.bankVerification.rawSnippet}
+                      </pre>
+                    </details>
+                  ) : null}
+                </>
+              ) : (
+                <p className="mt-4 rounded-2xl border border-white/5 bg-black/30 p-3 text-xs leading-5 text-gray-400">
+                  Awaiting bank notification — usually arrives within 2-5
+                  minutes of the customer's transfer. If the bank email never
+                  comes, manually verify in your banking app and approve below.
+                </p>
+              )}
+            </div>
+
+            {isDevBuild ? (
+              <div className="rounded-[1.75rem] border border-amber-500/30 bg-amber-500/[0.06] p-6">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+                  <Beaker className="h-4 w-4" /> Test tools (dev only)
+                </div>
+                <p className={`mt-2 ${eyebrow} text-amber-300/70`}>
+                  Hidden in production builds
+                </p>
+                <p className="mt-3 text-xs leading-5 text-gray-300">
+                  Simulate a bank credit notification for this payment without
+                  needing a real transfer. Calls the same code path as the
+                  IMAP watcher and SMS webhook — end state will be identical
+                  to a real bank confirmation.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateBankCredit({ mismatch: false })}
+                    disabled={isSimulating}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-emerald-200 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSimulating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    Simulate match
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateBankCredit({ mismatch: true })}
+                    disabled={isSimulating}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/15 px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-rose-200 transition hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <XCircle className="h-4 w-4" /> Simulate mismatch
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
