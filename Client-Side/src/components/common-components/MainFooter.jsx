@@ -1,12 +1,29 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Facebook, Instagram, Youtube, ArrowRight, CheckCircle2, ChevronDown, Lock, CreditCard, ShieldCheck, Mail, MapPin } from "lucide-react";
+import { Facebook, Instagram, Youtube, ArrowRight, CheckCircle2, ChevronDown, Lock, CreditCard, ShieldCheck, Mail, MapPin, Twitter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
+import useShopAbout from "@/hooks/use-shop-about";
 
 const MainFooter = () => {
   const location = useLocation();
   const isAdminView = location.pathname.startsWith("/admin");
+
+  // Pull editable shop content from siteConfig — falls back to literal copy
+  // when keys are unset, so the page never breaks during partial migrations.
+  const { data: about } = useShopAbout();
+  const tagline =
+    about?.shop_tagline ||
+    "Limited edition fashion inspired by street culture, exclusivity, and modern youth identity.";
+  const brandName = about?.shop_brand_name || "Saga Elite";
+  const whatsappDigits = (about?.shop_whatsapp_number || "").replace(/[^0-9]/g, "");
+  const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
+  const socialLinks = [
+    { Icon: Instagram, href: about?.shop_social_instagram, label: "Instagram" },
+    { Icon: Facebook, href: about?.shop_social_facebook, label: "Facebook" },
+    { Icon: Youtube, href: about?.shop_social_youtube, label: "YouTube" },
+    { Icon: Twitter, href: about?.shop_social_twitter, label: "Twitter" },
+  ].filter((s) => s.href);
   
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
@@ -162,12 +179,12 @@ const MainFooter = () => {
                 <div className="absolute inset-0 bg-[#D4AF37] blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
               </div>
               <div className="flex flex-col">
-                <h3 className="font-black tracking-[0.25em] text-2xl text-white uppercase mt-1">SAGA ELITE</h3>
+                <h3 className="font-black tracking-[0.25em] text-2xl text-white uppercase mt-1">{brandName.toUpperCase()}</h3>
                 <span className="text-[10px] text-[#D4AF37] tracking-[0.3em] uppercase opacity-80 group-hover:opacity-100 transition-opacity">Rare Fit Forever</span>
               </div>
             </Link>
             <p className="text-sm text-[#777] mt-6 max-w-sm leading-relaxed">
-              Limited edition fashion inspired by street culture, exclusivity, and modern youth identity.
+              {tagline}
             </p>
             <div className="mt-8 flex flex-col gap-2 text-xs text-[#555] font-mono tracking-wider">
               <p>🔥 12K+ ELITE MEMBERS</p>
@@ -209,11 +226,13 @@ const MainFooter = () => {
                     </Link>
                   </li>
                 ))}
-                <li className="pt-4">
-                  <a href="https://wa.me/yourwhatsappnumber" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#25D366]/10 text-[#25D366] px-3 py-2 border border-[#25D366]/20 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-[#25D366]/20 transition-colors">
-                    <CheckCircle2 className="w-4 h-4" /> WhatsApp Support
-                  </a>
-                </li>
+                {whatsappHref ? (
+                  <li className="pt-4">
+                    <a href={whatsappHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#25D366]/10 text-[#25D366] px-3 py-2 border border-[#25D366]/20 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-[#25D366]/20 transition-colors">
+                      <CheckCircle2 className="w-4 h-4" /> WhatsApp Support
+                    </a>
+                  </li>
+                ) : null}
               </ul>
             </motion.div>
 
@@ -324,16 +343,25 @@ const MainFooter = () => {
           <div className="flex items-center gap-6">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#555] hidden sm:block">Connect</span>
             <div className="flex items-center gap-4">
-              {[Instagram, Facebook, Youtube].map((Icon, idx) => (
-                <motion.a 
-                  key={idx} href="#" 
-                  whileHover={{ scale: 1.1, color: "#D4AF37" }} whileTap={{ scale: 0.9 }}
-                  className="w-10 h-10 rounded-full border border-[#333] flex items-center justify-center text-[#888] hover:border-[#D4AF37] transition-all relative overflow-hidden group"
-                >
-                  <Icon className="w-4 h-4 relative z-10" />
-                  <div className="absolute inset-0 bg-[#D4AF37]/10 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"></div>
-                </motion.a>
-              ))}
+              {socialLinks.length > 0 ? (
+                socialLinks.map(({ Icon, href, label }) => (
+                  <motion.a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    whileHover={{ scale: 1.1, color: "#D4AF37" }}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-10 h-10 rounded-full border border-[#333] flex items-center justify-center text-[#888] hover:border-[#D4AF37] transition-all relative overflow-hidden group"
+                  >
+                    <Icon className="w-4 h-4 relative z-10" />
+                    <div className="absolute inset-0 bg-[#D4AF37]/10 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"></div>
+                  </motion.a>
+                ))
+              ) : (
+                <span className="text-[10px] text-[#444] uppercase tracking-widest">Socials coming soon</span>
+              )}
             </div>
           </div>
 
