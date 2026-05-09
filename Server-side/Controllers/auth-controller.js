@@ -46,9 +46,9 @@ const registerUser = catchAsync(async (req, res, next) => {
         "password",
         "confirmPassword",
         "phoneNumber",
-        "name"
+        "username"
     );
-    const { email, password, confirmPassword, phoneNumber, name } = userData;
+    const { email, password, confirmPassword, phoneNumber, username } = userData;
 
     if (!email || !password || !confirmPassword || !phoneNumber) {
         return next(new AppError("Email, password and phone number are required", 400));
@@ -102,7 +102,7 @@ const registerUser = catchAsync(async (req, res, next) => {
         otp,
         otpExpires,
         phoneNumber: normalizedPhone,
-        name: name?.trim() || undefined,
+        username: username || undefined,
         isVerified: false,
         provider: "local",
     });
