@@ -14,6 +14,7 @@ const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 const reviewFilterConfig = require("../Config/review-filter-config");
+const { enrichReviewAsync } = require("../Utils/review-classifier");
 
 const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -288,6 +289,10 @@ const createReview = catchAsync(async (req, res, next) => {
 
   await recalculateProductRating(productId);
   tryIssueReviewReward(review).catch(() => {});
+  // Fire-and-forget AI enrichment — toxicity/spam/sentimentScore land on the
+  // review document a few seconds later for admin moderation. Never blocks
+  // the create response.
+  enrichReviewAsync(review._id);
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId,

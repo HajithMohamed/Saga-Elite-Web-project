@@ -504,8 +504,22 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 | Get Recommendations — personalized via UserActivityLog when authenticated
 |--------------------------------------------------------------------------
 */
-const ACTIVITY_WEIGHTS = { purchase: 5, cart_add: 3, wishlist_add: 2, view: 1 };
+const ACTIVITY_WEIGHTS = {
+  purchase: 5,
+  cart_add: 3,
+  wishlist_add: 2,
+  dwell: 2, // weight scaled by dwellSeconds inside buildTasteProfile
+  search: 1.5,
+  view: 1,
+};
 const ACTIVITY_WINDOW_DAYS = 60;
+const STOPWORDS = new Set(["the", "a", "an", "and", "or", "for", "with", "of", "in", "on", "to", "my", "your"]);
+
+const tokenizeQuery = (q) =>
+  String(q || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t && t.length > 2 && !STOPWORDS.has(t));
 
 const buildTasteProfile = async (userId) => {
   const cutoff = new Date();
@@ -514,30 +528,50 @@ const buildTasteProfile = async (userId) => {
   const logs = await UserActivityLog.find({
     userId,
     createdAt: { $gte: cutoff },
-    action: { $in: ["view", "wishlist_add", "cart_add", "purchase"] },
   })
-    .select("productId action category")
+    .select("productId action category metadata")
     .lean();
 
   if (logs.length === 0) return null;
 
   const categoryWeights = {};
   const productWeights = {};
+  const keywordCounts = {};
+
   for (const log of logs) {
-    const w = ACTIVITY_WEIGHTS[log.action] || 1;
-    if (log.category) categoryWeights[log.category] = (categoryWeights[log.category] || 0) + w;
-    productWeights[String(log.productId)] = (productWeights[String(log.productId)] || 0) + w;
+    let weight = ACTIVITY_WEIGHTS[log.action] || 0;
+    if (log.action === "dwell") {
+      // Scale dwell weight by seconds (capped). 30s+ ≈ same as a wishlist_add.
+      const seconds = Number(log.metadata?.dwellSeconds || 0);
+      weight = Math.min(5, ACTIVITY_WEIGHTS.dwell * (seconds / 30));
+    }
+    if (log.action === "search") {
+      tokenizeQuery(log.metadata?.query).forEach((kw) => {
+        keywordCounts[kw] = (keywordCounts[kw] || 0) + 1;
+      });
+    }
+    if (weight <= 0) continue;
+    if (log.category) categoryWeights[log.category] = (categoryWeights[log.category] || 0) + weight;
+    if (log.productId) {
+      productWeights[String(log.productId)] = (productWeights[String(log.productId)] || 0) + weight;
+    }
   }
+
   const topCategories = Object.entries(categoryWeights)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([category]) => category);
 
+  const topKeywords = Object.entries(keywordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([kw]) => kw);
+
   const purchasedIds = logs
-    .filter((l) => l.action === "purchase")
+    .filter((l) => l.action === "purchase" && l.productId)
     .map((l) => String(l.productId));
 
-  return { topCategories, productWeights, purchasedIds };
+  return { topCategories, productWeights, purchasedIds, topKeywords };
 };
 
 const scoreCandidate = (product, profile, maxSold) => {
@@ -545,13 +579,85 @@ const scoreCandidate = (product, profile, maxSold) => {
   const popularity = maxSold > 0 ? (product.soldCount || 0) / maxSold : 0;
   const ageDays = (Date.now() - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24);
   const recency = Math.max(0, 1 - ageDays / 90);
-  return 0.55 * categoryMatch + 0.25 * popularity + 0.2 * recency;
+  // Keyword bonus: 0..1, fraction of user's top keywords found in product name/tags
+  let keywordBonus = 0;
+  if (profile.topKeywords?.length) {
+    const haystack = `${product.name || ""} ${(product.tags || []).join(" ")}`.toLowerCase();
+    const hits = profile.topKeywords.filter((kw) => haystack.includes(kw)).length;
+    keywordBonus = hits / profile.topKeywords.length;
+  }
+  return 0.4 * categoryMatch + 0.2 * popularity + 0.15 * recency + 0.25 * keywordBonus;
 };
 
 const getRecommendations = catchAsync(async (req, res, next) => {
   const { productId, context = "home" } = req.query;
   const userId = req.userInfo?.id || req.userInfo?._id || null;
   const limit = Math.min(Number(req.query.limit) || 12, 24);
+
+  // Recently viewed — last N distinct products this user looked at
+  if (context === "recently-viewed") {
+    if (!userId) {
+      return res.status(200).json({ status: "success", results: 0, data: { recommendations: [], mode: "recently-viewed" } });
+    }
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - ACTIVITY_WINDOW_DAYS);
+    const viewed = await UserActivityLog.find({
+      userId,
+      action: "view",
+      productId: { $ne: null },
+      createdAt: { $gte: cutoff },
+    })
+      .sort({ createdAt: -1 })
+      .limit(80)
+      .select("productId createdAt")
+      .lean();
+
+    const seen = new Set();
+    const orderedIds = [];
+    for (const row of viewed) {
+      const key = String(row.productId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      orderedIds.push(row.productId);
+      if (orderedIds.length >= limit) break;
+    }
+    if (orderedIds.length === 0) {
+      return res.status(200).json({ status: "success", results: 0, data: { recommendations: [], mode: "recently-viewed" } });
+    }
+    const products = await Product.find({ _id: { $in: orderedIds }, isActive: true }).populate("images").lean();
+    const byId = new Map(products.map((p) => [String(p._id), p]));
+    const ordered = orderedIds.map((id) => byId.get(String(id))).filter(Boolean);
+    return res.status(200).json({
+      status: "success",
+      results: ordered.length,
+      data: { recommendations: ordered, mode: "recently-viewed" },
+    });
+  }
+
+  // Trending in user's top category
+  if (context === "trending-style") {
+    if (!userId) {
+      return res.status(200).json({ status: "success", results: 0, data: { recommendations: [], mode: "trending-style" } });
+    }
+    const profile = await buildTasteProfile(userId);
+    if (!profile || profile.topCategories.length === 0) {
+      return res.status(200).json({ status: "success", results: 0, data: { recommendations: [], mode: "trending-style" } });
+    }
+    const products = await Product.find({
+      isActive: true,
+      category: profile.topCategories[0],
+      _id: { $nin: profile.purchasedIds },
+    })
+      .sort({ soldCount: -1, viewCount: -1, createdAt: -1 })
+      .limit(limit)
+      .populate("images")
+      .lean();
+    return res.status(200).json({
+      status: "success",
+      results: products.length,
+      data: { recommendations: products, mode: "trending-style", category: profile.topCategories[0] },
+    });
+  }
 
   // Product-context: keep existing same-category logic but mix in personalization
   if (productId) {
@@ -653,12 +759,46 @@ const searchProducts = catchAsync(async (req, res, next) => {
 
   const total = await Product.countDocuments({ $text: { $search: q }, isActive: true });
 
+  // Log the search as a personalization signal (fire-and-forget)
+  UserActivityLog.create({
+    userId: req.userInfo?._id || req.userInfo?.id || null,
+    sessionId: req.sessionID || null,
+    action: "search",
+    metadata: { query: String(q).slice(0, 200), resultCount: total },
+  }).catch(() => {});
+
   res.status(200).json({
     status: "success",
     results: products.length,
     total,
     data: { products },
   });
+});
+
+/* Dwell-time beacon — fire-and-forget personalization signal */
+const recordDwell = catchAsync(async (req, res, next) => {
+  const { productId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return next(new AppError("Invalid product id", 400));
+  }
+  const seconds = Number(req.body?.seconds);
+  if (!Number.isFinite(seconds) || seconds < 1 || seconds > 600) {
+    // Quietly accept — beacons can't get useful errors back
+    return res.status(204).end();
+  }
+  const product = await Product.findById(productId).select("category").lean();
+  if (!product) return res.status(204).end();
+
+  UserActivityLog.create({
+    userId: req.userInfo?._id || req.userInfo?.id || null,
+    sessionId: req.sessionID || null,
+    productId,
+    action: "dwell",
+    category: product.category || "",
+    metadata: { dwellSeconds: Math.round(seconds) },
+  }).catch(() => {});
+
+  res.status(204).end();
 });
 
 module.exports = {
@@ -673,4 +813,5 @@ module.exports = {
     getProductAnalytics,
     getRecommendations,
     searchProducts,
+    recordDwell,
 };

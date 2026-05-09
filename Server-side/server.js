@@ -31,7 +31,10 @@ const connectToDB = require("./DataBase/db");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
 const { initRecommendationsJobs } = require('./Utils/recommendations-job');
+const { initSmartAlertsJob } = require('./Utils/smart-alerts-job');
+const { initRecommendationsDigest } = require('./Utils/recommendations-digest');
 const recommendationsRoutes = require('./Routes/recommendationsRoutes');
+const smartAlertsRoutes = require('./Routes/smartAlertsRoutes');
 
 
 const app = express();
@@ -132,6 +135,7 @@ app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
 app.use("/api/v1/admin/recommendations", recommendationsRoutes);
+app.use("/api/v1/admin/alerts", smartAlertsRoutes);
 
 app.use(globalErrorController);
 
@@ -213,6 +217,8 @@ const startServer = async () => {
     server.listen(PORT, () => {
       initAgingStockJob();
       initRecommendationsJobs();
+      initSmartAlertsJob();
+      initRecommendationsDigest();
       logger.info("Server is listening", { port: PORT });
     });
   } catch (error) {

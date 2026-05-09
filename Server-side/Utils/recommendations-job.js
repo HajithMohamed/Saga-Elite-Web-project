@@ -55,6 +55,12 @@ const callOpenAI = async (systemPrompt, userPrompt) => {
 
 const allowedSeverities = ["high", "medium", "low"];
 
+const clampConfidence = (raw) => {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 50;
+  return Math.max(0, Math.min(100, Math.round(n)));
+};
+
 const sanitizeItems = (rawItems) =>
   Array.isArray(rawItems)
     ? rawItems.slice(0, 10).map((entry) => ({
@@ -66,6 +72,7 @@ const sanitizeItems = (rawItems) =>
         refIds: Array.isArray(entry.refIds)
           ? entry.refIds.filter((id) => /^[a-f0-9]{24}$/i.test(String(id))).slice(0, 5)
           : [],
+        confidence: clampConfidence(entry.confidence),
       }))
     : [];
 
@@ -77,8 +84,12 @@ const sanitizeRecommendations = (rawRecs) =>
         priority: allowedSeverities.includes(entry.priority) ? entry.priority : "medium",
         expectedImpact: String(entry.expectedImpact || "").trim(),
         supportingData: String(entry.supportingData || "").trim(),
+        confidence: clampConfidence(entry.confidence),
       }))
     : [];
+
+const CONFIDENCE_INSTRUCTION =
+  " Each item AND each recommendation MUST include a `confidence` integer 0-100 reflecting how strongly the supplied data supports it. Use 90+ only when the data is unambiguous; use 50-70 for plausible-but-thin signals; use <50 only when speculation.";
 
 const persistRecommendation = async (type, parsed, dataSnapshot, tokensUsed) =>
   Recommendation.create({
@@ -108,7 +119,7 @@ const generateReviewRecommendations = async () => {
     .select("_id rating title content category sentiment createdAt")
     .lean();
 
-  const systemPrompt = `You are a senior CX analyst for a luxury fashion brand. Analyse customer reviews and produce JSON: {summary, items: [{title, detail, severity, frequency, category, refIds}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = recurring issues; refIds = up to 5 example review _ids. Categories: fit/quality/delivery/style/value. Limit to 6 items and 6 recommendations.`;
+  const systemPrompt = `You are a senior CX analyst for a luxury fashion brand. Analyse customer reviews and produce JSON: {summary, items: [{title, detail, severity, frequency, category, refIds}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = recurring issues; refIds = up to 5 example review _ids. Categories: fit/quality/delivery/style/value. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Approved reviews from last ${REVIEW_WINDOW_DAYS} days (${reviews.length} of ${total}):\n${JSON.stringify(reviews.map((r) => ({ id: String(r._id), ...r })))}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
@@ -138,7 +149,7 @@ const generateProductRecommendations = async () => {
     return null;
   }
 
-  const systemPrompt = `You are a merchandising strategist for a luxury fashion brand. Analyse the catalog signals and produce JSON: {summary, items: [{title, detail, severity, category}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = specific products to flag (promote, retire, restock, rework). recommendations = portfolio-level moves. Use product names from the data. Limit to 8 items and 6 recommendations.`;
+  const systemPrompt = `You are a merchandising strategist for a luxury fashion brand. Analyse the catalog signals and produce JSON: {summary, items: [{title, detail, severity, category}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = specific products to flag (promote, retire, restock, rework). recommendations = portfolio-level moves. Use product names from the data. Limit to 8 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Catalog signals:\nBest sellers (last 30d sold counts): ${JSON.stringify(bestSellers)}\nSlow movers: ${JSON.stringify(slowMovers)}\nMost viewed (low conversion): ${JSON.stringify(mostViewedNotPurchased)}\nMost wishlisted: ${JSON.stringify(mostWished)}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
@@ -177,7 +188,7 @@ const generateDropRecommendations = async () => {
     })
   );
 
-  const systemPrompt = `You are a drop-strategy expert for a luxury streetwear brand. Analyse the last 6 drops and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. recommendations should cover: timing, theme, size of next drop, pricing, marketing window. Limit to 6 items and 6 recommendations.`;
+  const systemPrompt = `You are a drop-strategy expert for a luxury streetwear brand. Analyse the last 6 drops and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. recommendations should cover: timing, theme, size of next drop, pricing, marketing window. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Recent drops (newest first):\n${JSON.stringify(dropPayload)}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
@@ -226,7 +237,7 @@ const generateAnalyticsRecommendations = async () => {
     newUsers: recentUsers,
   };
 
-  const systemPrompt = `You are an e-commerce growth analyst. Analyse the KPI snapshot (recent vs prior period) and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = KPIs needing attention. recommendations = concrete moves with expected % impact. Limit to 6 items and 6 recommendations.`;
+  const systemPrompt = `You are an e-commerce growth analyst. Analyse the KPI snapshot (recent vs prior period) and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = KPIs needing attention. recommendations = concrete moves with expected % impact. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `KPI snapshot:\n${JSON.stringify(snapshot, null, 2)}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
@@ -256,7 +267,7 @@ const generateBusinessImprovements = async () => {
     couponUsed: recentOrders.filter((o) => o.couponCode).length,
   };
 
-  const systemPrompt = `You are an operations consultant for a luxury e-commerce brand. From the signals below, identify operational fixes that will reduce friction and lift retention. Produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = pain points. recommendations = fixes (logistics, returns, sizing, customer service, payment, etc). Limit to 6 of each.`;
+  const systemPrompt = `You are an operations consultant for a luxury e-commerce brand. From the signals below, identify operational fixes that will reduce friction and lift retention. Produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = pain points. recommendations = fixes (logistics, returns, sizing, customer service, payment, etc). Limit to 6 of each.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Low-rating reviews (≤2 stars, last 60d): ${JSON.stringify(lowReviews)}\nOrder summary (last 60d): ${JSON.stringify(orderSummary)}\nAging products (idle 60+ days): ${JSON.stringify(agingProducts)}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
@@ -287,7 +298,7 @@ const generateBusinessIdeas = async () => {
     ? (latestReviewInsight.items || []).map((i) => i.title).slice(0, 6)
     : [];
 
-  const systemPrompt = `You are a creative business strategist for a luxury fashion brand. Suggest growth ideas based on catalog coverage + customer feedback themes. Produce JSON: {summary, items: [{title, detail}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = idea ideas (e.g., "Launch eco-line", "Add monthly drop subscription"). recommendations = how to validate/launch each. Be bold but realistic. Limit to 6 of each.`;
+  const systemPrompt = `You are a creative business strategist for a luxury fashion brand. Suggest growth ideas based on catalog coverage + customer feedback themes. Produce JSON: {summary, items: [{title, detail}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = idea ideas (e.g., "Launch eco-line", "Add monthly drop subscription"). recommendations = how to validate/launch each. Be bold but realistic. Limit to 6 of each.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Catalog by category: ${JSON.stringify(productsByCategory)}\nCustomer pain themes: ${JSON.stringify(customerThemes)}\nTotal users: ${totalUsers}`;
 
   const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);

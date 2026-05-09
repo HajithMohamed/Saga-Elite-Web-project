@@ -7,6 +7,8 @@ import {
   Loader2,
   RefreshCcw,
   ShieldAlert,
+  Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -122,6 +124,9 @@ const PendingPaymentsPage = () => {
   });
 
   const [flashIds, setFlashIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(null);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, failed: 0 });
 
   const requestParams = useMemo(
     () => ({
@@ -217,12 +222,93 @@ const PendingPaymentsPage = () => {
     }
   };
 
+  // Reset selection when filter or page changes — selected IDs may not even be visible anymore.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [statusFilter, page]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!pendingPayments) return;
+    const visibleIds = pendingPayments.map((p) => String(p._id));
+    setSelectedIds((current) => {
+      const allSelected = visibleIds.every((id) => current.has(id));
+      if (allSelected) return new Set();
+      return new Set(visibleIds);
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // Sequential queue — backend rate-limits cumulative writes, so chain awaits.
+  // Counts successes/failures and surfaces a single summary toast at the end.
+  const runBulk = async (action) => {
+    if (selectedIds.size === 0 || !pendingPayments) return;
+    if (action === "reject") {
+      const ok = window.confirm(
+        `Reject ${selectedIds.size} selected payment${selectedIds.size === 1 ? "" : "s"}? This notifies each customer.`
+      );
+      if (!ok) return;
+    }
+
+    const ids = Array.from(selectedIds);
+    setBulkProcessing(action);
+    setBulkProgress({ done: 0, total: ids.length, failed: 0 });
+
+    let done = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await dispatch(
+          verifyManualPayment({
+            paymentId: id,
+            action: action === "verify" ? "approve" : "reject",
+            adminNotes: action === "verify" ? "Bulk verified" : undefined,
+            rejectionReason: action === "reject" ? "Bulk rejected" : undefined,
+          })
+        ).unwrap();
+      } catch {
+        failed += 1;
+      }
+      done += 1;
+      setBulkProgress({ done, total: ids.length, failed });
+    }
+
+    setBulkProcessing(null);
+    clearSelection();
+
+    toast({
+      title:
+        failed === 0
+          ? `${ids.length} payment${ids.length === 1 ? "" : "s"} ${action === "verify" ? "verified" : "rejected"}`
+          : `${ids.length - failed}/${ids.length} ${action === "verify" ? "verified" : "rejected"}`,
+      description: failed > 0 ? `${failed} failed — check the queue.` : undefined,
+      variant: failed === 0 ? "success" : "destructive",
+    });
+
+    await loadQueue();
+  };
+
   const currentStatusLabel = (status) =>
     statusMeta[status]?.label || status.replace(/_/g, " ");
 
   const currentStatusClass = (status) =>
     statusMeta[status]?.className ||
     "border-white/10 bg-white/5 text-gray-300";
+
+  const visibleIds = (pendingPayments || []).map((p) => String(p._id));
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected =
+    visibleIds.some((id) => selectedIds.has(id)) && !allVisibleSelected;
 
   return (
     <motion.div
@@ -284,6 +370,53 @@ const PendingPaymentsPage = () => {
           </div>
         </section>
 
+        {selectedIds.size > 0 ? (
+          <motion.section
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-[#D4AF37]/30 bg-[#0b0b0b] px-5 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
+          >
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+                {selectedIds.size} selected
+              </span>
+              {bulkProcessing ? (
+                <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {bulkProgress.done}/{bulkProgress.total}
+                  {bulkProgress.failed > 0 ? ` · ${bulkProgress.failed} failed` : ""}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => runBulk("verify")}
+                disabled={!!bulkProcessing}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200 transition hover:border-emerald-500/50 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Bulk verify
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulk("reject")}
+                disabled={!!bulkProcessing}
+                className="inline-flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/15 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-rose-200 transition hover:border-rose-500/50 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Bulk reject
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                disabled={!!bulkProcessing}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <X className="h-3.5 w-3.5" /> Clear
+              </button>
+            </div>
+          </motion.section>
+        ) : null}
+
         {isAdminLoading ? (
           <div className="flex items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] py-16 text-gray-400">
             <Loader2 className="mr-3 h-5 w-5 animate-spin text-[#D4AF37]" /> Loading pending payments...
@@ -304,6 +437,18 @@ const PendingPaymentsPage = () => {
               <table className="min-w-full divide-y divide-white/10 text-left text-sm">
                 <thead className="bg-black/40 text-[10px] uppercase tracking-[0.24em] text-gray-400">
                   <tr>
+                    <th className="w-10 px-4 py-4">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all visible payments"
+                        checked={allVisibleSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someVisibleSelected;
+                        }}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+                      />
+                    </th>
                     <th className="px-6 py-4">Reference Number</th>
                     <th className="px-6 py-4">Customer Name</th>
                     <th className="px-6 py-4">Order ID</th>
@@ -318,9 +463,25 @@ const PendingPaymentsPage = () => {
                 <tbody className="divide-y divide-white/5">
                   {pendingPayments.map((payment) => {
                     const status = payment.status || "proof_submitted";
+                    const id = String(payment._id);
+                    const isSelected = selectedIds.has(id);
 
                     return (
-                      <tr key={payment._id || payment.referenceNumber} className="align-top hover:bg-white/[0.02]">
+                      <tr
+                        key={payment._id || payment.referenceNumber}
+                        className={`align-top transition ${
+                          isSelected ? "bg-[#D4AF37]/[0.05]" : "hover:bg-white/[0.02]"
+                        }`}
+                      >
+                        <td className="px-4 py-5">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${payment.referenceNumber || "payment"}`}
+                            checked={isSelected}
+                            onChange={() => toggleSelect(id)}
+                            className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+                          />
+                        </td>
                         <td className="px-6 py-5 font-mono text-xs tracking-[0.2em] text-[#D4AF37]">
                           {payment.referenceNumber || "—"}
                         </td>

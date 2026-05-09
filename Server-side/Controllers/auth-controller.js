@@ -14,6 +14,7 @@ const {
   normalizeSriLankanMobile,
 } = require("../Utils/phone-validator");
 const logger = require("../Utils/logger");
+const { recordLoginAttempt } = require("../Utils/login-activity-service");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -290,22 +291,75 @@ const login = catchAsync(async (req, res, next) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
+        recordLoginAttempt({
+            req,
+            emailAttempted: email,
+            success: false,
+            failureReason: "user_not_found",
+        });
         return next(new AppError("Incorrect email or password", 401));
     }
 
     const isPasswordCorrect = await user.correctPassword(password, user.password);
 
     if (!isPasswordCorrect) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "wrong_password",
+        });
         return next(new AppError("Incorrect email or password", 401));
     }
 
     if (!user.isVerified) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "not_verified",
+        });
         return next(new AppError("User not verified. Please verify your email first.", 401));
     }
 
     if (!user.isActive) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "deactivated",
+        });
         return next(new AppError("Your account has been deactivated. Please contact support.", 403));
     }
+
+    // Super-admin reset this account's password — block normal login until
+    // they rotate it. We log the attempt as a successful credential check
+    // (because the password DID match), but withhold the session token.
+    if (user.mustChangePassword) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: true,
+        });
+        return res.status(200).json({
+            status: "must_change_password",
+            success: false,
+            message:
+                "A super admin reset your password. Use the forgot-password flow to set a new one before signing in.",
+            email: user.email,
+        });
+    }
+
+    recordLoginAttempt({
+        req,
+        userId: user._id,
+        emailAttempted: email,
+        success: true,
+    });
 
     createSendToken(user, 200, res, "Login successful");
 });

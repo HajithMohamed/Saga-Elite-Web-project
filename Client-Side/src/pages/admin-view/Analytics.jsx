@@ -11,7 +11,25 @@ import {
   Users,
   Star,
   AlertTriangle,
+  Sparkles,
+  Lightbulb,
+  Shirt,
+  Heart,
+  Skull,
+  Zap,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 
@@ -20,8 +38,175 @@ const TABS = [
   { key: "products", label: "Products", icon: Package },
   { key: "drops", label: "Drops", icon: Layers3 },
   { key: "customers", label: "Customers", icon: Users },
+  { key: "fashion", label: "Fashion", icon: Shirt },
   { key: "reviews", label: "Sentiment", icon: Star },
+  { key: "ai", label: "AI Insights", icon: Sparkles },
 ];
+
+// "Fashion" reuses the products endpoint but renders a streetwear-specific view.
+// Mapped here so fetchTab can share cache with the Products tab.
+const TAB_ENDPOINT_OVERRIDE = {
+  fashion: "products",
+};
+
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+const SEVERITY_STYLES = {
+  high: "border-rose-400/40 bg-rose-400/10 text-rose-300",
+  medium: "border-amber-400/40 bg-amber-400/10 text-amber-300",
+  low: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
+};
+
+const ConfidenceBadge = ({ value }) => {
+  if (typeof value !== "number") return null;
+  const tone =
+    value >= 75
+      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+      : value >= 50
+      ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+      : "border-rose-400/40 bg-rose-400/10 text-rose-300";
+  return (
+    <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${tone}`}>
+      {value}% conf
+    </span>
+  );
+};
+
+const AIInsightsTab = () => {
+  const [recommendation, setRecommendation] = React.useState(null);
+  const [alerts, setAlerts] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      axios.get(`${API_BASE}/admin/recommendations/analytics`, { withCredentials: true }).catch(() => null),
+      axios.get(`${API_BASE}/admin/alerts`, { withCredentials: true }).catch(() => null),
+    ])
+      .then(([recRes, alertRes]) => {
+        if (cancelled) return;
+        setRecommendation(recRes?.data?.data?.recommendation || null);
+        setAlerts(alertRes?.data?.data?.alerts || []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err?.message || "Could not load AI insights");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-3 border border-[#ffb4ab]/40 bg-[#ffb4ab]/5 p-4 text-sm text-[#ffb4ab]">
+        <AlertTriangle className="h-4 w-4" /> {error}
+      </div>
+    );
+  }
+
+  const sortedRecs = recommendation?.recommendations
+    ? [...recommendation.recommendations].sort(
+        (a, b) =>
+          (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9) ||
+          (b.confidence || 0) - (a.confidence || 0)
+      )
+    : [];
+
+  return (
+    <div className="space-y-6">
+      {alerts.length > 0 ? (
+        <div className="rounded-lg border border-rose-400/40 bg-rose-400/5 p-4">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-rose-300">
+            <AlertTriangle className="h-4 w-4" />
+            {alerts.length} active alert{alerts.length === 1 ? "" : "s"}
+          </h3>
+          <ul className="mt-3 space-y-2">
+            {alerts.slice(0, 5).map((a) => (
+              <li key={a._id} className="text-sm text-[#e5e2e1]">
+                <span className="font-bold">{a.title}:</span>{" "}
+                <span className="text-[#99907c]">{a.message}</span>
+              </li>
+            ))}
+          </ul>
+          <a href="/admin/alerts" className="mt-3 inline-block text-xs uppercase tracking-wider text-[#f2ca50] hover:underline">
+            See all alerts →
+          </a>
+        </div>
+      ) : null}
+
+      {!recommendation ? (
+        <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-8 text-center">
+          <Sparkles className="mx-auto h-8 w-8 text-[#f2ca50]" />
+          <p className="mt-3 text-sm text-[#99907c]">
+            No AI analytics insight yet. The daily job runs at 03:45. Visit{" "}
+            <a href="/admin/recommendations" className="text-[#f2ca50] hover:underline">
+              /admin/recommendations
+            </a>{" "}
+            to generate one now.
+          </p>
+        </div>
+      ) : (
+        <>
+          {recommendation.summary ? (
+            <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-4">
+              <h3 className="text-xs uppercase tracking-wider text-[#99907c]">Summary</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#e5e2e1]">{recommendation.summary}</p>
+            </div>
+          ) : null}
+
+          {sortedRecs.length > 0 ? (
+            <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-4">
+              <h3 className="text-xs uppercase tracking-wider text-[#99907c]">Recommended actions</h3>
+              <ul className="mt-3 space-y-3">
+                {sortedRecs.map((rec, idx) => (
+                  <li key={idx} className="border-t border-[#4d4635]/40 pt-3 first:border-t-0 first:pt-0">
+                    <div className="flex items-start gap-2">
+                      <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[#f2ca50]" />
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold uppercase tracking-wide text-[#e5e2e1]">{rec.area}</span>
+                          <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${SEVERITY_STYLES[rec.priority] || SEVERITY_STYLES.medium}`}>
+                            {rec.priority}
+                          </span>
+                          <ConfidenceBadge value={rec.confidence} />
+                        </div>
+                        <p className="mt-1 text-sm text-[#e5e2e1]">{rec.action}</p>
+                        {rec.expectedImpact ? (
+                          <p className="mt-1 text-xs italic text-[#99907c]">Expected: {rec.expectedImpact}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <a href="/admin/recommendations" className="mt-4 inline-block text-xs uppercase tracking-wider text-[#f2ca50] hover:underline">
+                Open full Recommendations hub →
+              </a>
+            </div>
+          ) : null}
+
+          <p className="text-center text-xs text-[#4d4635]">
+            Generated {new Date(recommendation.generatedAt).toLocaleString()} by {recommendation.model || "AI"}
+          </p>
+        </>
+      )}
+    </div>
+  );
+};
 
 const formatCurrency = (value) =>
   Number(value || 0).toLocaleString("en-LK", {
@@ -792,6 +977,301 @@ const DateRangeControls = ({ range, onChange }) => {
 /* MAIN                                                                   */
 /* --------------------------------------------------------------------- */
 
+// Recharts color palette aligned to Saga Elite's gold-on-dark theme.
+// Order matters — pies and bars cycle through these in the order shown.
+const FASHION_COLORS = ["#f2ca50", "#d4af37", "#a78bfa", "#34d399", "#fb7185", "#38bdf8"];
+
+const FashionTab = ({ data }) => {
+  if (!data) return null;
+  const products = data.products || [];
+
+  if (products.length === 0) {
+    return (
+      <div className="border border-[#2a2a2a] bg-[#131313] p-10 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[#666]">
+          No product data yet
+        </p>
+        <p className="mt-3 text-sm text-[#99907c]">
+          Once products start moving, fashion-specific insights surface here.
+        </p>
+      </div>
+    );
+  }
+
+  // Aggregations — grouped by category so we can plot a pie + a side ledger.
+  const byCategory = products.reduce((acc, p) => {
+    const k = p.category || "Other";
+    acc[k] = acc[k] || { name: k, sold: 0, products: 0, revenue: 0 };
+    acc[k].sold += Number(p.soldCount) || 0;
+    acc[k].products += 1;
+    acc[k].revenue += (Number(p.soldCount) || 0) * (Number(p.basePrice) || 0);
+    return acc;
+  }, {});
+  const categorySoldData = Object.values(byCategory)
+    .map((c) => ({ name: c.name, value: c.sold, products: c.products, revenue: c.revenue }))
+    .filter((c) => c.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  const topWishlisted = [...products]
+    .filter((p) => Number(p.wishCount) > 0)
+    .sort((a, b) => (Number(b.wishCount) || 0) - (Number(a.wishCount) || 0))
+    .slice(0, 8)
+    .map((p) => ({
+      name: p.name?.length > 22 ? `${p.name.slice(0, 22)}…` : p.name || "—",
+      wishes: Number(p.wishCount) || 0,
+      sold: Number(p.soldCount) || 0,
+    }));
+
+  const fastestSelling = [...products]
+    .filter((p) => Number(p.soldCount) > 0)
+    .sort((a, b) => (Number(b.soldCount) || 0) - (Number(a.soldCount) || 0))
+    .slice(0, 8)
+    .map((p) => ({
+      name: p.name?.length > 22 ? `${p.name.slice(0, 22)}…` : p.name || "—",
+      sold: Number(p.soldCount) || 0,
+    }));
+
+  const deadInventory = [...products]
+    .filter((p) => (Number(p.soldCount) || 0) === 0 && (Number(p.totalStock) || 0) > 0)
+    .sort((a, b) => (Number(b.totalStock) || 0) - (Number(a.totalStock) || 0))
+    .slice(0, 8);
+
+  const totalSold = categorySoldData.reduce((s, c) => s + c.value, 0);
+  const totalWishes = products.reduce((s, p) => s + (Number(p.wishCount) || 0), 0);
+  const totalDeadUnits = deadInventory.reduce(
+    (s, p) => s + (Number(p.totalStock) || 0),
+    0
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+            Categories live
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-white">
+            {categorySoldData.length}
+          </p>
+          <p className="mt-1 text-[10px] text-[#666]">with sales</p>
+        </div>
+        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+            Units sold
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-[#f2ca50]">
+            {totalSold.toLocaleString()}
+          </p>
+        </div>
+        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+            Wishlist demand
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-rose-300">
+            {totalWishes.toLocaleString()}
+          </p>
+        </div>
+        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+            Dead stock units
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-orange-300">
+            {totalDeadUnits.toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <Shirt className="h-4 w-4 text-[#f2ca50]" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+              Top categories — units sold
+            </h3>
+          </div>
+          <p className="mb-4 text-[10px] text-[#666]">
+            Where the volume is concentrated. Use this to pace next drop's mix.
+          </p>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={categorySoldData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={2}
+              >
+                {categorySoldData.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={FASHION_COLORS[index % FASHION_COLORS.length]}
+                    stroke="#0a0a0a"
+                    strokeWidth={2}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: "#0a0a0a",
+                  border: "1px solid #2a2a2a",
+                  fontSize: 12,
+                }}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: 11, color: "#99907c" }}
+                iconType="circle"
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="mt-4 space-y-1.5">
+            {categorySoldData.map((c, i) => (
+              <div
+                key={c.name}
+                className="flex items-center justify-between border-l-2 pl-3 text-xs"
+                style={{ borderColor: FASHION_COLORS[i % FASHION_COLORS.length] }}
+              >
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+                  {c.name}
+                </span>
+                <span className="text-[#e5e2e1]">
+                  {c.value} units · {c.products} products
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[#f2ca50]" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+              Fastest selling
+            </h3>
+          </div>
+          <p className="mb-4 text-[10px] text-[#666]">
+            Top 8 by total units shipped. Restock candidates.
+          </p>
+          {fastestSelling.length === 0 ? (
+            <p className="py-12 text-center text-xs text-[#666]">No sales yet.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={fastestSelling}
+                layout="vertical"
+                margin={{ left: 10, right: 16, top: 0, bottom: 0 }}
+              >
+                <XAxis type="number" stroke="#666" fontSize={10} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#99907c"
+                  fontSize={10}
+                  width={140}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0a0a0a",
+                    border: "1px solid #2a2a2a",
+                    fontSize: 12,
+                  }}
+                  cursor={{ fill: "rgba(242,202,80,0.05)" }}
+                />
+                <Bar dataKey="sold" fill="#f2ca50" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <Heart className="h-4 w-4 text-rose-300" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-rose-300">
+              Most wishlisted
+            </h3>
+          </div>
+          <p className="mb-4 text-[10px] text-[#666]">
+            Strong demand signal — promote in next campaign or re-stock if low.
+          </p>
+          {topWishlisted.length === 0 ? (
+            <p className="py-12 text-center text-xs text-[#666]">No wishlist activity.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={topWishlisted}
+                layout="vertical"
+                margin={{ left: 10, right: 16, top: 0, bottom: 0 }}
+              >
+                <XAxis type="number" stroke="#666" fontSize={10} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#99907c"
+                  fontSize={10}
+                  width={140}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0a0a0a",
+                    border: "1px solid #2a2a2a",
+                    fontSize: 12,
+                  }}
+                  cursor={{ fill: "rgba(251,113,133,0.05)" }}
+                />
+                <Bar dataKey="wishes" fill="#fb7185" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <Skull className="h-4 w-4 text-orange-300" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-orange-300">
+              Dead inventory
+            </h3>
+          </div>
+          <p className="mb-4 text-[10px] text-[#666]">
+            Stocked but never sold. Discount, bundle, or pull from listing.
+          </p>
+          {deadInventory.length === 0 ? (
+            <p className="py-12 text-center text-xs text-[#666]">
+              All stocked products have moved at least once. Healthy.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {deadInventory.map((p) => (
+                <li
+                  key={p._id || p.slug || p.artNo}
+                  className="flex items-center justify-between border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-[#e5e2e1]">{p.name}</p>
+                    <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-[#666]">
+                      {p.category || "—"} · {p.artNo || "no art#"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-orange-400/30 bg-orange-400/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-orange-200">
+                    {p.totalStock} stuck
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const initialRange = () => {
   const to = new Date();
   const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -810,18 +1290,25 @@ export default function AdminAnalytics() {
       setLoading(true);
       setError(null);
       try {
+        const apiTab = TAB_ENDPOINT_OVERRIDE[tab] || tab;
         let endpoint;
-        if (tab === "sales" || tab === "customers") {
+        if (apiTab === "sales" || apiTab === "customers") {
           const params = new URLSearchParams({
             from: currentRange.from.toISOString(),
             to: currentRange.to.toISOString(),
           });
-          endpoint = `${API_BASE}/admin/analytics/${tab}?${params.toString()}`;
+          endpoint = `${API_BASE}/admin/analytics/${apiTab}?${params.toString()}`;
         } else {
-          endpoint = `${API_BASE}/admin/analytics/${tab}`;
+          endpoint = `${API_BASE}/admin/analytics/${apiTab}`;
         }
         const res = await axios.get(endpoint, { withCredentials: true });
-        setDataByTab((prev) => ({ ...prev, [tab]: res.data?.data || null }));
+        // Cache under both the UI tab key and the apiTab so a switch between
+        // tabs that share an endpoint (Products ↔ Fashion) doesn't refetch.
+        setDataByTab((prev) => ({
+          ...prev,
+          [tab]: res.data?.data || null,
+          [apiTab]: res.data?.data || null,
+        }));
       } catch (err) {
         setError(
           err?.response?.data?.message ||
@@ -836,10 +1323,15 @@ export default function AdminAnalytics() {
   );
 
   useEffect(() => {
+    // The AI Insights tab fetches its own data; skip the analytics endpoint.
+    if (activeTab === "ai") return;
     fetchTab(activeTab, range);
   }, [activeTab, range, fetchTab]);
 
   const tabContent = () => {
+    if (activeTab === "ai") {
+      return <AIInsightsTab />;
+    }
     const data = dataByTab[activeTab];
     if (loading && !data) {
       return (
@@ -859,6 +1351,7 @@ export default function AdminAnalytics() {
       return <SalesTab data={data} range={range} onRangeChange={setRange} />;
     }
     if (activeTab === "products") return <ProductsTab data={data} />;
+    if (activeTab === "fashion") return <FashionTab data={data} />;
     if (activeTab === "drops") return <DropsTab data={data} />;
     if (activeTab === "customers") {
       return (

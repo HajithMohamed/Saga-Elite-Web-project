@@ -53,6 +53,24 @@ const SEVERITY_STYLES = {
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
+const ConfidenceBadge = ({ value }) => {
+  if (typeof value !== "number") return null;
+  const tone =
+    value >= 75
+      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+      : value >= 50
+      ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+      : "border-rose-400/40 bg-rose-400/10 text-rose-300";
+  return (
+    <span
+      className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${tone}`}
+      title="AI confidence"
+    >
+      {value}% conf
+    </span>
+  );
+};
+
 const formatDate = (value) => {
   if (!value) return "—";
   try {
@@ -199,6 +217,7 @@ const TabContent = ({ type }) => {
                       >
                         {item.severity}
                       </span>
+                      <ConfidenceBadge value={item.confidence} />
                     </div>
                     <p className="mt-2 text-sm font-semibold text-[#e5e2e1]">{item.title}</p>
                     {item.detail ? (
@@ -239,6 +258,7 @@ const TabContent = ({ type }) => {
                       >
                         {rec.priority}
                       </span>
+                      <ConfidenceBadge value={rec.confidence} />
                     </div>
                     <p className="mt-2 text-sm text-[#e5e2e1]">{rec.action}</p>
                     {rec.expectedImpact ? (

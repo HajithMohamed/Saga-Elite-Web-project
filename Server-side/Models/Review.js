@@ -54,6 +54,18 @@ const reviewSchema = new mongoose.Schema(
       enum: ['positive', 'neutral', 'negative'],
       default: null,
     },
+
+    // AI-generated classification populated asynchronously after the review
+    // is saved. Each score is 0-100. Null means "not yet analyzed" — admin UI
+    // should treat that distinctly from "analyzed and clean."
+    aiAnalysis: {
+      toxicity: { type: Number, default: null, min: 0, max: 100 },
+      spam: { type: Number, default: null, min: 0, max: 100 },
+      sentimentScore: { type: Number, default: null, min: -100, max: 100 },
+      summary: { type: String, default: null, trim: true, maxlength: 280 },
+      analyzedAt: { type: Date, default: null },
+      model: { type: String, default: null, trim: true },
+    },
     helpfulCount: {
       type: Number,
       default: 0,

@@ -1,6 +1,6 @@
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import usePageMeta from "./hooks/use-page-meta";
 import { useLenis } from "./hooks/use-lenis";
@@ -26,33 +26,38 @@ import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
 import VerifyOtp from "./pages/auth/VerifyOtp";
 
-// admin page imports
+// Admin shell + permission gate stay eagerly loaded — both are tiny and on
+// every admin route. Page components below are code-split (React.lazy) so a
+// fresh admin session only downloads the chunk for whichever page is opened.
 import AdminLayout from "./components/admin-components/Layout";
 import PermissionGuard from "./components/admin-components/PermissionGuard";
-import AdminDashboard from "./pages/admin-view/Dashboard";
-import AdminFeatures from "./pages/admin-view/Features";
-import AdminOffers from "./pages/admin-view/Offers";
-import AdminCoupons from "./pages/admin-view/Coupons";
-import AdminSeoSettings from "./pages/admin-view/SeoSettings";
-import AdminCommunity from "./pages/admin-view/CommunityPage";
-import AdminShipping from "./pages/admin-view/ShippingPage";
-import AdminOrders from "./pages/admin-view/Orders";
-import GiftManager from "./pages/admin-view/GiftManager";
-import AdminProduct from "./pages/admin-view/Product";
-import AdminDrops from "./pages/admin-view/Drops";
-import DropAnalytics from "./pages/admin-view/DropAnalytics";
-import AdminAnalytics from "./pages/admin-view/Analytics";
-import AdminHomeImages from "./pages/admin-view/HomeImages";
-import NotificationsManager from "./pages/admin-view/NotificationsManager";
-import PendingPaymentsPage from "./pages/admin-view/PendingPaymentsPage";
-import PaymentVerificationPage from "./pages/admin-view/PaymentVerificationPage";
-import AdminUsers from "./pages/admin-view/Users";
-import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
-import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
-import Recommendations from "./pages/admin-view/Recommendations";
-import AboutSiteConfig from "./pages/admin-view/AboutSiteConfig";
-import ContactInquiriesPage from "./pages/admin-view/ContactInquiriesPage";
-import NewsletterSubscribersPage from "./pages/admin-view/NewsletterSubscribersPage";
+
+const AdminDashboard = lazy(() => import("./pages/admin-view/Dashboard"));
+const AdminFeatures = lazy(() => import("./pages/admin-view/Features"));
+const AdminOffers = lazy(() => import("./pages/admin-view/Offers"));
+const AdminCoupons = lazy(() => import("./pages/admin-view/Coupons"));
+const AdminSeoSettings = lazy(() => import("./pages/admin-view/SeoSettings"));
+const AdminCommunity = lazy(() => import("./pages/admin-view/CommunityPage"));
+const AdminShipping = lazy(() => import("./pages/admin-view/ShippingPage"));
+const AdminOrders = lazy(() => import("./pages/admin-view/Orders"));
+const GiftManager = lazy(() => import("./pages/admin-view/GiftManager"));
+const AdminProduct = lazy(() => import("./pages/admin-view/Product"));
+const AdminDrops = lazy(() => import("./pages/admin-view/Drops"));
+const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
+const AdminAnalytics = lazy(() => import("./pages/admin-view/Analytics"));
+const AdminHomeImages = lazy(() => import("./pages/admin-view/HomeImages"));
+const NotificationsManager = lazy(() => import("./pages/admin-view/NotificationsManager"));
+const PendingPaymentsPage = lazy(() => import("./pages/admin-view/PendingPaymentsPage"));
+const PaymentVerificationPage = lazy(() => import("./pages/admin-view/PaymentVerificationPage"));
+const AdminUsers = lazy(() => import("./pages/admin-view/Users"));
+const SuperAdminDashboard = lazy(() => import("./pages/admin-view/SuperAdminDashboard"));
+const ReviewModerationPage = lazy(() => import("./pages/admin-view/ReviewModerationPage"));
+const Recommendations = lazy(() => import("./pages/admin-view/Recommendations"));
+const Alerts = lazy(() => import("./pages/admin-view/Alerts"));
+const AboutSiteConfig = lazy(() => import("./pages/admin-view/AboutSiteConfig"));
+const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
+const NewsletterSubscribersPage = lazy(() => import("./pages/admin-view/NewsletterSubscribersPage"));
+
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
@@ -156,7 +161,8 @@ function App() {
       <RouteMetaManager />
 
       <ErrorBoundary>
-        <Routes>
+        <Suspense fallback={<AppLoader />}>
+          <Routes>
 
           {/* PUBLIC */}
           <Route element={<PublicLayout />}>
@@ -236,6 +242,7 @@ function App() {
             <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
             <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
             <Route path="recommendations" element={<PermissionGuard permission="manageReviews"><Recommendations /></PermissionGuard>} />
+            <Route path="alerts" element={<PermissionGuard permission="manageReviews"><Alerts /></PermissionGuard>} />
             <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
             <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
@@ -280,7 +287,8 @@ function App() {
           <Route path="/un-auth-page" element={<UnauthPage />} />
           <Route path="*" element={<NotFound />} />
 
-        </Routes>
+          </Routes>
+        </Suspense>
 
         <WhatsAppFloatingButton />
       </ErrorBoundary>

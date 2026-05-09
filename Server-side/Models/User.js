@@ -128,12 +128,47 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    // Set true when a super_admin resets this account's password.
+    // Auth login surfaces a `must_change_password` status without issuing a
+    // session token; client-side forced-rotation UI is a follow-up PR.
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+
     membership: {
       type: String,
       enum: ["standard", "elite", "rare", "legend", "vip"],
       default: "standard",
       index: true,
     },
+
+    // Admin-curated tags for fast filtering/segmentation. Distinct from
+    // `membership` (which is a tier) — tags are descriptive, multi-select,
+    // and can stack: a VIP can also be a "drop_collector" + "refund_risk".
+    tags: {
+      type: [String],
+      enum: [
+        "vip",
+        "high_spender",
+        "drop_collector",
+        "frequent_buyer",
+        "refund_risk",
+        "early_supporter",
+      ],
+      default: [],
+      index: true,
+    },
+
+    // Append-only admin commentary. Each entry captures who wrote it and
+    // when so we have a clear audit trail when handling support escalations.
+    adminNotes: [
+      {
+        note: { type: String, trim: true, maxlength: 2000 },
+        author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
 
     totalSpent: {
       type: Number,

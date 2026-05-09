@@ -17,6 +17,10 @@ import {
   UserCheck,
   UserCog,
   Users,
+  Tag as TagIcon,
+  StickyNote,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
@@ -56,6 +60,48 @@ const MEMBERSHIP_STYLES = {
   elite: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
   standard: "border-white/10 bg-white/5 text-gray-300",
 };
+
+// Customer tags drive segmentation in Marketing + Notifications. Order matters
+// here — these render as a chip row, left-to-right. Keep keys in sync with the
+// User model's enum.
+const CUSTOMER_TAGS = [
+  {
+    key: "vip",
+    label: "VIP",
+    description: "Manual flag for high-touch service",
+    accent: "border-[#f2ca50]/50 bg-[#f2ca50]/15 text-[#f2ca50]",
+  },
+  {
+    key: "high_spender",
+    label: "High Spender",
+    description: "Lifetime spend in top decile",
+    accent: "border-emerald-400/50 bg-emerald-400/10 text-emerald-200",
+  },
+  {
+    key: "drop_collector",
+    label: "Drop Collector",
+    description: "Buys from multiple drops",
+    accent: "border-violet-400/50 bg-violet-400/10 text-violet-200",
+  },
+  {
+    key: "frequent_buyer",
+    label: "Frequent Buyer",
+    description: "5+ orders in 90 days",
+    accent: "border-sky-400/50 bg-sky-400/10 text-sky-200",
+  },
+  {
+    key: "early_supporter",
+    label: "Early Supporter",
+    description: "Bought during launch window",
+    accent: "border-rose-400/50 bg-rose-400/10 text-rose-200",
+  },
+  {
+    key: "refund_risk",
+    label: "Refund Risk",
+    description: "Refunded ≥2 of last 5 orders",
+    accent: "border-orange-400/50 bg-orange-400/10 text-orange-200",
+  },
+];
 
 const membershipBadgeClasses = (membership) =>
   MEMBERSHIP_STYLES[membership] || MEMBERSHIP_STYLES.standard;
@@ -157,6 +203,9 @@ const UsersPage = () => {
   const [sortMode, setSortMode] = useState("newest");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [tagSubmitting, setTagSubmitting] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAdminUsers());
@@ -270,6 +319,60 @@ const UsersPage = () => {
         description: statusError || "Could not update this account.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Reset the note draft when switching users so we don't carry text across.
+  useEffect(() => {
+    setNoteDraft("");
+  }, [selectedUserId]);
+
+  const handleTagToggle = async (tagKey) => {
+    if (!selectedUser) return;
+    const currentTags = Array.isArray(selectedUser.tags) ? selectedUser.tags : [];
+    const nextTags = currentTags.includes(tagKey)
+      ? currentTags.filter((t) => t !== tagKey)
+      : [...currentTags, tagKey];
+
+    setTagSubmitting(tagKey);
+    try {
+      await dispatch(
+        updateAdminUserStatus({ userId: selectedUser._id, tags: nextTags })
+      ).unwrap();
+      // Refresh the detail so populated adminNotes/tags reflect the latest state.
+      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
+    } catch (tagError) {
+      toast({
+        title: "Tag update failed",
+        description: tagError || "Could not update tags.",
+        variant: "destructive",
+      });
+    } finally {
+      setTagSubmitting(null);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedUser || !noteDraft.trim()) return;
+    setNoteSubmitting(true);
+    try {
+      await dispatch(
+        updateAdminUserStatus({
+          userId: selectedUser._id,
+          addAdminNote: noteDraft.trim(),
+        })
+      ).unwrap();
+      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
+      setNoteDraft("");
+      toast({ title: "Note added", variant: "success" });
+    } catch (noteError) {
+      toast({
+        title: "Could not add note",
+        description: noteError || "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setNoteSubmitting(false);
     }
   };
 
@@ -730,6 +833,117 @@ const UsersPage = () => {
                   </div>
                 </section>
 
+                <section className="grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <TagIcon className="h-5 w-5 text-[#D4AF37]" />
+                        <h3 className="text-lg font-semibold text-white">Customer Tags</h3>
+                      </div>
+                      {(selectedUser.tags?.length || 0) > 0 ? (
+                        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+                          {selectedUser.tags.length} active
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                      Internal segmentation. Used by Marketing for targeted notifications and Recommendations for cohort analysis.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {CUSTOMER_TAGS.map((tag) => {
+                        const isActive = (selectedUser.tags || []).includes(tag.key);
+                        const isPending = tagSubmitting === tag.key;
+                        return (
+                          <button
+                            key={tag.key}
+                            type="button"
+                            onClick={() => handleTagToggle(tag.key)}
+                            disabled={isPending}
+                            title={tag.description}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              isActive
+                                ? tag.accent
+                                : "border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20 hover:text-white"
+                            }`}
+                          >
+                            {isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  isActive ? "bg-current" : "bg-white/20"
+                                }`}
+                              />
+                            )}
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                    <div className="flex items-center gap-3">
+                      <StickyNote className="h-5 w-5 text-[#D4AF37]" />
+                      <h3 className="text-lg font-semibold text-white">Admin Notes</h3>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                      Append-only. Captures who said what for support escalations.
+                    </p>
+
+                    <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                      {(selectedUser.adminNotes || []).length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-white/10 bg-black/40 px-3 py-4 text-center text-xs text-gray-500">
+                          No admin notes yet.
+                        </p>
+                      ) : (
+                        [...selectedUser.adminNotes]
+                          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                          .map((note, idx) => (
+                            <div
+                              key={note._id || idx}
+                              className="rounded-xl border border-white/5 bg-black/40 px-3 py-2"
+                            >
+                              <p className="text-xs leading-5 text-gray-200">{note.note}</p>
+                              <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
+                                {note.author?.email || note.author?.name || "Admin"} ·{" "}
+                                {formatDate(note.createdAt, true)}
+                              </p>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                      <textarea
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value.slice(0, 2000))}
+                        placeholder="Add an internal note about this customer…"
+                        rows={3}
+                        className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                          {noteDraft.length} / 2000
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleAddNote}
+                          disabled={!noteDraft.trim() || noteSubmitting}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {noteSubmitting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Plus className="h-3 w-3" />
+                          )}
+                          Add note
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
                 <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                   <div className="space-y-6">
                     <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
@@ -902,6 +1116,89 @@ const UsersPage = () => {
                         ) : (
                           <div className="rounded-2xl border border-dashed border-white/10 bg-black/40 p-5 text-sm text-gray-400">
                             No recent activity has been recorded for this account.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                      <div className="flex items-center gap-3">
+                        <ShieldCheck className="h-5 w-5 text-[#D4AF37]" />
+                        <h3 className="text-lg font-semibold text-white">Login Activity</h3>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Last 15 attempts. New IPs and devices are flagged for review.
+                      </p>
+                      <div className="mt-4 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                        {selectedUser.recentLogins?.length ? (
+                          selectedUser.recentLogins.map((login) => (
+                            <div
+                              key={login._id}
+                              className={`rounded-xl border p-3 text-sm ${
+                                login.success
+                                  ? login.newIp || login.newDevice
+                                    ? "border-amber-400/30 bg-amber-400/5"
+                                    : "border-white/5 bg-black/40"
+                                  : "border-rose-400/30 bg-rose-400/5"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`font-mono text-[9px] uppercase tracking-[0.22em] ${
+                                      login.success ? "text-emerald-300" : "text-rose-300"
+                                    }`}
+                                  >
+                                    {login.success
+                                      ? "Success"
+                                      : login.failureReason?.replace(/_/g, " ") || "Failed"}
+                                  </span>
+                                  {login.newIp ? (
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
+                                      · new IP
+                                    </span>
+                                  ) : null}
+                                  {login.newDevice ? (
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
+                                      · new device
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <span className="font-mono text-[10px] text-gray-400">
+                                  {formatDate(login.createdAt, true)}
+                                </span>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                    IP
+                                  </span>
+                                  <span className="font-mono text-[11px] text-gray-300">
+                                    {login.ip || "—"}
+                                  </span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                    Device
+                                  </span>
+                                  <span className="text-[11px] text-gray-300">
+                                    {login.deviceHint || "Unknown"}
+                                  </span>
+                                </span>
+                                {login.provider !== "local" ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                      Via
+                                    </span>
+                                    <span className="text-[11px] text-gray-300">{login.provider}</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-white/10 bg-black/40 p-4 text-sm text-gray-400">
+                            No login activity recorded yet.
                           </div>
                         )}
                       </div>

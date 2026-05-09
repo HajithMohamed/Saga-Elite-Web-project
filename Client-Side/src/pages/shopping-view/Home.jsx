@@ -127,8 +127,10 @@ const Home = () => {
         {/* 3. Trust bar — quick credibility strip */}
         <TrustBar />
 
-        {/* 3b. For You — personalized rail (hidden for anon users / cold start) */}
-        <ForYouRail />
+        {/* 3b. Personalized rails (hidden for anon users / cold start) */}
+        <ForYouRail variant="for-you" />
+        <ForYouRail variant="recently-viewed" />
+        <ForYouRail variant="trending-style" />
 
         {/* 4. Collection selector — 3 identity cards */}
         <CategoryLockup categoryImages={payload.categoryImages} />

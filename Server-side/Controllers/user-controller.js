@@ -4,6 +4,7 @@ const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
+const LoginActivity = require("../Models/LoginActivity");
 const UserActivityLog = require("../Models/UserActivityLog");
 const { isAdminRole } = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
@@ -83,6 +84,8 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   isVerified: user.isVerified,
   isActive: user.isActive,
   membership: user.membership || "standard",
+  tags: Array.isArray(user.tags) ? user.tags : [],
+  adminNotes: Array.isArray(user.adminNotes) ? user.adminNotes : [],
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -238,7 +241,7 @@ const escapeCsvValue = (value) => {
 const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = await User.find()
     .select(
-      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .sort({ createdAt: -1 })
     .lean();
@@ -293,8 +296,9 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
 const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id)
     .select(
-      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
+    .populate({ path: "adminNotes.author", select: "email name" })
     .lean();
 
   if (!user) {
@@ -303,7 +307,7 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
-  const [recentOrders, recentNotifications] = await Promise.all([
+  const [recentOrders, recentNotifications, recentLogins] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -314,7 +318,30 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       .limit(5)
       .select("type title message isRead entityType createdAt")
       .lean(),
+    LoginActivity.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(15)
+      .select("success failureReason provider ip deviceHint userAgent createdAt")
+      .lean(),
   ]);
+
+  // Tag entries that look suspicious so the UI can highlight them. "First
+  // sighting" of an IP or device counts as new only if at least one prior
+  // success exists — a brand-new account with one login isn't suspicious.
+  const successCount = recentLogins.filter((l) => l.success).length;
+  const seenIps = new Set();
+  const seenDevices = new Set();
+  const decoratedLogins = [...recentLogins].reverse().map((l) => {
+    const isNewIp = l.ip && !seenIps.has(l.ip);
+    const isNewDevice = l.deviceHint && !seenDevices.has(l.deviceHint);
+    if (l.ip) seenIps.add(l.ip);
+    if (l.deviceHint) seenDevices.add(l.deviceHint);
+    return {
+      ...l,
+      newIp: l.success && successCount > 1 && isNewIp,
+      newDevice: l.success && successCount > 1 && isNewDevice,
+    };
+  }).reverse();
 
   const summary = buildAdminUserSummary(
     user,
@@ -330,6 +357,7 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       addresses: user.addresses || [],
       recentOrders,
       recentNotifications,
+      recentLogins: decoratedLogins,
       activityTimeline: buildActivityTimeline({
         user,
         recentOrders,
@@ -340,11 +368,19 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 });
 
 const updateAdminUserStatus = catchAsync(async (req, res, next) => {
-  const { isActive, membership } = req.body;
+  const { isActive, membership, tags, addAdminNote } = req.body;
 
-  if (typeof isActive === "undefined" && typeof membership === "undefined") {
+  if (
+    typeof isActive === "undefined" &&
+    typeof membership === "undefined" &&
+    typeof tags === "undefined" &&
+    !addAdminNote
+  ) {
     return next(
-      new AppError("isActive or membership must be provided", 400)
+      new AppError(
+        "isActive, membership, tags, or addAdminNote must be provided",
+        400
+      )
     );
   }
 
@@ -370,6 +406,25 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
   if (typeof membership === "string") {
     user.membership = membership;
     changes.push(`membership → ${membership}`);
+  }
+
+  // Tag mutation — accepts the full target set; the model's enum guard
+  // filters anything unknown so the client doesn't need to validate.
+  if (Array.isArray(tags)) {
+    const allowed = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
+    const cleaned = [...new Set(tags.filter((t) => allowed.includes(t)))];
+    user.tags = cleaned;
+    changes.push(`tags: ${cleaned.length ? cleaned.join(", ") : "cleared"}`);
+  }
+
+  // Append-only note. Capture author so the audit trail shows who said what.
+  if (typeof addAdminNote === "string" && addAdminNote.trim()) {
+    user.adminNotes.push({
+      note: addAdminNote.trim().slice(0, 2000),
+      author: req.userInfo._id,
+      createdAt: new Date(),
+    });
+    changes.push("note added");
   }
 
   await user.save({ validateBeforeSave: false });

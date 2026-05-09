@@ -94,6 +94,30 @@ const initialProductForm = {
   variants: [defaultVariant],
 };
 
+// Draft key for the wizard's auto-save. Only used when creating a NEW product
+// (editing an existing one always loads server state, never a stale draft).
+const PRODUCT_DRAFT_KEY = "saga.admin.product.draft";
+
+const loadProductDraft = () => {
+  try {
+    const raw = localStorage.getItem(PRODUCT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const clearProductDraft = () => {
+  try {
+    localStorage.removeItem(PRODUCT_DRAFT_KEY);
+  } catch {
+    /* storage disabled — silent */
+  }
+};
+
 const PRODUCT_TAG_OPTIONS = [
   "LIMITED",
   "RARE",
@@ -158,6 +182,36 @@ const Product = () => {
     setProductImages([]);
     setActiveFormTab("basic");
   };
+
+  const openNewProductForm = () => {
+    const draft = loadProductDraft();
+    setFormData(draft ? { ...initialProductForm, ...draft } : initialProductForm);
+    setSelectedProductSlug(null);
+    setSelectedProductId(null);
+    setProductImages([]);
+    setActiveFormTab("basic");
+    setShowForm(true);
+    if (draft) {
+      toast({
+        title: "Draft restored",
+        description: "Resumed from your last unsaved product draft.",
+      });
+    }
+  };
+
+  // Auto-save the form to localStorage every ~600ms while creating a NEW product.
+  // Editing an existing product never persists a draft (would clobber server state on next open).
+  useEffect(() => {
+    if (!showForm || selectedProductSlug) return undefined;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(formData));
+      } catch {
+        /* quota or disabled — silent */
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [formData, showForm, selectedProductSlug]);
 
   const fetchProductImages = async (id) => {
     try {
@@ -303,6 +357,8 @@ const Product = () => {
         title: selectedProductSlug ? "Product updated successfully" : "Product created successfully",
         className: "bg-surface border border-primary-container text-saga-primary",
       });
+      // Successful create — drop the draft so the next "New Product" starts fresh.
+      if (!selectedProductSlug) clearProductDraft();
       setShowProductSaved(true);
       resetForm();
       fetchProducts();
@@ -904,6 +960,48 @@ const Product = () => {
           </div>
         </FormSection>
       ) : null}
+
+      {/* Step navigation — wizard Back / Next, with Save & Publish on the final step */}
+      {(() => {
+        const tabIds = PRODUCT_TABS.map((t) => t.id);
+        const idx = tabIds.indexOf(activeFormTab);
+        const isFirst = idx <= 0;
+        const isLast = idx >= tabIds.length - 1;
+        return (
+          <div className="mt-6 flex flex-col gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              disabled={isFirst}
+              onClick={() => !isFirst && setActiveFormTab(tabIds[idx - 1])}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3 w-3" /> Back
+            </button>
+
+            <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
+              Step {idx + 1} of {tabIds.length} · {PRODUCT_TABS[idx]?.label}
+            </span>
+
+            {isLast ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90"
+              >
+                {selectedProductSlug ? "Save product" : "Publish product"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveFormTab(tabIds[idx + 1])}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/[0.08] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+              >
+                Next <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        );
+      })()}
     </AdminFormShell>
   );
 
@@ -990,10 +1088,7 @@ const Product = () => {
               </button>
             </div>
             <button
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
+              onClick={openNewProductForm}
               className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
             >
               <Plus className="w-3 h-3" />

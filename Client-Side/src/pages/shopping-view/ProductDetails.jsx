@@ -234,6 +234,50 @@ const ProductDetails = () => {
     fetchReviewPreview();
   }, [product?._id]);
 
+  // Dwell-time beacon: send seconds-on-page when leaving or hiding the tab.
+  // Skip dwells <3s (just bouncing). Uses sendBeacon so it fires on tab close.
+  useEffect(() => {
+    if (!product?._id) return;
+    const productId = product._id;
+    const startedAt = Date.now();
+    let sent = false;
+
+    const sendDwell = () => {
+      if (sent) return;
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds < 3) return;
+      sent = true;
+      try {
+        const url = `${API_BASE}/products/${productId}/dwell`;
+        const blob = new Blob([JSON.stringify({ seconds })], { type: "application/json" });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, blob);
+        } else {
+          // Fallback for browsers without sendBeacon
+          fetch(url, {
+            method: "POST",
+            credentials: "include",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ seconds }),
+          }).catch(() => {});
+        }
+      } catch {
+        // never throw from a beacon
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") sendDwell();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      sendDwell();
+    };
+  }, [product?._id]);
+
   useEffect(() => {
     if (!product?._id) return;
 

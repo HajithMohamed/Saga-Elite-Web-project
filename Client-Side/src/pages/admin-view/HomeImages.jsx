@@ -2,9 +2,23 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 // eslint-disable-next-line no-unused-vars -- motion JSX
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
-import { RefreshCw, Star, Trash2, ArrowUpRight, Plus, ImageIcon, Type } from "lucide-react";
+import { RefreshCw, Star, Trash2, ArrowUpRight, Plus, ImageIcon, Type, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { compressImageFile } from "@/lib/image-compression";
@@ -64,6 +78,85 @@ function ShimmerImageTile({ src, alt }) {
   );
 }
 
+function SortableImageTile({ image, section, isNew, onSetPrimary, onToggleActive, onReplace, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: image._id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={isNew ? { scale: 0.85, opacity: 0 } : { opacity: 1, scale: 1 }}
+      animate={{ scale: 1, opacity: isDragging ? 0.5 : 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className={`group relative overflow-hidden rounded-3xl border border-neutral-800 bg-black/50 ${image.isActive === false ? "opacity-50" : ""}`}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="absolute right-3 bottom-3 z-30 inline-flex h-8 w-8 cursor-grab items-center justify-center rounded-full bg-black/70 text-white/80 hover:bg-black hover:text-white active:cursor-grabbing"
+        title="Drag to reorder"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="relative">
+        <ShimmerImageTile src={image.url} alt={image.altText || section.label} />
+        {image.isPrimary ? (
+          <span className="absolute left-3 top-3 z-20 rounded-full bg-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black">
+            Primary
+          </span>
+        ) : null}
+        {image.isActive === false ? (
+          <span className="absolute left-3 bottom-3 z-20 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300">
+            Hidden
+          </span>
+        ) : null}
+        {image.label ? (
+          <span className="absolute right-3 top-3 z-20 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+            {image.label}
+          </span>
+        ) : null}
+      </div>
+      <div className="space-y-2 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="truncate text-sm font-semibold text-white">{image.altText || "Uploaded image"}</p>
+          <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-gray-400">
+            {section.key}
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button size="sm" variant="secondary" onClick={() => onSetPrimary(image, section.key)} className="inline-flex items-center justify-center gap-1.5" title="Set as primary image">
+            <Star className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide">Primary</span>
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => onToggleActive(image, section.key)} className="inline-flex items-center justify-center gap-1.5" title={image.isActive === false ? "Show on customer site" : "Hide from customer site"}>
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              {image.isActive === false ? "Show" : "Hide"}
+            </span>
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => onReplace(image, section.key)} className="inline-flex items-center justify-center gap-1.5" title="Replace image file">
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide">Replace</span>
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => onDelete(image, section.key)} className="inline-flex items-center justify-center gap-1.5" title="Delete image">
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide">Delete</span>
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 const AdminHomeImages = () => {
   const hero = useSectionState();
   const banner = useSectionState();
@@ -73,6 +166,35 @@ const AdminHomeImages = () => {
   const [newImageIds, setNewImageIds] = useState(() => new Set());
   const [activeTab, setActiveTab] = useState("galleries");
   const { toast } = useToast();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const handleReorder = (sectionKey) => async (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const section = getSectionSetter(sectionKey);
+    if (!section) return;
+    const oldIndex = section.images.findIndex((i) => i._id === active.id);
+    const newIndex = section.images.findIndex((i) => i._id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const original = section.images;
+    const reordered = arrayMove(section.images, oldIndex, newIndex);
+    section.setImages(reordered);
+    try {
+      await axios.patch(
+        `${API_BASE}/image/reorder-images`,
+        { imageOrders: reordered.map((img, idx) => ({ imageId: img._id, order: idx })) },
+        { withCredentials: true }
+      );
+    } catch (error) {
+      toast({
+        title: "Reorder failed",
+        description: error.response?.data?.message || error.message || "Could not save new order",
+        variant: "destructive",
+      });
+      section.setImages(original);
+    }
+  };
 
   const sectionState = {
     hero,
@@ -194,6 +316,34 @@ const AdminHomeImages = () => {
     }
   };
 
+  const handleToggleActive = async (image, type) => {
+    const section = getSectionSetter(type);
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/image/toggle-active/${image._id}`,
+        {},
+        { withCredentials: true }
+      );
+      const updated = response.data.image;
+      section.setImages((prev) =>
+        prev.map((item) => (item._id === updated._id ? { ...item, isActive: updated.isActive } : item))
+      );
+      toast({
+        title: updated.isActive ? "Image activated" : "Image hidden",
+        description: updated.isActive
+          ? "Now visible on the customer site."
+          : "Hidden from the customer site without deleting.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Toggle failed",
+        description: error.response?.data?.message || error.message || "Unable to toggle visibility",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleReplace = async (image, type) => {
     const section = getSectionSetter(type);
     const input = document.createElement("input");
@@ -240,9 +390,9 @@ const AdminHomeImages = () => {
 
   return (
     <AdminPage
-      eyebrow="Homepage media"
-      title="Home Images"
-      description="Manage hero, banner, logo, and category image assets with simple controls."
+      eyebrow="Store · Media"
+      title="Media Library"
+      description="Manage hero, banner, logo, and category image assets. Drag to reorder, toggle visibility, or replace inline."
     >
       <motion.div
         variants={pageVariants}
@@ -387,80 +537,30 @@ const AdminHomeImages = () => {
                       ) : state.images.length === 0 ? (
                         <p className="mt-4 text-sm text-gray-400">No images uploaded yet.</p>
                       ) : (
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <AnimatePresence>
-                            {state.images.map((image) => (
-                              <motion.div
-                                key={image._id}
-                                layout
-                                initial={
-                                  newImageIds.has(image._id)
-                                    ? { scale: 0.85, opacity: 0 }
-                                    : { opacity: 1, scale: 1 }
-                                }
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                                whileHover={{ y: -4 }}
-                                className="group overflow-hidden rounded-3xl border border-neutral-800 bg-black/50"
-                              >
-                                <div className="relative">
-                                  <ShimmerImageTile src={image.url} alt={image.altText || section.label} />
-                                  {image.isPrimary ? (
-                                    <span className="absolute left-3 top-3 z-20 rounded-full bg-[#D4AF37] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-black">
-                                      Primary
-                                    </span>
-                                  ) : null}
-                                  {image.label ? (
-                                    <span className="absolute right-3 top-3 z-20 rounded-full bg-black/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
-                                      {image.label}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <div className="space-y-2 p-4">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <p className="truncate text-sm font-semibold text-white">{image.altText || "Uploaded image"}</p>
-                                    <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-gray-400">
-                                      {section.key}
-                                    </span>
-                                  </div>
-                                  <div className="grid gap-2 sm:grid-cols-3">
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => handleSetPrimary(image, section.key)}
-                                      className="inline-flex items-center justify-center gap-1.5"
-                                      title="Set as primary image"
-                                    >
-                                      <Star className="h-3.5 w-3.5" />
-                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Primary</span>
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => handleReplace(image, section.key)}
-                                      className="inline-flex items-center justify-center gap-1.5"
-                                      title="Replace image file"
-                                    >
-                                      <ArrowUpRight className="h-3.5 w-3.5" />
-                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Replace</span>
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => handleDelete(image, section.key)}
-                                      className="inline-flex items-center justify-center gap-1.5"
-                                      title="Delete image"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                      <span className="text-[10px] font-semibold uppercase tracking-wide">Delete</span>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </AnimatePresence>
-                        </div>
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleReorder(section.key)}
+                        >
+                          <SortableContext items={state.images.map((i) => i._id)} strategy={rectSortingStrategy}>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <AnimatePresence>
+                                {state.images.map((image) => (
+                                  <SortableImageTile
+                                    key={image._id}
+                                    image={image}
+                                    section={section}
+                                    isNew={newImageIds.has(image._id)}
+                                    onSetPrimary={handleSetPrimary}
+                                    onToggleActive={handleToggleActive}
+                                    onReplace={handleReplace}
+                                    onDelete={handleDelete}
+                                  />
+                                ))}
+                              </AnimatePresence>
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       )}
                     </div>
                   </div>

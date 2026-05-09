@@ -16,7 +16,11 @@ import {
   Bell,
   Settings,
   Sparkles,
+  BarChart3,
+  Film,
+  Quote,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   getAllDrops,
   updateDrop,
@@ -113,6 +117,10 @@ const ToggleSwitch = ({
 const initialFormData = {
   name: "",
   description: "",
+  headline: "",
+  manifesto: "",
+  cinematicMode: false,
+  vipEarlyAccessHours: 0,
   releaseDate: "",
   endDate: "",
   isPublished: true,
@@ -572,6 +580,104 @@ const Drops = () => {
           </>
         )}
       </FormSection>
+
+      <FormSection
+        number="04"
+        title="Story & Hype"
+        description="The emotional layer customers see on the drop page. Drives anticipation and brand voice."
+      >
+        <FormField
+          label="Headline"
+          optional
+          helper="One-line hook above the drop title — keeps users on the page."
+          hint={`${(formData.headline || "").length} / 140`}
+        >
+          <LuxuryInput
+            value={formData.headline || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, headline: e.target.value.slice(0, 140) })
+            }
+            placeholder="The drop you've been waiting for."
+          />
+        </FormField>
+
+        <FormField
+          label="Manifesto"
+          optional
+          helper="Long-form story shown on the drop page. Set the tone — references, inspiration, why it exists."
+          hint={`${(formData.manifesto || "").length} / 4000`}
+        >
+          <LuxuryTextarea
+            rows={6}
+            value={formData.manifesto || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, manifesto: e.target.value.slice(0, 4000) })
+            }
+            placeholder="A few sentences that capture the spirit of this drop. Keep it raw — this is what customers will quote."
+          />
+        </FormField>
+
+        <div className="rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] p-4">
+          <label className="flex cursor-pointer items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Film className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" />
+              <div>
+                <p className="text-sm font-semibold text-white">Cinematic mode</p>
+                <p className="mt-1 text-xs text-white/55">
+                  Renders the drop landing with a fullscreen hero + animated reveal. Best for marquee
+                  releases.
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={!!formData.cinematicMode}
+              onChange={(e) =>
+                setFormData({ ...formData, cinematicMode: e.target.checked })
+              }
+              className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+            />
+          </label>
+        </div>
+
+        <FormField
+          label="VIP early access (hours)"
+          optional
+          helper="Customers tagged 'vip' can shop this drop this many hours before the public release. 0 = no early access."
+          hint={`${Number(formData.vipEarlyAccessHours) || 0}h`}
+        >
+          <LuxuryInput
+            type="number"
+            min={0}
+            max={168}
+            step={1}
+            value={formData.vipEarlyAccessHours ?? 0}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                vipEarlyAccessHours: Math.max(
+                  0,
+                  Math.min(168, Number(e.target.value) || 0)
+                ),
+              })
+            }
+            placeholder="0"
+          />
+        </FormField>
+
+        {currentEditedSlug ? (
+          <Link
+            to="/admin/drop-analytics"
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+          >
+            <BarChart3 className="h-3.5 w-3.5" /> View drop performance
+          </Link>
+        ) : (
+          <p className="mt-4 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
+            <Quote className="h-3 w-3" /> Performance analytics unlock after publishing.
+          </p>
+        )}
+      </FormSection>
     </AdminFormShell>
   );
 
@@ -769,7 +875,11 @@ const Drops = () => {
                       setCurrentEditedSlug(drop.slug);
                       setFormData({
                         name: drop.name,
-                        description: drop.description,
+                        description: drop.description || "",
+                        headline: drop.headline || "",
+                        manifesto: drop.manifesto || "",
+                        cinematicMode: !!drop.cinematicMode,
+                        vipEarlyAccessHours: Number(drop.vipEarlyAccessHours) || 0,
                         releaseDate: drop.releaseDate.split("T")[0],
                         endDate: drop.endDate
                           ? drop.endDate.split("T")[0]

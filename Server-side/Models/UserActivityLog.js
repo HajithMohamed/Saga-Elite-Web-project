@@ -16,12 +16,23 @@ const userActivityLogSchema = new mongoose.Schema(
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true,
+      required: function () {
+        return this.action !== "search";
+      },
       index: true,
     },
     action: {
       type: String,
-      enum: ["view", "wishlist_add", "wishlist_remove", "cart_add", "cart_remove", "purchase"],
+      enum: [
+        "view",
+        "wishlist_add",
+        "wishlist_remove",
+        "cart_add",
+        "cart_remove",
+        "purchase",
+        "search",
+        "dwell",
+      ],
       required: true,
       index: true,
     },

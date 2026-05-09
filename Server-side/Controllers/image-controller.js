@@ -8,8 +8,48 @@ const uploadToCloudinary = require("../Utils/image-upload");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const winston = require("winston");
+const { imageSize } = require("image-size");
 
 const MAX_IMAGES_PER_ENTITY = 10;
+
+// Per-system-type upload constraints. Reject before Cloudinary touches anything.
+const SYSTEM_IMAGE_LIMITS = {
+  hero:           { minWidth: 1600, minHeight: 600,  maxBytes: 5 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  ad:             { minWidth: 800,  minHeight: 800,  maxBytes: 3 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  logo:           { minWidth: 256,  minHeight: 256,  maxBytes: 1 * 1024 * 1024, mimes: ["image/png", "image/webp", "image/svg+xml"] },
+  "category-logo":{ minWidth: 400,  minHeight: 400,  maxBytes: 2 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  "social-ugc":   { minWidth: 600,  minHeight: 600,  maxBytes: 4 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+};
+
+const validateSystemImageFile = (file, type) => {
+  const limits = SYSTEM_IMAGE_LIMITS[type];
+  if (!limits) return null;
+  if (!limits.mimes.includes(file.mimetype)) {
+    return `${type} images must be one of: ${limits.mimes.join(", ")} (got ${file.mimetype})`;
+  }
+  if (file.size > limits.maxBytes) {
+    const maxMb = (limits.maxBytes / (1024 * 1024)).toFixed(1);
+    return `${type} images must be ≤${maxMb}MB (got ${(file.size / (1024 * 1024)).toFixed(1)}MB)`;
+  }
+  // SVG dimensions can't be read by image-size reliably; skip dimension check for SVG
+  if (file.mimetype === "image/svg+xml") return null;
+  try {
+    const dims = imageSize(file.buffer);
+    if (!dims?.width || !dims?.height) {
+      return `${type} image dimensions could not be determined`;
+    }
+    if (dims.width < limits.minWidth || dims.height < limits.minHeight) {
+      return `${type} images must be at least ${limits.minWidth}×${limits.minHeight}px (got ${dims.width}×${dims.height})`;
+    }
+  } catch (err) {
+    return `${type} image is not a valid image file`;
+  }
+  return null;
+};
+
+const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
+const isAdminViewer = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
+const visibilityFilter = (req) => (isAdminViewer(req.userInfo) ? {} : { isActive: true });
 
 // Configure Winston logger for image actions
 const actionLogger = winston.createLogger({
@@ -90,6 +130,12 @@ const uploadImages = catchAsync(async (req, res, next) => {
           400
         )
       );
+    }
+
+    // Per-type size/format/dimension checks
+    for (const file of req.files) {
+      const error = validateSystemImageFile(file, imageData.type);
+      if (error) return next(new AppError(error, 400));
     }
   }
 
@@ -393,6 +439,7 @@ const getHeroImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "hero",
     isDeleted: false,
+    ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
   if (!heroImages.length) {
@@ -411,6 +458,7 @@ const getAdImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "ad",
     isDeleted: false,
+    ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
   if (!adImages.length) {
@@ -429,6 +477,7 @@ const getLogoImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "logo",
     isDeleted: false,
+    ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
   if (!logoImages.length) {
@@ -451,6 +500,7 @@ const getCategoryLogoImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "category-logo",
     isDeleted: false,
+    ...visibilityFilter(req),
   };
 
   if (req.query.label) {
@@ -498,6 +548,7 @@ const getSocialUgcImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "social-ugc",
     isDeleted: false,
+    ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
   if (!images.length) {
@@ -563,6 +614,33 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
     success: true,
     message: "Primary image updated successfully",
     image: updatedImage,
+  });
+});
+
+/* ==============================
+   Toggle Active (visibility) — distinct from soft-delete
+============================== */
+const toggleActiveImage = catchAsync(async (req, res, next) => {
+  const imageId = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Invalid image ID", 400));
+  }
+  const image = await Image.findById(imageId);
+  if (!image || image.isDeleted) {
+    return next(new AppError("Image not found", 404));
+  }
+  image.isActive = !image.isActive;
+  await image.save();
+  actionLogger.info({
+    action: "toggle_active_image",
+    userId: req.userInfo ? req.userInfo._id : null,
+    imageId: image._id,
+    isActive: image.isActive,
+  });
+  res.status(200).json({
+    success: true,
+    message: `Image ${image.isActive ? "activated" : "deactivated"}`,
+    image,
   });
 });
 
@@ -801,6 +879,7 @@ module.exports = {
   getReviewImages,
   getSocialUgcImages,
   setPrimaryImage,
+  toggleActiveImage,
   deleteImage,
   reorderImages,
   deleteAllImages,

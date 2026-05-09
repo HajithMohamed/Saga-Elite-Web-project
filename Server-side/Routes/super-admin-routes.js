@@ -43,6 +43,18 @@ router.patch(
   superAdminController.toggleAdminActiveStatus
 );
 
+router.delete(
+  "/admins/:id",
+  validateObjectIdParam("id", "admin id"),
+  superAdminController.deleteAdmin
+);
+
+router.post(
+  "/admins/:id/reset-password",
+  validateObjectIdParam("id", "admin id"),
+  superAdminController.resetAdminPassword
+);
+
 // ── Logs ────────────────────────────────────────────────────────────
 router.get("/logs", superAdminController.getActivityLogs);
 router.get(

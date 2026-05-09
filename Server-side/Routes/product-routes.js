@@ -9,6 +9,7 @@ const {
   getAdminAnalytics,
   searchProducts,
   getRecommendations,
+  recordDwell,
 } = require("../Controllers/product-controller");
 const paginatedResult = require("../Middlewares/pagination-middleware");
 const Product = require("../Models/Product");
@@ -25,8 +26,9 @@ const router = express.Router();
 
 router.get("/get-all-products", paginatedResult(Product), getAllProducts);
 router.get("/", getLandingProducts);
-router.get("/search", searchProducts);
+router.get("/search", optionalAuthMiddleware, searchProducts);
 router.get("/recommendations", optionalAuthMiddleware, getRecommendations);
+router.post("/:productId/dwell", optionalAuthMiddleware, recordDwell);
 router.get("/get-single-product/:slug", optionalAuthMiddleware, getSingleProduct);
 router.get("/analytics", authMiddleware, adminMiddleware, requirePermission("products"), getAdminAnalytics);
 router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, adminLogMiddleware, addProduct);

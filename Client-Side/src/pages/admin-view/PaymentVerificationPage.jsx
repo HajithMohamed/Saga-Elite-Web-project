@@ -10,11 +10,15 @@ import {
   Banknote,
   Beaker,
   CheckCircle2,
+  Contrast,
   Landmark,
   Loader2,
+  Maximize2,
   MessageSquareText,
+  RotateCcw,
   ScanLine,
   ShieldAlert,
+  Sun,
   XCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -48,6 +52,21 @@ const PaymentVerificationPage = () => {
   const [proofLightboxOpen, setProofLightboxOpen] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [imageFilters, setImageFilters] = useState({
+    brightness: 100,
+    contrast: 100,
+    grayscale: 0,
+    invert: 0,
+  });
+
+  const filterStyle = `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) grayscale(${imageFilters.grayscale}%) invert(${imageFilters.invert}%)`;
+  const filtersDirty =
+    imageFilters.brightness !== 100 ||
+    imageFilters.contrast !== 100 ||
+    imageFilters.grayscale !== 0 ||
+    imageFilters.invert !== 0;
+  const resetFilters = () =>
+    setImageFilters({ brightness: 100, contrast: 100, grayscale: 0, invert: 0 });
 
   // The dev endpoint is only mounted when NODE_ENV !== "production". Vite
   // exposes import.meta.env.PROD/MODE — we render the simulate button only
@@ -237,109 +256,244 @@ const PaymentVerificationPage = () => {
           />
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-          <section className="space-y-6 rounded-[1.75rem] border border-[#D4AF37]/10 bg-[#0b0b0b] p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.24em] ${statusTone[currentPayment.status] || statusTone.pending_payment}`}>
-                {currentPayment.status}
-              </span>
-              <span className="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-gray-300">
-                {currentPayment.currency} {formatCurrency(currentPayment.amount)}
-              </span>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className={eyebrow}>Reference number</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="font-mono text-lg tracking-[0.2em] text-[#D4AF37]">{currentPayment.referenceNumber}</p>
+        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          {/* LEFT — Image-focused proof viewer with enhancement controls */}
+          <section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+            <div className="rounded-[1.75rem] border border-[#D4AF37]/15 bg-[#0b0b0b] p-4">
+              <div className="flex items-center justify-between gap-3 px-2 pb-3 pt-1">
+                <div className="flex items-center gap-2">
+                  <ScanLine className="h-4 w-4 text-[#D4AF37]" />
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+                    Payment proof
+                  </p>
+                </div>
+                {currentPayment.proofUrl && !currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentPayment.referenceNumber);
-                    }}
-                    className="rounded-full border border-[#D4AF37]/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10 hover:text-white"
+                    type="button"
+                    onClick={() => setProofLightboxOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
                   >
-                    Copy
+                    <Maximize2 className="h-3 w-3" /> Enlarge
                   </button>
-                </div>
+                ) : null}
               </div>
-              <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className={eyebrow}>Customer email</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-sm text-white">{customerEmail}</p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(customerEmail);
-                    }}
-                    className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
-                  >
-                    Copy
-                  </button>
-                </div>
+              <div className="overflow-hidden rounded-[20px] border border-white/10 bg-black/60">
+                {currentPayment.proofUrl ? (
+                  currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
+                    <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-gray-300">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                        PDF proof
+                      </p>
+                      <a
+                        href={currentPayment.proofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
+                      >
+                        Open receipt
+                      </a>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setProofLightboxOpen(true)}
+                      className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+                    >
+                      <img
+                        src={currentPayment.proofUrl}
+                        alt="Payment proof — tap to enlarge"
+                        style={{ filter: filterStyle }}
+                        className="max-h-[640px] w-full cursor-zoom-in object-contain transition group-hover:opacity-95"
+                      />
+                      <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                        View full size
+                      </span>
+                    </button>
+                  )
+                ) : (
+                  <div className="flex min-h-[420px] items-center justify-center text-sm text-gray-400">
+                    No proof image stored.
+                  </div>
+                )}
               </div>
             </div>
 
-            {currentPayment.extensionGranted && (
-              <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">Time Extension Granted</p>
-                <p className="mt-1 text-sm text-blue-200">
-                  Customer requested 12-hour extension at {currentPayment.extensionRequestedAt ? formatDateTime(currentPayment.extensionRequestedAt) : "unknown time"}.
-                </p>
-              </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className={eyebrow}>Order ID</p>
-                <p className="mt-2 break-all text-sm text-white">{order._id}</p>
-              </div>
-              <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className={eyebrow}>Submitted at</p>
-                <p className="mt-2 text-sm text-white">{formatDateTime(currentPayment.proofSubmittedAt)}</p>
-              </div>
-              <div className="rounded-2xl border border-white/5 bg-black/35 p-4">
-                <p className={eyebrow}>Proof expires</p>
-                <p className="mt-2 text-sm text-white">{formatDateTime(currentPayment.expiresAt)}</p>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-[24px] border border-white/5 bg-black/30">
-              {currentPayment.proofUrl ? currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
-                <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 p-8 text-center text-gray-300">
-                  <p className="text-sm uppercase tracking-[0.24em] text-gray-500">PDF proof</p>
-                  <a
-                    href={currentPayment.proofUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
-                  >
-                    Open receipt
-                  </a>
+            {currentPayment.proofUrl && !currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
+              <div className="rounded-[1.5rem] border border-white/10 bg-[#0b0b0b] p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
+                    Image enhancement
+                  </p>
+                  {filtersDirty ? (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Reset
+                    </button>
+                  ) : null}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setProofLightboxOpen(true)}
-                  className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
-                >
-                  <img
-                    src={currentPayment.proofUrl}
-                    alt="Payment proof — tap to enlarge"
-                    className="max-h-[520px] w-full cursor-zoom-in object-contain transition group-hover:opacity-95"
-                  />
-                  <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
-                    View full size
-                  </span>
-                </button>
-              ) : (
-                <div className="flex min-h-[360px] items-center justify-center text-sm text-gray-400">
-                  No proof image stored.
+                <div className="space-y-4">
+                  <label className="block">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-400">
+                        <Sun className="h-3 w-3" /> Brightness
+                      </span>
+                      <span className="font-mono text-[10px] tabular-nums text-gray-300">
+                        {imageFilters.brightness}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      step="5"
+                      value={imageFilters.brightness}
+                      onChange={(e) =>
+                        setImageFilters((current) => ({
+                          ...current,
+                          brightness: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[#D4AF37]"
+                    />
+                  </label>
+                  <label className="block">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-400">
+                        <Contrast className="h-3 w-3" /> Contrast
+                      </span>
+                      <span className="font-mono text-[10px] tabular-nums text-gray-300">
+                        {imageFilters.contrast}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      step="5"
+                      value={imageFilters.contrast}
+                      onChange={(e) =>
+                        setImageFilters((current) => ({
+                          ...current,
+                          contrast: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full accent-[#D4AF37]"
+                    />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageFilters((current) => ({
+                          ...current,
+                          grayscale: current.grayscale > 0 ? 0 : 100,
+                        }))
+                      }
+                      className={`rounded-xl border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] transition ${
+                        imageFilters.grayscale > 0
+                          ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37]"
+                          : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                      }`}
+                    >
+                      Grayscale
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageFilters((current) => ({
+                          ...current,
+                          invert: current.invert > 0 ? 0 : 100,
+                        }))
+                      }
+                      className={`rounded-xl border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] transition ${
+                        imageFilters.invert > 0
+                          ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37]"
+                          : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                      }`}
+                    >
+                      Invert
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {/* RIGHT — Identity, order details, OCR, bank, decision */}
+          <aside className="space-y-6">
+            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.24em] ${statusTone[currentPayment.status] || statusTone.pending_payment}`}>
+                  {currentPayment.status}
+                </span>
+                <span className="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-gray-300">
+                  {currentPayment.currency} {formatCurrency(currentPayment.amount)}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <p className={eyebrow}>Reference</p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="truncate font-mono text-base tracking-[0.18em] text-[#D4AF37]">
+                      {currentPayment.referenceNumber}
+                    </p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentPayment.referenceNumber);
+                      }}
+                      className="shrink-0 rounded-full border border-[#D4AF37]/50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10 hover:text-white"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <p className={eyebrow}>Customer</p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="truncate text-sm text-white">{customerEmail}</p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(customerEmail);
+                      }}
+                      className="shrink-0 rounded-full border border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <p className={eyebrow}>Order ID</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-gray-300">{order._id}</p>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <p className={eyebrow}>Submitted</p>
+                  <p className="mt-1 text-xs text-white">{formatDateTime(currentPayment.proofSubmittedAt)}</p>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <p className={eyebrow}>Expires</p>
+                  <p className="mt-1 text-xs text-white">{formatDateTime(currentPayment.expiresAt)}</p>
+                </div>
+              </div>
+
+              {currentPayment.extensionGranted && (
+                <div className="mt-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-3">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-blue-400">
+                    Time extension granted
+                  </p>
+                  <p className="mt-1 text-xs text-blue-200">
+                    Customer requested 12-hour extension at {currentPayment.extensionRequestedAt ? formatDateTime(currentPayment.extensionRequestedAt) : "unknown time"}.
+                  </p>
                 </div>
               )}
             </div>
-          </section>
 
-          <aside className="space-y-6">
             <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
                 <Landmark className="h-4 w-4 text-[#D4AF37]" /> Order summary
@@ -672,6 +826,7 @@ const PaymentVerificationPage = () => {
               <img
                 src={currentPayment.proofUrl}
                 alt="Payment proof enlarged"
+                style={{ filter: filterStyle }}
                 className="max-h-[85vh] w-full object-contain"
               />
             </motion.div>

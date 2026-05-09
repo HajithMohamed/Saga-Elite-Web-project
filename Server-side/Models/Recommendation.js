@@ -8,6 +8,7 @@ const itemSchema = new mongoose.Schema(
     frequency: { type: Number, default: 0 },
     category: { type: String, default: "" },
     refIds: [{ type: mongoose.Schema.Types.ObjectId }],
+    confidence: { type: Number, min: 0, max: 100, default: 50 },
   },
   { _id: false }
 );
@@ -19,6 +20,7 @@ const recommendationActionSchema = new mongoose.Schema(
     priority: { type: String, enum: ["high", "medium", "low"], default: "medium" },
     expectedImpact: { type: String, default: "", trim: true },
     supportingData: { type: String, default: "", trim: true },
+    confidence: { type: Number, min: 0, max: 100, default: 50 },
   },
   { _id: false }
 );

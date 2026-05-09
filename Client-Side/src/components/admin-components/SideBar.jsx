@@ -26,6 +26,9 @@ import {
   Bell,
   Globe,
   Sparkles,
+  AlertTriangle,
+  Layers3,
+  Layout,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -37,22 +40,20 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Catalog: ["Products", "Drops", "Mystery Gifts"],
-  Orders: ["Orders", "Manual Payments", "Shipping"],
-  Customers: ["Users", "Reviews", "Recommendations", "Contact Inquiries"],
-  Marketing: ["Offers & Deals", "Coupons", "Newsletter", "Notifications"],
-  Content: ["Home Images", "Site Pages"],
-  Insights: ["Analytics"],
-  Settings: ["SEO & Branding", "Admin Team"],
+  Dashboard: ["Dashboard", "Alerts"],
+  Store: ["Products", "Drops", "Mystery Collectibles"],
+  Sales: ["Orders", "Manual Payments", "Customers", "Reviews", "Contact Inquiries"],
+  Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
+  Analytics: ["Analytics", "Recommendations"],
+  Settings: ["Shipping", "About Content", "SEO & Branding", "Admin Team"],
 };
 
 const SECTION_ORDER = [
-  "Catalog",
-  "Orders",
-  "Customers",
+  "Dashboard",
+  "Store",
+  "Sales",
   "Marketing",
-  "Content",
-  "Insights",
+  "Analytics",
   "Settings",
 ];
 
@@ -73,15 +74,18 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
   const [uncategorizedReviewCount, setUncategorizedReviewCount] = useState(0);
   const [agingAlertCount, setAgingAlertCount] = useState(0);
+  const [smartAlertCount, setSmartAlertCount] = useState(0);
   const [isLg, setIsLg] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
   const prevPaymentRef = useRef(0);
   const prevReviewRef = useRef(0);
   const prevAgingRef = useRef(0);
+  const prevSmartAlertRef = useRef(0);
   const [paymentBounce, setPaymentBounce] = useState(0);
   const [reviewBounce, setReviewBounce] = useState(0);
   const [agingBounce, setAgingBounce] = useState(0);
+  const [smartAlertBounce, setSmartAlertBounce] = useState(0);
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -89,7 +93,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       // permission shouldn't break the others. Catch per-request so a 403
       // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
       const fallback = { data: { success: true, data: { count: 0 } } };
-      const [paymentRes, reviewRes, agingRes] = await Promise.all([
+      const [paymentRes, reviewRes, agingRes, smartAlertRes] = await Promise.all([
         // Count anything that needs admin eyes — both manual-review proofs
         // and provisional OCR-matches still waiting on bank confirmation.
         axios
@@ -108,6 +112,9 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             withCredentials: true,
           })
           .catch(() => fallback),
+        axios
+          .get(`${API_V1_URL}/admin/alerts?countOnly=true`, { withCredentials: true })
+          .catch(() => fallback),
       ]);
 
       if (paymentRes.data?.success) {
@@ -121,10 +128,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       if (agingRes.data?.success) {
         setAgingAlertCount(agingRes.data.data?.count || 0);
       }
+
+      if (smartAlertRes.data?.success) {
+        setSmartAlertCount(smartAlertRes.data.data?.count || 0);
+      }
     } catch {
       setPendingPaymentCount(0);
       setUncategorizedReviewCount(0);
       setAgingAlertCount(0);
+      setSmartAlertCount(0);
     }
   }, []);
 
@@ -178,6 +190,16 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     prevAgingRef.current = a;
   }, [agingAlertCount]);
 
+  useEffect(() => {
+    const s = smartAlertCount;
+    if (s > 0 && prevSmartAlertRef.current === 0 && s !== prevSmartAlertRef.current) {
+      setSmartAlertBounce((k) => k + 1);
+    } else if (s > prevSmartAlertRef.current && prevSmartAlertRef.current > 0) {
+      setSmartAlertBounce((k) => k + 1);
+    }
+    prevSmartAlertRef.current = s;
+  }, [smartAlertCount]);
+
   useSocketEvent("payment:new_pending", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("admin:refresh", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("payment:refresh", () => fetchCounts(), [fetchCounts]);
@@ -187,15 +209,23 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const userPerms = user?.permissions || {};
 
   const allMenuItems = [
-    // Overview
+    // Dashboard
     {
       label: "Dashboard",
       path: "/admin/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
       permission: null,
     },
+    {
+      label: "Alerts",
+      path: "/admin/alerts",
+      icon: <AlertTriangle className="h-5 w-5" />,
+      badge: smartAlertCount,
+      bounceKey: smartAlertBounce,
+      permission: "manageReviews",
+    },
 
-    // Catalog
+    // Store
     {
       label: "Products",
       path: "/admin/product",
@@ -209,13 +239,13 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "drops",
     },
     {
-      label: "Mystery Gifts",
+      label: "Mystery Collectibles",
       path: "/admin/gifts",
       icon: <Gift className="h-5 w-5" />,
       permission: "products",
     },
 
-    // Orders
+    // Sales
     {
       label: "Orders",
       path: "/admin/order",
@@ -231,15 +261,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "verifyPayments",
     },
     {
-      label: "Shipping",
-      path: "/admin/shipping",
-      icon: <Truck className="h-5 w-5" />,
-      permission: "manageInventory",
-    },
-
-    // Customers
-    {
-      label: "Users",
+      label: "Customers",
       path: "/admin/users",
       icon: <Users className="h-5 w-5" />,
       permission: "users",
@@ -253,12 +275,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "manageReviews",
     },
     {
-      label: "Recommendations",
-      path: "/admin/recommendations",
-      icon: <Sparkles className="h-5 w-5" />,
-      permission: "manageReviews",
-    },
-    {
       label: "Contact Inquiries",
       path: "/admin/contact-inquiries",
       icon: <Inbox className="h-5 w-5" />,
@@ -266,6 +282,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     },
 
     // Marketing
+    {
+      label: "Notifications",
+      path: "/admin/notifications",
+      icon: <Bell className="h-5 w-5" />,
+      permission: "notifications",
+    },
     {
       label: "Offers & Deals",
       path: "/admin/offers",
@@ -286,37 +308,35 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <Newspaper className="h-5 w-5" />,
       permission: null,
     },
-    {
-      label: "Notifications",
-      path: "/admin/notifications",
-      icon: <Bell className="h-5 w-5" />,
-      permission: "notifications",
-    },
 
-    // Content
-    {
-      label: "Home Images",
-      path: "/admin/home-images",
-      icon: <ImagePlus className="h-5 w-5" />,
-      permission: "products",
-    },
-    {
-      label: "Site Pages",
-      path: "/admin/about-content",
-      icon: <Settings className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-
-    // Insights
+    // Analytics
     {
       label: "Analytics",
       path: "/admin/analytics",
       icon: <BarChart3 className="h-5 w-5" />,
       permission: "viewAnalytics",
     },
+    {
+      label: "Recommendations",
+      path: "/admin/recommendations",
+      icon: <Sparkles className="h-5 w-5" />,
+      permission: "manageReviews",
+    },
 
     // Settings
+    {
+      label: "Shipping",
+      path: "/admin/shipping",
+      icon: <Truck className="h-5 w-5" />,
+      permission: "manageInventory",
+    },
+    {
+      label: "About Content",
+      path: "/admin/about-content",
+      icon: <FileText className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
     {
       label: "SEO & Branding",
       path: "/admin/seo",
@@ -343,21 +363,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     });
   }
 
-  // Build a render order: Dashboard first (no section), then grouped sections, then super-admin trail.
+  // Build a render order: 6 grouped sections in SECTION_ORDER, then any uncategorized trail.
   const renderGroups = [];
-  const overviewItems = menuItems.filter((i) => i.label === "Dashboard");
-  if (overviewItems.length) {
-    renderGroups.push({ section: null, items: overviewItems });
-  }
 
   SECTION_ORDER.forEach((section) => {
     const items = menuItems.filter((i) => findSectionFor(i.label) === section);
     if (items.length) renderGroups.push({ section, items });
   });
 
-  const trailingItems = menuItems.filter(
-    (i) => i.label !== "Dashboard" && !findSectionFor(i.label)
-  );
+  const trailingItems = menuItems.filter((i) => !findSectionFor(i.label));
   if (trailingItems.length) {
     renderGroups.push({ section: null, items: trailingItems });
   }

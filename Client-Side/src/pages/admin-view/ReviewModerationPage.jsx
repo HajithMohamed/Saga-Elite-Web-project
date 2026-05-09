@@ -479,6 +479,109 @@ const ReviewModerationPage = () => {
                           </div>
                         ) : null}
 
+                        {review.aiAnalysis?.analyzedAt ? (
+                          <div className="rounded-xl border border-violet-400/30 bg-violet-400/5 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-violet-300">
+                                AI moderation signal
+                              </p>
+                              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/40">
+                                {review.aiAnalysis.model || "model"} ·{" "}
+                                {new Date(review.aiAnalysis.analyzedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                              {[
+                                {
+                                  key: "toxicity",
+                                  label: "Toxicity",
+                                  value: review.aiAnalysis.toxicity,
+                                  warn: review.aiAnalysis.toxicity >= 60,
+                                  color: review.aiAnalysis.toxicity >= 60 ? "rose" : "emerald",
+                                },
+                                {
+                                  key: "spam",
+                                  label: "Spam",
+                                  value: review.aiAnalysis.spam,
+                                  warn: review.aiAnalysis.spam >= 60,
+                                  color: review.aiAnalysis.spam >= 60 ? "amber" : "emerald",
+                                },
+                                {
+                                  key: "sentiment",
+                                  label: "Sentiment",
+                                  value: review.aiAnalysis.sentimentScore,
+                                  warn: review.aiAnalysis.sentimentScore <= -40,
+                                  color:
+                                    review.aiAnalysis.sentimentScore <= -40
+                                      ? "rose"
+                                      : review.aiAnalysis.sentimentScore >= 40
+                                        ? "emerald"
+                                        : "sky",
+                                  rangeMin: -100,
+                                  rangeMax: 100,
+                                },
+                              ].map((m) => {
+                                const min = m.rangeMin ?? 0;
+                                const max = m.rangeMax ?? 100;
+                                const pct = ((Number(m.value || 0) - min) / (max - min)) * 100;
+                                const tone =
+                                  m.color === "rose"
+                                    ? "bg-rose-400 text-rose-200"
+                                    : m.color === "amber"
+                                      ? "bg-amber-400 text-amber-200"
+                                      : m.color === "sky"
+                                        ? "bg-sky-400 text-sky-200"
+                                        : "bg-emerald-400 text-emerald-200";
+                                const [barTone, textTone] = tone.split(" ");
+                                return (
+                                  <div
+                                    key={m.key}
+                                    className="rounded-lg border border-white/10 bg-black/40 p-3"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/50">
+                                        {m.label}
+                                      </p>
+                                      <p className={`font-mono text-xs tabular-nums ${textTone}`}>
+                                        {Number(m.value || 0)}
+                                        {m.key === "sentiment" ? "" : "%"}
+                                      </p>
+                                    </div>
+                                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                                      <div
+                                        className={`h-full ${barTone}`}
+                                        style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                                      />
+                                    </div>
+                                    {m.warn ? (
+                                      <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-rose-300">
+                                        Action recommended
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {review.aiAnalysis.summary ? (
+                              <p className="mt-3 text-xs leading-5 text-white/60">
+                                <span className="font-mono uppercase tracking-[0.2em] text-violet-300">
+                                  Summary —
+                                </span>{" "}
+                                {review.aiAnalysis.summary}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-white/10 bg-black/30 p-3 text-center">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
+                              AI signal pending
+                            </p>
+                            <p className="mt-1 text-[11px] text-white/40">
+                              Classification runs in the background — usually within ~15 seconds of submission.
+                            </p>
+                          </div>
+                        )}
+
                         {review.brandReply ? (
                           <div className="rounded-xl border border-[#f2ca50]/30 bg-[#f2ca50]/5 p-3">
                             <p className="text-[10px] uppercase tracking-[0.22em] text-[#f2ca50]">

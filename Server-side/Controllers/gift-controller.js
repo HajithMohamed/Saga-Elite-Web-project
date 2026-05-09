@@ -12,6 +12,7 @@ const giftPayloadFields = [
   "isActive",
   "condition",
   "minOrderValue",
+  "rarity",
   "description",
   "internalNotes",
   "imageUrl",

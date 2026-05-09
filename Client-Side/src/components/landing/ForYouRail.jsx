@@ -2,17 +2,59 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { ArrowRight, Sparkles, Info } from "lucide-react";
+import { ArrowRight, Sparkles, History, Flame, Info } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
 import { Eyebrow } from "@/components/ui/editorial";
 
 /*
- * ForYouRail — personalized product strip on the landing page.
- * Hidden when the user is anonymous OR when the API returns trending fallback
- * (no signal). Honest tooltip explains what data drives the picks.
+ * Personalized rail on the landing page. Three variants:
+ *   - "for-you"          → /products/recommendations?context=home (mixed personalized+explore)
+ *   - "recently-viewed"  → /products/recommendations?context=recently-viewed
+ *   - "trending-style"   → /products/recommendations?context=trending-style
+ *
+ * Each rail self-hides for anon users or when the API returns nothing meaningful.
+ * Default export keeps the old name for backwards compatibility.
  */
-const ForYouRail = () => {
+
+const VARIANT_CONFIG = {
+  "for-you": {
+    eyebrow: "For you",
+    title: "Picked from your trail",
+    icon: Sparkles,
+    apiContext: "home",
+    seeAllLabel: "See all",
+    seeAllTo: "/shopping/for-you",
+    // Hide when only trending fallback comes back — the page already has a
+    // separate Trending section so we don't double it up here.
+    hideWhenMode: ["trending"],
+    infoText:
+      "Based on what you've viewed, wishlisted, searched, and purchased on this site. No external data.",
+  },
+  "recently-viewed": {
+    eyebrow: "Recently viewed",
+    title: "Pick up where you left off",
+    icon: History,
+    apiContext: "recently-viewed",
+    seeAllLabel: null,
+    seeAllTo: null,
+    hideWhenMode: [],
+    infoText: null,
+  },
+  "trending-style": {
+    eyebrow: "Trending in your style",
+    title: "What others like you are buying",
+    icon: Flame,
+    apiContext: "trending-style",
+    seeAllLabel: null,
+    seeAllTo: null,
+    hideWhenMode: [],
+    infoText: null,
+  },
+};
+
+const PersonalizedRail = ({ variant = "for-you" }) => {
+  const config = VARIANT_CONFIG[variant] || VARIANT_CONFIG["for-you"];
   const user = useSelector((state) => state.auth?.user);
   const [products, setProducts] = useState([]);
   const [mode, setMode] = useState(null);
@@ -24,7 +66,7 @@ const ForYouRail = () => {
     let cancelled = false;
     setLoading(true);
     axios
-      .get(`${API_BASE}/products/recommendations?context=home&limit=8`, {
+      .get(`${API_BASE}/products/recommendations?context=${config.apiContext}&limit=8`, {
         withCredentials: true,
       })
       .then((res) => {
@@ -42,45 +84,50 @@ const ForYouRail = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, config.apiContext]);
 
-  // Hide when there's no logged-in user, or when we only have trending fallback
-  // (the home page already has a separate Trending section, so don't duplicate)
-  if (!user || mode === "trending" || products.length === 0) return null;
+  if (!user || products.length === 0) return null;
+  if (config.hideWhenMode.includes(mode)) return null;
+
+  const Icon = config.icon;
 
   return (
     <section className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
         <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-[#f2ca50]" />
+          <Icon className="h-5 w-5 text-[#f2ca50]" />
           <div>
-            <Eyebrow tone="muted" size="xs">For you</Eyebrow>
+            <Eyebrow tone="muted" size="xs">{config.eyebrow}</Eyebrow>
             <h2 className="se-serif text-[#e5e2e1] text-3xl md:text-4xl mt-1">
-              Picked from your trail
+              {config.title}
             </h2>
           </div>
-          <button
-            type="button"
-            onMouseEnter={() => setShowInfo(true)}
-            onMouseLeave={() => setShowInfo(false)}
-            onClick={() => setShowInfo((v) => !v)}
-            className="relative ml-1 text-[#99907c] hover:text-[#f2ca50]"
-            aria-label="What drives these picks"
-          >
-            <Info className="h-4 w-4" />
-            {showInfo ? (
-              <span className="absolute left-0 top-6 z-10 w-64 rounded border border-[#4d4635] bg-[#0a0a0a] px-3 py-2 text-xs text-[#d0c5af] shadow-lg">
-                Based on what you've viewed, wishlisted, and purchased on this site. We don't read your search history or social activity.
-              </span>
-            ) : null}
-          </button>
+          {config.infoText ? (
+            <button
+              type="button"
+              onMouseEnter={() => setShowInfo(true)}
+              onMouseLeave={() => setShowInfo(false)}
+              onClick={() => setShowInfo((v) => !v)}
+              className="relative ml-1 text-[#99907c] hover:text-[#f2ca50]"
+              aria-label="What drives these picks"
+            >
+              <Info className="h-4 w-4" />
+              {showInfo ? (
+                <span className="absolute left-0 top-6 z-10 w-64 rounded border border-[#4d4635] bg-[#0a0a0a] px-3 py-2 text-xs text-[#d0c5af] shadow-lg">
+                  {config.infoText}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
         </div>
-        <Link
-          to="/shopping/for-you"
-          className="se-label text-[10px] tracking-[0.18em] text-[#d0c5af] hover:text-[#f2ca50] inline-flex items-center gap-2"
-        >
-          See all <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        {config.seeAllTo ? (
+          <Link
+            to={config.seeAllTo}
+            className="se-label text-[10px] tracking-[0.18em] text-[#d0c5af] hover:text-[#f2ca50] inline-flex items-center gap-2"
+          >
+            {config.seeAllLabel} <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : null}
       </div>
 
       {loading ? (
@@ -98,4 +145,4 @@ const ForYouRail = () => {
   );
 };
 
-export default ForYouRail;
+export default PersonalizedRail;

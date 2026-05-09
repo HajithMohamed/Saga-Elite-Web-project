@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCcw, LayoutGrid, Table2, Search, FileDown } from "lucide-react";
+import { Loader2, RefreshCcw, LayoutGrid, Table2, Search, FileDown, Eye } from "lucide-react";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import RefundOrderModal from "@/components/admin-components/RefundOrderModal";
+import OrderDetailDrawer from "@/components/admin-components/OrderDetailDrawer";
 
 const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
@@ -230,6 +231,7 @@ const Orders = () => {
   const [refundOrderTarget, setRefundOrderTarget] = useState(null);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [invoiceDownloadingId, setInvoiceDownloadingId] = useState(null);
+  const [detailOrder, setDetailOrder] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
@@ -754,6 +756,14 @@ description="Monitor customer orders and update fulfillment status in board or t
                             ))}
                           </div>
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDetailOrder(order)}
+                              className="inline-flex items-center gap-2 rounded-sm border border-[#4d4635] bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-[#d0c5af] transition hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                              title="Open order detail"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> View
+                            </button>
                             <PrimaryButton
                               type="button"
                               disabled={isBusy || draft === order.status}
@@ -811,6 +821,40 @@ description="Monitor customer orders and update fulfillment status in board or t
         submitting={refundSubmitting}
         onClose={() => (refundSubmitting ? null : setRefundOrderTarget(null))}
         onSubmit={handleRefundSubmit}
+      />
+      <OrderDetailDrawer
+        order={detailOrder}
+        open={Boolean(detailOrder)}
+        onClose={() => setDetailOrder(null)}
+        isBusy={updatingOrderId === detailOrder?._id}
+        onMarkStatus={async (newStatus) => {
+          if (!detailOrder?._id) return;
+          try {
+            await dispatch(
+              updateOrderStatus({ orderId: detailOrder._id, status: newStatus })
+            ).unwrap();
+            toast({
+              title: `Order marked ${newStatus.replace(/_/g, " ")}`,
+              variant: "success",
+            });
+            // Reflect locally so the drawer's badges & timeline update without a re-fetch.
+            setDetailOrder((current) =>
+              current ? { ...current, status: newStatus } : current
+            );
+            loadOrders();
+          } catch (error) {
+            toast({
+              title: "Status update failed",
+              description: error || "Try again.",
+              variant: "destructive",
+            });
+          }
+        }}
+        onRefund={() => {
+          setRefundOrderTarget(detailOrder);
+          setDetailOrder(null);
+        }}
+        onDownloadInvoice={() => detailOrder && handleDownloadInvoice(detailOrder)}
       />
     </AdminPage>
   );

@@ -21,10 +21,53 @@ const emptyForm = {
   isActive: true,
   condition: "always",
   minOrderValue: 0,
+  rarity: "common",
   description: "",
   internalNotes: "",
   imageUrl: "",
 };
+
+const RARITY_TIERS = [
+  {
+    key: "common",
+    label: "Common",
+    description: "Stickers, low-value tokens",
+    border: "border-gray-500/40",
+    glow: "shadow-[0_0_24px_rgba(156,163,175,0.18)]",
+    text: "text-gray-300",
+    chip: "bg-gray-500/10 text-gray-300 border-gray-500/30",
+  },
+  {
+    key: "rare",
+    label: "Rare",
+    description: "Wristbands, branded merch",
+    border: "border-sky-400/40",
+    glow: "shadow-[0_0_24px_rgba(56,189,248,0.22)]",
+    text: "text-sky-300",
+    chip: "bg-sky-500/10 text-sky-300 border-sky-500/30",
+  },
+  {
+    key: "epic",
+    label: "Epic",
+    description: "Metallic cards, premium items",
+    border: "border-violet-400/40",
+    glow: "shadow-[0_0_28px_rgba(167,139,250,0.28)]",
+    text: "text-violet-300",
+    chip: "bg-violet-500/10 text-violet-300 border-violet-500/30",
+  },
+  {
+    key: "legendary",
+    label: "Legendary",
+    description: "Ultra-limited collectibles",
+    border: "border-[#f2ca50]/60",
+    glow: "shadow-[0_0_36px_rgba(242,202,80,0.35)]",
+    text: "text-[#f2ca50]",
+    chip: "bg-[#f2ca50]/10 text-[#f2ca50] border-[#f2ca50]/40",
+  },
+];
+
+const rarityTier = (key) =>
+  RARITY_TIERS.find((tier) => tier.key === key) || RARITY_TIERS[0];
 
 const money = (value = 0) =>
   Number(value || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 });
@@ -60,7 +103,7 @@ const GiftManager = () => {
       setGifts(Array.isArray(res.data?.data) ? res.data.data : []);
     } catch (error) {
       toast({
-        title: "Unable to load gifts",
+        title: "Unable to load collectibles",
         description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
@@ -115,6 +158,7 @@ const GiftManager = () => {
       isActive: gift.isActive !== false,
       condition: gift.condition || "always",
       minOrderValue: gift.minOrderValue || 0,
+      rarity: gift.rarity || "common",
       description: gift.description || "",
       internalNotes: gift.internalNotes || "",
       imageUrl: gift.imageUrl || "",
@@ -143,7 +187,7 @@ const GiftManager = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!form.name.trim()) {
-      toast({ title: "Validation error", description: "Gift name is required.", variant: "destructive" });
+      toast({ title: "Validation error", description: "Collectible name is required.", variant: "destructive" });
       return;
     }
 
@@ -162,8 +206,8 @@ const GiftManager = () => {
       }
 
       toast({
-        title: editingGift ? "Gift updated" : "Gift created",
-        description: "Gift settings saved successfully.",
+        title: editingGift ? "Collectible updated" : "Collectible created",
+        description: "Collectible settings saved successfully.",
         variant: "success",
       });
 
@@ -183,7 +227,7 @@ const GiftManager = () => {
   const setInactive = async (gift) => {
     try {
       await axios.patch(`${API_V1_URL}/gifts/${gift._id}`, { isActive: false }, { withCredentials: true });
-      toast({ title: "Gift deactivated", description: `${gift.name} is no longer active.`, variant: "success" });
+      toast({ title: "Collectible deactivated", description: `${gift.name} is no longer active.`, variant: "success" });
       fetchGifts();
       if (selectedGift?._id === gift._id) {
         setSelectedGift(null);
@@ -201,21 +245,21 @@ const GiftManager = () => {
   return (
     <motion.div variants={pageVariants} initial="hidden" animate="visible" className="w-full min-h-0">
       <AdminPage
-        eyebrow="Gifts & Rewards"
-        title="Gift & reward manager"
-        description="Surprise gifts attached to orders, plus reward campaigns for repeat purchase."
+        eyebrow="Mystery Collectibles & Rewards"
+        title="Mystery collectibles vault"
+        description="Rarity-tiered surprise items attached to orders, plus review-reward campaigns."
         actions={
           activeTab === "gifts" ? (
             <>
               <PrimaryButton onClick={() => { fetchGifts(); fetchAnalytics(); }}>Refresh</PrimaryButton>
-              <PrimaryButton onClick={openCreate}>New gift</PrimaryButton>
+              <PrimaryButton onClick={openCreate}>New collectible</PrimaryButton>
             </>
           ) : null
         }
       >
         <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-3">
           {[
-            { key: "gifts", label: "Gifts", icon: GiftIcon },
+            { key: "gifts", label: "Collectibles", icon: GiftIcon },
             { key: "rewards", label: "Rewards", icon: Award },
           ].map((tab) => {
             const TabIcon = tab.icon;
@@ -245,15 +289,15 @@ const GiftManager = () => {
         {analytics ? (
           <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-gray-500">
-                Gifts attached
+              <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-gray-500">
+                Collectibles attached
               </p>
               <p className="mt-2 text-2xl font-bold text-white">
                 {analytics.totalAttached || 0}
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-gray-500">
+              <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-gray-500">
                 Revealed
               </p>
               <p className="mt-2 text-2xl font-bold text-emerald-400">
@@ -264,13 +308,13 @@ const GiftManager = () => {
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#0e0e0e] p-4 md:col-span-2">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-gray-500">
-                Most common gift
+              <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-gray-500">
+                Most common collectible
               </p>
               {analytics.mostCommon ? (
                 <>
                   <p className="mt-2 truncate text-lg font-bold text-[#D4AF37]">
-                    {analytics.mostCommon.name || "Unknown gift"}
+                    {analytics.mostCommon.name || "Unknown collectible"}
                   </p>
                   <p className="mt-1 text-[10px] text-gray-500">
                     Attached to {analytics.mostCommon.count} order
@@ -278,99 +322,135 @@ const GiftManager = () => {
                   </p>
                 </>
               ) : (
-                <p className="mt-2 text-sm text-gray-500">No gifts attached yet.</p>
+                <p className="mt-2 text-sm text-gray-500">No collectibles attached yet.</p>
               )}
             </div>
           </div>
         ) : null}
 
-        <AdminPanel title="Gift catalog" description="Manage the mystery item attached to each checkout.">
+        <AdminPanel title="Collectible catalog" description="Rarity-tiered mystery items attached to checkout. Hover a card to inspect.">
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative max-w-xl flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search gifts, drops, or conditions"
+                placeholder="Search collectibles, drops, or conditions"
                 className="w-full rounded-2xl border border-white/10 bg-black/40 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
               />
             </div>
             <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-              {filteredGifts.length} gift{filteredGifts.length === 1 ? "" : "s"}
+              {filteredGifts.length} collectible{filteredGifts.length === 1 ? "" : "s"}
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10">
-            <div className="grid grid-cols-[1.4fr_1fr_1fr_.8fr_.8fr_auto] gap-4 border-b border-white/10 bg-white/[0.02] px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-              <span>Name</span>
-              <span>Scope</span>
-              <span>Condition</span>
-              <span>Status</span>
-              <span>Orders</span>
-              <span>Actions</span>
+          {loading ? (
+            <div className="flex items-center justify-center rounded-2xl border border-white/10 p-12 text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-
-            <div className="divide-y divide-white/10">
-              {loading ? (
-                <div className="flex items-center justify-center p-10 text-gray-400">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-              ) : filteredGifts.length === 0 ? (
-                <div className="p-10 text-center text-sm text-gray-400">No gifts found.</div>
-              ) : (
-                filteredGifts.map((gift) => (
-                  <div key={gift._id} className="grid grid-cols-[1.4fr_1fr_1fr_.8fr_.8fr_auto] gap-4 px-4 py-4 text-sm text-white">
-                    <div>
-                      <p className="font-semibold">{gift.name}</p>
-                      <p className="mt-1 line-clamp-1 text-xs text-gray-500">{gift.description || "No description"}</p>
-                    </div>
-                    <div className="text-gray-300">{gift.drop?.name || "Global"}</div>
-                    <div className="text-gray-300">
-                      {gift.condition}
-                      {gift.condition === "min_order_value" ? ` · LKR ${money(gift.minOrderValue)}` : ""}
-                    </div>
-                    <div>
-                      <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${gift.isActive ? "bg-emerald-500/10 text-emerald-300" : "bg-gray-500/10 text-gray-400"}`}>
-                        {gift.isActive ? "Active" : "Inactive"}
+          ) : filteredGifts.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-sm text-gray-400">
+              No collectibles found. Create your first mystery drop reward.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredGifts.map((gift) => {
+                const tier = rarityTier(gift.rarity);
+                return (
+                  <motion.div
+                    key={gift._id}
+                    whileHover={{ y: -3 }}
+                    transition={{ duration: 0.2 }}
+                    className={`group relative overflow-hidden rounded-2xl border ${tier.border} bg-[#0e0e0e] ${
+                      gift.isActive ? tier.glow : "opacity-70"
+                    }`}
+                  >
+                    <div className="relative aspect-square w-full overflow-hidden bg-black/40">
+                      {gift.imageUrl ? (
+                        <img
+                          src={gift.imageUrl}
+                          alt={gift.name}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <GiftIcon className={`h-20 w-20 ${tier.text} opacity-60`} />
+                        </div>
+                      )}
+                      <span
+                        className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.24em] ${tier.chip}`}
+                      >
+                        {tier.label}
                       </span>
+                      {!gift.isActive ? (
+                        <span className="absolute left-3 top-3 rounded-full border border-gray-500/40 bg-black/70 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.24em] text-gray-300">
+                          Inactive
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="text-gray-300">{gift.orderCount || 0}</div>
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => loadGiftOrders(gift)}
-                        className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
-                      >
-                        View orders
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openEdit(gift)}
-                        className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!gift.isActive}
-                        onClick={() => setInactive(gift)}
-                        className="rounded-lg border border-white/10 px-3 py-2 text-xs text-gray-300 transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-40"
-                      >
-                        Deactivate
-                      </button>
+
+                    <div className="space-y-3 p-4">
+                      <div>
+                        <p className="truncate text-base font-bold text-white">{gift.name}</p>
+                        <p className="mt-1 line-clamp-2 min-h-[32px] text-xs text-gray-500">
+                          {gift.description || "No description"}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em]">
+                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-1 text-gray-400">
+                          {gift.drop?.name || "Global"}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-1 text-gray-400">
+                          {gift.condition === "min_order_value"
+                            ? `Min LKR ${money(gift.minOrderValue)}`
+                            : gift.condition.replace(/_/g, " ")}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-1 text-gray-400">
+                          {gift.orderCount || 0} orders
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => loadGiftOrders(gift)}
+                          className="rounded-lg border border-white/10 px-2 py-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(gift)}
+                          className="rounded-lg border border-white/10 px-2 py-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!gift.isActive}
+                          onClick={() => setInactive(gift)}
+                          className="rounded-lg border border-white/10 px-2 py-2 font-mono text-[9px] uppercase tracking-[0.2em] text-gray-300 transition hover:border-rose-500/40 hover:text-rose-300 disabled:opacity-40"
+                        >
+                          Hide
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
-              )}
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </AdminPanel>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-          <AdminPanel title={selectedGift ? `${selectedGift.name} orders` : "Gift orders"} description="Orders that received the currently selected gift.">
+          <AdminPanel title={selectedGift ? `${selectedGift.name} orders` : "Collectible orders"} description="Orders that received the currently selected collectible.">
             {!selectedGift ? (
               <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-gray-500">
-                Select a gift to inspect its orders.
+                Select a collectible to inspect its orders.
               </div>
             ) : ordersLoading ? (
               <div className="flex min-h-[220px] items-center justify-center text-gray-400">
@@ -378,7 +458,7 @@ const GiftManager = () => {
               </div>
             ) : selectedOrders.length === 0 ? (
               <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-gray-500">
-                No orders have received this gift yet.
+                No orders have received this collectible yet.
               </div>
             ) : (
               <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -402,7 +482,7 @@ const GiftManager = () => {
             )}
           </AdminPanel>
 
-          <AdminPanel title={editingGift ? "Edit gift" : "Create gift"} description="Assign a drop or leave it global.">
+          <AdminPanel title={editingGift ? "Edit collectible" : "Create collectible"} description="Assign a drop or leave it global. Rarity drives the visual tier.">
             <form className="grid gap-4" onSubmit={handleSubmit}>
               <label className="grid gap-2 text-sm text-gray-300">
                 Name
@@ -440,6 +520,38 @@ const GiftManager = () => {
                     <option value="per_drop">Per drop</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="grid gap-2 text-sm text-gray-300">
+                <span>Rarity tier</span>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {RARITY_TIERS.map((tier) => {
+                    const isActive = form.rarity === tier.key;
+                    return (
+                      <button
+                        key={tier.key}
+                        type="button"
+                        onClick={() => setForm((current) => ({ ...current, rarity: tier.key }))}
+                        className={`flex flex-col items-start gap-1 rounded-2xl border px-3 py-3 text-left transition ${
+                          isActive
+                            ? `${tier.border} bg-black/60 ${tier.glow}`
+                            : "border-white/10 bg-black/40 hover:border-white/20"
+                        }`}
+                      >
+                        <span
+                          className={`font-mono text-[10px] uppercase tracking-[0.24em] ${
+                            isActive ? tier.text : "text-gray-400"
+                          }`}
+                        >
+                          {tier.label}
+                        </span>
+                        <span className="text-[10px] leading-tight text-gray-500">
+                          {tier.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <label className="grid gap-2 text-sm text-gray-300">
@@ -493,7 +605,7 @@ const GiftManager = () => {
               </label>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving..." : editingGift ? "Update gift" : "Create gift"}</PrimaryButton>
+                <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving..." : editingGift ? "Update collectible" : "Create collectible"}</PrimaryButton>
                 <button
                   type="button"
                   onClick={resetForm}
