@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   ShoppingBag,
+  Star,
 } from "lucide-react";
 
 import { logoutUserAction, changePasswordAction, checkAuthAction } from "@/store/auth-slice";
@@ -257,6 +258,12 @@ const Account = () => {
       icon: Package,
     },
     {
+      to: "/account/my-reviews",
+      label: "My Reviews",
+      sub: "View & manage",
+      icon: Star,
+    },
+    {
       to: "/shopping/wishlist",
       label: "Wishlist",
       sub: `${wishlistItems.length} saved`,
@@ -394,6 +401,18 @@ const Account = () => {
                     We use it for OTPs, order confirmations, and shipping
                     updates. We don't share your number — ever.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneInput("");
+                      setPhoneError(null);
+                      setPhoneEditMode(true);
+                    }}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-bold uppercase tracking-wider text-black transition-opacity hover:opacity-90"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    Add now
+                  </button>
                 </div>
               ) : null}
 

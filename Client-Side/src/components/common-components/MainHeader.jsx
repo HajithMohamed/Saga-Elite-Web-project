@@ -224,8 +224,14 @@ const MainHeader = () => {
                     <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
                       {user ? (
                         <>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders">My Fits</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist">Wishlist</Link>
+                          <div className="px-4 py-3 border-b border-[#2a2a2a] mb-1">
+                            <p className="text-[9px] text-[#d0c5af]/60 tracking-[0.2em]">Signed in as</p>
+                            <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
+                          </div>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
                           <div className="h-[1px] bg-[#2a2a2a] my-1" />
                           <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
                         </>

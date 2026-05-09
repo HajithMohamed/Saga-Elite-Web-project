@@ -74,6 +74,7 @@ const ProductDetails = () => {
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const cartItems = useSelector((state) => state.cart.cart?.items ?? []);
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
+  const authUser = useSelector((state) => state.auth.user);
 
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -758,6 +759,21 @@ const ProductDetails = () => {
                           See all reviews
                         </Link>
                       </div>
+                      {authUser ? (
+                        <Link
+                          to={`/product/${product._id}/reviews`}
+                          className="inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-black transition-opacity hover:opacity-90"
+                        >
+                          Write a review
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/auth/login"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/40 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10"
+                        >
+                          Sign in to review
+                        </Link>
+                      )}
                       {reviewLoading ? (
                         <div className="space-y-4">
                           {Array.from({ length: 2 }).map((_, index) => (
