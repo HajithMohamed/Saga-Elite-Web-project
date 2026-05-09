@@ -26,7 +26,7 @@ import {
   Bell,
   FolderOpen,
   Globe,
-  Layers3,
+  Sparkles,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -38,9 +38,9 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Catalog: ["Products", "Drops", "Collections", "Mystery Gifts"],
+  Catalog: ["Products", "Drops", "Mystery Gifts"],
   Orders: ["Orders", "Manual Payments", "Shipping"],
-  Customers: ["Users", "Reviews", "Contact Inquiries"],
+  Customers: ["Users", "Reviews", "Review Insights", "Contact Inquiries"],
   Marketing: ["Offers & Deals", "Coupons", "Newsletter", "Notifications"],
   Content: ["Home Images", "Media Library", "Site Pages"],
   Insights: ["Analytics"],
@@ -72,7 +72,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const { isLoading, user } = useSelector((state) => state.auth);
 
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
-  const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [uncategorizedReviewCount, setUncategorizedReviewCount] = useState(0);
   const [agingAlertCount, setAgingAlertCount] = useState(0);
   const [isLg, setIsLg] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
@@ -100,7 +100,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           )
           .catch(() => fallback),
         axios
-          .get(`${API_V1_URL}/admin/reviews?status=pending&countOnly=true`, {
+          .get(`${API_V1_URL}/admin/reviews?category=uncategorized&countOnly=true`, {
             withCredentials: true,
           })
           .catch(() => fallback),
@@ -116,7 +116,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       }
 
       if (reviewRes.data?.success) {
-        setPendingReviewCount(reviewRes.data.data?.count || 0);
+        setUncategorizedReviewCount(reviewRes.data.data?.count || 0);
       }
 
       if (agingRes.data?.success) {
@@ -124,7 +124,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       }
     } catch {
       setPendingPaymentCount(0);
-      setPendingReviewCount(0);
+      setUncategorizedReviewCount(0);
       setAgingAlertCount(0);
     }
   }, []);
@@ -160,14 +160,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   }, [pendingPaymentCount]);
 
   useEffect(() => {
-    const r = pendingReviewCount;
+    const r = uncategorizedReviewCount;
     if (r > 0 && prevReviewRef.current === 0 && r !== prevReviewRef.current) {
       setReviewBounce((k) => k + 1);
     } else if (r > prevReviewRef.current && prevReviewRef.current > 0) {
       setReviewBounce((k) => k + 1);
     }
     prevReviewRef.current = r;
-  }, [pendingReviewCount]);
+  }, [uncategorizedReviewCount]);
 
   useEffect(() => {
     const a = agingAlertCount;
@@ -210,12 +210,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "drops",
     },
     {
-      label: "Collections",
-      path: "/admin/collections",
-      icon: <Layers3 className="h-5 w-5" />,
-      permission: "products",
-    },
-    {
       label: "Mystery Gifts",
       path: "/admin/gifts",
       icon: <Gift className="h-5 w-5" />,
@@ -255,8 +249,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Reviews",
       path: "/admin/reviews",
       icon: <StarHalf className="h-5 w-5" />,
-      badge: pendingReviewCount,
+      badge: uncategorizedReviewCount,
       bounceKey: reviewBounce,
+      permission: "manageReviews",
+    },
+    {
+      label: "Review Insights",
+      path: "/admin/review-insights",
+      icon: <Sparkles className="h-5 w-5" />,
       permission: "manageReviews",
     },
     {

@@ -124,7 +124,7 @@ const MyReviewsPage = () => {
                   />
                 </div>
 
-                {editingReview?._id === review._id && review.status === "pending" && (
+                {editingReview?._id === review._id && (
                   <div className="mt-6">
                     <ReviewForm
                       productId={review.productId?._id}

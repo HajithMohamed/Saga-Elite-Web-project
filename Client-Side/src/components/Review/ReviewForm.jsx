@@ -139,9 +139,8 @@ const ReviewForm = ({ productId, orderId, onSubmit, onCancel, initialValues }) =
       });
 
       toast({
-        title: "Review submitted",
-        description:
-          "Your review has been submitted and is pending approval. We will notify you once it is live.",
+        title: "Review published",
+        description: "Thanks for sharing — your review is live.",
       });
 
       setRating(0);

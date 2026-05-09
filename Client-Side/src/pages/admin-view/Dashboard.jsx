@@ -252,10 +252,10 @@ const Dashboard = () => {
       tone: "text-orange-400",
     },
     {
-      label: "Pending Reviews",
-      numericValue: Number(overview.pendingReviews) || 0,
+      label: "Uncategorized Reviews",
+      numericValue: Number(overview.uncategorizedReviews) || 0,
       formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: "Awaiting moderation",
+      hint: "Tag a topic to surface them",
       icon: StarHalf,
       tone: "text-rose-300",
     },

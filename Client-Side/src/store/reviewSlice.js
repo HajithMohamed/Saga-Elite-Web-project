@@ -6,12 +6,14 @@ import {
   voteReviewHelpfulApi,
   deleteReviewApi,
   fetchAdminReviewsApi,
-  moderateReviewApi,
+  categorizeReviewApi,
   updateReviewApi,
   flagReviewApi,
   replyToReviewApi,
   featureReviewApi,
   fetchReviewAnalyticsApi,
+  fetchReviewInsightsApi,
+  regenerateReviewInsightsApi,
 } from "@/api/reviewAPI";
 
 const unwrapError = (error, fallback) => {
@@ -27,6 +29,10 @@ const initialState = {
   adminReviews: [],
   adminPagination: null,
   adminAnalytics: null,
+  insights: null,
+  insightsLoading: false,
+  insightsRegenerating: false,
+  insightsError: null,
   activeFilters: {
     productId: null,
     rating: null,
@@ -40,7 +46,20 @@ const initialState = {
 
 export const fetchProductReviews = createAsyncThunk(
   "review/fetchProductReviews",
-  async ({ productId, rating, sort, page, limit = 10 }, thunkAPI) => {
+  async (
+    {
+      productId,
+      rating,
+      sort,
+      page,
+      limit = 10,
+      withPhotos,
+      verifiedOnly,
+      category,
+      q,
+    },
+    thunkAPI
+  ) => {
     try {
       const response = await fetchProductReviewsApi({
         productId,
@@ -48,6 +67,10 @@ export const fetchProductReviews = createAsyncThunk(
         sort,
         page,
         limit,
+        withPhotos,
+        verifiedOnly,
+        category,
+        q,
       });
       return response.data;
     } catch (error) {
@@ -131,9 +154,15 @@ export const deleteReview = createAsyncThunk(
 
 export const fetchAdminReviews = createAsyncThunk(
   "review/fetchAdminReviews",
-  async ({ status, page, limit = 20, search }, thunkAPI) => {
+  async ({ status, page, limit = 20, search, category }, thunkAPI) => {
     try {
-      const response = await fetchAdminReviewsApi({ status, page, limit, search });
+      const response = await fetchAdminReviewsApi({
+        status,
+        page,
+        limit,
+        search,
+        category,
+      });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -157,18 +186,15 @@ export const flagReview = createAsyncThunk(
   }
 );
 
-export const moderateReview = createAsyncThunk(
-  "review/moderateReview",
-  async ({ reviewId, action, rejectionReason }, thunkAPI) => {
+export const categorizeReview = createAsyncThunk(
+  "review/categorizeReview",
+  async ({ reviewId, category }, thunkAPI) => {
     try {
-      const response = await moderateReviewApi(reviewId, {
-        action,
-        rejectionReason,
-      });
+      const response = await categorizeReviewApi(reviewId, category);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        unwrapError(error, "Failed to moderate review")
+        unwrapError(error, "Failed to categorize review")
       );
     }
   }
@@ -211,6 +237,34 @@ export const fetchReviewAnalytics = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         unwrapError(error, "Failed to load review analytics")
+      );
+    }
+  }
+);
+
+export const fetchReviewInsights = createAsyncThunk(
+  "review/fetchReviewInsights",
+  async (_, thunkAPI) => {
+    try {
+      const response = await fetchReviewInsightsApi();
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to load review insights")
+      );
+    }
+  }
+);
+
+export const regenerateReviewInsights = createAsyncThunk(
+  "review/regenerateReviewInsights",
+  async (_, thunkAPI) => {
+    try {
+      const response = await regenerateReviewInsightsApi();
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to regenerate review insights")
       );
     }
   }
@@ -334,12 +388,7 @@ const reviewSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-      .addCase(moderateReview.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(moderateReview.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(categorizeReview.fulfilled, (state, action) => {
         const updated = action.payload?.review;
         if (updated) {
           state.adminReviews = state.adminReviews.map((review) =>
@@ -347,8 +396,7 @@ const reviewSlice = createSlice({
           );
         }
       })
-      .addCase(moderateReview.rejected, (state, action) => {
-        state.loading = false;
+      .addCase(categorizeReview.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
       })
       .addCase(replyToReview.fulfilled, (state, action) => {
@@ -369,6 +417,30 @@ const reviewSlice = createSlice({
       })
       .addCase(fetchReviewAnalytics.fulfilled, (state, action) => {
         state.adminAnalytics = action.payload?.data || null;
+      })
+      .addCase(fetchReviewInsights.pending, (state) => {
+        state.insightsLoading = true;
+        state.insightsError = null;
+      })
+      .addCase(fetchReviewInsights.fulfilled, (state, action) => {
+        state.insightsLoading = false;
+        state.insights = action.payload?.data?.insight || null;
+      })
+      .addCase(fetchReviewInsights.rejected, (state, action) => {
+        state.insightsLoading = false;
+        state.insightsError = action.payload || action.error.message;
+      })
+      .addCase(regenerateReviewInsights.pending, (state) => {
+        state.insightsRegenerating = true;
+        state.insightsError = null;
+      })
+      .addCase(regenerateReviewInsights.fulfilled, (state, action) => {
+        state.insightsRegenerating = false;
+        state.insights = action.payload?.data?.insight || state.insights;
+      })
+      .addCase(regenerateReviewInsights.rejected, (state, action) => {
+        state.insightsRegenerating = false;
+        state.insightsError = action.payload || action.error.message;
       });
   },
 });

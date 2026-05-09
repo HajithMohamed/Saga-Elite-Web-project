@@ -822,79 +822,6 @@ const validateOfferUpdate = createValidationMiddleware((req) => {
   req.body = body;
 });
 
-const sanitizeCollectionPayload = (body, { isUpdate = false } = {}) => {
-  const out = {};
-
-  if (body.name !== undefined || !isUpdate) {
-    out.name = sanitizeString(body.name, "name", {
-      required: !isUpdate,
-      minLength: 2,
-      maxLength: 200,
-    });
-  }
-  if (body.description !== undefined) {
-    out.description = sanitizeOptionalPlainText(body.description, "description", {
-      maxLength: 2000,
-    });
-  }
-  if (body.bannerImageUrl !== undefined && body.bannerImageUrl !== "") {
-    out.bannerImageUrl = sanitizeUrl(body.bannerImageUrl, "bannerImageUrl");
-  }
-  if (body.products !== undefined) {
-    if (!Array.isArray(body.products)) fail("products must be an array");
-    out.products = body.products.map((id, index) =>
-      sanitizeObjectId(id, `products[${index}]`)
-    );
-  }
-  if (body.isActive !== undefined) {
-    out.isActive = sanitizeBoolean(body.isActive, "isActive");
-  }
-  if (body.isFeatured !== undefined) {
-    out.isFeatured = sanitizeBoolean(body.isFeatured, "isFeatured");
-  }
-  if (body.displayOrder !== undefined) {
-    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
-      integer: true,
-      min: 0,
-    });
-  }
-
-  return out;
-};
-
-const validateCollectionCreate = createValidationMiddleware((req) => {
-  req.body = sanitizeCollectionPayload(req.body, { isUpdate: false });
-});
-
-const validateCollectionUpdate = createValidationMiddleware((req) => {
-  const body = sanitizeCollectionPayload(req.body, { isUpdate: true });
-  if (!Object.keys(body).length) {
-    fail("At least one field is required to update");
-  }
-  req.body = body;
-});
-
-const validateCollectionReorder = createValidationMiddleware((req) => {
-  if (!Array.isArray(req.body.orders) || req.body.orders.length === 0) {
-    fail("orders must be a non-empty array");
-  }
-  req.body = {
-    orders: req.body.orders.map((entry, index) => {
-      if (!entry || typeof entry !== "object") {
-        fail(`orders[${index}] must be an object`);
-      }
-      return {
-        id: sanitizeObjectId(entry.id, `orders[${index}].id`),
-        displayOrder: sanitizeNumber(
-          entry.displayOrder,
-          `orders[${index}].displayOrder`,
-          { required: true, integer: true, min: 0 }
-        ),
-      };
-    }),
-  };
-});
-
 const sanitizeShippingZonePayload = (body, { isUpdate = false } = {}) => {
   const out = {};
 
@@ -1031,10 +958,18 @@ const validateReviewFlag = createValidationMiddleware((req) => {
   };
 });
 
-const validateReviewModeration = createValidationMiddleware((req) => {
+const REVIEW_CATEGORIES = [
+  "uncategorized",
+  "fit",
+  "quality",
+  "delivery",
+  "style",
+  "value",
+];
+
+const validateReviewCategorize = createValidationMiddleware((req) => {
   req.body = {
-    action: sanitizeEnum(req.body.action, ["approve", "reject"], "action", { required: true }),
-    rejectionReason: sanitizeOptionalPlainText(req.body.rejectionReason, "rejectionReason", { maxLength: 500 }),
+    category: sanitizeEnum(req.body.category, REVIEW_CATEGORIES, "category", { required: true }),
   };
 });
 
@@ -1193,9 +1128,6 @@ module.exports = {
   validateBannerUpdate,
   validateOfferCreate,
   validateOfferUpdate,
-  validateCollectionCreate,
-  validateCollectionUpdate,
-  validateCollectionReorder,
   validateShippingZoneCreate,
   validateShippingZoneUpdate,
   validateNewsletterSubscribe,
@@ -1207,7 +1139,7 @@ module.exports = {
   validateReviewCreate,
   validateReviewUpdate,
   validateReviewFlag,
-  validateReviewModeration,
+  validateReviewCategorize,
   validateImageUploadRequest,
   validateImageReorder,
   validateDeleteAllImages,

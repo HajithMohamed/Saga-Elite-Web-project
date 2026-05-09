@@ -1058,7 +1058,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     topDrops,
     salesTrendRaw,
     nextScheduledDropDoc,
-    pendingReviewsCount,
+    uncategorizedReviewsCount,
     pendingPaymentsCount,
     agingProductsRaw,
   ] = await Promise.all([
@@ -1215,7 +1215,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       .sort({ releaseDate: 1 })
       .select("name slug releaseDate isPublished isArchived")
       .lean(),
-    Review.countDocuments({ status: "pending" }),
+    Review.countDocuments({ status: "approved", category: "uncategorized" }),
     ManualPayment.countDocuments({ status: "proof_submitted" }),
     Product.find({
       isActive: true,
@@ -1328,7 +1328,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         averageOrderValue: revenueStats.nonCancelledOrders
           ? revenueStats.totalRevenue / revenueStats.nonCancelledOrders
           : 0,
-        pendingReviews: pendingReviewsCount || 0,
+        uncategorizedReviews: uncategorizedReviewsCount || 0,
         pendingPayments: pendingPaymentsCount || 0,
         agingProductsCount,
       },

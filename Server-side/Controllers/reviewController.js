@@ -6,15 +6,16 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Coupon = require("../Models/Coupon");
 const SiteConfig = require("../Models/SiteConfig");
+const ReviewInsight = require("../Models/ReviewInsight");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
-const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 const reviewFilterConfig = require("../Config/review-filter-config");
+const { generateReviewInsights } = require("../Utils/review-insights-job");
 
 const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -281,10 +282,14 @@ const createReview = catchAsync(async (req, res, next) => {
     sentiment: getSentiment(rating),
     images: Array.isArray(images) ? images : [],
     verifiedPurchase: true,
-    status: "pending",
+    status: "approved",
+    approvedAt: new Date(),
     isFlagged: Boolean(isSuspicious),
     flagReason: isSuspicious ? "Auto-flagged: suspicious pattern" : null,
   });
+
+  await recalculateProductRating(productId);
+  tryIssueReviewReward(review).catch(() => {});
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId,
@@ -304,10 +309,19 @@ const createReview = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     success: true,
-    message: "Review submitted for approval",
+    message: "Review published",
     review,
   });
 });
+
+const REVIEW_CATEGORIES = [
+  "uncategorized",
+  "fit",
+  "quality",
+  "delivery",
+  "style",
+  "value",
+];
 
 const getProductReviews = catchAsync(async (req, res, next) => {
   const { productId } = req.params;
@@ -322,10 +336,18 @@ const getProductReviews = catchAsync(async (req, res, next) => {
   const limit = Math.max(1, normalizeNumber(req.query.limit, 10));
   const skip = (page - 1) * limit;
 
+  const withPhotos = String(req.query.withPhotos || "").toLowerCase() === "true";
+  const verifiedOnly = String(req.query.verifiedOnly || "").toLowerCase() === "true";
+  const rawCategory = String(req.query.category || "").toLowerCase();
+  const category = REVIEW_CATEGORIES.includes(rawCategory) ? rawCategory : null;
+  const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
+
   const filter = { productId, status: "approved" };
-  if (rating && rating >= 1 && rating <= 5) {
-    filter.rating = rating;
-  }
+  if (rating && rating >= 1 && rating <= 5) filter.rating = rating;
+  if (withPhotos) filter["images.0"] = { $exists: true };
+  if (verifiedOnly) filter.verifiedPurchase = true;
+  if (category) filter.category = category;
+  if (q) filter.$text = { $search: q };
 
   const sortMap = {
     recent: { createdAt: -1 },
@@ -336,7 +358,9 @@ const getProductReviews = catchAsync(async (req, res, next) => {
 
   const sortOption = sortMap[sort] || sortMap.recent;
 
-  const [reviews, totalReviews, stats] = await Promise.all([
+  // Category counts unaffected by the user's category filter so chips can show totals.
+  const categoryFilter = { productId, status: "approved" };
+  const [reviews, totalReviews, stats, categoryCounts] = await Promise.all([
     Review.find(filter)
       .sort(sortOption)
       .skip(skip)
@@ -345,13 +369,27 @@ const getProductReviews = catchAsync(async (req, res, next) => {
       .lean(),
     Review.countDocuments(filter),
     getRatingStats(productId),
+    Review.aggregate([
+      { $match: categoryFilter },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
   ]);
+
+  const categoryBreakdown = REVIEW_CATEGORIES.reduce((acc, key) => {
+    acc[key] = 0;
+    return acc;
+  }, {});
+  categoryCounts.forEach((entry) => {
+    if (entry._id && categoryBreakdown[entry._id] !== undefined) {
+      categoryBreakdown[entry._id] = entry.count;
+    }
+  });
 
   res.status(200).json({
     success: true,
     message: "Reviews fetched successfully",
     reviews,
-    stats,
+    stats: { ...stats, categoryBreakdown },
     pagination: {
       total: totalReviews,
       page,
@@ -484,9 +522,7 @@ const deleteReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  const isAdmin = isAdminRole(req.userInfo?.role);
-
-  if (!isAdmin && review.userId.toString() !== userId.toString()) {
+  if (review.userId.toString() !== userId.toString()) {
     return next(new AppError("You do not have permission to delete this review", 403));
   }
 
@@ -523,10 +559,6 @@ const updateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("You do not have permission to edit this review", 403));
   }
 
-  if (review.status !== "pending") {
-    return next(new AppError("Only pending reviews can be edited", 400));
-  }
-
   if (rating && (Number(rating) < 1 || Number(rating) > 5)) {
     return next(new AppError("Rating must be between 1 and 5", 400));
   }
@@ -543,12 +575,19 @@ const updateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("You can upload up to 3 images", 400));
   }
 
+  const ratingChanged =
+    rating !== undefined && Number(rating) !== Number(review.rating);
+
   if (rating !== undefined) review.rating = rating;
   if (title !== undefined) review.title = title.trim();
   if (content !== undefined) review.content = content.trim();
   if (images !== undefined) review.images = Array.isArray(images) ? images : [];
 
   await review.save({ validateBeforeSave: false });
+
+  if (ratingChanged) {
+    await recalculateProductRating(review.productId);
+  }
 
   res.status(200).json({
     success: true,
@@ -558,14 +597,27 @@ const updateReview = catchAsync(async (req, res, next) => {
 });
 
 const getAllReviews = catchAsync(async (req, res, next) => {
-  const status = req.query.status || "pending";
   const search = req.query.search || "";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
-  const filter = status ? { status } : {};
+  // Reviews now auto-publish, so the admin defaults to all approved reviews.
+  // Optional `category` filter narrows to a topic (fit / quality / etc.) and
+  // the legacy `status` query is honoured for backward compatibility.
+  const filter = {};
+  const requestedStatus = String(req.query.status || "").toLowerCase();
+  if (["approved", "pending", "rejected"].includes(requestedStatus)) {
+    filter.status = requestedStatus;
+  } else {
+    filter.status = "approved";
+  }
+
+  const requestedCategory = String(req.query.category || "").toLowerCase();
+  if (REVIEW_CATEGORIES.includes(requestedCategory)) {
+    filter.category = requestedCategory;
+  }
 
   if (search) {
     const products = await Product.find({ name: { $regex: search, $options: "i" } }).select("_id");
@@ -614,12 +666,16 @@ const getAllReviews = catchAsync(async (req, res, next) => {
   });
 });
 
-const moderateReview = catchAsync(async (req, res, next) => {
+const categorizeReview = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
-  const { action, rejectionReason } = req.body;
+  const { category } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(reviewId)) {
     return next(new AppError("Valid review ID is required", 400));
+  }
+
+  if (!REVIEW_CATEGORIES.includes(category)) {
+    return next(new AppError("Invalid category", 400));
   }
 
   const review = await Review.findById(reviewId);
@@ -627,44 +683,18 @@ const moderateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  if (!action || !["approve", "reject"].includes(action)) {
-    return next(new AppError("Action must be approve or reject", 400));
-  }
-
-  if (action === "approve") {
-    review.status = "approved";
-    review.approvedAt = new Date();
-    review.rejectionReason = null;
-    await review.save({ validateBeforeSave: false });
-    await recalculateProductRating(review.productId);
-    // Fire-and-forget reward issuance — never blocks moderation
-    tryIssueReviewReward(review).catch(() => {});
-  } else {
-    review.status = "rejected";
-    review.rejectionReason = rejectionReason?.trim() || "Rejected by admin";
-    review.approvedAt = null;
-    await review.save({ validateBeforeSave: false });
-  }
+  review.category = category;
+  await review.save({ validateBeforeSave: false });
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
-    userId: review.userId,
     reviewId: review._id,
-    status: review.status,
     productId: review.productId,
-    source: "review-moderated",
-  });
-
-  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
-    userId: review.userId,
-    reviewId: review._id,
-    status: review.status,
-    productId: review.productId,
-    source: "review-moderated",
+    source: "review-categorized",
   });
 
   res.status(200).json({
     success: true,
-    message: "Review moderation updated",
+    message: "Review categorized",
     review,
   });
 });
@@ -870,7 +900,7 @@ const featureReview = catchAsync(async (req, res, next) => {
 |--------------------------------------------------------------------------
 */
 const getReviewsAnalytics = catchAsync(async (_req, res) => {
-  const [totals, sentiment, avgRating] = await Promise.all([
+  const [totals, sentiment, avgRating, categories] = await Promise.all([
     Review.aggregate([
       {
         $group: {
@@ -898,6 +928,10 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
         },
       },
     ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
   ]);
 
   const totalsByStatus = { pending: 0, approved: 0, rejected: 0 };
@@ -908,6 +942,16 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
   const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
   sentiment.forEach((entry) => {
     if (entry._id) sentimentBreakdown[entry._id] = entry.count;
+  });
+
+  const categoryBreakdown = REVIEW_CATEGORIES.reduce((acc, key) => {
+    acc[key] = 0;
+    return acc;
+  }, {});
+  categories.forEach((entry) => {
+    if (entry._id && categoryBreakdown[entry._id] !== undefined) {
+      categoryBreakdown[entry._id] = entry.count;
+    }
   });
 
   const [totalFlagged, totalFeatured] = await Promise.all([
@@ -921,15 +965,42 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
     success: true,
     data: {
       totalApproved: totalsByStatus.approved,
-      totalPending: totalsByStatus.pending,
-      totalRejected: totalsByStatus.rejected,
       totalFlagged,
       totalFeatured,
       averageRating: Math.round((avg.avg || 0) * 10) / 10,
       totalApprovedReviews: avg.total,
       sentimentBreakdown,
+      categoryBreakdown,
     },
   });
+});
+
+const getLatestReviewInsights = catchAsync(async (req, res) => {
+  const insight = await ReviewInsight.findOne().sort({ generatedAt: -1 }).lean();
+  res.status(200).json({
+    success: true,
+    data: { insight },
+  });
+});
+
+const regenerateReviewInsights = catchAsync(async (req, res, next) => {
+  try {
+    const insight = await generateReviewInsights();
+    if (!insight) {
+      return next(
+        new AppError(
+          "Not enough approved reviews in the last 90 days to generate insights.",
+          400
+        )
+      );
+    }
+    res.status(200).json({
+      success: true,
+      data: { insight },
+    });
+  } catch (err) {
+    return next(new AppError(err.message || "Failed to generate insights", 500));
+  }
 });
 
 module.exports = {
@@ -940,7 +1011,7 @@ module.exports = {
   voteHelpful,
   deleteReview,
   getAllReviews,
-  moderateReview,
+  categorizeReview,
   uploadReviewImages,
   updateReview,
   flagReview,
@@ -950,4 +1021,6 @@ module.exports = {
   replyToReview,
   featureReview,
   getReviewsAnalytics,
+  getLatestReviewInsights,
+  regenerateReviewInsights,
 };

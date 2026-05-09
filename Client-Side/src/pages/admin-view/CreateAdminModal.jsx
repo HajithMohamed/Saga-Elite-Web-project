@@ -45,7 +45,7 @@ const ROLE_PRESETS = {
   },
   content_manager: {
     label: "Content Manager",
-    description: "Can manage drops, products, and moderate reviews. No payment access.",
+    description: "Can manage drops, products, and organize reviews. No payment access.",
     subRole: "product_manager",
     permissions: {
       products: true,

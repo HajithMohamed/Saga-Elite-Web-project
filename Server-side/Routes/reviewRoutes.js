@@ -8,7 +8,7 @@ const {
   validateReviewCreate,
   validateReviewUpdate,
   validateReviewFlag,
-  validateReviewModeration,
+  validateReviewCategorize,
 } = require("../Middlewares/request-validation");
 const {
   createReview,
@@ -18,7 +18,7 @@ const {
   voteHelpful,
   deleteReview,
   getAllReviews,
-  moderateReview,
+  categorizeReview,
   uploadReviewImages,
   updateReview,
   flagReview,
@@ -26,6 +26,8 @@ const {
   replyToReview,
   featureReview,
   getReviewsAnalytics,
+  getLatestReviewInsights,
+  regenerateReviewInsights,
 } = require("../Controllers/reviewController");
 
 const userRouter = express.Router();
@@ -43,8 +45,10 @@ userRouter.delete("/:reviewId", authMiddleware, validateObjectIdParam("reviewId"
 
 adminRouter.get("/", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getAllReviews);
 adminRouter.get("/analytics", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getReviewsAnalytics);
+adminRouter.get("/insights", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getLatestReviewInsights);
+adminRouter.post("/insights/regenerate", authMiddleware, adminMiddleware, requirePermission("manageReviews"), adminLogMiddleware, regenerateReviewInsights);
 adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requirePermission("viewAnalytics"), validateObjectIdParam("dropId", "drop id"), getDropAnalytics);
-adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewModeration, adminLogMiddleware, moderateReview);
+adminRouter.patch("/:reviewId/category", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewCategorize, adminLogMiddleware, categorizeReview);
 adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, replyToReview);
 adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, featureReview);
 

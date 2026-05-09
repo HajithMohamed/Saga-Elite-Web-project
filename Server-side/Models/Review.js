@@ -99,6 +99,12 @@ const reviewSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    category: {
+      type: String,
+      enum: ["uncategorized", "fit", "quality", "delivery", "style", "value"],
+      default: "uncategorized",
+      index: true,
+    },
     rewardCouponIssued: {
       type: Boolean,
       default: false,
@@ -122,6 +128,7 @@ const reviewSchema = new mongoose.Schema(
 
 reviewSchema.index({ productId: 1, status: 1 });
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+reviewSchema.index({ title: "text", content: "text" });
 
 reviewSchema.pre("save", function () {
   if (!this.slug) {
