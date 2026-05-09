@@ -92,11 +92,3 @@ export const featureReviewApi = (reviewId, isFeatured) =>
 
 export const fetchReviewAnalyticsApi = () =>
   axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });
-
-export const fetchReviewInsightsApi = () =>
-  axios.get(`${API_BASE}/admin/reviews/insights`, { withCredentials: true });
-
-export const regenerateReviewInsightsApi = () =>
-  axios.post(`${API_BASE}/admin/reviews/insights/regenerate`, null, {
-    withCredentials: true,
-  });

@@ -33,7 +33,6 @@ import AdminDashboard from "./pages/admin-view/Dashboard";
 import AdminFeatures from "./pages/admin-view/Features";
 import AdminOffers from "./pages/admin-view/Offers";
 import AdminCoupons from "./pages/admin-view/Coupons";
-import AdminMediaLibrary from "./pages/admin-view/MediaLibrary";
 import AdminSeoSettings from "./pages/admin-view/SeoSettings";
 import AdminCommunity from "./pages/admin-view/CommunityPage";
 import AdminShipping from "./pages/admin-view/ShippingPage";
@@ -50,7 +49,7 @@ import PaymentVerificationPage from "./pages/admin-view/PaymentVerificationPage"
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
-import ReviewInsights from "./pages/admin-view/ReviewInsights";
+import Recommendations from "./pages/admin-view/Recommendations";
 import AboutSiteConfig from "./pages/admin-view/AboutSiteConfig";
 import ContactInquiriesPage from "./pages/admin-view/ContactInquiriesPage";
 import NewsletterSubscribersPage from "./pages/admin-view/NewsletterSubscribersPage";
@@ -73,6 +72,7 @@ import NotificationsPage from "./pages/common/NotificationsPage";
 import OrderSuccess from "./pages/shopping-view/OrderSuccess";
 import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
+import ForYou from "./pages/shopping-view/ForYou";
 import OrderTracking from "./pages/shopping-view/OrderTracking";
 import ManualPaymentPage from "./pages/ManualPaymentPage";
 import FindPaymentPage from "./pages/FindPaymentPage";
@@ -222,7 +222,6 @@ function App() {
             <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
             <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
             <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
-            <Route path="media" element={<PermissionGuard permission="products"><AdminMediaLibrary /></PermissionGuard>} />
             <Route path="seo" element={<PermissionGuard superAdminOnly><AdminSeoSettings /></PermissionGuard>} />
             <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
             <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
@@ -236,7 +235,8 @@ function App() {
             <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
             <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
             <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
-            <Route path="review-insights" element={<PermissionGuard permission="manageReviews"><ReviewInsights /></PermissionGuard>} />
+            <Route path="recommendations" element={<PermissionGuard permission="manageReviews"><Recommendations /></PermissionGuard>} />
+            <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
             <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
@@ -271,6 +271,7 @@ function App() {
             <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
             <Route path="find-payment" element={<FindPaymentPage />} />
             <Route path="wishlist" element={<Wishlist />} />
+            <Route path="for-you" element={<ForYou />} />
             <Route path="order-tracking" element={<OrderTracking />} />
             <Route path="account/my-reviews" element={<MyReviewsPage />} />
           </Route>

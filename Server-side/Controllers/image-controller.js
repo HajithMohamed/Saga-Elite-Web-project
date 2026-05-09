@@ -81,8 +81,6 @@ const uploadImages = catchAsync(async (req, res, next) => {
       "logo",
       "category-logo",
       "social-ugc",
-      "editorial-quote",
-      "testimonial",
     ];
 
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
@@ -353,7 +351,7 @@ const getProductImages = catchAsync(async (req, res, next) => {
     refId: productRefId,
     refModel: "Product",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -380,7 +378,7 @@ const getDropImages = catchAsync(async (req, res, next) => {
     refId: dropRefId,
     refModel: "Drop",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -395,7 +393,7 @@ const getHeroImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "hero",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!heroImages.length) {
     return next(new AppError("No hero images found", 404));
@@ -413,7 +411,7 @@ const getAdImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "ad",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!adImages.length) {
     return next(new AppError("No ad images found", 404));
@@ -431,7 +429,7 @@ const getLogoImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "logo",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!logoImages.length) {
     return next(new AppError("No logo images found", 404));
@@ -486,7 +484,7 @@ const getReviewImages = catchAsync(async (req, res, next) => {
     refId: reviewRefId,
     refModel: "Review",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -500,46 +498,10 @@ const getSocialUgcImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "social-ugc",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!images.length) {
     return next(new AppError("No social UGC images found", 404));
-  }
-
-  res.status(200).json({
-    success: true,
-    results: images.length,
-    images,
-  });
-});
-
-const getEditorialQuoteImages = catchAsync(async (req, res, next) => {
-  const images = await Image.find({
-    refModel: "System",
-    type: "editorial-quote",
-    isDeleted: false,
-  }).sort({ order: 1 });
-
-  if (!images.length) {
-    return next(new AppError("No editorial quote images found", 404));
-  }
-
-  res.status(200).json({
-    success: true,
-    results: images.length,
-    images,
-  });
-});
-
-const getTestimonialImages = catchAsync(async (req, res, next) => {
-  const images = await Image.find({
-    refModel: "System",
-    type: "testimonial",
-    isDeleted: false,
-  }).sort({ order: 1 });
-
-  if (!images.length) {
-    return next(new AppError("No testimonial images found", 404));
   }
 
   res.status(200).json({
@@ -838,8 +800,6 @@ module.exports = {
   getCategoryLogoImages,
   getReviewImages,
   getSocialUgcImages,
-  getEditorialQuoteImages,
-  getTestimonialImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,

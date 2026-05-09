@@ -10,8 +10,6 @@ const {
   getCategoryLogoImages,
   getReviewImages,
   getSocialUgcImages,
-  getEditorialQuoteImages,
-  getTestimonialImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,
@@ -68,8 +66,6 @@ router.get("/get-ad-images", getAdImages);
 router.get("/get-logo-images", getLogoImages);
 router.get("/get-category-logo-images", getCategoryLogoImages);
 router.get("/get-social-ugc-images", getSocialUgcImages);
-router.get("/get-editorial-quote-images", getEditorialQuoteImages);
-router.get("/get-testimonial-images", getTestimonialImages);
 
 router.patch("/set-primary/:id", authMiddleware, adminMiddleware, requirePermission("products"), validateObjectIdParam("id", "image id"), adminLogMiddleware, setPrimaryImage);
 router.delete("/delete-image/:id", authMiddleware, adminMiddleware, requirePermission("products"), adminLogMiddleware, deleteImage);

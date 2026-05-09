@@ -40,8 +40,6 @@ const imageSchema = new mongoose.Schema(
         "logo",
         "system",
         "social-ugc",
-        "editorial-quote",
-        "testimonial",
         "other",
       ],
       default: "product",

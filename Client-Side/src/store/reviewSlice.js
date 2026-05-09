@@ -12,8 +12,6 @@ import {
   replyToReviewApi,
   featureReviewApi,
   fetchReviewAnalyticsApi,
-  fetchReviewInsightsApi,
-  regenerateReviewInsightsApi,
 } from "@/api/reviewAPI";
 
 const unwrapError = (error, fallback) => {
@@ -29,10 +27,6 @@ const initialState = {
   adminReviews: [],
   adminPagination: null,
   adminAnalytics: null,
-  insights: null,
-  insightsLoading: false,
-  insightsRegenerating: false,
-  insightsError: null,
   activeFilters: {
     productId: null,
     rating: null,
@@ -242,34 +236,6 @@ export const fetchReviewAnalytics = createAsyncThunk(
   }
 );
 
-export const fetchReviewInsights = createAsyncThunk(
-  "review/fetchReviewInsights",
-  async (_, thunkAPI) => {
-    try {
-      const response = await fetchReviewInsightsApi();
-      return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(
-        unwrapError(error, "Failed to load review insights")
-      );
-    }
-  }
-);
-
-export const regenerateReviewInsights = createAsyncThunk(
-  "review/regenerateReviewInsights",
-  async (_, thunkAPI) => {
-    try {
-      const response = await regenerateReviewInsightsApi();
-      return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(
-        unwrapError(error, "Failed to regenerate review insights")
-      );
-    }
-  }
-);
-
 const reviewSlice = createSlice({
   name: "review",
   initialState,
@@ -417,30 +383,6 @@ const reviewSlice = createSlice({
       })
       .addCase(fetchReviewAnalytics.fulfilled, (state, action) => {
         state.adminAnalytics = action.payload?.data || null;
-      })
-      .addCase(fetchReviewInsights.pending, (state) => {
-        state.insightsLoading = true;
-        state.insightsError = null;
-      })
-      .addCase(fetchReviewInsights.fulfilled, (state, action) => {
-        state.insightsLoading = false;
-        state.insights = action.payload?.data?.insight || null;
-      })
-      .addCase(fetchReviewInsights.rejected, (state, action) => {
-        state.insightsLoading = false;
-        state.insightsError = action.payload || action.error.message;
-      })
-      .addCase(regenerateReviewInsights.pending, (state) => {
-        state.insightsRegenerating = true;
-        state.insightsError = null;
-      })
-      .addCase(regenerateReviewInsights.fulfilled, (state, action) => {
-        state.insightsRegenerating = false;
-        state.insights = action.payload?.data?.insight || state.insights;
-      })
-      .addCase(regenerateReviewInsights.rejected, (state, action) => {
-        state.insightsRegenerating = false;
-        state.insightsError = action.payload || action.error.message;
       });
   },
 });

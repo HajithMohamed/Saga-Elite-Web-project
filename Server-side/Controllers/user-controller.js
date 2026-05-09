@@ -4,6 +4,7 @@ const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
+const UserActivityLog = require("../Models/UserActivityLog");
 const { isAdminRole } = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
@@ -615,6 +616,12 @@ const addToCart = catchAsync(async (req, res, next) => {
       { _id: product._id },
       { $inc: { cartAddCount: 1 } }
     ).catch(() => {});
+    UserActivityLog.create({
+      userId: req.userInfo?.id || null,
+      productId: product._id,
+      action: "cart_add",
+      category: product.category || "",
+    }).catch(() => {});
   }
 
   await user.save({ validateBeforeSave: false });
@@ -812,6 +819,13 @@ const addToWishlist = catchAsync(async (req, res, next) => {
   product.wishCount = (product.wishCount || 0) + 1;
   await product.save({ validateBeforeSave: false });
 
+  UserActivityLog.create({
+    userId: req.userInfo?.id || null,
+    productId: product._id,
+    action: "wishlist_add",
+    category: product.category || "",
+  }).catch(() => {});
+
   const updatedUser = await User.findById(req.userInfo.id)
     .populate({
       path: "wishlist",
@@ -858,6 +872,12 @@ const removeFromWishlist = catchAsync(async (req, res, next) => {
     if (product) {
       product.wishCount = Math.max((product.wishCount || 0) - 1, 0);
       await product.save({ validateBeforeSave: false });
+      UserActivityLog.create({
+        userId: req.userInfo?.id || null,
+        productId,
+        action: "wishlist_remove",
+        category: product.category || "",
+      }).catch(() => {});
     }
   }
 

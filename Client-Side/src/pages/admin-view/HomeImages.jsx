@@ -34,21 +34,6 @@ const sectionConfig = [
     description: "Logos for specific categories (Gents, Ladies, Unisex).",
     isCategorized: true,
   },
-  {
-    key: "editorial-quote",
-    label: "Editorial Pull Quotes",
-    description: "Full-width quote imagery shown in mid-page editorial spreads.",
-  },
-  {
-    key: "testimonial",
-    label: "Testimonial Imagery",
-    description: "Imagery shown alongside curated customer quotes.",
-  },
-  {
-    key: "social-ugc",
-    label: "Community Gallery",
-    description: "Customer / influencer UGC photos for the homepage social proof section.",
-  },
 ];
 
 const useSectionState = () => {
@@ -84,9 +69,6 @@ const AdminHomeImages = () => {
   const banner = useSectionState();
   const logo = useSectionState();
   const categoryLogo = useSectionState();
-  const editorialQuote = useSectionState();
-  const testimonial = useSectionState();
-  const socialUgc = useSectionState();
   const [globalLoading, setGlobalLoading] = useState(false);
   const [newImageIds, setNewImageIds] = useState(() => new Set());
   const [activeTab, setActiveTab] = useState("galleries");
@@ -97,9 +79,6 @@ const AdminHomeImages = () => {
     ad: banner,
     logo,
     "category-logo": categoryLogo,
-    "editorial-quote": editorialQuote,
-    testimonial,
-    "social-ugc": socialUgc,
   };
 
   const fetchImages = async (type, setter) => {
@@ -130,9 +109,6 @@ const AdminHomeImages = () => {
       fetchImages("ad", banner),
       fetchImages("logo", logo),
       fetchImages("category-logo", categoryLogo),
-      fetchImages("editorial-quote", editorialQuote),
-      fetchImages("testimonial", testimonial),
-      fetchImages("social-ugc", socialUgc),
     ]);
 
     setGlobalLoading(false);
