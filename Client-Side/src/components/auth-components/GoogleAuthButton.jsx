@@ -28,7 +28,7 @@ const GoogleGlyph = ({ size = 18 }) => (
   </svg>
 );
 
-const GoogleAuthButton = ({ onSuccess, onError, disabled, label = "Continue with Google" }) => {
+const GoogleAuthButton = ({ onSuccess, onError, disabled, label = "Quick Access with Google" }) => {
   const googleLogin = useGoogleLogin({
     flow: "implicit",
     onSuccess,
@@ -43,20 +43,17 @@ const GoogleAuthButton = ({ onSuccess, onError, disabled, label = "Continue with
       aria-label={label}
       className="
         group w-full h-12
-        bg-white hover:bg-[#f8f8f8] active:bg-[#f1f1f1]
-        text-[#1f1f1f]
-        border border-[#dadce0] hover:border-[#d2d2d2]
-        rounded-sm
+        bg-[#1c1b1b] hover:bg-[#2a2a2a] active:bg-[#131313]
+        text-[#e5e2e1]
+        border border-[#4d4635] hover:border-[#99907c]
         flex items-center justify-center gap-3
         transition-colors duration-200
         disabled:opacity-50 disabled:pointer-events-none
-        shadow-[0_1px_2px_rgba(0,0,0,0.08)]
-        hover:shadow-[0_2px_6px_rgba(0,0,0,0.18)]
-        focus:outline-none focus:ring-2 focus:ring-[#f2ca50]/60 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]
+        focus:outline-none focus:ring-2 focus:ring-[#f2ca50]/40 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]
       "
     >
       <GoogleGlyph size={18} />
-      <span className="font-medium text-sm tracking-tight" style={{ fontFamily: 'Geist, "Roboto", sans-serif' }}>
+      <span className="se-label text-[11px] tracking-[0.18em]">
         {label}
       </span>
     </button>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  Gift,
   Heart,
   Loader2,
   Lock,
@@ -19,6 +20,7 @@ import {
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
@@ -35,6 +37,7 @@ const errMsg = (err, fallback) =>
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  usePageMeta({ title: "Cart" });
   const [activeItemId, setActiveItemId] = useState(null);
   const [removingItemId, setRemovingItemId] = useState(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -302,6 +305,28 @@ const Cart = () => {
                 );
               })}
             </AnimatePresence>
+
+            {items.length > 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center justify-between py-4 border-t border-[#4d4635]/40"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 border border-[#4d4635] bg-[#1c1b1b] flex items-center justify-center">
+                    <Gift size={16} strokeWidth={1.25} className="text-[#f2ca50]" />
+                  </div>
+                  <div>
+                    <p className="se-body text-sm text-[#e5e2e1]">Saga Exclusive Gift</p>
+                    <p className="se-label text-[9px] tracking-[0.24em] text-[#99907c] mt-0.5">
+                      Surprise included with every order
+                    </p>
+                  </div>
+                </div>
+                <span className="se-mono text-sm text-[#d0c5af]">FREE</span>
+              </motion.div>
+            ) : null}
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
               <Eyebrow tone="muted" size="xs">

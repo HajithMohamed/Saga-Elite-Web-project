@@ -2,21 +2,60 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { registerUserAction, googleSignUpAction } from "@/store/auth-slice";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  registerUserAction,
+  googleSignUpAction,
+  facebookSignUpAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
+import {
+  AUTH_INPUT,
+  AUTH_PRIMARY_BTN,
+  Btn,
+  Eyebrow,
+  FieldError,
+  Hairline,
+} from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Sri Lankan mobile prefixes (the carriers that ship 7X numbers).
+const SL_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
+// Validates that the digits-only phone is a real SL mobile in any of:
+// "07X XXX XXXX", "7X XXX XXXX", "+947X XXX XXXX". Mirrors the server-side
+// rule in Server-Side/Utils/phone-validator.js so we fail fast in the UI.
+const isValidSLPhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return false;
+  let local = digits;
+  if (local.startsWith("0094")) local = local.slice(4);
+  else if (local.startsWith("94") && local.length === 11) local = local.slice(2);
+  else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
+  if (local.length !== 9) return false;
+  return SL_MOBILE_PREFIXES.includes(local.slice(0, 2));
+};
+
+if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+  console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
+}
+
+const GENDER_OPTIONS = ["Gents", "Ladies", "Unisex"];
+const STYLE_OPTIONS = ["Streetwear", "Oversized", "Minimal", "Luxury", "Sporty"];
+const DROP_OPTIONS = ["Limited Drops", "Streetwear", "Accessories", "Mystery Rewards"];
 
 const describeAuthError = (err) => {
   if (typeof err === "string") return { title: "Registration failed", description: err };
   const status = err?.response?.status;
   const serverMsg = err?.response?.data?.message;
   const code = err?.code;
+
   if (code === "ERR_NETWORK" || err?.message === "Network Error") {
     return {
       title: "Cannot reach the atelier",
@@ -48,14 +87,13 @@ const describeAuthError = (err) => {
   return { title: "Registration failed", description: serverMsg || err?.message || "Something didn't work." };
 };
 
-// Friendly summary of which fields blocked submission, so the user knows the
-// click WAS registered but validation prevented the API call.
 const summarizeBlocking = (errs) => {
   const fields = Object.keys(errs);
   if (fields.length === 0) return null;
   if (fields.length === 1) {
     const k = fields[0];
     if (k === "email") return "Check your email address.";
+    if (k === "phoneNumber") return "Add a valid Sri Lankan mobile number.";
     if (k === "password") return "Password doesn't meet the requirements yet.";
     if (k === "confirmPassword") return "Confirm your password to match.";
   }
@@ -68,6 +106,12 @@ const validateRegister = (data, touched = {}) => {
     errs.email = "Tell us your email.";
   } else if (data.email && !EMAIL_REGEX.test(data.email)) {
     errs.email = "Please enter a valid email address.";
+  }
+  if (touched.phoneNumber && !data.phoneNumber) {
+    errs.phoneNumber = "We need your phone for WhatsApp updates.";
+  } else if (data.phoneNumber && !isValidSLPhone(data.phoneNumber)) {
+    errs.phoneNumber =
+      "Enter a valid Sri Lankan mobile (e.g. 077 123 4567).";
   }
   if (touched.password && !data.password) {
     errs.password = "Choose a password.";
@@ -87,36 +131,43 @@ const validateRegister = (data, touched = {}) => {
   return errs;
 };
 
-const FieldLabel = ({ children, hint }) => (
-  <div className="flex items-baseline justify-between">
-    <Eyebrow tone="muted" size="xs">{children}</Eyebrow>
-    {hint && (
-      <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">{hint}</span>
-    )}
-  </div>
-);
+const PILL_BASE =
+  "se-label text-[10px] tracking-[0.18em] px-4 py-2 transition-colors";
+const PILL_INACTIVE =
+  "bg-[#1c1b1b] text-[#d0c5af] border border-[#4d4635] hover:border-[#99907c]";
+const PILL_SINGLE_ACTIVE =
+  "bg-[#f2ca50] text-[#1b1c1c] border border-[#f2ca50]";
+const PILL_MULTI_ACTIVE =
+  "bg-[#f2ca50]/15 text-[#f2ca50] border border-[#f2ca50]";
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    username: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
+    gender: "",
+    stylePreference: "",
+    dropInterest: [],
   });
+  const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Bounce away if already authenticated
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+
   useEffect(() => {
     if (isAuthenticated) {
       const role = String(user?.role || "").toLowerCase();
       navigate(
-        role === "admin" || role === "super_admin" || role === "superadmin"
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
           ? "/admin/dashboard"
           : "/shopping/home",
         { replace: true }
@@ -124,18 +175,30 @@ const Register = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
+  usePageMeta({ title: "Create Account" });
+
   useEffect(() => {
     setErrors(validateRegister(formData, touched));
   }, [formData, touched]);
 
-  const handleSubmit = async (e) => {
+  const inputState = (field) =>
+    touched[field] && errors[field]
+      ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+      : "border-[#4d4635] focus:border-[#f2ca50]";
+
+  const handleNextStep = (e) => {
     e.preventDefault();
-    const allTouched = { email: true, password: true, confirmPassword: true };
+    const allTouched = {
+      email: true,
+      phoneNumber: true,
+      password: true,
+      confirmPassword: true,
+    };
     setTouched(allTouched);
+
     const fresh = validateRegister(formData, allTouched);
     setErrors(fresh);
 
-    // Surface why submit didn't fire — was hidden silently before.
     const blockingMsg = summarizeBlocking(fresh);
     if (blockingMsg) {
       toast({
@@ -143,28 +206,35 @@ const Register = () => {
         description: blockingMsg,
         variant: "destructive",
       });
-      // eslint-disable-next-line no-console
-      console.warn("[register] blocked by validation", fresh);
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (step === 1) {
+      handleNextStep(e);
       return;
     }
 
     setIsLoading(true);
     try {
-      // eslint-disable-next-line no-console
       console.info("[register] sending", { email: formData.email });
+
       const response = await dispatch(registerUserAction(formData)).unwrap();
-      // eslint-disable-next-line no-console
+
       console.info("[register] response", response);
+
       toast({
         title: "Account opened",
         description:
-          response?.message ||
-          "Check your email for the verification code.",
+          response?.message || "Check your email for the verification code.",
         variant: "success",
       });
+
       navigate("/auth/verify-otp");
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[register] error", err);
       const { title, description } = describeAuthError(err);
       toast({ title, description, variant: "destructive" });
@@ -176,19 +246,32 @@ const Register = () => {
   const handleGoogleSuccess = async ({ access_token }) => {
     setIsLoading(true);
     try {
-      const response = await dispatch(googleSignUpAction({ accessToken: access_token })).unwrap();
-      // eslint-disable-next-line no-console
+      const response = await dispatch(
+        googleSignUpAction({ accessToken: access_token })
+      ).unwrap();
+
       console.info("[google sign-up] response", response);
+
       toast({
         title: "Welcome to the atelier",
         description: response?.message || "Signed up.",
         variant: "success",
       });
-      navigate("/shopping/home", { replace: true });
+
+      const role = String(
+        response?.data?.user?.role || response?.data?.role || ""
+      ).toLowerCase();
+
+      navigate(
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+          ? "/admin/dashboard"
+          : "/shopping/home",
+        { replace: true }
+      );
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[google sign-up] error", err);
       const { title, description } = describeAuthError(err);
+
       toast({
         title: title === "Registration failed" ? "Google sign-up failed" : title,
         description,
@@ -199,169 +282,406 @@ const Register = () => {
     }
   };
 
-  const handleGoogleError = () =>
+  const handleGoogleError = (err) => {
+    if (err?.type === "popup_closed" || err?.error === "popup_closed_by_user") {
+      return;
+    }
+
     toast({
       title: "Google sign-up failed",
-      description: "Could not open Google sign-in.",
+      description: "Please try again or use email and password.",
       variant: "destructive",
     });
+  };
 
-  const inputBase =
-    "w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";
-  const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
-  const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignUpAction({ accessToken: access_token })
+      ).unwrap();
+
+      toast({
+        title: "Welcome to the atelier",
+        description: response?.message || "Signed up.",
+        variant: "success",
+      });
+
+      const role = String(
+        response?.data?.user?.role || response?.data?.role || ""
+      ).toLowerCase();
+
+      navigate(
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+          ? "/admin/dashboard"
+          : "/shopping/home",
+        { replace: true }
+      );
+    } catch (err) {
+      console.error("[facebook sign-up] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title:
+          title === "Registration failed" ? "Facebook sign-up failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = (err) => {
+    if (err?.status === "unknown" || err?.status === "not_authorized") {
+      return; // user closed popup or denied
+    }
+    toast({
+      title: "Facebook sign-up failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
+
+  const toggleDropInterest = (value) => {
+    setFormData((prev) => {
+      const next = prev.dropInterest.includes(value)
+        ? prev.dropInterest.filter((v) => v !== value)
+        : [...prev.dropInterest, value];
+      return { ...prev, dropInterest: next };
+    });
+  };
+
+  const StepDots = (
+    <div className="flex items-center gap-1.5 mb-6">
+      <div
+        className={`h-1 rounded-full transition-all ${
+          step === 1 ? "w-6 bg-[#f2ca50]" : "w-2 bg-[#4d4635]"
+        }`}
+      />
+      <div
+        className={`h-1 rounded-full transition-all ${
+          step === 2 ? "w-6 bg-[#f2ca50]" : "w-2 bg-[#4d4635]"
+        }`}
+      />
+    </div>
+  );
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">Become a member</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Open an account.
-      </h1>
-      <p className="mt-5 se-body text-sm text-[#99907c]">
-        Already inside the atelier?{" "}
-        <Link to="/auth/login" className="text-[#f2ca50] underline-offset-4 hover:underline">
-          Sign in
-        </Link>
-        .
-      </p>
-
-      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
-        <div>
-          <FieldLabel>Email</FieldLabel>
-          <input
-            type="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-            placeholder="your.name@email.com"
-            aria-invalid={Boolean(touched.email && errors.email)}
-            className={`mt-2 ${inputBase} ${
-              touched.email && errors.email ? inputErr : inputOk
-            }`}
-          />
-          <FieldError>{touched.email ? errors.email : null}</FieldError>
-        </div>
-
-        <div>
-          <FieldLabel hint="At least 8 characters">Password</FieldLabel>
-          <div className="relative mt-2">
-            <input
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              value={formData.password}
-              onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
-              onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-              placeholder="Choose with care"
-              aria-invalid={Boolean(touched.password && errors.password)}
-              className={`pr-10 ${inputBase} ${
-                touched.password && errors.password ? inputErr : inputOk
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.password ? errors.password : null}</FieldError>
-          <PasswordStrengthMeter password={formData.password} />
-        </div>
-
-        <div>
-          <FieldLabel>Confirm password</FieldLabel>
-          <div className="relative mt-2">
-            <input
-              type={showConfirm ? "text" : "password"}
-              autoComplete="new-password"
-              value={formData.confirmPassword}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, confirmPassword: e.target.value }))
-              }
-              onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
-              placeholder="Once more"
-              aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
-              className={`pr-10 ${inputBase} ${
-                touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
-              aria-label={showConfirm ? "Hide password" : "Show password"}
-            >
-              {showConfirm ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.confirmPassword ? errors.confirmPassword : null}</FieldError>
-        </div>
-
-        <Btn
-          variant="default"
-          size="lg"
-          className="w-full"
-          iconRight={ArrowRight}
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Opening account" : "Open account"}
-        </Btn>
-      </form>
-
-      <div className="mt-10 flex items-center gap-5">
-        <Hairline />
-        <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">or</span>
-        <Hairline />
-      </div>
-
-      <div className="mt-6">
-        {GOOGLE_ENABLED ? (
-          <GoogleAuthButton
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            disabled={isLoading}
-            label="Continue with Google"
-          />
-        ) : (
-          <button
-            type="button"
-            disabled
-            title="Set VITE_GOOGLE_CLIENT_ID in your .env.local to enable Google sign-up"
-            className="w-full h-12 bg-white/95 border border-[#dadce0] rounded-sm flex items-center justify-center gap-3 text-[#5f6368] cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.06)] opacity-70"
+    <div className="relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        {step === 1 ? (
+          <motion.div
+            key="step-1"
+            initial={{ opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 24 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           >
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#9aa0a6" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-            </svg>
-            <span className="text-sm font-medium" style={{ fontFamily: 'Geist, "Roboto", sans-serif' }}>
-              Google sign-up unavailable
-            </span>
-          </button>
-        )}
-      </div>
+            {StepDots}
+            <Eyebrow tone="gold" size="md">Become a member</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Join the<br />elite.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              Create your account to access exclusive drops, members-only chapters,
+              and early releases.
+            </p>
 
-      <p className="mt-10 se-body text-xs text-[#574500] leading-relaxed">
-        By becoming a member you accept our{" "}
-        <Link to="/legal/terms-and-conditions" className="text-[#99907c] hover:text-[#f2ca50]">
-          terms
-        </Link>{" "}
-        and{" "}
-        <Link to="/legal/privacy-policy" className="text-[#99907c] hover:text-[#f2ca50]">
-          privacy practice
-        </Link>
-        . You'll receive a verification code by email.
-      </p>
+            <form onSubmit={handleNextStep} noValidate className="mt-10 md:mt-12 space-y-6">
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <Eyebrow tone="muted" size="xs">Username</Eyebrow>
+                  <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">
+                    Optional
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  autoComplete="username"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, username: e.target.value }))
+                  }
+                  placeholder="Your handle in the atelier"
+                  className={`mt-2 ${AUTH_INPUT} border-[#4d4635] focus:border-[#f2ca50]`}
+                />
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, email: e.target.value }));
+                    setTouched((p) => ({ ...p, email: true }));
+                  }}
+                  onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+                  placeholder="your.name@email.com"
+                  aria-invalid={Boolean(touched.email && errors.email)}
+                  className={`mt-2 ${AUTH_INPUT} ${inputState("email")}`}
+                />
+                <FieldError>{touched.email ? errors.email : null}</FieldError>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">
+                  Mobile (for WhatsApp updates)
+                </Eyebrow>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, phoneNumber: e.target.value }));
+                    setTouched((p) => ({ ...p, phoneNumber: true }));
+                  }}
+                  onBlur={() => setTouched((p) => ({ ...p, phoneNumber: true }))}
+                  placeholder="077 123 4567"
+                  aria-invalid={Boolean(touched.phoneNumber && errors.phoneNumber)}
+                  className={`mt-2 ${AUTH_INPUT} ${inputState("phoneNumber")}`}
+                />
+                <FieldError>
+                  {touched.phoneNumber ? errors.phoneNumber : null}
+                </FieldError>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+                <div className="relative mt-2">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData((p) => ({ ...p, password: e.target.value }));
+                      setTouched((p) => ({ ...p, password: true }));
+                    }}
+                    onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+                    placeholder="Choose with care"
+                    aria-invalid={Boolean(touched.password && errors.password)}
+                    className={`${AUTH_INPUT} pr-10 ${inputState("password")}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={16} strokeWidth={1.5} />
+                    ) : (
+                      <Eye size={16} strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
+                <FieldError>{touched.password ? errors.password : null}</FieldError>
+                <PasswordStrengthMeter password={formData.password} />
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Confirm password</Eyebrow>
+                <div className="relative mt-2">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => {
+                      setFormData((p) => ({
+                        ...p,
+                        confirmPassword: e.target.value,
+                      }));
+                      setTouched((p) => ({ ...p, confirmPassword: true }));
+                    }}
+                    onBlur={() =>
+                      setTouched((p) => ({ ...p, confirmPassword: true }))
+                    }
+                    placeholder="Once more"
+                    aria-invalid={Boolean(
+                      touched.confirmPassword && errors.confirmPassword
+                    )}
+                    className={`${AUTH_INPUT} pr-10 ${inputState("confirmPassword")}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                  >
+                    {showConfirm ? (
+                      <EyeOff size={16} strokeWidth={1.5} />
+                    ) : (
+                      <Eye size={16} strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
+                <FieldError>
+                  {touched.confirmPassword ? errors.confirmPassword : null}
+                </FieldError>
+              </div>
+
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Continuing" : "Continue"}
+              </Btn>
+            </form>
+
+            {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
+              <>
+                <div className="my-8 flex items-center gap-4">
+                  <Hairline tone="soft" />
+                  <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+                    Or
+                  </span>
+                  <Hairline tone="soft" />
+                </div>
+                <div className="space-y-3">
+                  {GOOGLE_ENABLED && (
+                    <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <GoogleAuthButton
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        label="Quick Access with Google"
+                      />
+                    </div>
+                  )}
+                  {FACEBOOK_ENABLED && (
+                    <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <FacebookAuthButton
+                        onSuccess={handleFacebookSuccess}
+                        onError={handleFacebookError}
+                        label="Quick Access with Facebook"
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <p className="mt-10 se-body text-sm text-[#99907c]">
+              Already elite?{" "}
+              <Link
+                to="/auth/login"
+                className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+              >
+                Enter here
+              </Link>
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="step-2"
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {StepDots}
+            <Eyebrow tone="gold" size="md">Your atelier</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Make it<br />personal.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              Tell us a little so we can shape your feed.
+              Skip if you'd rather come back to it.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-10 md:mt-12 space-y-8">
+              <div>
+                <Eyebrow tone="muted" size="xs">You shop for</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {GENDER_OPTIONS.map((value) => {
+                    const active = formData.gender === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, gender: value }))
+                        }
+                        className={`${PILL_BASE} ${
+                          active ? PILL_SINGLE_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Your vibe</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {STYLE_OPTIONS.map((value) => {
+                    const active = formData.stylePreference === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, stylePreference: value }))
+                        }
+                        className={`${PILL_BASE} ${
+                          active ? PILL_SINGLE_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">What excites you</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {DROP_OPTIONS.map((value) => {
+                    const active = formData.dropInterest.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleDropInterest(value)}
+                        className={`${PILL_BASE} ${
+                          active ? PILL_MULTI_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Unlocking" : "Unlock access"}
+              </Btn>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="mt-10 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+            >
+              ← Back
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -49,6 +49,11 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: null,
+    },
     helpfulCount: {
       type: Number,
       default: 0,
@@ -79,6 +84,31 @@ const reviewSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    brandReply: {
+      type: String,
+      maxlength: 1000,
+      trim: true,
+      default: "",
+    },
+    brandReplyAt: {
+      type: Date,
+      default: null,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    rewardCouponIssued: {
+      type: Boolean,
+      default: false,
+    },
+    rewardCouponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     slug: {
       type: String,
       unique: true,
@@ -93,12 +123,11 @@ const reviewSchema = new mongoose.Schema(
 reviewSchema.index({ productId: 1, status: 1 });
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
 
-reviewSchema.pre("save", function (next) {
+reviewSchema.pre("save", function () {
   if (!this.slug) {
     const idpart = this._id != null ? String(this._id) : `${this.productId}-${Date.now()}`;
     this.slug = slugify(`review-${idpart}`, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model("Review", reviewSchema);

@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionTemplate,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import axios from "axios";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,6 +38,8 @@ import VariantSelectors, {
 
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
+
+import usePageMeta from "@/hooks/use-page-meta";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -89,6 +98,35 @@ const ProductDetails = () => {
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
   );
+
+  usePageMeta({ title: product?.name || "Product" });
+
+  const heroPointerX = useMotionValue(0.5);
+  const heroPointerY = useMotionValue(0.5);
+  const heroImageX = useSpring(useTransform(heroPointerX, [0, 1], [10, -10]), {
+    stiffness: 90,
+    damping: 18,
+    mass: 0.4,
+  });
+  const heroImageY = useSpring(useTransform(heroPointerY, [0, 1], [10, -10]), {
+    stiffness: 90,
+    damping: 18,
+    mass: 0.4,
+  });
+  const heroGlowX = useTransform(heroPointerX, [0, 1], ["30%", "70%"]);
+  const heroGlowY = useTransform(heroPointerY, [0, 1], ["30%", "70%"]);
+  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(242,202,80,0.18), transparent 55%)`;
+
+  const handleHeroPointerMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    heroPointerX.set((event.clientX - rect.left) / rect.width);
+    heroPointerY.set((event.clientY - rect.top) / rect.height);
+  };
+
+  const handleHeroPointerLeave = () => {
+    heroPointerX.set(0.5);
+    heroPointerY.set(0.5);
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -381,7 +419,7 @@ const ProductDetails = () => {
           <img
             src={item.images?.[0]?.url || "/placeholder.jpg"}
             alt={item.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-12 w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37] backdrop-blur-md">
             {itemDropName}
@@ -422,22 +460,74 @@ const ProductDetails = () => {
 
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start relative">
           {/* LEFT 60%: Image Gallery */}
-          <div className="lg:col-span-7 flex flex-col gap-4">
-            <div className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]">
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <div
+              className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
+              onMouseMove={handleHeroPointerMove}
+              onMouseLeave={handleHeroPointerLeave}
+            >
+                <motion.div
+                  className="pointer-events-none absolute -inset-12 z-0 opacity-70"
+                  style={{ background: heroGlowBackground }}
+                />
                 <motion.img
                   key={activeImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4 }}
+                  initial={{ opacity: 0, scale: 1.06, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  whileHover={{ scale: 1.08 }}
+                  transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ x: heroImageX, y: heroImageY }}
                   src={product.images?.[activeImageIndex]?.url}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.3] cursor-zoom-in"
+                  className="relative z-10 w-full h-full object-cover cursor-zoom-in will-change-transform"
                   onClick={() => setLightboxOpen(true)}
                 />
+
+                {/* Cinematic gradient overlays */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/55 via-black/10 to-transparent z-20" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 via-black/15 to-transparent z-20" />
+                <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/[0.04] rounded-[2rem] z-20" />
+
+                {/* Floating badges */}
+                {product.isLimited && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: [0, -3, 0] }}
+                    transition={{
+                      y: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+                      opacity: { duration: 0.5, delay: 0.15 },
+                    }}
+                    className="absolute left-6 top-6 z-30 rounded-full border border-[#f2ca50]/40 bg-black/55 px-4 py-1.5 backdrop-blur-xl shadow-[0_0_28px_rgba(242,202,80,0.18)]"
+                  >
+                    <span className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+                      Limited Drop
+                    </span>
+                  </motion.div>
+                )}
+
+                {selectedVariant &&
+                  selectedVariant.stock > 0 &&
+                  selectedVariant.stock <= 5 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: [0, 3, 0] }}
+                      transition={{
+                        y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                        opacity: { duration: 0.5, delay: 0.25 },
+                      }}
+                      className="absolute right-6 bottom-6 z-30 flex items-center gap-2 rounded-full border border-[#93000a]/45 bg-black/55 px-4 py-1.5 backdrop-blur-xl shadow-[0_0_28px_rgba(147,0,10,0.22)]"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#ffb4ab] animate-pulse" />
+                      <span className="se-label text-[10px] tracking-[0.32em] text-[#ffb4ab]">
+                        Only {selectedVariant.stock} Left
+                      </span>
+                    </motion.div>
+                  )}
+
                 <button
                   type="button"
                   onClick={toggleWishlist}
-                  className="absolute top-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50] hover:scale-110"
+                  className="absolute top-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50] hover:scale-110"
                 >
                   <Heart
                     className={`w-5 h-5 transition-colors ${
@@ -465,7 +555,7 @@ const ProductDetails = () => {
           </div>
 
           {/* RIGHT 40%: Sticky Details */}
-          <div className="lg:col-span-5 sticky top-24 flex flex-col py-4">
+          <div className="lg:col-span-6 sticky top-24 flex flex-col py-4">
             <p className="text-[#f2ca50] se-label tracking-[0.28em] text-[10px] mb-4">
               {product.category} {product.isLimited && "• Limited Drop"}
             </p>
@@ -500,6 +590,11 @@ const ProductDetails = () => {
                       onColorChange={handleColorChange}
                       errors={variantErrors}
                     />
+                    {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 ? (
+                      <p className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] mt-2">
+                        Only {selectedVariant.stock} left in this size
+                      </p>
+                    ) : null}
                   </>
                 ) : (
                   <p className="se-body text-sm text-[#d0c5af]">One size fits all</p>

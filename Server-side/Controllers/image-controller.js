@@ -38,7 +38,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
   // Log upload attempt
   actionLogger.info({
     action: "upload_images_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -75,12 +75,20 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   // Validate type for System images
   if (imageData.refModel === "System") {
-    const validSystemTypes = ["hero", "ad", "logo", "category-logo"];
+    const validSystemTypes = [
+      "hero",
+      "ad",
+      "logo",
+      "category-logo",
+      "social-ugc",
+      "editorial-quote",
+      "testimonial",
+    ];
 
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
       return next(
         new AppError(
-          "System images require type: hero, ad, logo, or category-logo",
+          `System images require type: ${validSystemTypes.join(", ")}`,
           400
         )
       );
@@ -194,7 +202,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
         // Log successful upload with URL for debugging
         actionLogger.info({
           action: "image_upload_success",
-          userId: req.user ? req.user._id : null,
+          userId: req.userInfo ? req.userInfo._id : null,
           refModel: imageData.refModel,
           refId: imageData.refId || null,
           publicId: result.public_id,
@@ -222,7 +230,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
     actionLogger.error({
       action: "upload_images",
-      userId: req.user ? req.user._id : null,
+      userId: req.userInfo ? req.userInfo._id : null,
       refModel: imageData.refModel,
       refId: imageData.refId || null,
       type: imageData.type || null,
@@ -238,7 +246,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "upload_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -278,7 +286,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log update attempt
   actionLogger.info({
     action: "update_image_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     oldPublicId: image.publicId,
   });
@@ -315,7 +323,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log successful update
   actionLogger.info({
     action: "update_image_success",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     newPublicId: uploadResult.public_id,
     url: uploadResult.secure_url,
@@ -487,6 +495,60 @@ const getReviewImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const getSocialUgcImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "social-ugc",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No social UGC images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
+const getEditorialQuoteImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "editorial-quote",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No editorial quote images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
+const getTestimonialImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "testimonial",
+    isDeleted: false,
+  }).sort({ order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No testimonial images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
+  });
+});
+
 /* ==============================
    Set Primary Image
 ============================== */
@@ -528,7 +590,7 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "set_primary_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -563,7 +625,7 @@ const deleteImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -661,7 +723,7 @@ const reorderImages = catchAsync(async (req, res, next) => {
   const sampleImage = images[0];
   actionLogger.info({
     action: "reorder_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: sampleImage.refModel,
     refId: sampleImage.refId || null,
     type: sampleImage.type || null,
@@ -716,7 +778,7 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_all_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: normalizedRefModel,
     refId: refId || null,
     type: type || null,
@@ -775,6 +837,9 @@ module.exports = {
   getLogoImages,
   getCategoryLogoImages,
   getReviewImages,
+  getSocialUgcImages,
+  getEditorialQuoteImages,
+  getTestimonialImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,

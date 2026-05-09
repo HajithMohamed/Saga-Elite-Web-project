@@ -46,17 +46,39 @@ export const fetchAdminUserDetail = createAsyncThunk(
 
 export const updateAdminUserStatus = createAsyncThunk(
   "adminUsers/updateStatus",
-  async ({ userId, isActive }, thunkAPI) => {
+  async ({ userId, isActive, membership }, thunkAPI) => {
     try {
+      const body = {};
+      if (typeof isActive === "boolean") body.isActive = isActive;
+      if (typeof membership === "string") body.membership = membership;
+
       const response = await axios.patch(
         `${API_BASE}/user/admin/users/${userId}/status`,
-        { isActive },
+        body,
         { withCredentials: true }
       );
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to update user status";
+      const message = serverMsg || error.message || "Failed to update user";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const triggerAdminPasswordReset = createAsyncThunk(
+  "adminUsers/triggerPasswordReset",
+  async (userId, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/user/admin/users/${userId}/reset-password`,
+        {},
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to send password reset";
       return thunkAPI.rejectWithValue(message);
     }
   }

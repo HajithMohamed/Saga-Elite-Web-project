@@ -8,6 +8,7 @@ const {
   validateContactUpdate,
   validateObjectIdParam,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   submitContactInquiry,
   getContactInquiries,
@@ -24,6 +25,7 @@ router.patch(
   adminMiddleware,
   validateObjectIdParam("id", "contact inquiry id"),
   validateContactUpdate,
+  adminLogMiddleware,
   updateContactInquiry
 );
 

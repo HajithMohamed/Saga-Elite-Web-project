@@ -8,7 +8,7 @@ import {
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
-import { Btn, Eyebrow } from "@/components/ui/editorial";
+import { Btn, Eyebrow, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const VerifyResetOtp = () => {
   const location = useLocation();
@@ -39,7 +39,7 @@ const VerifyResetOtp = () => {
           code.
         </p>
         <Link to="/auth/forgot-password" className="mt-8 inline-block">
-          <Btn variant="default" size="lg" iconRight={ArrowRight}>
+          <Btn variant="default" className={AUTH_PRIMARY_BTN} iconRight={ArrowRight}>
             Back to forgot password
           </Btn>
         </Link>
@@ -124,8 +124,7 @@ const VerifyResetOtp = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full mt-10"
+          className={`${AUTH_PRIMARY_BTN} mt-10`}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading || otp.length < 4}

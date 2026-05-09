@@ -3,10 +3,19 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
+const Gift = require("../Models/Gift");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
-const { isAdminRole } = require("../Utils/admin-roles");
+const ManualPayment = require("../Models/ManualPayment");
+const Review = require("../Models/Review");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
+const { computeMembershipTier } = require("../Utils/membership-tier");
+const { evaluateCoupon } = require("./coupon-controller");
+const { streamInvoicePdf } = require("../Utils/invoice-pdf");
+const { generateUniqueReference } = require("../Utils/referenceGenerator");
+const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const {
   sendWhatsAppMessage,
@@ -32,9 +41,18 @@ const ORDER_STATUS_FLOW = {
   verification_pending: ["confirmed", "cancelled"],
   confirmed: ["shipped", "cancelled"],
   shipped: ["delivered"],
-  delivered: [],
+  delivered: ["refund_requested", "refunded"],
   cancelled: [],
+  refund_requested: ["refunded", "delivered"],
+  refunded: [],
 };
+
+const REFUND_REASONS = new Set([
+  "wrong_item",
+  "damaged",
+  "customer_request",
+  "other",
+]);
 
 const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
 
@@ -96,6 +114,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     paymentProofUrl,
     notes,
     guestEmail,
+    couponCode,
   } = req.body;
 
   logger.debug("Order creation request received", {
@@ -229,6 +248,50 @@ const createOrder = catchAsync(async (req, res, next) => {
         totalAmount += itemTotal;
       }
 
+      // Coupon evaluation (optional). Throws AppError on validation failure,
+      // which will roll back the transaction.
+      let appliedCoupon = null;
+      let appliedDiscount = 0;
+      if (couponCode && String(couponCode).trim()) {
+        const productIds = items.map((it) => it.productId);
+        const result = await evaluateCoupon({
+          code: couponCode,
+          subtotal: totalAmount,
+          productIds,
+        });
+        if (result) {
+          appliedCoupon = result.coupon;
+          appliedDiscount = result.discount;
+          totalAmount = Math.max(0, totalAmount - appliedDiscount);
+          // Increment usage atomically; respect maxUses if defined.
+          const updateResult = await Coupon.updateOne(
+            {
+              _id: appliedCoupon._id,
+              $or: [
+                { maxUses: null },
+                { $expr: { $lt: ["$usedCount", "$maxUses"] } },
+              ],
+            },
+            { $inc: { usedCount: 1 } },
+            { session }
+          );
+          if (updateResult.modifiedCount === 0) {
+            throw new AppError("Coupon usage limit reached", 400);
+          }
+        }
+      }
+
+      const dropId = req.body.dropId || null;
+      let selectedGift = null;
+
+      if (dropId) {
+        selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
+      }
+
+      if (!selectedGift) {
+        selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
+      }
+
       const orderPayload = {
         user: user ? user._id : undefined,
         guest: guest ? guest._id : undefined,
@@ -241,6 +304,8 @@ const createOrder = catchAsync(async (req, res, next) => {
         paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
         referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
         notes: notes?.trim(),
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: appliedDiscount || 0,
         status: isBankTransferPayment
           ? "pending_payment"
           : ["manual", "cash"].includes(paymentMethod)
@@ -251,6 +316,13 @@ const createOrder = catchAsync(async (req, res, next) => {
           ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
           : undefined,
       };
+
+      if (selectedGift) {
+        orderPayload.gift = {
+          giftId: selectedGift._id,
+          revealed: false,
+        };
+      }
 
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
@@ -290,7 +362,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     entityRef: createdOrder._id,
     entityType: "Order",
     meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
-    filter: { role: "admin" },
+    filter: { role: { $in: ADMIN_ROLES } },
   });
 
   const orderNotifyPhones = parsePhoneList(
@@ -316,11 +388,88 @@ const createOrder = catchAsync(async (req, res, next) => {
     });
   }
 
+  // Customer-facing order-placed WhatsApp. The bank-transfer branch below
+  // sends its own (with payment instructions), so we only fire this for
+  // other payment methods (card, gpay, payhere, cash, etc.).
+  if (!isBankTransferPayment) {
+    const customerOrderPhone = cleanPhoneNumber(contactNumber);
+    if (customerOrderPhone) {
+      sendWhatsAppMessage({
+        to: customerOrderPhone,
+        message:
+          `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+          `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+          `We'll message you when it ships.`,
+      }).catch((err) =>
+        logger.error("Customer order-placed WhatsApp failed", { error: err?.message })
+      );
+    }
+  }
+
+  // If guest or registered, send payment instructions
+  let createdManualPayment = null;
+  if (isBankTransferPayment) {
+    const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
+    createdManualPayment = await ManualPayment.create({
+      referenceNumber,
+      orderId: createdOrder._id,
+      userId: user ? user._id : undefined,
+      guestId: guest ? guest._id : undefined,
+      amount: createdOrder.totalAmount,
+      currency: "LKR",
+    });
+    const manualPayment = createdManualPayment;
+
+    const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
+    const customerEmail = user?.email || guestEmailNormalized;
+    const customerPhone = cleanPhoneNumber(contactNumber);
+
+    if (customerEmail) {
+      const emailHtml = buildEmailTemplate(
+        "Complete your payment",
+        `<p>Thank you for your order! Here are your payment instructions:</p>
+         <p><strong>Reference:</strong> ${manualPayment.referenceNumber}</p>
+         <p><strong>Amount:</strong> LKR ${createdOrder.totalAmount.toLocaleString()}</p>
+         <p><strong>Bank:</strong> Sampath Bank, Hatton Branch</p>
+         <p><strong>Account Name:</strong> N.Gayathree</p>
+         <p><strong>Account No:</strong> 108052612262</p>
+         <p><strong>IMPORTANT:</strong> Write ${manualPayment.referenceNumber} in the transfer remarks or on your ATM deposit slip.</p>
+         <p><strong>You have 24 hours.</strong> After that your order expires.</p>
+         <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
+      );
+      sendEmail({
+        email: customerEmail,
+        subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
+        html: emailHtml,
+      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
+    }
+
+    if (customerPhone) {
+      sendWhatsAppMessage({
+        to: customerPhone,
+        message:
+          `*Saga Elite Order*\n` +
+          `Reference: *${manualPayment.referenceNumber}*\n` +
+          `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
+          `Upload your receipt: ${paymentLink}\n` +
+          `You have 24 hours to complete payment.`
+      }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
+    }
+  }
+
   res.status(201).json({
     success: true,
     message: "Order placed successfully",
     orderId: createdOrder._id,
     data: createdOrder,
+    manualPayment: createdManualPayment
+      ? {
+          slug: createdManualPayment.slug,
+          referenceNumber: createdManualPayment.referenceNumber,
+          amount: createdManualPayment.amount,
+        }
+      : null,
+    guestEmail: guestEmailNormalized || null,
   });
 });
 
@@ -345,7 +494,21 @@ const getUserOrders = catchAsync(async (req, res, next) => {
 });
 
 const getAllOrders = catchAsync(async (req, res, next) => {
-  const orders = await Order.find()
+  // Bank-transfer orders are kept out of the main admin Orders list while the
+  // payment is still awaiting verification — they live in Pending Payments
+  // until the admin approves the receipt (status flips to confirmed) or the
+  // order is cancelled. Keeps the Orders page focused on orders that actually
+  // need fulfilment.
+  const filter = {
+    $nor: [
+      {
+        paymentMethod: "manual_bank_transfer",
+        status: { $in: ["pending_payment", "verification_pending"] },
+      },
+    ],
+  };
+
+  const orders = await Order.find(filter)
     .populate("user", "email role")
     .sort({ createdAt: -1 })
     .lean();
@@ -502,7 +665,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: "cancelled" },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status !== "delivered") {
     if (order.user) {
@@ -517,6 +680,55 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       });
     }
 
+    // Customer email + WhatsApp for the headline status changes that
+    // customers care about. Skip noisy intermediate states (pending,
+    // pending_payment, verification_pending) — those don't need an
+    // outbound message.
+    const customerFacingStatuses = new Set(["confirmed", "shipped"]);
+    if (customerFacingStatuses.has(status)) {
+      const populatedForUpdate = await Order.findById(order._id).populate("user", "email");
+      const customer = populatedForUpdate?.user;
+      const customerPhone = cleanPhoneNumber(populatedForUpdate?.contactNumber || order.contactNumber || "");
+
+      const statusCopy = {
+        confirmed: {
+          subject: "Your Saga Elite order is confirmed",
+          headline: "Order confirmed",
+          body: "Your payment has been received and your order is now being prepared.",
+          whatsapp: `Saga Elite: your order #${order._id} is confirmed and being prepared. We'll message you again when it ships.`,
+        },
+        shipped: {
+          subject: "Your Saga Elite order has shipped",
+          headline: "Order shipped",
+          body: "Your order is on its way. You'll receive a delivery confirmation once it arrives.",
+          whatsapp: `Saga Elite: your order #${order._id} has shipped! You'll get another message when it's delivered.`,
+        },
+      }[status];
+
+      if (customer?.email && statusCopy) {
+        sendEmail({
+          email: customer.email,
+          subject: statusCopy.subject,
+          html: buildEmailTemplate(
+            statusCopy.headline,
+            `<p>Hi,</p>
+             <p>${statusCopy.body}</p>
+             <p>Order: <strong>#${order._id}</strong></p>`
+          ),
+        }).catch((err) =>
+          logger.error("[order:status-update] Email failed", { error: err?.message, status })
+        );
+      }
+      if (customerPhone && statusCopy) {
+        sendWhatsAppMessage({
+          to: customerPhone,
+          message: statusCopy.whatsapp,
+        }).catch((err) =>
+          logger.error("[order:status-update] WhatsApp failed", { error: err?.message, status })
+        );
+      }
+    }
+
     await broadcastNotification({
       type: "admin",
       title: `Order ${order._id} status changed`,
@@ -524,10 +736,71 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status === "delivered") {
-    const deliveredOrder = await Order.findById(order._id).populate("user", "email");
+    order.gift = order.gift || { giftId: null, revealed: false };
+    const hasGift = Boolean(order.gift.giftId);
+    if (hasGift && !order.gift.revealed) {
+      order.gift.revealed = true;
+      await order.save({ validateModifiedOnly: true });
+    }
+
+    // Stamp lastSoldAt on every product in the order — feeds the aging-stock job.
+    const productIds = (order.items || [])
+      .map((it) => it?.product)
+      .filter(Boolean);
+    if (productIds.length > 0) {
+      Product.updateMany(
+        { _id: { $in: productIds } },
+        { $set: { lastSoldAt: new Date() } }
+      ).catch((err) =>
+        logger.error("[order:delivered] failed to stamp lastSoldAt", {
+          orderId: order._id,
+          error: err?.message,
+        })
+      );
+    }
+
+    // Update customer membership totals (skip guest orders).
+    if (order.user) {
+      try {
+        const updatedUser = await User.findByIdAndUpdate(
+          order.user,
+          {
+            $inc: {
+              totalSpent: order.totalAmount || 0,
+              orderCount: 1,
+            },
+            $set: { lastOrderAt: new Date() },
+          },
+          { new: true }
+        ).select("totalSpent membership");
+
+        if (updatedUser) {
+          const nextTier = computeMembershipTier(
+            updatedUser.totalSpent,
+            updatedUser.membership
+          );
+          if (nextTier !== updatedUser.membership) {
+            await User.updateOne(
+              { _id: order.user },
+              { $set: { membership: nextTier } }
+            );
+          }
+        }
+      } catch (membershipErr) {
+        logger.error("Membership recompute failed", {
+          orderId: order._id,
+          userId: order.user,
+          error: membershipErr?.message,
+        });
+      }
+    }
+
+    const deliveredOrder = await Order.findById(order._id)
+      .populate("user", "email")
+      .populate("gift.giftId");
     const line0 = order.items?.[0];
     const productSlug =
       line0?.productSlug ||
@@ -544,6 +817,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       typeof line0?.productName === "string" ? line0.productName : "your recent purchase";
     const greeting = customer?.email ? customer.email.split("@")[0] : "there";
     const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+    const giftDescription = deliveredOrder?.gift?.giftId?.description || "your surprise gift";
 
     if (customer?._id) {
       await createNotification({
@@ -555,6 +829,23 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
         entityType: "Order",
         meta: { orderId: order._id, reviewUrl, status: "delivered" },
       });
+
+      if (hasGift) {
+        await createNotification({
+          userId: customer._id,
+          type: "order",
+          title: "Your surprise gift is revealed",
+          message: `Your Saga Elite surprise gift has been revealed! Open your package and discover ${giftDescription}.`,
+          entityRef: order._id,
+          entityType: "Order",
+          meta: {
+            orderId: order._id,
+            status: "delivered",
+            giftId: deliveredOrder?.gift?.giftId?._id || null,
+            revealed: true,
+          },
+        });
+      }
     }
 
     if (customer?.email) {
@@ -577,6 +868,20 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
            <p>Thank you for shopping with Saga Elite.</p>`
         ),
       }).catch((err) => logger.error("[review-notify] Email failed", { error: err.message }));
+
+      if (hasGift) {
+        sendEmail({
+          email: customer.email,
+          subject: "Your Saga Elite surprise gift has been revealed",
+          html: buildEmailTemplate(
+            "Your surprise gift is revealed",
+            `<p>Hi ${greeting},</p>
+             <p>Your Saga Elite surprise gift has been revealed! Open your package and discover <strong>${escapeHtml(giftDescription)}</strong>.</p>
+             <p>We hope the gift adds something special to your order.</p>
+             <p>Thank you for shopping with Saga Elite.</p>`
+          ),
+        }).catch((err) => logger.error("[gift-notify] Email failed", { error: err.message }));
+      }
     }
 
     const phone = cleanPhoneNumber(deliveredOrder?.contactNumber || order.contactNumber || "");
@@ -597,7 +902,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   }
 
@@ -607,6 +912,123 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     success: true,
     message: "Order status updated successfully",
     data: fresh,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Refund Order (admin — gated by verifyPayments permission)
+|--------------------------------------------------------------------------
+*/
+const refundOrder = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { amount, reason, note } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid order id", 400));
+  }
+
+  const order = await Order.findById(id).populate("user", "email userName");
+
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (!["delivered", "refund_requested"].includes(order.status)) {
+    return next(
+      new AppError(
+        `Refunds are only available for delivered orders. Current status: ${order.status}`,
+        409
+      )
+    );
+  }
+
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    return next(new AppError("Refund amount must be a positive number", 400));
+  }
+  if (numericAmount > order.totalAmount) {
+    return next(
+      new AppError(
+        `Refund amount (${numericAmount}) cannot exceed order total (${order.totalAmount})`,
+        400
+      )
+    );
+  }
+
+  const normalizedReason = String(reason || "").toLowerCase().trim();
+  if (!REFUND_REASONS.has(normalizedReason)) {
+    return next(
+      new AppError(
+        `Refund reason must be one of: ${[...REFUND_REASONS].join(", ")}`,
+        400
+      )
+    );
+  }
+
+  order.status = "refunded";
+  order.refundAmount = numericAmount;
+  order.refundReason = normalizedReason;
+  order.refundNote = typeof note === "string" ? note.trim().slice(0, 1000) : "";
+  order.refundedAt = new Date();
+  order.refundedBy = req.userInfo?._id || req.userInfo?.id || null;
+
+  await order.save({ validateModifiedOnly: true });
+
+  // Customer email
+  const customerEmail = order.user?.email || order.guestEmail;
+  if (customerEmail) {
+    sendEmail({
+      email: customerEmail,
+      subject: `Refund issued for your Saga Elite order ${order.referenceNumber || order._id}`,
+      html: buildEmailTemplate(
+        "Your refund is on its way",
+        `<p>We have processed a refund of <strong>LKR ${numericAmount.toLocaleString("en-LK")}</strong> for your order <strong>${escapeHtml(order.referenceNumber || String(order._id))}</strong>.</p>
+         <p><strong>Reason:</strong> ${escapeHtml(normalizedReason.replace(/_/g, " "))}</p>
+         ${order.refundNote ? `<p><strong>Note:</strong> ${escapeHtml(order.refundNote)}</p>` : ""}
+         <p>Refunds typically reflect on your original payment method within 5–10 business days. If you have any questions, reply to this email or message us on WhatsApp.</p>`
+      ),
+    }).catch((err) =>
+      logger.error("Refund email notify failed", {
+        orderId: order._id,
+        error: err?.message,
+      })
+    );
+  }
+
+  // WhatsApp parity — refunds are time-sensitive enough that customers
+  // should hear about them on the same channel as order updates.
+  const refundPhone = cleanPhoneNumber(order.contactNumber);
+  if (refundPhone) {
+    sendWhatsAppMessage({
+      to: refundPhone,
+      message:
+        `Saga Elite: a refund of LKR ${numericAmount.toLocaleString("en-LK")} ` +
+        `has been issued for order ${order.referenceNumber || order._id}. ` +
+        `Reason: ${normalizedReason.replace(/_/g, " ")}. ` +
+        `Funds usually clear within 5–10 business days.`,
+    }).catch((err) =>
+      logger.error("Refund WhatsApp notify failed", {
+        orderId: order._id,
+        error: err?.message,
+      })
+    );
+  }
+
+  // Socket emit
+  const io = req.app.get("io");
+  if (io) {
+    io.emit("order:refresh", {
+      orderId: order._id,
+      status: order.status,
+      refundAmount: numericAmount,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Order refunded successfully",
+    data: await Order.findById(order._id),
   });
 });
 
@@ -636,6 +1058,9 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     topDrops,
     salesTrendRaw,
     nextScheduledDropDoc,
+    pendingReviewsCount,
+    pendingPaymentsCount,
+    agingProductsRaw,
   ] = await Promise.all([
     Order.aggregate([
       { $match: revenueMatch },
@@ -790,7 +1215,24 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       .sort({ releaseDate: 1 })
       .select("name slug releaseDate isPublished isArchived")
       .lean(),
+    Review.countDocuments({ status: "pending" }),
+    ManualPayment.countDocuments({ status: "proof_submitted" }),
+    Product.find({
+      isActive: true,
+      $or: [
+        { lastSoldAt: { $lte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+        { lastSoldAt: null, createdAt: { $lte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+      ],
+    })
+      .select("totalStock variants")
+      .lean(),
   ]);
+
+  const agingProductsCount = (agingProductsRaw || []).filter((p) => {
+    if (typeof p.totalStock === "number" && p.totalStock > 0) return true;
+    if (!Array.isArray(p.variants)) return false;
+    return p.variants.some((v) => (v?.stock || 0) > 0);
+  }).length;
 
   const revenueStats = revenueSummary[0] || {
     totalRevenue: 0,
@@ -886,6 +1328,9 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         averageOrderValue: revenueStats.nonCancelledOrders
           ? revenueStats.totalRevenue / revenueStats.nonCancelledOrders
           : 0,
+        pendingReviews: pendingReviewsCount || 0,
+        pendingPayments: pendingPaymentsCount || 0,
+        agingProductsCount,
       },
       highlights: {
         bestSellingProduct: bestSellingProductDoc,
@@ -904,11 +1349,51 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Stream order invoice as PDF (admin)
+|--------------------------------------------------------------------------
+*/
+const getOrderInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid order id", 400));
+  }
+
+  const order = await Order.findById(id)
+    .populate("user", "email userName name")
+    .lean();
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  // Pull bank details from SiteConfig (key: bank_details). If not set yet
+  // (Wave 8 will surface the editor), pass undefined to render the fallback.
+  let bankConfig;
+  try {
+    const doc = await SiteConfig.findOne({ key: "bank_details" }).lean();
+    bankConfig = doc?.value && typeof doc.value === "object" ? doc.value : undefined;
+  } catch {
+    bankConfig = undefined;
+  }
+
+  const fileName = `saga-elite-invoice-${order.referenceNumber || order._id}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${fileName.replace(/[^A-Za-z0-9_.-]/g, "_")}"`
+  );
+
+  streamInvoicePdf({ order, bankConfig, stream: res });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  refundOrder,
+  getOrderInvoice,
   getDashboardStats,
 };

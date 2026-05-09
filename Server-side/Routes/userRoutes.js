@@ -8,10 +8,12 @@ const {
   validateCartUpdate,
   validateWishlistAdd,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  triggerAdminPasswordReset,
   deleteAdminUser,
   getCart,
   addToCart,
@@ -20,16 +22,25 @@ const {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  getMyProfile,
+  updateMyProfile,
 } = require("../Controllers/user-controller");
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
+// Self-service profile (current user). Used by the account page to show /
+// edit name + phone. Phone is required for WhatsApp notifications, so
+// Google-OAuth users hit this endpoint after signup to fill the gap.
+router.get("/me", getMyProfile);
+router.patch("/me", updateMyProfile);
+
 router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
-router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, updateAdminUserStatus);
-router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), deleteAdminUser);
+router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
+router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);
+router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, deleteAdminUser);
 
 router.get("/cart", getCart);
 router.post("/cart", validateCartAdd, addToCart);

@@ -20,10 +20,10 @@ const AboutSiteConfig = () => {
   const [valuesJson, setValuesJson] = useState("[]");
   const [teamHeading, setTeamHeading] = useState("");
   const [teamSubtext, setTeamSubtext] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [contentLoading, setContentLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadContent = useCallback(async () => {
+    setContentLoading(true);
     try {
       const res = await axios.get(`${API_V1_URL}/site-config/about`);
       const d = res.data?.data || {};
@@ -42,15 +42,15 @@ const AboutSiteConfig = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setContentLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadContent();
+  }, [loadContent]);
 
-  const handleSave = async () => {
+  const handleSaveContent = async () => {
     let storyArr;
     let statsVal;
     let valuesVal;
@@ -108,7 +108,7 @@ const AboutSiteConfig = () => {
         value: teamSubtext.trim(),
       });
       toast({ title: "Saved", description: "About page content updated.", variant: "success" });
-      await load();
+      await loadContent();
     } catch (err) {
       const msg =
         err?.response?.data?.message || err?.message || "Save failed.";
@@ -125,7 +125,13 @@ const AboutSiteConfig = () => {
       description="Edit brand story blocks, headline stats, value cards, and team section shown on /about."
     >
       <div className="w-full space-y-8 pb-24">
-        {loading ? (
+        <p className="rounded-md border border-[#4d4635]/40 bg-[#131313] p-3 text-xs text-[#99907c]">
+          Looking for bank details / payment settings? They live under{" "}
+          <span className="font-bold text-[#f2ca50]">SEO & Branding → Payment Settings</span>{" "}
+          now.
+        </p>
+
+        {contentLoading ? (
           <div className="flex justify-center py-16 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -202,14 +208,14 @@ const AboutSiteConfig = () => {
               type="button"
               className="px-8 py-3"
               disabled={pending}
-              onClick={() => void handleSave()}
+              onClick={() => void handleSaveContent()}
             >
               {pending ? (
                 <>
                   <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Saving…
                 </>
               ) : (
-                "Save all"
+                "Save content"
               )}
             </PrimaryButton>
           </>

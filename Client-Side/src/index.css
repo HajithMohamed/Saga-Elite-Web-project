@@ -3,216 +3,154 @@
 @tailwind utilities;
 
 @layer components {
-  /* ── Editorial type tiers — luxury Sri Lankan e-commerce stack ─
-     Display: Cinzel (Roman caps, campaign poster).
-     Headlines / pull-quotes: Playfair Display (timeless serif).
-     Body / labels / instruments: Inter (modern sans).
-     Numerics only: JetBrains Mono (SKUs, refs, countdowns). */
-  .se-serif      { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; font-style: normal !important; }
-  .se-headline   { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; letter-spacing: -0.015em; font-style: normal !important; }
-  .se-display    { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-style: normal !important; }
-  .se-instrument { font-family: 'Instrument Sans', system-ui, sans-serif; font-weight: 600; font-style: normal !important; font-variant-numeric: tabular-nums; }
-  .se-wordmark   { font-family: 'Cinzel', 'Playfair Display', serif; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal !important; }
-  .se-body       { font-family: 'Inter', system-ui, sans-serif; font-weight: 400; letter-spacing: -0.005em; line-height: 1.6; }
-  .se-mono       { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
-  .se-label      { font-family: 'Inter', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 500; }
-  /* Override stray italic utilities on editorial classes — directive: no italics. */
-  .se-serif.italic, .se-headline.italic, .se-display.italic,
-  .se-instrument.italic, .se-wordmark.italic { font-style: normal !important; }
+  /* ── Editorial type system ────────────────────────────────
+     Display / Brand: Cinzel
+     Headlines: Playfair Display
+     Body / labels: Inter
+     Numerics: JetBrains Mono */
 
-  /* ── Hairline system ──────────────────────────────────────── */
+  .se-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-style: normal !important;
+  }
+
+  .se-headline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    font-style: normal !important;
+  }
+
+  .se-display {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-style: normal !important;
+  }
+
+  .se-wordmark {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-style: normal !important;
+  }
+
+  .se-body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    line-height: 1.6;
+  }
+
+  .se-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .se-label {
+    font-family: 'Inter', system-ui, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 500;
+  }
+
+  /* Remove unwanted italics */
+  .se-serif.italic,
+  .se-headline.italic,
+  .se-display.italic,
+  .se-wordmark.italic {
+    font-style: normal !important;
+  }
+
+  /* Hairline system */
   .se-hairline { border-color: #4d4635; }
   .se-hairline-soft { border-color: rgba(255,255,255,0.08); }
+
   .se-divider-h { height: 1px; background: #4d4635; }
   .se-divider-soft-h { height: 1px; background: rgba(255,255,255,0.08); }
 
-  /* ── Image fallback frame ─────────────────────────────────── */
+  /* Image fallback */
   .se-img-fallback {
-    background: #1c1b1b;
+    background: #131313;
     border: 1px solid #4d4635;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #d0c5af;
   }
 
-  /* ── Editorial focus ring ─────────────────────────────────── */
+  /* Focus ring */
   .se-focus:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
   }
 
+  /* ── ADMIN UI ──────────────────────────────── */
 
   .admin-page-shell {
-    @apply min-h-screen w-full bg-[#050505] text-white p-4 md:p-6;
+    @apply min-h-screen w-full bg-[#050505] text-[#e5e2e1] p-4 md:p-6;
   }
+
   .admin-page-header {
     @apply mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 lg:flex-row lg:items-end lg:justify-between;
   }
+
   .admin-page-eyebrow {
     @apply text-xs uppercase tracking-[0.3em] text-[#D4AF37];
   }
+
   .admin-page-title {
-    @apply mt-2 text-3xl font-black tracking-tight text-white;
+    @apply mt-2 text-3xl font-black tracking-tight text-[#e5e2e1];
   }
+
   .admin-page-description {
-    @apply mt-3 max-w-3xl text-sm leading-6 text-gray-400;
+    @apply mt-3 max-w-3xl text-sm leading-6 text-[#d0c5af];
   }
+
   .admin-panel {
     @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
   }
+
   .admin-panel-title {
-    @apply text-lg font-semibold text-white;
+    @apply text-lg font-semibold text-[#e5e2e1];
   }
+
   .admin-panel-description {
-    @apply mt-2 text-sm text-gray-400;
+    @apply mt-2 text-sm text-[#d0c5af];
   }
+
   .admin-stat-card {
-    @apply rounded-3xl border border-white/10 bg-[#0d0d0d] p-5;
+    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
   }
+
   .admin-stat-label {
-    @apply text-[11px] uppercase tracking-[0.22em] text-gray-500;
+    @apply text-[11px] uppercase tracking-[0.22em] text-[#d0c5af];
   }
+
   .admin-stat-value {
-    @apply mt-2 text-3xl font-semibold tracking-tight text-white;
+    @apply mt-2 text-3xl font-semibold tracking-tight text-[#e5e2e1];
   }
+
   .admin-stat-hint {
-    @apply mt-2 text-xs text-gray-500;
+    @apply mt-2 text-xs text-[#d0c5af];
   }
 }
 
 @layer base {
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: theme('colors.background');
+    color: theme('colors.foreground');
     font-family: 'Inter', system-ui, sans-serif;
-    line-height: 1.6;
-    letter-spacing: -0.005em;
-  }
-  .grain {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 9999;
-  }
-  .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
   }
   
-  :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 220.9 39.3% 11%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 71.4% 4.1%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.25s;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
   }
-  .dark {
-    --background: 0 0% 7.5%;
-    --foreground: 0 0% 89.8%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 216 12.2% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
-  }
-}
-/* Custom Drop Layout Overrides */
-input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(0.8) sepia(100%) saturate(1000%) hue-rotate(10deg);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: #131313;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #353535;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-@keyframes homepage-marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.homepage-marquee-track {
-  animation: homepage-marquee 28s linear infinite;
-}
-
-@keyframes bounce-scroll-hint {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translateY(10px);
-    opacity: 0.5;
-  }
-}
-
-.animate-bounce-scroll-hint {
-  animation: bounce-scroll-hint 1.6s ease-in-out infinite;
-}
-
-@keyframes header-marquee-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.header-marquee-track {
-  animation: header-marquee-scroll 45s linear infinite;
 }

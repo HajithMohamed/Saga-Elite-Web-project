@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const unwrapAxiosError = (error) => {
@@ -17,9 +17,7 @@ export const registerUserAction = createAsyncThunk(
   "auth/register",
   async (formData, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_BASE}/auth/register`, formData, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.post(`/auth/register`, formData);
       return response.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(err));
@@ -31,9 +29,10 @@ export const verifyOtpAction = createAsyncThunk(
   "auth/otp-verify",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/otp-verify`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/otp-verify`, formData);
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -45,9 +44,7 @@ export const resendOtpAction = createAsyncThunk(
   "auth/resend-otp",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/resend-otp`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/resend-otp`, formData);
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -59,9 +56,10 @@ export const loginUserAction = createAsyncThunk(
   "auth/login",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/login`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/login`, formData);
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -73,12 +71,11 @@ export const checkAuthAction = createAsyncThunk(
   "auth/checkauth",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/auth/check-auth`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get(`/auth/check-auth`);
       return response.data;
     } catch (error) {
       if (error?.response?.status === 401) {
+        localStorage.removeItem('authToken');
         return { success: false };
       }
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -90,9 +87,7 @@ export const forgotPasswordAction = createAsyncThunk(
   "auth/forgot-password",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/forgot-password`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/forgot-password`, formData);
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -104,9 +99,10 @@ export const resetPasswordAction = createAsyncThunk(
   "auth/reset-password",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/reset-password`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/reset-password`, formData);
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -118,9 +114,7 @@ export const resendResetPasswordOtpAction = createAsyncThunk(
   "auth/resend-reset-otp",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/resend-reset-otp`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/resend-reset-otp`, formData);
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -132,9 +126,7 @@ export const verifyResetOtpAction = createAsyncThunk(
   "auth/verify-reset-otp",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(`${API_BASE}/auth/verify-reset-otp`, formData, {
-        withCredentials: true,
-      });
+      const apiResponse = await axiosInstance.post(`/auth/verify-reset-otp`, formData);
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -146,11 +138,13 @@ export const googleSignInAction = createAsyncThunk(
   "auth/google-sign-in",
   async ({ accessToken }, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(
-        `${API_BASE}/google/sign-in`,
-        { accessToken },
-        { withCredentials: true }
+      const apiResponse = await axiosInstance.post(
+        `/google/sign-in`,
+        { accessToken }
       );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -162,11 +156,49 @@ export const googleSignUpAction = createAsyncThunk(
   "auth/google-sign-up",
   async ({ accessToken }, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(
-        `${API_BASE}/google/sign-up`,
-        { accessToken },
-        { withCredentials: true }
+      const apiResponse = await axiosInstance.post(
+        `/google/sign-up`,
+        { accessToken }
       );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const facebookSignInAction = createAsyncThunk(
+  "auth/facebook-sign-in",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(
+        `/facebook/sign-in`,
+        { accessToken }
+      );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const facebookSignUpAction = createAsyncThunk(
+  "auth/facebook-sign-up",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(
+        `/facebook/sign-up`,
+        { accessToken }
+      );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
       return apiResponse.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -178,10 +210,9 @@ export const changePasswordAction = createAsyncThunk(
   "auth/change-password",
   async (formData, thunkAPI) => {
     try {
-      const apiResponse = await axios.post(
-        `${API_BASE}/auth/change-password`,
-        formData,
-        { withCredentials: true }
+      const apiResponse = await axiosInstance.post(
+        `/auth/change-password`,
+        formData
       );
       return apiResponse.data;
     } catch (error) {
@@ -194,9 +225,8 @@ export const logoutUserAction = createAsyncThunk(
   "auth/logout",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_BASE}/auth/logout`, {}, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.post(`/auth/logout`, {});
+      localStorage.removeItem('authToken');
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -208,9 +238,7 @@ export const checkGuestAction = createAsyncThunk(
   "auth/checkGuest",
   async (email, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_BASE}/auth/check-guest`, { email }, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.post(`/auth/check-guest`, { email });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -222,9 +250,10 @@ export const registerGuestAction = createAsyncThunk(
   "auth/registerGuest",
   async (email, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_BASE}/auth/register-guest`, { email }, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.post(`/auth/register-guest`, { email });
+      if (response.data?.token) {
+        localStorage.setItem('authToken', response.data.token);
+      }
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -356,8 +385,9 @@ const authSlice = createSlice({
       })
       .addCase(googleSignInAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignInAction.rejected, (state) => {
         state.isLoading = false;
@@ -370,10 +400,41 @@ const authSlice = createSlice({
       })
       .addCase(googleSignUpAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.data.user;
-        state.isAuthenticated = true;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
       })
       .addCase(googleSignUpAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Facebook Sign In
+      .addCase(facebookSignInAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(facebookSignInAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
+      })
+      .addCase(facebookSignInAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Facebook Sign Up
+      .addCase(facebookSignUpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(facebookSignUpAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
+      })
+      .addCase(facebookSignUpAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
@@ -396,9 +457,11 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+        localStorage.removeItem('authToken');
       })
       .addCase(logoutUserAction.rejected, (state) => {
         state.isLoading = false;
+        localStorage.removeItem('authToken');
       })
       // Check Guest
       .addCase(checkGuestAction.pending, (state) => {

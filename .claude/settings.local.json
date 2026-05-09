@@ -19,7 +19,10 @@
       "Bash(node -e \"['./Controllers/auth-controller','./Controllers/google-auth-controller','./Controllers/order-controller','./Controllers/whatsapp-webhook-controller','./Middlewares/auth-middleware','./Utils/create-send-token','./Config/cors-config'].forEach\\(m => require\\(m\\)\\); console.log\\('all modules load OK'\\);\")",
       "PowerShell(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID = $_.OwningProcess; Name = $proc.ProcessName; Started = $proc.StartTime; CmdPath = $proc.Path } } | Format-List)",
       "PowerShell($conns = Get-NetTCPConnection -LocalPort 5001 -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' }; if \\($conns\\) { $conns | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID = $_.OwningProcess; Name = $p.ProcessName; Started = $p.StartTime } } | Format-Table -AutoSize } else { Write-Output \"PORT_5001_FREE\" })",
-      "Bash(npm ci *)"
+      "Bash(npm ci *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Fullstack development course\\\\Saga-Elite-Web-Project\\\\Client-Side\\\\src\\\\components\\\\admin-components\\\\\" -Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Fullstack development course\\\\Saga-Elite-Web-Project\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

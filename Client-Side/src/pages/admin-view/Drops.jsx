@@ -12,10 +12,10 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
-  ChevronLeft,
   Eye,
   Bell,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import {
   getAllDrops,
@@ -31,17 +31,33 @@ import {
   pageVariants,
   containerVariants,
   itemVariants,
-  slideInPanelVariants,
 } from "@/components/admin-components/_shared/animations";
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import {
+  AdminFormShell,
+  StickyActionBar,
+  FormSection,
+  FormField,
+  LuxuryInput,
+  LuxuryTextarea,
+  LuxuryDateInput,
+  StatusPill,
+  RightRailPanel,
+  RailToggleRow,
+  LivePreviewCard,
+  ProgressBar,
+} from "@/components/admin-components/_form";
 
 // ── Shared helper components (matches Product page) ──────────────────────────
 
+const MotionSpan = motion.span;
+const MotionDiv = motion.div;
+
 const PulseDot = ({ active }) =>
   active ? (
-    <motion.span
+    <MotionSpan
       key="live"
       layout
       className="block h-2 w-2 shrink-0 rounded-full bg-saga-primary"
@@ -50,7 +66,7 @@ const PulseDot = ({ active }) =>
       transition={{ type: "spring", stiffness: 420, damping: 16 }}
     />
   ) : (
-    <motion.span
+    <MotionSpan
       key="draft"
       layout
       className="block h-2 w-2 shrink-0 rounded-full bg-outline-variant"
@@ -99,7 +115,7 @@ const initialFormData = {
   description: "",
   releaseDate: "",
   endDate: "",
-  isPublished: false,
+  isPublished: true,
   isArchived: false,
 };
 
@@ -219,7 +235,41 @@ const Drops = () => {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
+  function validateDropForm() {
+    const name = formData.name.trim();
+    if (name.length < 3) {
+      return "Drop name must be at least 3 characters.";
+    }
+    if (name.length > 200) {
+      return "Drop name must be 200 characters or fewer.";
+    }
+    if (!formData.releaseDate) {
+      return "Release date is required.";
+    }
+    if (formData.endDate) {
+      const release = new Date(formData.releaseDate);
+      const end = new Date(formData.endDate);
+      if (Number.isNaN(release.getTime()) || Number.isNaN(end.getTime())) {
+        return "Invalid date selection.";
+      }
+      if (end <= release) {
+        return "End date must be strictly after the release date.";
+      }
+    }
+    return null;
+  }
+
   async function onSubmit() {
+    const validationError = validateDropForm();
+    if (validationError) {
+      toast({
+        title: "Check the form",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       let result;
       if (currentEditedSlug) {
@@ -246,9 +296,14 @@ const Drops = () => {
       setShowDropSaved(true);
       resetForm();
     } catch (e) {
+      // Thunk rejects with a string; older callers may pass an object — handle both.
+      const description =
+        typeof e === "string"
+          ? e
+          : e?.message || e?.error || "Something went wrong while saving.";
       toast({
         title: "Failed to save drop",
-        description: e?.message,
+        description,
         variant: "destructive",
       });
     }
@@ -272,239 +327,252 @@ const Drops = () => {
     });
   }
 
-  // ── FORM VIEW (slide-in panel) ─────────────────────────────────────────────
+  // ── FORM VIEW (Luxury Control Panel) ───────────────────────────────────────
+
+  // Compute the displayed status pill from the form state.
+  const computedStatus = (() => {
+    if (formData.isArchived) return "archived";
+    if (!formData.isPublished) return "draft";
+    if (formData.releaseDate) {
+      const release = new Date(formData.releaseDate);
+      if (!Number.isNaN(release.getTime()) && release > new Date()) {
+        return "scheduled";
+      }
+    }
+    return "published";
+  })();
+
+  // Completion progress: name + releaseDate are required; description, endDate, image are bonus.
+  const completedCount = [
+    formData.name?.trim().length >= 3,
+    Boolean(formData.releaseDate),
+    formData.description?.trim().length > 0,
+    Boolean(formData.endDate),
+    dropImages.length > 0,
+  ].filter(Boolean).length;
+  const progressValue = completedCount / 5;
+
+  const heroImageUrl = dropImages[0]?.url || null;
+  const releaseCountdown = (() => {
+    if (!formData.releaseDate) return null;
+    const days = daysUntilRelease(formData.releaseDate);
+    if (days == null) return "Live now";
+    if (days === 0) return "Drops today";
+    return `${days} day${days === 1 ? "" : "s"} away`;
+  })();
 
   const dropFormPanel = (
-      <motion.div
-        key="drop-atelier"
-        variants={slideInPanelVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        className="fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto bg-[#050505]"
+    <AdminFormShell
+      onClose={resetForm}
+      header={
+        <StickyActionBar
+          eyebrow={currentEditedSlug ? "Drop Atelier · Editing" : "Drop Atelier · New Release"}
+          title={formData.name?.trim() || (currentEditedSlug ? "Untitled drop" : "New Drop")}
+          subtitle={
+            formData.releaseDate
+              ? `Release ${new Date(formData.releaseDate).toLocaleDateString()}`
+              : "Set a release date to schedule"
+          }
+          onCancel={resetForm}
+          onPublish={onSubmit}
+          publishLabel={currentEditedSlug ? "Update Drop" : "Publish Drop"}
+          cancelLabel="Cancel"
+        />
+      }
+      rightRail={
+        <>
+          <RightRailPanel
+            tone="accent"
+            title="Live Preview"
+            description="What your customers will see on the storefront."
+          >
+            <LivePreviewCard
+              image={heroImageUrl}
+              eyebrow="Drop"
+              title={formData.name?.trim() || "Untitled drop"}
+              status={computedStatus}
+              meta={[
+                {
+                  label: "Release",
+                  value: formData.releaseDate
+                    ? new Date(formData.releaseDate).toLocaleDateString()
+                    : "Not set",
+                },
+                ...(formData.endDate
+                  ? [{ label: "Ends", value: new Date(formData.endDate).toLocaleDateString() }]
+                  : []),
+                ...(releaseCountdown
+                  ? [{ label: "Countdown", value: releaseCountdown }]
+                  : []),
+              ]}
+            />
+          </RightRailPanel>
+
+          <RightRailPanel title="Status & Visibility">
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3">
+              <span className="text-xs font-semibold text-white/80">Current state</span>
+              <StatusPill status={computedStatus} size="md" />
+            </div>
+            <RailToggleRow
+              label="Published"
+              helper="Visible on the public storefront."
+              checked={formData.isPublished}
+              onChange={(v) => setFormData({ ...formData, isPublished: v })}
+            />
+            <RailToggleRow
+              label="Archived"
+              helper="Hide from customers; keep internal record."
+              checked={formData.isArchived}
+              onChange={(v) => setFormData({ ...formData, isArchived: v })}
+            />
+          </RightRailPanel>
+
+          <RightRailPanel title="Setup Progress">
+            <ProgressBar
+              label="Drop completion"
+              value={progressValue}
+              segments={5}
+              filledCount={completedCount}
+            />
+            <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+              Required: name and release date. Add a description, end date, and hero
+              imagery for a stronger campaign.
+            </p>
+          </RightRailPanel>
+
+          <RightRailPanel title="Tips">
+            <ul className="space-y-2 text-[11px] leading-relaxed text-white/50">
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Keep drop names under 40 characters for cleaner storefront layout.
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Hero imagery looks best at 1600×2000 (4:5).
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Schedule a release date in the future to auto-publish later.
+              </li>
+            </ul>
+          </RightRailPanel>
+        </>
+      }
+    >
+      <FormSection
+        number="01"
+        title="General Details"
+        description="Basic information shown to customers on the homepage and drop page."
       >
-      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden w-full">
-        <main className="flex-1 w-full flex flex-col overflow-y-auto">
-          {/* Header */}
-          <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
-            <div className="flex flex-col">
-              <h1 className="font-serif text-3xl font-bold tracking-tighter text-saga-primary">
-                Saga Elite
-              </h1>
-              <p className="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant opacity-70 mt-1">
-                Drop Atelier / Release Studio
-              </p>
-            </div>
-            <div className="flex items-center gap-8">
-              <button
-                onClick={resetForm}
-                className="text-sm uppercase tracking-[0.1em] text-on-surface hover:text-saga-primary transition-colors duration-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onSubmit}
-                className="bg-primary-container text-on-primary-container px-8 py-3 text-sm uppercase font-extrabold tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]"
-              >
-                {currentEditedSlug ? "Update Drop" : "Save Drop"}
-              </button>
-            </div>
-          </header>
+        <FormField
+          label="Drop Name"
+          required
+          helper="Shown on the homepage, drop page, and notifications. Keep it under 40 characters."
+          hint={`${formData.name.length} / 200`}
+        >
+          <LuxuryInput
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="e.g. Winter Solstice 2025"
+            maxLength={200}
+          />
+        </FormField>
 
-          <div className="w-full px-0 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
-            {/* Left Column: Media & Visibility */}
-            <div className="col-span-1 md:col-span-4 space-y-12">
-              {/* Campaign Assets */}
-              <section>
-                <h2 className="font-serif text-xl mb-6 text-on-surface">
-                  Campaign Assets
-                </h2>
-                <div className="bg-surface-container-low p-4">
-                  {currentEditedSlug === null ? (
-                    <div className="p-8 text-center border-2 border-dashed border-outline-variant/30 text-on-surface-variant bg-surface">
-                      <p className="text-xs uppercase font-bold tracking-widest mb-2 text-saga-primary">
-                        Drop Creation Required
-                      </p>
-                      <p className="text-xs opacity-60">
-                        Save this drop first before uploading campaign images.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <ImageUpload
-                        images={dropImages}
-                        setImages={setDropImages}
-                        isMultiple
-                        refModel="Drop"
-                        refId={currentEditedId}
-                        type="drop"
-                      />
-                      {dropImages.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openDropGallery({
-                              name: formData.name,
-                              _id: currentEditedId,
-                              images: dropImages,
-                            })
-                          }
-                          className="mt-3 inline-flex items-center justify-center rounded-full border border-saga-primary px-4 py-2 text-sm font-semibold text-saga-primary hover:bg-saga-primary/10 transition"
-                        >
-                          View all images
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </section>
+        <FormField
+          label="Description"
+          optional
+          helper="A short narrative for the drop hero. Supports plain text."
+          hint={`${formData.description.length} / 2000`}
+        >
+          <LuxuryTextarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Describe the concept, mood, and pieces in this release…"
+            maxLength={2000}
+            rows={5}
+          />
+        </FormField>
+      </FormSection>
 
-              {/* Status & Visibility */}
-              <section className="bg-surface-container-low p-8 space-y-6 border border-outline-variant/10">
-                <h2 className="font-serif text-xl text-on-surface">
-                  Status &amp; Visibility
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high border-l-2 border-saga-primary">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">
-                        Published
-                      </p>
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        Visible to clients
-                      </p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isPublished}
-                      onChange={() =>
-                        setFormData({
-                          ...formData,
-                          isPublished: !formData.isPublished,
-                        })
-                      }
-                    />
-                  </div>
+      <FormSection
+        number="02"
+        title="Release Schedule"
+        description="Customers can view the drop after the release time. Optionally set an end date for a limited window."
+      >
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <FormField
+            label="Release Date"
+            required
+            helper="Goes live on the storefront from this date."
+          >
+            <LuxuryDateInput
+              value={formData.releaseDate}
+              onChange={(e) =>
+                setFormData({ ...formData, releaseDate: e.target.value })
+              }
+            />
+          </FormField>
 
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">
-                        Archived
-                      </p>
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        Internal records only
-                      </p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isArchived}
-                      onChange={() =>
-                        setFormData({
-                          ...formData,
-                          isArchived: !formData.isArchived,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
+          <FormField
+            label="End Date"
+            optional
+            helper="Optional. Drop will be archived from the storefront after this date."
+          >
+            <LuxuryDateInput
+              value={formData.endDate}
+              onChange={(e) =>
+                setFormData({ ...formData, endDate: e.target.value })
+              }
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-            {/* Right Column: Form Fields */}
-            <div className="col-span-1 md:col-span-8 space-y-12">
-              {/* General Details */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">
-                    01
-                  </span>
-                  <h2 className="font-serif text-2xl text-on-surface">
-                    General Details
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
-                      Drop Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30"
-                      placeholder="e.g. Winter Solstice 2025"
-                    />
-                  </div>
-
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30 min-h-[100px] resize-y"
-                      placeholder="Describe the concept and items in this release..."
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Schedule */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">
-                    02
-                  </span>
-                  <h2 className="font-serif text-2xl text-on-surface">
-                    Release Schedule
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
-                      Release Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.releaseDate}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          releaseDate: e.target.value,
-                        })
-                      }
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary [color-scheme:dark]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, endDate: e.target.value })
-                      }
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary [color-scheme:dark]"
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
+      <FormSection
+        number="03"
+        title="Campaign Assets"
+        description="Hero and supporting imagery shown across the storefront."
+      >
+        {currentEditedSlug === null ? (
+          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/30 p-8 text-center">
+            <Package className="mx-auto mb-3 h-8 w-8 text-white/20" />
+            <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
+              Save the drop to upload images
+            </p>
+            <p className="mt-2 text-[11px] text-white/40">
+              Recommended hero size: 1600×2000 · JPG / WEBP · Max 5 MB
+            </p>
           </div>
-        </main>
-      </div>
-      </motion.div>
+        ) : (
+          <>
+            <ImageUpload
+              images={dropImages}
+              setImages={setDropImages}
+              isMultiple
+              refModel="Drop"
+              refId={currentEditedId}
+              type="drop"
+            />
+            {dropImages.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  openDropGallery({
+                    name: formData.name,
+                    _id: currentEditedId,
+                    images: dropImages,
+                  })
+                }
+                className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+              >
+                View all images
+              </button>
+            )}
+          </>
+        )}
+      </FormSection>
+    </AdminFormShell>
   );
 
   // ── LIST VIEW ──────────────────────────────────────────────────────────────
@@ -516,7 +584,7 @@ const Drops = () => {
       title="Drop Ledger"
       description="Create, schedule, publish, archive, and monitor collection drops."
     >
-    <motion.div
+    <MotionDiv
       variants={pageVariants}
       initial="hidden"
       animate="visible"
@@ -584,7 +652,7 @@ const Drops = () => {
         </div>
 
         {/* Drop Rows */}
-        <motion.div
+        <MotionDiv
           className="space-y-3"
           variants={containerVariants}
           initial="hidden"
@@ -596,7 +664,7 @@ const Drops = () => {
             drops.map((drop) => {
               const daysAway = daysUntilRelease(drop.releaseDate);
               return (
-              <motion.div
+              <MotionDiv
                 key={drop._id}
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
@@ -763,7 +831,7 @@ const Drops = () => {
                     }}
                   />
                 </div>
-              </motion.div>
+              </MotionDiv>
             );
             })}
 
@@ -783,7 +851,7 @@ const Drops = () => {
               </button>
             </div>
           )}
-        </motion.div>
+        </MotionDiv>
       </main>
 
       {/* Gallery Modal */}
@@ -795,7 +863,7 @@ const Drops = () => {
           onImagesUpdate={handleDropGalleryImagesUpdate}
         />
       ) : null}
-    </motion.div>
+    </MotionDiv>
     </AdminPage>
     <AnimatePresence mode="wait">{showForm ? dropFormPanel : null}</AnimatePresence>
     </Fragment>

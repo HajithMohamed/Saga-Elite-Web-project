@@ -134,6 +134,29 @@ export const updateOrderStatus = createAsyncThunk(
   }
 );
 
+export const refundOrder = createAsyncThunk(
+  "/order/refundOrder",
+  async ({ orderId, amount, reason, note }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `${ORDER_API_BASE}/${orderId}/refund`,
+        { amount, reason, note },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to refund order";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState,
@@ -225,6 +248,23 @@ const orderSlice = createSlice({
         );
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.orderError = action.payload || action.error.message;
+      })
+      .addCase(refundOrder.pending, (state) => {
+        state.isLoading = true;
+        state.orderError = null;
+      })
+      .addCase(refundOrder.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const updatedOrder = action.payload.data;
+        if (updatedOrder?._id) {
+          state.adminOrders = state.adminOrders.map((order) =>
+            order._id === updatedOrder._id ? updatedOrder : order,
+          );
+        }
+      })
+      .addCase(refundOrder.rejected, (state, action) => {
         state.isLoading = false;
         state.orderError = action.payload || action.error.message;
       })

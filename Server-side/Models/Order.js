@@ -133,7 +133,17 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"],
+      enum: [
+        "pending",
+        "pending_payment",
+        "verification_pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "refund_requested",
+        "refunded",
+      ],
       default: "pending",
       index: true,
     },
@@ -149,15 +159,57 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    refundAmount: {
+      type: Number,
+      default: 0,
+    },
+    refundReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    refundNote: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+    refundedAt: {
+      type: Date,
+    },
+    refundedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
+    gift: {
+      giftId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Gift",
+        default: null,
+      },
+      revealed: {
+        type: Boolean,
+        default: false,
+      },
+    },
     notes: {
       type: String,
       trim: true,
       maxlength: 1000,
+    },
+    couponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
+    couponDiscount: {
+      type: Number,
+      default: 0,
     },
     expiresAt: {
       type: Date,
@@ -174,12 +226,12 @@ orderSchema.index({ expiresAt: 1 });
 // Single-field { user: 1 } index already declared via `index: true` on the field above.
 orderSchema.index({ user: 1, status: 1, createdAt: -1 });
 
-orderSchema.pre("save", function (next) {
+orderSchema.pre("save", function () {
   if (!this.slug) {
     const base = this.referenceNumber || String(this._id);
     this.slug = slugify(`order-${base}`, { lower: true, strict: true });
   }
-  next();
+
 });
 
 module.exports = mongoose.model("Order", orderSchema);

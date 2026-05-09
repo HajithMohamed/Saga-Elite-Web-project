@@ -2,12 +2,125 @@ const mongoose = require("mongoose");
 const Review = require("../Models/Review");
 const Order = require("../Models/Order");
 const Product = require("../Models/Product");
+const Drop = require("../Models/Drop");
 const User = require("../Models/User");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 const { isAdminRole } = require("../Utils/admin-roles");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
+const reviewFilterConfig = require("../Config/review-filter-config");
+
+const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+const generateRewardCode = (prefix = "REVIEW") => {
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) {
+    suffix += REWARD_CODE_CHARS.charAt(
+      Math.floor(Math.random() * REWARD_CODE_CHARS.length)
+    );
+  }
+  return `${(prefix || "REVIEW").toUpperCase()}-${suffix}`;
+};
+
+/*
+ * If the reward_review_discount SiteConfig is enabled, issue a one-time
+ * coupon for the review's user. Idempotent: skips if review.rewardCouponIssued.
+ * Failures are logged, never bubbled — review approval must succeed regardless.
+ */
+const tryIssueReviewReward = async (review) => {
+  if (review.rewardCouponIssued) return null;
+
+  let config;
+  try {
+    const doc = await SiteConfig.findOne({ key: "reward_review_discount" }).lean();
+    config = doc?.value;
+  } catch (err) {
+    logger.warn("Review reward config lookup failed", { error: err?.message });
+    return null;
+  }
+
+  if (!config?.enabled) return null;
+
+  const discountType = config.discountType === "fixed" ? "fixed" : "percent";
+  const discountValue = Number(config.discountValue);
+  if (!Number.isFinite(discountValue) || discountValue <= 0) return null;
+  if (discountType === "percent" && discountValue > 100) return null;
+
+  const expiryDays = Number.isFinite(Number(config.expiryDays))
+    ? Math.max(1, Number(config.expiryDays))
+    : 30;
+  const maxUses = Number.isFinite(Number(config.maxUses))
+    ? Math.max(1, Number(config.maxUses))
+    : 1;
+
+  // Generate a unique code (retry up to 5 times on collision)
+  let code = generateRewardCode(config.codePrefix);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const exists = await Coupon.exists({ code });
+    if (!exists) break;
+    code = generateRewardCode(config.codePrefix);
+  }
+
+  const startsAt = new Date();
+  const endsAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
+  try {
+    const coupon = await Coupon.create({
+      code,
+      description: `Thanks-for-reviewing reward for review ${review._id}`,
+      discountType,
+      discountValue,
+      maxUses,
+      startsAt,
+      endsAt,
+      isActive: true,
+      issuedFor: "review_reward",
+    });
+
+    review.rewardCouponIssued = true;
+    review.rewardCouponCode = code;
+    await review.save({ validateBeforeSave: false });
+
+    // Best-effort email to the customer
+    const user = await User.findById(review.userId).select("email").lean();
+    if (user?.email) {
+      const human =
+        discountType === "percent"
+          ? `${discountValue}% off`
+          : `LKR ${discountValue.toLocaleString("en-LK")} off`;
+      sendEmail({
+        email: user.email,
+        subject: "A thank-you from Saga Elite",
+        html: buildEmailTemplate(
+          "Your review reward",
+          `<p>Thanks for sharing your thoughts.</p>
+           <p>Use this one-time code at checkout for ${human}:</p>
+           <p style="font-size:28px;letter-spacing:6px;font-weight:bold;text-align:center;color:#f2ca50;">${code}</p>
+           <p>The code expires on ${endsAt.toLocaleDateString("en-LK")}.</p>`
+        ),
+      }).catch((err) =>
+        logger.warn("Review reward email failed", {
+          reviewId: review._id,
+          error: err?.message,
+        })
+      );
+    }
+
+    return coupon;
+  } catch (err) {
+    logger.warn("Review reward issuance failed", {
+      reviewId: review._id,
+      error: err?.message,
+    });
+    return null;
+  }
+};
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -120,13 +233,13 @@ const createReview = catchAsync(async (req, res, next) => {
   const order = await Order.findOne({
     _id: orderId,
     user: userId,
-    status: "confirmed",
+    status: "delivered",
     "items.product": productId,
   }).select("_id");
 
   if (!order) {
     return next(
-      new AppError("You can only review products you have purchased", 403)
+      new AppError("You can only leave a review after your order is delivered.", 403)
     );
   }
 
@@ -135,6 +248,29 @@ const createReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review already exists for this product", 409));
   }
 
+  const getSentiment = (r) => {
+    if (r >= 4) return 'positive';
+    if (r === 3) return 'neutral';
+    return 'negative';
+  };
+
+  const allText = `${title.trim()} ${content.trim()}`;
+
+  const containsProfanity = reviewFilterConfig.BLOCKED_PATTERNS.some((pattern) => pattern.test(allText));
+
+  if (containsProfanity) {
+    return res.status(422).json({
+      success: false,
+      message: 'Your review contains content that cannot be published. Please revise and resubmit.'
+    });
+  }
+
+  const urlMatches = allText.match(/https?:\/\//g) || [];
+  const isSuspicious =
+    urlMatches.length > reviewFilterConfig.MAX_URLS_ALLOWED ||
+    allText === allText.toUpperCase() ||
+    allText.length < reviewFilterConfig.AUTO_FLAG_MIN_LENGTH;
+
   const review = await Review.create({
     productId,
     userId,
@@ -142,9 +278,12 @@ const createReview = catchAsync(async (req, res, next) => {
     rating,
     title: title.trim(),
     content: content.trim(),
+    sentiment: getSentiment(rating),
     images: Array.isArray(images) ? images : [],
     verifiedPurchase: true,
     status: "pending",
+    isFlagged: Boolean(isSuspicious),
+    flagReason: isSuspicious ? "Auto-flagged: suspicious pattern" : null,
   });
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
@@ -498,6 +637,8 @@ const moderateReview = catchAsync(async (req, res, next) => {
     review.rejectionReason = null;
     await review.save({ validateBeforeSave: false });
     await recalculateProductRating(review.productId);
+    // Fire-and-forget reward issuance — never blocks moderation
+    tryIssueReviewReward(review).catch(() => {});
   } else {
     review.status = "rejected";
     review.rejectionReason = rejectionReason?.trim() || "Rejected by admin";
@@ -557,6 +698,240 @@ const uploadReviewImages = catchAsync(async (req, res, next) => {
   });
 });
 
+const getDropAnalytics = catchAsync(async (req, res, next) => {
+  const { dropId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(dropId)) {
+    return next(new AppError("Valid drop ID is required", 400));
+  }
+
+  const drop = await Drop.findById(dropId);
+  if (!drop) {
+    return next(new AppError("Drop not found", 404));
+  }
+
+  const products = await Product.find({ drop: dropId }).select("_id name averageRating reviewCount soldCount basePrice totalStock");
+  const productIds = products.map(p => p._id);
+
+  let totalSales = 0;
+  let revenue = 0;
+  let remainingStock = 0;
+  let topProductsRaw = [];
+
+  for (const p of products) {
+    totalSales += (p.soldCount || 0);
+    revenue += (p.soldCount || 0) * (p.basePrice || 0);
+    remainingStock += (p.totalStock || 0);
+    topProductsRaw.push({
+      name: p.name,
+      avgRating: p.averageRating || 0,
+      reviewCount: p.reviewCount || 0
+    });
+  }
+
+  const topProducts = topProductsRaw.sort((a, b) => b.avgRating - a.avgRating).slice(0, 5);
+
+  const stats = await Review.aggregate([
+    { $match: { productId: { $in: productIds }, status: "approved" } },
+    {
+      $group: {
+        _id: null,
+        totalReviews: { $sum: 1 },
+        averageRating: { $avg: "$rating" },
+        posCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "positive"] }, 1, 0 ] }
+        },
+        neuCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "neutral"] }, 1, 0 ] }
+        },
+        negCount: {
+          $sum: { $cond: [ { $eq: ["$sentiment", "negative"] }, 1, 0 ] }
+        },
+        rating5: { $sum: { $cond: [ { $eq: ["$rating", 5] }, 1, 0 ] } },
+        rating4: { $sum: { $cond: [ { $eq: ["$rating", 4] }, 1, 0 ] } },
+        rating3: { $sum: { $cond: [ { $eq: ["$rating", 3] }, 1, 0 ] } },
+        rating2: { $sum: { $cond: [ { $eq: ["$rating", 2] }, 1, 0 ] } },
+        rating1: { $sum: { $cond: [ { $eq: ["$rating", 1] }, 1, 0 ] } },
+      }
+    }
+  ]);
+
+  const summary = stats[0] || {
+    totalReviews: 0,
+    averageRating: 0,
+    posCount: 0, neuCount: 0, negCount: 0,
+    rating5: 0, rating4: 0, rating3: 0, rating2: 0, rating1: 0
+  };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      dropName: drop.name,
+      totalReviews: summary.totalReviews,
+      averageRating: Math.round(summary.averageRating * 10) / 10,
+      sentiment: {
+        positive: summary.posCount,
+        neutral: summary.neuCount,
+        negative: summary.negCount
+      },
+      ratingDistribution: {
+        5: summary.rating5,
+        4: summary.rating4,
+        3: summary.rating3,
+        2: summary.rating2,
+        1: summary.rating1
+      },
+      topProducts,
+      totalSales,
+      revenue,
+      remainingStock
+    }
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Brand reply on a review (admin)
+|--------------------------------------------------------------------------
+*/
+const replyToReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { brandReply } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const trimmed = typeof brandReply === "string" ? brandReply.trim() : "";
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  review.brandReply = trimmed;
+  review.brandReplyAt = trimmed ? new Date() : null;
+  await review.save({ validateBeforeSave: false });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-replied",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: trimmed ? "Brand reply published" : "Brand reply removed",
+    review,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Toggle/Set isFeatured on a review (admin)
+|--------------------------------------------------------------------------
+*/
+const featureReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { isFeatured } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+    return next(new AppError("Valid review ID is required", 400));
+  }
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (typeof isFeatured === "boolean") {
+    review.isFeatured = isFeatured;
+  } else {
+    review.isFeatured = !review.isFeatured;
+  }
+  await review.save({ validateBeforeSave: false });
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-featured",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: review.isFeatured ? "Review featured" : "Feature flag removed",
+    review,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reviews analytics (admin)
+|--------------------------------------------------------------------------
+*/
+const getReviewsAnalytics = catchAsync(async (_req, res) => {
+  const [totals, sentiment, avgRating] = await Promise.all([
+    Review.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      {
+        $group: {
+          _id: "$sentiment",
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      {
+        $group: {
+          _id: null,
+          avg: { $avg: "$rating" },
+          total: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const totalsByStatus = { pending: 0, approved: 0, rejected: 0 };
+  totals.forEach((entry) => {
+    if (entry._id) totalsByStatus[entry._id] = entry.count;
+  });
+
+  const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
+  sentiment.forEach((entry) => {
+    if (entry._id) sentimentBreakdown[entry._id] = entry.count;
+  });
+
+  const [totalFlagged, totalFeatured] = await Promise.all([
+    Review.countDocuments({ isFlagged: true }),
+    Review.countDocuments({ isFeatured: true }),
+  ]);
+
+  const avg = avgRating[0] || { avg: 0, total: 0 };
+
+  res.status(200).json({
+    success: true,
+    data: {
+      totalApproved: totalsByStatus.approved,
+      totalPending: totalsByStatus.pending,
+      totalRejected: totalsByStatus.rejected,
+      totalFlagged,
+      totalFeatured,
+      averageRating: Math.round((avg.avg || 0) * 10) / 10,
+      totalApprovedReviews: avg.total,
+      sentimentBreakdown,
+    },
+  });
+});
+
 module.exports = {
   createReview,
   getFeaturedReviews,
@@ -571,4 +946,8 @@ module.exports = {
   flagReview,
   recalculateProductRating,
   getRatingStats,
+  getDropAnalytics,
+  replyToReview,
+  featureReview,
+  getReviewsAnalytics,
 };

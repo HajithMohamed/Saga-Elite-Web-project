@@ -39,6 +39,9 @@ const imageSchema = new mongoose.Schema(
         "review",
         "logo",
         "system",
+        "social-ugc",
+        "editorial-quote",
+        "testimonial",
         "other",
       ],
       default: "product",
@@ -46,6 +49,12 @@ const imageSchema = new mongoose.Schema(
     },
 
     label: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    colorTag: {
       type: String,
       trim: true,
       default: "",

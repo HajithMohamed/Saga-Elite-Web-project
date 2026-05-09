@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import usePageMeta from "./hooks/use-page-meta";
+import { useLenis } from "./hooks/use-lenis";
 import AppLoader from "@/components/ui/AppLoader";
 
 // public layout import
@@ -15,7 +16,7 @@ import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
 import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
 import AboutPage from "./pages/Legal/AboutPage";
-
+import OffersPage from "./pages/user/OffersPage";
 // auth page imports
 import AuthLayout from "./components/auth-components/Layout";
 import Login from "./pages/auth/Login";
@@ -30,13 +31,23 @@ import AdminLayout from "./components/admin-components/Layout";
 import PermissionGuard from "./components/admin-components/PermissionGuard";
 import AdminDashboard from "./pages/admin-view/Dashboard";
 import AdminFeatures from "./pages/admin-view/Features";
+import AdminOffers from "./pages/admin-view/Offers";
+import AdminCoupons from "./pages/admin-view/Coupons";
+import AdminCollections from "./pages/admin-view/Collections";
+import AdminMediaLibrary from "./pages/admin-view/MediaLibrary";
+import AdminSeoSettings from "./pages/admin-view/SeoSettings";
+import AdminCommunity from "./pages/admin-view/CommunityPage";
+import AdminShipping from "./pages/admin-view/ShippingPage";
 import AdminOrders from "./pages/admin-view/Orders";
+import GiftManager from "./pages/admin-view/GiftManager";
 import AdminProduct from "./pages/admin-view/Product";
 import AdminDrops from "./pages/admin-view/Drops";
+import DropAnalytics from "./pages/admin-view/DropAnalytics";
+import AdminAnalytics from "./pages/admin-view/Analytics";
 import AdminHomeImages from "./pages/admin-view/HomeImages";
 import NotificationsManager from "./pages/admin-view/NotificationsManager";
-import PendingPaymentsPage from "./pages/admin/PendingPaymentsPage";
-import PaymentVerificationPage from "./pages/admin/PaymentVerificationPage";
+import PendingPaymentsPage from "./pages/admin-view/PendingPaymentsPage";
+import PaymentVerificationPage from "./pages/admin-view/PaymentVerificationPage";
 import AdminUsers from "./pages/admin-view/Users";
 import SuperAdminDashboard from "./pages/admin-view/SuperAdminDashboard";
 import ReviewModerationPage from "./pages/admin-view/ReviewModerationPage";
@@ -55,6 +66,7 @@ import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
 import DropDetails from "./pages/shopping-view/DropDetails";
+import DropsIndex from "./pages/shopping-view/DropsIndex";
 import ProductReviewsPage from "./pages/ProductReviewsPage";
 import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
@@ -63,6 +75,7 @@ import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
 import OrderTracking from "./pages/shopping-view/OrderTracking";
 import ManualPaymentPage from "./pages/ManualPaymentPage";
+import FindPaymentPage from "./pages/FindPaymentPage";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -102,6 +115,7 @@ function App() {
     (state) => state.auth
   );
   const dispatch = useDispatch();
+  useLenis();
 
   const ADMIN_ROLES = ["admin", "super_admin", "superadmin", "sub_admin"];
   const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
@@ -111,7 +125,14 @@ function App() {
     : "/shopping/home";
 
   useEffect(() => {
-    dispatch(checkAuthAction());
+    const hasLocalToken =
+      typeof window !== "undefined" && Boolean(localStorage.getItem("authToken"));
+    const hasCookieToken =
+      typeof document !== "undefined" && document.cookie.includes("token=");
+
+    if (hasLocalToken || hasCookieToken) {
+      dispatch(checkAuthAction());
+    }
   }, [dispatch]);
 
   useEffect(() => {
@@ -154,6 +175,7 @@ function App() {
             <Route path="/legal/terms-and-conditions" element={<TermsConditionsPage />} />
             <Route path="/legal/refund-policy" element={<RefundPolicyPage />} />
             <Route path="/legal/delivery-policy" element={<DeliveryPolicyPage />} />
+            <Route path="/offers" element={<OffersPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/product/:productId/reviews" element={<ProductReviewsPage />} />
@@ -198,7 +220,15 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
             <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
+            <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
+            <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
+            <Route path="collections" element={<PermissionGuard permission="products"><AdminCollections /></PermissionGuard>} />
+            <Route path="media" element={<PermissionGuard permission="products"><AdminMediaLibrary /></PermissionGuard>} />
+            <Route path="seo" element={<PermissionGuard superAdminOnly><AdminSeoSettings /></PermissionGuard>} />
+            <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
+            <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
+            <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
             <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
             <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
@@ -207,11 +237,13 @@ function App() {
             <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
             <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
             <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
-            <Route path="about-content" element={<AboutSiteConfig />} />
+            <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
-            <Route path="account" element={<Account />} />
+            <Route path="account" element={<Navigate to="/shopping/account" replace />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
+            <Route path="drop-analytics" element={<PermissionGuard permission="viewAnalytics"><DropAnalytics /></PermissionGuard>} />
+            <Route path="analytics" element={<PermissionGuard permission="viewAnalytics"><AdminAnalytics /></PermissionGuard>} />
           </Route>
 
           {/* SHOPPING */}
@@ -231,11 +263,13 @@ function App() {
             <Route path="checkout" element={<Checkout />} />
             <Route path="product-list" element={<ProductListing />} />
             <Route path="product/:slug" element={<ProductDetails />} />
+            <Route path="drops" element={<DropsIndex />} />
             <Route path="drop/:slug" element={<DropDetails />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="checkout-success" element={<OrderSuccess />} />
             <Route path="manual-payment" element={<ManualPaymentPage />} />
             <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+            <Route path="find-payment" element={<FindPaymentPage />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="order-tracking" element={<OrderTracking />} />
             <Route path="account/my-reviews" element={<MyReviewsPage />} />

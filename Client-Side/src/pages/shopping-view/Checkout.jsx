@@ -14,18 +14,36 @@ import {
 } from "@/store/manualPaymentSlice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import usePageMeta from "@/hooks/use-page-meta";
 import VariantSelectors, {
   getColorsForSize,
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
-import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud, Lock } from "lucide-react";
+import {
+  Loader2,
+  Minus,
+  Plus,
+  Trash2,
+  CreditCard,
+  Building2,
+  AlertCircle,
+  UploadCloud,
+  Lock,
+  Gift,
+  Check,
+  ShieldCheck,
+  Truck,
+  ChevronDown,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { compressImageFile } from "@/lib/image-compression";
 import { cn } from "@/lib/utils";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+
 const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
-const MANUAL_BANK_DETAILS = {
+
+const DEFAULT_MANUAL_BANK_DETAILS = {
   bankName: "Sampath Bank",
   branch: "Hatton",
   accountName: "N.Gayathree",
@@ -34,36 +52,66 @@ const MANUAL_BANK_DETAILS = {
   deadline: "Pay within 24 hours to confirm your order.",
 };
 
-const buildManualPaymentPath = (paymentSlug) =>
-  paymentSlug
-    ? `/shopping/manual-payment/${encodeURIComponent(paymentSlug)}`
-    : "/shopping/manual-payment";
+const SRI_LANKA_DISTRICTS = [
+  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
+  "Galle", "Gampaha", "Hambantota", "Jaffna", "Kalutara",
+  "Kandy", "Kegalle", "Kilinochchi", "Kurunegala", "Mannar",
+  "Matale", "Matara", "Monaragala", "Mullaitivu", "Nuwara Eliya",
+  "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
+];
 
-const getErrorMessage = (error, fallback) =>
-  typeof error === "string" ? error : error?.message || fallback;
+const PAYMENT_METHODS = [
+  {
+    id: "card",
+    label: "Card Payment",
+    sublabel: "Visa · Mastercard",
+    description: "Instant secure checkout via PayHere gateway.",
+    badge: "Activates with hosting",
+    icon: CreditCard,
+  },
+  {
+    id: "manual_bank_transfer",
+    label: "Manual Bank Transfer",
+    sublabel: "Sampath / Commercial / BoC",
+    description: "We'll generate a payment reference for your transfer.",
+    badge: "Recommended",
+    icon: Building2,
+  },
+];
+
+const buildManualPaymentPath = (slug) =>
+  slug ? `/shopping/manual-payment/${encodeURIComponent(slug)}` : "/shopping/manual-payment";
+
+const getErrorMessage = (err, fallback) =>
+  typeof err === "string" ? err : err?.message || fallback;
 
 const getDiscountedUnitPrice = (product = {}, variant = {}) => {
-  const basePrice =
+  const base =
     Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
-
-  return Math.round(
-    basePrice * (1 - Number(product?.discountPercent || 0) / 100)
-  );
+  return Math.round(base * (1 - Number(product?.discountPercent || 0) / 100));
 };
 
-const normalizeBuyNowItem = (item) => {
-  if (!item?.product || !item?.variant) {
-    return null;
-  }
+const getVariantId = (v = {}) => v?.id || v?._id || "";
 
-  const variant = normalizeCheckoutVariant(item.variant);
+const normalizeCheckoutVariant = (v = {}) => ({
+  id: getVariantId(v),
+  sku: v?.sku || "",
+  size: v?.size || "",
+  color: v?.color || "",
+  stock: Number(v?.stock ?? 0),
+  priceAdjustment: Number(v?.priceAdjustment || 0),
+});
+
+const normalizeBuyNowItem = (item) => {
+  if (!item?.product || !item?.variant) return null;
+
   const quantity = Math.max(1, Number(item.quantity) || 1);
-  const unitPrice = getDiscountedUnitPrice(item.product, variant);
+  const unitPrice = getDiscountedUnitPrice(item.product, item.variant);
 
   return {
-    id: `buynow-${item.product.id || item.product._id}-${variant.sku}`,
+    id: `buynow-${item.product.id || item.product._id}-${item.variant.sku}`,
     product: item.product,
-    variant,
+    variant: item.variant,
     quantity,
     unitPrice,
     subTotal: unitPrice * quantity,
@@ -72,7 +120,6 @@ const normalizeBuyNowItem = (item) => {
 
 const loadPersistedBuyNowItem = () => {
   if (typeof window === "undefined") return null;
-
   try {
     const raw = window.sessionStorage.getItem(BUY_NOW_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -83,125 +130,139 @@ const loadPersistedBuyNowItem = () => {
 
 const persistBuyNowItem = (item) => {
   if (typeof window === "undefined") return;
-
   if (!item) {
     window.sessionStorage.removeItem(BUY_NOW_STORAGE_KEY);
     return;
   }
-
   window.sessionStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(item));
 };
 
-const getVariantId = (variant = {}) => variant?.id || variant?._id || "";
+const fieldBaseClass =
+  "h-12 w-full rounded-xl border bg-[#0a0a0a] px-4 text-sm text-[#e5e2e1] placeholder-[#574500] transition focus:outline-none focus:ring-2 focus:ring-[#f2ca50]/20";
 
-const normalizeCheckoutVariant = (variant = {}) => ({
-  id: getVariantId(variant),
-  sku: variant?.sku || "",
-  size: variant?.size || "",
-  color: variant?.color || "",
-  stock: Number(variant?.stock ?? 0),
-  priceAdjustment: Number(variant?.priceAdjustment || 0),
-});
+const Field = ({
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  placeholder,
+  className,
+  ...rest
+}) => (
+  <div className={cn("space-y-2", className)}>
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+      {label}
+    </label>
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={cn(
+        fieldBaseClass,
+        error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[#f2ca50]"
+      )}
+      {...rest}
+    />
+    {error && <p className="text-xs text-rose-400">{error}</p>}
+  </div>
+);
 
-const buildCheckoutItem = (item, variantOverride) => {
-  const variant = normalizeCheckoutVariant(variantOverride || item?.variant);
-  const quantity = Math.max(1, Number(item?.quantity) || 1);
-  const unitPrice = getDiscountedUnitPrice(item?.product, variant);
-
-  return {
-    ...item,
-    variant,
-    quantity,
-    unitPrice,
-    subTotal: unitPrice * quantity,
-  };
-};
-
-const buildBuyNowPersistencePayload = (item) => {
-  if (!item?.product || !item?.variant?.sku) {
-    return null;
-  }
-
-  return {
-    product: item.product,
-    variant: item.variant,
-    quantity: item.quantity,
-  };
-};
-
-const getCheckoutItemErrors = (item) => {
-  const errors = {};
-  const sizes = getProductSizes(item?.product);
-  const colors = getColorsForSize(item?.product, item?.variant?.size);
-
-  if (sizes.length > 0 && !item?.variant?.size) {
-    errors.size = "Please choose a size.";
-  }
-
-  if (colors.length > 0 && !item?.variant?.color) {
-    errors.color = "Please choose a color.";
-  }
-
-  if ((sizes.length > 0 || colors.length > 0) && !item?.variant?.sku) {
-    errors.color = errors.color || "Please choose an available variant.";
-  }
-
-  return errors;
-};
+const SelectField = ({
+  label,
+  value,
+  onChange,
+  options = [],
+  error,
+  placeholder = "Select",
+  disabled = false,
+  className,
+}) => (
+  <div className={cn("space-y-2", className)}>
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+      {label}
+    </label>
+    <div className="relative">
+      <select
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={cn(
+          fieldBaseClass,
+          "appearance-none pr-10",
+          disabled && "cursor-not-allowed opacity-70",
+          error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[#f2ca50]"
+        )}
+      >
+        {!value && <option value="">{placeholder}</option>}
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="bg-[#0a0a0a]">
+            {opt}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#99907c]" />
+    </div>
+    {error && <p className="text-xs text-rose-400">{error}</p>}
+  </div>
+);
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const { items, totalPrice, isLoading: cartIsLoading } = useSelector(
-    (state) => state.cart.cart
-  );
+  const { isAuthenticated } = useSelector((s) => s.auth);
+  const { items, totalPrice } = useSelector((s) => s.cart.cart);
 
   const [formData, setFormData] = useState({
-    shippingAddress: "",
-    contactNumber: "",
-    paymentMethod: "manual_bank_transfer",
+    fullName: "",
+    email: "",
+    phone: "",
+    country: "Sri Lanka",
+    addressLine: "",
+    city: "",
+    district: "",
+    postalCode: "",
+    deliveryMode: "delivery",
     notes: "",
-    guestEmail: "",
+    paymentMethod: "manual_bank_transfer",
+    termsAccepted: false,
   });
-
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    cardholderName: "",
-  });
-
-  const [receiptFile, setReceiptFile] = useState(null);
-  const [receiptPreview, setReceiptPreview] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [formError, setFormError] = useState(null);
-  const fileInputRef = useRef(null);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [currentStep] = useState(2);
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
-  
-  const [showGuestDialog, setShowGuestDialog] = useState(false);
-  const [guestCheckInfo, setGuestCheckInfo] = useState(null);
-  const [isProcessingSelection, setIsProcessingSelection] = useState(false);
-  const [variantErrorsByItem, setVariantErrorsByItem] = useState({});
-  const [variantUpdateItemId, setVariantUpdateItemId] = useState(null);
 
-  const locationState = useMemo(() => location.state || {}, [location.key]);
-  const cartStateItems = useMemo(
-    () => (Array.isArray(locationState.cartItems) ? locationState.cartItems : null),
-    [locationState],
+  const checkoutSteps = [
+    { id: 1, label: "Cart" },
+    { id: 2, label: "Delivery" },
+    { id: 3, label: "Payment" },
+    { id: 4, label: "Complete" },
+  ];
+
+  const formatLKR = (value = 0) =>
+    `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
+      maximumFractionDigits: 0,
+    })}`;
+
+  const itemCount = checkoutItems.reduce(
+    (sum, item) => sum + (Number(item?.quantity) || 0),
+    0
   );
-  const routedBuyNowItem = useMemo(
-    () => normalizeBuyNowItem(locationState.buyNowItem),
-    [locationState],
-  );
+
+  const cartStateItems = Array.isArray(location.state?.cartItems)
+    ? location.state.cartItems
+    : null;
 
   useEffect(() => {
+    const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
     const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
 
     if (routedBuyNowItem) {
@@ -218,7 +279,7 @@ const Checkout = () => {
       setIsBuyNow(false);
       setCheckoutItems(cartStateItems);
       setCheckoutTotal(
-        location.state.cartTotal ||
+        location.state?.cartTotal ||
           cartStateItems.reduce(
             (sum, item) => sum + item.unitPrice * item.quantity,
             0
@@ -241,1117 +302,669 @@ const Checkout = () => {
     setIsBuyNow(false);
     setHasInitializedSource(true);
     dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, routedBuyNowItem]);
+  }, [cartStateItems, dispatch, location.state]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;
-
     setCheckoutItems(items);
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
   useEffect(() => {
-    setCheckoutTotal(
-      checkoutItems.reduce(
-        (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
-        0
+    axios
+      .get(`${API_BASE}/site-config/bank_details`)
+      .then((res) =>
+        setBankDetails({
+          ...DEFAULT_MANUAL_BANK_DETAILS,
+          ...(res.data?.data || {}),
+        })
       )
-    );
+      .catch(() => setBankDetails(DEFAULT_MANUAL_BANK_DETAILS));
+  }, []);
 
-    if (isBuyNow) {
-      persistBuyNowItem(buildBuyNowPersistencePayload(checkoutItems[0]));
+  const displayBankDetails = bankDetails || DEFAULT_MANUAL_BANK_DETAILS;
+
+  const whatsAppLink = displayBankDetails.whatsapp
+    ? `https://wa.me/${displayBankDetails.whatsapp.replace(/\D/g, "")}`
+    : "#";
+
+  const updateField = (key) => (eventOrValue) => {
+    const value =
+      eventOrValue?.target !== undefined
+        ? eventOrValue.target.type === "checkbox"
+          ? eventOrValue.target.checked
+          : eventOrValue.target.value
+        : eventOrValue;
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
+
+  const validate = () => {
+    const next = {};
+    if (!formData.fullName.trim()) next.fullName = "Required";
+    if (!formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email))
+      next.email = "Enter a valid email";
+    if (!formData.phone.trim()) next.phone = "Required";
+    if (formData.deliveryMode === "delivery") {
+      if (!formData.addressLine.trim()) next.addressLine = "Required";
+      if (!formData.city.trim()) next.city = "Required";
+      if (!formData.district) next.district = "Choose a district";
+      if (!formData.postalCode.trim()) next.postalCode = "Required";
     }
-  }, [checkoutItems, isBuyNow]);
-
-  // ---------------- CART ACTIONS ----------------
-  const handleQuantityChange = async (item, quantity) => {
-    if (isBuyNow) return;
-    try {
-      if (quantity < 1) return;
-
-      await dispatch(
-        updateCartItemAction({
-          itemId: item.id,
-          quantity,
-        })
-      ).unwrap();
-    } catch (err) {
-      toast({
-        title: "Update failed",
-        description: getErrorMessage(err, "Unable to update quantity."),
-        variant: "destructive",
-      });
-    }
+    if (!formData.termsAccepted) next.termsAccepted = "Please accept the terms";
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
-  const handleRemove = async (itemId) => {
-    if (isBuyNow) return;
-    try {
-      await dispatch(removeFromCartAction(itemId)).unwrap();
-
-      toast({
-        title: "Removed",
-        description: "Item removed from cart.",
-        variant: "success",
-      });
-    } catch (err) {
-      toast({
-        title: "Remove failed",
-        description: getErrorMessage(err, "Unable to remove item."),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateCheckoutItemLocally = (itemId, updater) => {
-    setCheckoutItems((currentItems) =>
-      currentItems.map((entry) => {
-        if (entry.id !== itemId) {
-          return entry;
-        }
-
-        const nextItem = updater(entry);
-        return buildCheckoutItem(nextItem, nextItem.variant);
-      })
-    );
-  };
-
-  const validateCheckoutItems = (itemsToValidate = checkoutItems) => {
-    const nextErrors = {};
-
-    itemsToValidate.forEach((item) => {
-      const itemErrors = getCheckoutItemErrors(item);
-      if (Object.keys(itemErrors).length > 0) {
-        nextErrors[item.id] = itemErrors;
-      }
-    });
-
-    setVariantErrorsByItem(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const syncCartVariant = async (item, nextVariant) => {
-    if (isBuyNow || !nextVariant?.sku) {
-      return;
-    }
-
-    setVariantUpdateItemId(item.id);
-
-    try {
-      await dispatch(
-        updateCartItemAction({
-          itemId: item.id,
-          quantity: item.quantity,
-          variantId: getVariantId(nextVariant),
-        })
-      ).unwrap();
-    } catch (err) {
-      toast({
-        title: "Variant update failed",
-        description: getErrorMessage(err, "Unable to update size or color."),
-        variant: "destructive",
-      });
-
-      updateCheckoutItemLocally(item.id, () => buildCheckoutItem(item, item.variant));
-    } finally {
-      setVariantUpdateItemId(null);
-    }
-  };
-
-  const applyVariantSelection = async (item, nextSize, nextColor) => {
-    const resolvedVariant = nextSize && nextColor
-      ? getVariantBySelection(item.product, nextSize, nextColor)
-      : null;
-
-    updateCheckoutItemLocally(item.id, (currentItem) => ({
-      ...currentItem,
-      variant: resolvedVariant
-        ? normalizeCheckoutVariant(resolvedVariant)
-        : {
-            sku: "",
-            size: nextSize || "",
-            color: nextColor || "",
-            stock: 0,
-            priceAdjustment: 0,
-            id: "",
-          },
-    }));
-
-    setVariantErrorsByItem((current) => ({
-      ...current,
-      [item.id]: {},
-    }));
-    setFormError(null);
-
-    if (resolvedVariant) {
-      await syncCartVariant(item, normalizeCheckoutVariant(resolvedVariant));
-    }
-  };
-
-  const handleSizeSelection = async (item, size) => {
-    const nextColors = getColorsForSize(item.product, size);
-    const preservedColor = nextColors.includes(item.variant?.color)
-      ? item.variant.color
-      : "";
-    const nextColor =
-      preservedColor || (nextColors.length === 1 ? nextColors[0] : "");
-
-    await applyVariantSelection(item, size, nextColor);
-  };
-
-  const handleColorSelection = async (item, color) => {
-    await applyVariantSelection(item, item.variant?.size, color);
-  };
-
-  // ---------------- FORM HANDLING ----------------
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCardChange = (e) => {
-    let { name, value } = e.target;
-    
-    // Auto-format card number with spaces every 4 digits
-    if (name === "cardNumber") {
-      value = value.replace(/\D/g, '').substring(0, 16);
-      value = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-    }
-    
-    // Auto-format expiry date MM/YY
-    if (name === "expiryDate") {
-      value = value.replace(/\D/g, '').substring(0, 4);
-      if (value.length >= 3) {
-        value = `${value.substring(0, 2)}/${value.substring(2, 4)}`;
-      }
-    }
-    
-    if (name === "cvv") {
-      value = value.replace(/\D/g, '').substring(0, 4);
-    }
-
-    setCardDetails((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-
-  const checkoutTotalAmount = checkoutItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-  const submitButtonLabel =
-    formData.paymentMethod === "manual_bank_transfer"
-      ? "Place Order & Get Reference"
-      : "Complete Purchase";
-
-  const handleFileChange = async (e) => {
-    const originalFile = e.target.files?.[0];
-    const file = await compressImageFile(originalFile);
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setFormError("File size must be less than 5MB");
-        return;
-      }
-      setReceiptFile(file);
-      setReceiptPreview(URL.createObjectURL(file));
-      setFormError(null);
-    }
-  };
-
-  const uploadReceipt = async () => {
-    if (!receiptFile) return "";
-    const fd = new FormData();
-    fd.append("receipt", receiptFile);
-    try {
-      const res = await axios.post(`${API_BASE}/image/upload-receipt`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
-      return res.data?.data?.url || "";
-    } catch (err) {
-      throw new Error(getErrorMessage(err?.response?.data, "Failed to upload receipt"));
-    }
-  };
-
-  const handleGuestChoice = async (choice) => {
-    setIsProcessingSelection(true);
-    setShowGuestDialog(false);
-    
-    if (choice === 'register') {
-      try {
-        await dispatch(registerGuestAction(formData.guestEmail)).unwrap();
-        toast({
-          title: "Account Created",
-          description: "Temporary password sent to your email. You are now logged in.",
-          variant: "success"
-        });
-        // After registration, proceed as authenticated user
-        await proceedWithOrder();
-      } catch (err) {
-        toast({
-          title: "Registration failed",
-          description: getErrorMessage(err, "Could not create account."),
-          variant: "destructive"
-        });
-        setIsProcessingSelection(false);
-      }
-    } else {
-      // Proceed as one-time guest
-      await proceedWithOrder();
-    }
-  };
-
-  // ---------------- ORDER SUBMIT ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!checkoutItems.length) {
-      setFormError("Your cart is empty.");
+    if (checkoutItems.length === 0) {
+      toast({ title: "Your bag is empty", variant: "destructive" });
       return;
     }
-
-    if (!validateCheckoutItems()) {
-      setFormError("Please choose a valid size and color for each item.");
-      return;
-    }
-
-    if (!isAuthenticated && !formData.guestEmail) {
-      setFormError("Email address is required for guest checkout.");
-      return;
-    }
-
-    if (!formData.shippingAddress || !formData.contactNumber) {
-      setFormError("Shipping address and contact number are required.");
-      return;
-    }
-
-    if (formData.paymentMethod === "manual" && !receiptFile) {
-      setFormError("Please upload a receipt for manual payment.");
-      return;
-    }
-
-    if (formData.paymentMethod === "card") {
-      const { cardNumber, expiryDate, cvv, cardholderName } = cardDetails;
-      if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-        setFormError("All card details are required.");
-        return;
-      }
-      const rawCardNum = cardNumber.replace(/\s+/g, "");
-      if (!/^\d{16}$/.test(rawCardNum)) {
-        setFormError("Invalid card number. It must be 16 digits.");
-        return;
-      }
-      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
-        setFormError("Invalid expiry date format. Use MM/YY.");
-        return;
-      }
-      const [expMonth, expYear] = expiryDate.split("/");
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = parseInt(now.getFullYear().toString().slice(-2), 10);
-      const expM = parseInt(expMonth, 10);
-      const expY = parseInt(expYear, 10);
-      if (expY < currentYear || (expY === currentYear && expM < currentMonth)) {
-        setFormError("Card has expired.");
-        return;
-      }
-      if (!/^\d{3,4}$/.test(cvv)) {
-        setFormError("Invalid CVV format.");
-        return;
-      }
-    }
-
-    setFormError(null);
-
-    // Client-side validation
-    if (!checkoutItems || checkoutItems.length === 0) {
-      setFormError("Your cart is empty. Please add items before checkout.");
-      return;
-    }
-    if (!formData.shippingAddress.trim()) {
-      setFormError("Shipping address is required.");
-      return;
-    }
-    if (!formData.contactNumber.trim()) {
-      setFormError("Contact number is required.");
-      return;
-    }
-    if (!["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
-      setFormError("Please select a valid payment method.");
-      return;
-    }
-
-    setIsUploading(true);
-
-    // If not authenticated, check guest status
-    if (!isAuthenticated) {
-      try {
-        const guestRes = await dispatch(checkGuestAction(formData.guestEmail)).unwrap();
-        if (guestRes.data.existsAsUser) {
-          toast({
-            title: "Account exists",
-            description: "An account with this email already exists. Please log in.",
-            variant: "destructive",
-          });
-          navigate("/auth/login", { state: { email: formData.guestEmail } });
-          setIsUploading(false);
-          return;
-        }
-
-        // Show dialog asking to register OR proceed as guest
-        setGuestCheckInfo(guestRes.data);
-        setShowGuestDialog(true);
-        setIsUploading(false);
-        return;
-      } catch (err) {
-        console.error("Guest check failed", err);
-      }
-    }
-
-    await proceedWithOrder();
-  };
-
-  const proceedWithOrder = async () => {
-    setIsUploading(true);
-    try {
-      if (!validateCheckoutItems()) {
-        setFormError("Please choose a valid size and color for each item.");
-        return;
-      }
-
-      let uploadedUrl = "";
-      if (["manual", "manual_bank_transfer"].includes(formData.paymentMethod)) {
-        uploadedUrl = await uploadReceipt();
-        if (formData.paymentMethod === "manual" && !uploadedUrl) {
-          setFormError("Receipt upload failed. Please try again.");
-          return;
-        }
-      }
-
-      // Simulate online gateway processing if needed
-      if (["payhere", "gpay", "card", "lankapay"].includes(formData.paymentMethod)) {
-        toast({
-          title: `Processing via ${formData.paymentMethod.toUpperCase()}`,
-          description: "Redirecting to gateway environment...",
-        });
-        await new Promise(resolve => setTimeout(resolve, 1500)); // simulated latency
-      }
-
-      const payload = {
-        items: checkoutItems.map((item) => ({
-          productId: item.product.id || item.product._id,
-          variantSku: item.variant.sku,
-          size: item.variant.size,
-          color: item.variant.color,
-          quantity: item.quantity,
-        })),
-        checkoutMode: isBuyNow ? "buyNow" : "cart",
-        shippingAddress: formData.shippingAddress,
-        contactNumber: formData.contactNumber,
-        paymentMethod: formData.paymentMethod,
-        paymentProofUrl:
-          ["manual", "manual_bank_transfer"].includes(formData.paymentMethod)
-            ? uploadedUrl
-            : "",
-        notes: formData.notes,
-        guestEmail: !isAuthenticated ? formData.guestEmail : undefined,
-      };
-
-      const resultAction = await dispatch(createOrder(payload)).unwrap();
-      const createdOrder = resultAction?.data || {};
-      const createdOrderId = resultAction?.orderId || createdOrder._id || `TEM-${Math.floor(Math.random() * 100000)}`;
-      const resolvedTotal = createdOrder.totalAmount || checkoutTotal || checkoutTotalAmount || totalAmount;
-      if (!isBuyNow) {
-        dispatch(fetchCartAction());
-      }
-
+    if (!validate()) {
       toast({
-        title: "Order placed",
-        description: "Your order was successfully submitted.",
-        variant: "success",
+        title: "Check your details",
+        description: "Some required fields need attention.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    const shippingAddress =
+      formData.deliveryMode === "pickup"
+        ? `STORE PICKUP — ${formData.fullName}`
+        : [
+            formData.fullName,
+            formData.addressLine,
+            `${formData.city}, ${formData.district} ${formData.postalCode}`.trim(),
+            formData.country,
+          ]
+            .filter(Boolean)
+            .join("\n");
+
+    const orderItems = checkoutItems
+      .map((item) => {
+        const productId = item.product?.id || item.product?._id;
+        const variantSku = item.variant?.sku;
+        if (!productId || !variantSku) return null;
+        return {
+          productId,
+          variantSku,
+          size: item.variant?.size || undefined,
+          color: item.variant?.color || undefined,
+          quantity: Math.max(1, Number(item.quantity) || 1),
+        };
+      })
+      .filter(Boolean);
+
+    if (orderItems.length === 0) {
+      toast({
+        title: "Cart items unavailable",
+        description: "We couldn't read product/variant info for this order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await dispatch(
+        createOrder({
+          items: orderItems,
+          checkoutMode: isBuyNow ? "buyNow" : "cart",
+          shippingAddress,
+          contactNumber: formData.phone,
+          paymentMethod: formData.paymentMethod,
+          notes: formData.notes,
+          guestEmail: formData.email,
+        })
+      ).unwrap();
+
+      const newOrderId = response?.orderId || response?.data?._id;
+      const totalAmount = checkoutTotal;
+      const manualPaymentSlug = response?.manualPayment?.slug || null;
+      const manualPaymentRef = response?.manualPayment?.referenceNumber || null;
+      const guestEmailReturned = response?.guestEmail || formData.email || null;
 
       persistBuyNowItem(null);
 
-      if (formData.paymentMethod === "manual_bank_transfer") {
-        const paymentReferenceResponse = await dispatch(
-          generateManualPaymentReference({
-            orderId: createdOrderId,
-            amount: resolvedTotal,
-          })
-        ).unwrap();
-
-        const manualPaymentData = paymentReferenceResponse?.data || {};
-        const manualReference =
-          paymentReferenceResponse?.referenceNumber ||
-          manualPaymentData.referenceNumber ||
-          manualPaymentData.manualPayment?.referenceNumber ||
-          createdOrder.referenceNumber;
-        const manualAmount =
-          paymentReferenceResponse?.amount ||
-          manualPaymentData.amount ||
-          resolvedTotal;
-        const manualOrderId =
-          paymentReferenceResponse?.orderId ||
-          manualPaymentData.orderId ||
-          createdOrderId;
-
-        dispatch(
-          storeManualPaymentContext({
-            orderId: manualOrderId,
-            amount: manualAmount,
-            slug:
-              paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug ||
-              null,
-            referenceNumber: manualReference,
-          })
-        );
-
-        navigate(
-          buildManualPaymentPath(
-            paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug
-          ),
-          {
-            state: {
-              orderId: manualOrderId,
-              amount: manualAmount,
-              slug:
-                paymentReferenceResponse?.slug ||
-                manualPaymentData.slug ||
-                manualPaymentData.manualPayment?.slug ||
-                null,
-              referenceNumber: manualReference,
-            },
-          },
-        );
-        return;
+      if (formData.paymentMethod === "card") {
+        toast({
+          title: "Card payments launching soon",
+          description:
+            "We've recorded your order — finalising via bank transfer for now.",
+          variant: "success",
+        });
       }
 
-      navigate("/shopping/checkout-success", {
-        state: {
-          orderId: createdOrderId,
-          totalAmount: resolvedTotal,
-          referenceNumber: createdOrder.referenceNumber,
-          paymentMethod: formData.paymentMethod,
-        },
-      });
+      const target = manualPaymentSlug
+        ? `/shopping/manual-payment/${encodeURIComponent(manualPaymentSlug)}`
+        : "/shopping/manual-payment";
+
+      navigate(
+        guestEmailReturned
+          ? `${target}?email=${encodeURIComponent(guestEmailReturned)}`
+          : target,
+        {
+          state: {
+            orderId: newOrderId,
+            amount: totalAmount,
+            referenceNumber: manualPaymentRef,
+            slug: manualPaymentSlug,
+          },
+        }
+      );
     } catch (err) {
       toast({
         title: "Checkout failed",
         description: getErrorMessage(err, "Try again later."),
         variant: "destructive",
       });
-      setFormError(getErrorMessage(err, "Checkout failed"));
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // ---------------- LOADING ----------------
-  if ((!hasInitializedSource || cartIsLoading) && !checkoutItems.length) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
-      </div>
-    );
-  }
-
-  // ---------------- EMPTY CART ----------------
-  if (!checkoutItems.length) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-on-surface">
-        <h1 className="text-3xl font-bold">Your cart is empty</h1>
-        <p className="mt-2 text-muted-foreground">
-          Add products before checkout
-        </p>
-        <Link
-          to="/shopping/product-list"
-          className="mt-6 rounded-full bg-[#D4AF37] px-6 py-3 font-bold text-black"
-        >
-          Start Shopping
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background py-12 font-sans text-on-surface md:py-20">
-      <div className="mx-auto grid max-w-screen-2xl items-start gap-16 px-6 md:px-12 lg:grid-cols-[3fr_2fr]">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Checkout header */}
+      <header className="sticky top-0 z-40 border-b border-[#1c1b1b] bg-[#0a0a0a]/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 md:px-8">
+          <Link to="/shopping/home" className="flex flex-col leading-none">
+            <span className="se-serif text-2xl tracking-[0.18em] text-[#e5e2e1]">
+              SAGA ELITE
+            </span>
+            <span className="se-label mt-1 text-[9px] tracking-[0.32em] text-[#99907c]">
+              Rare Fit Forever
+            </span>
+          </Link>
+          <div className="flex items-center gap-2 rounded-full border border-[#4d4635]/40 bg-[#0d0d0d] px-4 py-2">
+            <Lock className="h-3.5 w-3.5 text-[#f2ca50]" />
+            <span className="se-label text-[9px] tracking-[0.28em] text-[#d0c5af]">
+              <span className="hidden sm:inline">Secure Checkout · </span>SSL Protected
+            </span>
+          </div>
+        </div>
+      </header>
 
-        {/* LEFT: FORM (Shipping & Payment) */}
-        <div className="space-y-12 lg:space-y-16">
-          <section>
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#f2ca50]/10 text-[#f2ca50]">
-                <Lock className="w-4 h-4" />
-              </span>
-              <span className="se-label tracking-[0.28em] text-[10px] text-[#f2ca50]">SECURE CHECKOUT</span>
-            </div>
-            <h1 className="se-serif text-4xl md:text-5xl text-[#e5e2e1] leading-[1.1] mb-4">Complete Your Order</h1>
-            <p className="se-body text-sm text-[#d0c5af]">
-              Review your items and complete your purchase.
-            </p>
-          </section>
-
-          <form onSubmit={handleSubmit} className="space-y-12">
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
-                <h2 className="text-xl font-bold tracking-tight">Review Items</h2>
-              </div>
-
-              <div className="space-y-5">
-                {checkoutItems.map((item) => {
-                  const itemErrors = variantErrorsByItem[item.id] || {};
-                  const isVariantUpdating = variantUpdateItemId === item.id;
-
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-[28px] border border-border bg-surface-container-low p-5 shadow-[0_16px_50px_rgba(0,0,0,0.12)] dark:bg-[#0c0c0c] dark:shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
+      <div className="mx-auto max-w-[1280px] px-4 pb-32 pt-8 md:px-8">
+        {/* Progress stepper */}
+        <nav aria-label="Checkout progress" className="mb-12 mt-2">
+          <ol className="flex items-center justify-between gap-2 sm:gap-4">
+            {checkoutSteps.map((step, index) => {
+              const isComplete = step.id < currentStep;
+              const isActive = step.id === currentStep;
+              const labelTone = isActive
+                ? "text-[#f2ca50]"
+                : isComplete
+                ? "text-[#d0c5af]"
+                : "text-[#574500]";
+              const circleTone = isComplete
+                ? "border-[#f2ca50] bg-[#f2ca50] text-[#0a0a0a]"
+                : isActive
+                ? "border-[#f2ca50] bg-transparent text-[#f2ca50] shadow-[0_0_24px_rgba(242,202,80,0.45)]"
+                : "border-[#4d4635] bg-transparent text-[#574500]";
+              return (
+                <React.Fragment key={step.id}>
+                  <li className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "relative flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                        circleTone
+                      )}
                     >
-                      <div className="flex flex-col gap-5 md:flex-row">
-                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-border bg-muted/30 md:h-36 md:w-28 md:flex-shrink-0 dark:bg-black/30">
-                          <img
-                            src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
-                            className="h-full w-full object-cover"
-                            alt={item.product.name}
-                          />
-                        </div>
-
-                        <div className="flex-1 space-y-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="text-lg font-semibold tracking-tight">{item.product.name}</p>
-                              <p className="mt-1 text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                                Unit LKR {item.unitPrice}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#f1d27a]">
-                                Qty {item.quantity}
-                              </span>
-                              {!isBuyNow ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemove(item.id)}
-                                  disabled={isVariantUpdating || isUploading}
-                                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-red-300 transition-colors hover:bg-red-500/15"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <VariantSelectors
-                            product={item.product}
-                            selectedSize={item.variant?.size}
-                            selectedColor={item.variant?.color}
-                            onSizeChange={(size) => handleSizeSelection(item, size)}
-                            onColorChange={(color) => handleColorSelection(item, color)}
-                            errors={itemErrors}
-                            disabled={isVariantUpdating || isUploading}
-                          />
-
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            {!isBuyNow ? (
-                              <div className="inline-flex items-center rounded-full border border-border bg-muted/40 p-1 dark:bg-black/30">
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                                  disabled={item.quantity <= 1 || isVariantUpdating || isUploading}
-                                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-on-surface disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </button>
-                                <span className="flex h-11 min-w-12 items-center justify-center text-sm font-semibold">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                                  disabled={item.quantity >= (item.variant?.stock || 1) || isVariantUpdating || isUploading}
-                                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-on-surface disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                Buy now quantity: {item.quantity}
-                              </p>
-                            )}
-
-                            <div className="text-right">
-                              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                Variant stock
-                              </p>
-                              <p className="text-sm font-semibold">
-                                {item.variant?.stock ?? 0} available
-                              </p>
-                              {isVariantUpdating ? (
-                                <p className="mt-1 text-xs text-[#D4AF37]">Updating selection...</p>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </section>
-            
-            {/* Guest Email (only for non-authenticated users) */}
-            {!isAuthenticated && (
-              <section className="space-y-8">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">01</span>
-                  <h2 className="text-xl font-bold tracking-tight">Contact Information</h2>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <input
-                      id="checkout-guest-email"
-                      type="email"
-                      name="guestEmail"
-                      value={formData.guestEmail}
-                      onChange={handleChange}
-                      placeholder=" "
-                      className="se-input"
-                      required
-                    />
-                    <label
-                      htmlFor="checkout-guest-email"
-                      className="se-input-label"
+                      {isComplete ? (
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      ) : (
+                        step.id
+                      )}
+                      {isActive && (
+                        <motion.span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 rounded-full"
+                          animate={{
+                            boxShadow: [
+                              "0 0 0 0 rgba(242,202,80,0.55)",
+                              "0 0 0 12px rgba(242,202,80,0)",
+                            ],
+                          }}
+                          transition={{ duration: 1.8, repeat: Infinity }}
+                        />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "se-label hidden text-[10px] uppercase tracking-[0.28em] sm:inline",
+                        labelTone
+                      )}
                     >
-                      Email Address
-                    </label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    We will send your order confirmation and tracking details to this email.
+                      {step.label}
+                    </span>
+                  </li>
+                  {index < checkoutSteps.length - 1 && (
+                    <li
+                      aria-hidden
+                      className="relative h-px flex-1 overflow-hidden bg-[#1c1b1b]"
+                    >
+                      <motion.span
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#f2ca50] to-[#ffe088]"
+                        initial={{ width: 0 }}
+                        animate={{ width: step.id < currentStep ? "100%" : "0%" }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                      />
+                    </li>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <form onSubmit={handleSubmit} className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+          {/* Left column — checkout sections */}
+          <div className="space-y-6 lg:col-span-7">
+            {/* Section 02 — Shipping Information */}
+            <section className="rounded-[2rem] border border-[#1c1b1b] bg-[#0d0d0d] p-7 md:p-9">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">
+                    Step 02
+                  </p>
+                  <h2 className="se-serif mt-2 text-2xl text-[#e5e2e1] md:text-3xl">
+                    Shipping Information
+                  </h2>
+                  <p className="se-body mt-2 text-sm text-[#99907c]">
+                    Where should the drop arrive?
                   </p>
                 </div>
-              </section>
-            )}
-            
-            {/* 01 Shipping Destination */}
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">02</span>
-                <h2 className="text-xl font-bold tracking-tight">Shipping Destination</h2>
+                <Truck className="h-6 w-6 shrink-0 text-[#f2ca50]" />
               </div>
-              
-              <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2">
-                <div className="relative md:col-span-2">
-                  <input
-                    id="checkout-shipping-address"
-                    name="shippingAddress"
-                    value={formData.shippingAddress}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className="se-input"
-                  />
-                  <label
-                    htmlFor="checkout-shipping-address"
-                    className="se-input-label"
-                  >
-                    Complete Address
-                  </label>
-                </div>
 
-                <div className="relative">
-                  <input
-                    id="checkout-contact-number"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className="se-input"
-                  />
-                  <label
-                    htmlFor="checkout-contact-number"
-                    className="se-input-label"
-                  >
-                    Contact Number
-                  </label>
-                </div>
-
-                <div className="relative">
-                  <input
-                    id="checkout-notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className="se-input"
-                  />
-                  <label
-                    htmlFor="checkout-notes"
-                    className="se-input-label"
-                  >
-                    Notes (Optional)
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            {/* 02 Payment Method */}
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">03</span>
-                <h2 className="text-xl font-bold tracking-tight">Payment Method</h2>
-              </div>
-              
-              {/* Payment Choice */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Delivery / Pickup toggle */}
+              <div className="mb-6 inline-flex rounded-full border border-[#4d4635]/40 bg-[#0a0a0a] p-1">
                 {[
-                  { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="h-6 w-6" /> },
-                  { id: "card", label: "Card Payment", icon: <CreditCard className="h-6 w-6" /> },
-                ].map((method) => {
-                  const selected = formData.paymentMethod === method.id;
+                  { id: "delivery", label: "Delivery", icon: Truck },
+                  { id: "pickup", label: "Pickup", icon: Building2 },
+                ].map((mode) => {
+                  const Icon = mode.icon;
+                  const active = formData.deliveryMode === mode.id;
                   return (
-                    <motion.button
-                      key={method.id}
+                    <button
+                      key={mode.id}
                       type="button"
-                      layout
-                      onClick={() =>
-                        setFormData((prev) => ({ ...prev, paymentMethod: method.id }))
-                      }
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                      onClick={() => updateField("deliveryMode")(mode.id)}
                       className={cn(
-                        "flex cursor-pointer items-center justify-between rounded-xl border-2 p-6 text-left transition-all",
-                        selected
-                          ? "border-[#D4AF37] bg-surface-container-low shadow-[0_0_24px_rgba(212,175,55,0.14)] dark:bg-[#0a0a0a]"
-                          : "border-transparent bg-muted/50 opacity-90 hover:opacity-100 dark:bg-[#111] dark:hover:bg-[#151515]"
+                        "se-label flex items-center gap-2 rounded-full px-5 py-2 text-[10px] uppercase tracking-[0.28em] transition",
+                        active
+                          ? "bg-[#f2ca50] text-[#0a0a0a]"
+                          : "text-[#99907c] hover:text-[#e5e2e1]"
                       )}
                     >
-                      <div className="flex items-center gap-4">
-                        <span
-                          className={
-                            selected ? "text-[#D4AF37]" : "text-muted-foreground"
-                          }
-                        >
-                          {method.icon}
-                        </span>
-                        <span className="font-bold">{method.label}</span>
-                      </div>
-                      {selected ? (
-                        <div className="h-4 w-4 rounded-full border-4 border-[#D4AF37]" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/40" />
-                      )}
-                    </motion.button>
+                      <Icon className="h-3.5 w-3.5" />
+                      {mode.label}
+                    </button>
                   );
                 })}
               </div>
 
-              {/* Dynamic Payment Fields */}
-              <div className="space-y-8 rounded-xl border border-border bg-surface-container-low p-8 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-[#222] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
-                {formData.paymentMethod === "card" && (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field
+                  label="Full name"
+                  value={formData.fullName}
+                  onChange={updateField("fullName")}
+                  error={errors.fullName}
+                  placeholder="Asanga Perera"
+                  className="sm:col-span-2"
+                />
+                <Field
+                  label="Email address"
+                  type="email"
+                  value={formData.email}
+                  onChange={updateField("email")}
+                  error={errors.email}
+                  placeholder="you@example.com"
+                />
+                <Field
+                  label="Phone number"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={updateField("phone")}
+                  error={errors.phone}
+                  placeholder="07X XXX XXXX"
+                />
+                {formData.deliveryMode === "delivery" && (
                   <>
-                    <div className="flex flex-col gap-2 relative">
-                      <input
-                        id="cardholderName"
-                        name="cardholderName"
-                        value={cardDetails.cardholderName}
-                        onChange={(e) => setCardDetails(prev => ({ ...prev, cardholderName: e.target.value }))}
-                        placeholder=" "
-                        className="se-input"
-                      />
-                      <label htmlFor="cardholderName" className="se-input-label">Cardholder Name</label>
-                    </div>
-                    
-                    <div className="flex flex-col gap-2 relative">
-                      <input
-                        id="cardNumber"
-                        name="cardNumber"
-                        value={cardDetails.cardNumber}
-                        onChange={handleCardChange}
-                        placeholder=" "
-                        maxLength={19}
-                        className="se-input pr-12 tracking-[0.2em]"
-                      />
-                      <label htmlFor="cardNumber" className="se-input-label">Card Number</label>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                        <CreditCard className="text-[#99907c] w-5 h-5" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-2 relative">
-                        <input
-                          id="expiryDate"
-                          name="expiryDate"
-                          value={cardDetails.expiryDate}
-                          onChange={handleCardChange}
-                          placeholder=" "
-                          maxLength={5}
-                          className="se-input"
-                        />
-                        <label htmlFor="expiryDate" className="se-input-label">Expiry Date (MM/YY)</label>
-                      </div>
-                      <div className="flex flex-col gap-2 relative">
-                        <input
-                          id="cvv"
-                          name="cvv"
-                          value={cardDetails.cvv}
-                          onChange={handleCardChange}
-                          placeholder=" "
-                          maxLength={4}
-                          className="se-input"
-                        />
-                        <label htmlFor="cvv" className="se-input-label">CVC</label>
-                      </div>
-                    </div>
+                    <SelectField
+                      label="Country"
+                      value={formData.country}
+                      onChange={updateField("country")}
+                      options={["Sri Lanka"]}
+                      disabled
+                    />
+                    <Field
+                      label="City"
+                      value={formData.city}
+                      onChange={updateField("city")}
+                      error={errors.city}
+                      placeholder="Colombo"
+                    />
+                    <SelectField
+                      label="District"
+                      value={formData.district}
+                      onChange={updateField("district")}
+                      options={SRI_LANKA_DISTRICTS}
+                      placeholder="Choose a district"
+                      error={errors.district}
+                    />
+                    <Field
+                      label="Postal code"
+                      value={formData.postalCode}
+                      onChange={updateField("postalCode")}
+                      error={errors.postalCode}
+                      placeholder="00100"
+                    />
+                    <Field
+                      label="Address line"
+                      value={formData.addressLine}
+                      onChange={updateField("addressLine")}
+                      error={errors.addressLine}
+                      placeholder="No 12, Galle Road"
+                      className="sm:col-span-2"
+                    />
                   </>
                 )}
-
-                {formData.paymentMethod === "manual_bank_transfer" && (
-                  <div className="space-y-6">
-                    <div className="bg-[#111] border border-gray-800 p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
-                       <div className="absolute top-0 right-0 bg-[#D4AF37]/10 w-32 h-32 blur-3xl rounded-full"></div>
-                       <div className="space-y-3 flex-1 relative z-10">
-                        <h4 className="font-bold text-[#D4AF37] text-lg">Bank Information</h4>
-                        <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                          <span className="text-gray-400">Bank:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.bankName}</span>
-                          
-                          <span className="text-gray-400">Branch:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.branch}</span>
-                          
-                          <span className="text-gray-400">Account Name:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.accountName}</span>
-                          
-                          <span className="text-gray-400">Account No:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">
-                              {MANUAL_BANK_DETAILS.accountNumber}
-                            </span>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(MANUAL_BANK_DETAILS.accountNumber);
-                                toast({ title: "Copied!", description: "Account number copied to clipboard." });
-                              }}
-                              className="text-xs bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black px-2 py-1 rounded transition-colors"
-                            >
-                              Copy
-                            </button>
-                          </div>
-
-                          <span className="text-gray-400">WhatsApp:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.whatsapp}</span>
-                        </div>
-                        <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-gray-300">
-                          <p className="font-semibold text-[#D4AF37]">
-                            You must place the order first to get your payment reference.
-                          </p>
-                          <p className="mt-1">
-                            Step 1: place the order. Step 2: we show your unique reference. Step 3: make the bank transfer using that reference in the memo.
-                          </p>
-                          <p className="mt-2 text-amber-200">{MANUAL_BANK_DETAILS.deadline}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt (Optional)</label>
-                      <div
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}
-                        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.currentTarget.classList.remove('border-[#D4AF37]', 'bg-[#1a1a1a]');
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) handleFileChange({ target: { files: [file] } });
-                        }}
-                        className="w-full bg-[#111] border border-dashed border-gray-700 hover:border-[#D4AF37] p-8 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer rounded-lg relative overflow-hidden group"
-                      >
-                         <input
-                          type="file"
-                          ref={fileInputRef}
-                          className="hidden"
-                          accept="image/jpeg,image/png,application/pdf"
-                          onChange={handleFileChange}
-                        />
-                        {receiptPreview ? (
-                           <div className="flex flex-col items-center z-10 relative">
-                             {receiptFile?.type?.includes("image") ? (
-                               <img src={receiptPreview} className="max-h-40 rounded border border-gray-700 shadow-md" alt="Receipt preview" />
-                             ) : (
-                                <div className="h-24 w-full px-8 flex items-center justify-center bg-black border border-gray-800 rounded">
-                                  <UploadCloud className="w-8 h-8 text-[#D4AF37] mr-3" />
-                                  <span className="text-sm truncate w-32">{receiptFile?.name}</span>
-                                </div>
-                             )}
-                             <p className="text-xs text-[#D4AF37] mt-3 bg-black/80 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">Change File</p>
-                           </div>
-                        ) : (
-                          <>
-                            <UploadCloud className="w-8 h-8 text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors" />
-                            <div className="text-center text-sm text-gray-400">
-                              <span className="font-semibold text-white block">Click to upload</span> or drag and drop
-                              <p className="text-xs mt-1">JPG, PNG or PDF (Max 5MB)</p>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <label className="mt-6 flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.termsAccepted}
+                  onChange={updateField("termsAccepted")}
+                  className="mt-0.5 h-4 w-4 cursor-pointer rounded border border-[#4d4635] bg-[#0a0a0a] accent-[#f2ca50]"
+                />
+                <span className="se-body text-sm text-[#d0c5af]">
+                  I have read and agree to the{" "}
+                  <Link to="/terms" className="text-[#f2ca50] hover:text-[#ffe088]">
+                    Terms & Conditions
+                  </Link>
+                  .
+                </span>
+              </label>
+              {errors.termsAccepted && (
+                <p className="mt-2 text-xs text-rose-400">{errors.termsAccepted}</p>
+              )}
             </section>
 
-            {/* Error Message */}
-            {formError && (
-              <div className="p-4 bg-red-950/20 border border-red-900 border-l-4 border-l-red-500 flex items-center gap-3 rounded-r-lg">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                <p className="text-red-400 text-sm font-medium">{formError}</p>
+            {/* Section 03 — Payment Method */}
+            <section className="rounded-[2rem] border border-[#1c1b1b] bg-[#0d0d0d] p-7 md:p-9">
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">
+                    Step 03
+                  </p>
+                  <h2 className="se-serif mt-2 text-2xl text-[#e5e2e1] md:text-3xl">
+                    Payment Method
+                  </h2>
+                  <p className="se-body mt-2 text-sm text-[#99907c]">
+                    Choose how you'd like to pay.
+                  </p>
+                </div>
+                <CreditCard className="h-6 w-6 shrink-0 text-[#f2ca50]" />
               </div>
-            )}
 
-            {/* Submit Action for Mobile */}
-            <div className="lg:hidden block pt-6">
-              <button
-                type="submit"
-                disabled={isUploading}
-                className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
-                  <>
-                    {submitButtonLabel} <span className="text-lg">→</span>
-                  </>
-                )}
-              </button>
-            </div>
-            
-          </form>
-        </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {PAYMENT_METHODS.map((method) => {
+                  const Icon = method.icon;
+                  const isSelected = formData.paymentMethod === method.id;
+                  return (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => updateField("paymentMethod")(method.id)}
+                      className={cn(
+                        "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all",
+                        isSelected
+                          ? "border-[#f2ca50] bg-[#0a0a0a] shadow-[0_0_24px_rgba(242,202,80,0.18)]"
+                          : "border-[#4d4635]/40 bg-[#0a0a0a] hover:border-[#99907c]"
+                      )}
+                    >
+                      <div className="flex w-full items-start justify-between">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full border transition",
+                            isSelected
+                              ? "border-[#f2ca50] bg-[#f2ca50]/10"
+                              : "border-[#4d4635]/40 bg-[#131313]"
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              "h-5 w-5",
+                              isSelected ? "text-[#f2ca50]" : "text-[#99907c]"
+                            )}
+                          />
+                        </div>
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded-full border transition",
+                            isSelected
+                              ? "border-[#f2ca50] bg-[#f2ca50]"
+                              : "border-[#4d4635]/60"
+                          )}
+                        >
+                          {isSelected && (
+                            <Check className="h-3 w-3 text-[#0a0a0a]" strokeWidth={3} />
+                          )}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="se-body text-sm font-medium text-[#e5e2e1]">
+                          {method.label}
+                        </p>
+                        <p className="se-label mt-1 text-[9px] uppercase tracking-[0.28em] text-[#574500]">
+                          {method.sublabel}
+                        </p>
+                        <p className="se-body mt-2 text-xs text-[#99907c]">
+                          {method.description}
+                        </p>
+                      </div>
+                      {method.badge && (
+                        <span
+                          className={cn(
+                            "se-label rounded-full border px-3 py-1 text-[9px] tracking-[0.28em]",
+                            method.id === "card"
+                              ? "border-amber-500/30 bg-amber-500/5 text-amber-300"
+                              : "border-[#4d4635]/40 bg-[#131313] text-[#99907c]"
+                          )}
+                        >
+                          {method.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-        {/* RIGHT: ORDER SUMMARY (Sticky Sidebar) */}
-        <div className="w-full lg:sticky lg:top-32 hidden lg:block">
-          <div className="bg-[#0a0a0a] rounded-xl p-8 border border-[#222] shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
-            <h3 className="text-xl font-bold tracking-tight mb-8">Order Summary</h3>
-            
-            {/* Cart Items */}
-            <div className="space-y-6 mb-10 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {checkoutItems.map((item) => (
-                <div key={item.id} className="flex gap-4 items-center">
-                  <div className="w-20 h-24 bg-[#111] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
-                    <img
-                      src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
-                      className="w-full h-full object-cover"
-                      alt={item.product.name}
-                    />
+              {formData.paymentMethod === "manual_bank_transfer" && (
+                <div className="mt-6 rounded-2xl border border-[#4d4635]/40 bg-[#0a0a0a] p-6">
+                  <div className="mb-5 flex items-center justify-between">
+                    <span className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+                      Bank details
+                    </span>
+                    <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">
+                      Reference will be generated
+                    </span>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="font-bold text-sm leading-tight line-clamp-1">{item.product.name}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Qty: {item.quantity}
+                  <dl className="grid grid-cols-[110px_1fr] gap-x-4 gap-y-3 se-body text-sm">
+                    <dt className="text-[#99907c]">Bank</dt>
+                    <dd className="text-[#e5e2e1]">{displayBankDetails.bankName}</dd>
+                    <dt className="text-[#99907c]">Branch</dt>
+                    <dd className="text-[#e5e2e1]">{displayBankDetails.branch}</dd>
+                    <dt className="text-[#99907c]">Account name</dt>
+                    <dd className="text-[#e5e2e1]">
+                      {displayBankDetails.accountName}
+                    </dd>
+                    <dt className="text-[#99907c]">Account no</dt>
+                    <dd className="se-instrument text-[#f2ca50]">
+                      {displayBankDetails.accountNumber}
+                    </dd>
+                  </dl>
+                  <p className="se-body mt-4 border-t border-[#1c1b1b] pt-4 text-sm text-[#d0c5af]">
+                    {displayBankDetails.deadline}
+                  </p>
+                  <a
+                    href={whatsAppLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="se-label mt-2 inline-flex items-center gap-2 text-[10px] tracking-[0.28em] text-[#f2ca50] transition hover:text-[#ffe088]"
+                  >
+                    Need help? WhatsApp →
+                  </a>
+                </div>
+              )}
+
+              {formData.paymentMethod === "card" && (
+                <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                  <div>
+                    <p className="se-body text-sm text-amber-100">
+                      Card gateway activates after hosting setup.
                     </p>
-                    <p className="font-bold text-base mt-2 text-[#D4AF37]">LKR {item.unitPrice * item.quantity}</p>
+                    <p className="se-body mt-1 text-xs text-amber-200/70">
+                      For now, your order will be processed via the same secure
+                      bank-transfer reference flow.
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="space-y-4 pt-8 border-t border-gray-800">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Subtotal</span>
-                <span className="font-bold">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Shipping</span>
-                <span className="text-[#D4AF37] font-bold uppercase text-[10px] tracking-widest">Calculated per delivery</span>
-              </div>
-              
-              <div className="flex justify-between items-center pt-6 border-t border-gray-800">
-                <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <button
-               onClick={(e) => {
-                 // Trigger the form submit programmatically for the sticky button
-                 e.preventDefault();
-                 handleSubmit(e);
-               }}
-               disabled={isUploading}
-               className="w-full mt-10 bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-               {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
-                 <>
-                   {submitButtonLabel} <span className="text-xl">→</span>
-                 </>
-               )}
-            </button>
-            <p className="text-[10px] text-center text-gray-500 mt-6 uppercase tracking-widest leading-relaxed">
-              By completing your purchase you agree to our <br/> Terms of Service and Privacy Policy.
-            </p>
+              )}
+            </section>
           </div>
-        </div>
 
-      </div>
+          {/* Right column — sticky order summary */}
+          <aside className="lg:col-span-5">
+            <div className="space-y-5 lg:sticky lg:top-28">
+              <div className="rounded-[2rem] border border-[#1c1b1b] bg-gradient-to-b from-[#131313] to-[#0d0d0d] p-7 shadow-[0_0_60px_rgba(242,202,80,0.04)]">
+                <div className="mb-6 flex items-end justify-between">
+                  <div>
+                    <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">
+                      Order
+                    </p>
+                    <h2 className="se-serif mt-1 text-xl text-[#e5e2e1]">
+                      Your Selection
+                    </h2>
+                  </div>
+                  <span className="se-instrument text-sm text-[#99907c]">
+                    {itemCount} {itemCount === 1 ? "piece" : "pieces"}
+                  </span>
+                </div>
 
-      {/* Guest Checkout Dialog */}
-      {showGuestDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#111] border border-gray-800 p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold text-[#D4AF37]">
-                {guestCheckInfo?.existsAsGuest ? "Welcome Back!" : "Personalize Your Experience"}
-              </h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                {guestCheckInfo?.existsAsGuest 
-                  ? "We noticed you've shopped with us before. Would you like to create an account to track your orders and enjoy a faster checkout next time?"
-                  : "Would you like to register with us for a better experience, or proceed with a one-time guest purchase?"}
+                {checkoutItems.length === 0 ? (
+                  <p className="se-body py-6 text-center text-sm text-[#574500]">
+                    Your bag is empty.
+                  </p>
+                ) : (
+                  <ul className="mb-6 space-y-4">
+                    {checkoutItems.map((item) => (
+                      <li key={item.id} className="flex items-center gap-4">
+                        <div className="h-16 w-14 shrink-0 overflow-hidden rounded-xl bg-[#1c1b1b]">
+                          {item.product?.images?.[0]?.url ? (
+                            <img
+                              src={item.product.images[0].url}
+                              alt={item.product?.name || ""}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="se-body truncate text-sm text-[#e5e2e1]">
+                            {item.product?.name}
+                          </p>
+                          {(item.variant?.size || item.variant?.color) && (
+                            <p className="se-label mt-0.5 text-[9px] tracking-[0.28em] text-[#574500]">
+                              {[item.variant?.size, item.variant?.color]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          <p className="se-instrument mt-1 text-xs text-[#99907c]">
+                            Qty {item.quantity}
+                          </p>
+                        </div>
+                        <span className="se-instrument shrink-0 text-sm text-[#e5e2e1]">
+                          {formatLKR(item.unitPrice * item.quantity)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="space-y-3 border-t border-[#1c1b1b] pt-5">
+                  <div className="flex justify-between se-body text-sm text-[#d0c5af]">
+                    <span>Subtotal</span>
+                    <span>{formatLKR(checkoutTotal)}</span>
+                  </div>
+                  <div className="flex justify-between se-body text-sm text-[#99907c]">
+                    <span className="inline-flex items-center gap-2">
+                      <Truck className="h-3.5 w-3.5" />
+                      Delivery
+                    </span>
+                    <span>Calculated next step</span>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex items-baseline justify-between border-t border-[#1c1b1b] pt-5">
+                  <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
+                    Total
+                  </span>
+                  <span className="se-instrument text-3xl text-[#f2ca50]">
+                    {formatLKR(checkoutTotal)}
+                  </span>
+                </div>
+              </div>
+
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.97 }}
+                disabled={checkoutItems.length === 0 || isSubmitting}
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#f2ca50] text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] transition-all hover:bg-[#ffe088] hover:shadow-[0_6px_20px_rgba(212,175,55,0.45)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Placing order...
+                  </>
+                ) : formData.paymentMethod === "card" ? (
+                  "Pay Now"
+                ) : (
+                  "Continue to Bank Transfer"
+                )}
+              </motion.button>
+
+              <p className="se-body text-center text-xs text-[#574500]">
+                {formData.paymentMethod === "card"
+                  ? "You'll be redirected to the secure payment gateway."
+                  : "Next: receive your bank transfer reference number."}
               </p>
-            </div>
 
-            <div className="grid gap-4">
-              <button
-                onClick={() => handleGuestChoice('register')}
-                disabled={isProcessingSelection}
-                className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-              >
-                {isProcessingSelection ? <Loader2 className="animate-spin w-5 h-5" /> : "Register & Continue"}
-              </button>
-              
-              <button
-                onClick={() => handleGuestChoice('guest')}
-                disabled={isProcessingSelection}
-                className="w-full bg-transparent border border-gray-700 hover:border-gray-500 text-white py-4 rounded-xl font-bold transition-all"
-              >
-                Continue as Guest
-              </button>
+              <div className="flex items-center justify-around border-t border-[#1c1b1b] pt-4 text-[#99907c]">
+                <div className="flex flex-col items-center gap-1">
+                  <Lock className="h-4 w-4" />
+                  <span className="se-label text-[9px] tracking-[0.28em]">SSL</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="se-label text-[9px] tracking-[0.28em]">Trusted</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <Gift className="h-4 w-4" />
+                  <span className="se-label text-[9px] tracking-[0.28em]">Reward</span>
+                </div>
+              </div>
             </div>
-            
-            <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest">
-              Registration generates a temporary password sent to your email.
-            </p>
-          </div>
-        </div>
-      )}
+          </aside>
+        </form>
+      </div>
     </div>
   );
 };

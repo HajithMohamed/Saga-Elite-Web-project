@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
-import { Btn, Eyebrow } from "@/components/ui/editorial";
+import {
+  Btn,
+  Eyebrow,
+  AUTH_PRIMARY_BTN,
+} from "@/components/ui/editorial";
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -14,20 +19,22 @@ const VerifyOtp = () => {
   const [otp, setOtp] = useState("");
   const [resending, setResending] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    if (user?.isVerified) {
+    if (user?.isVerified && !showSuccess) {
+      setShowSuccess(true);
       toast({
-        title: "Verified",
-        description: "Welcome to the atelier.",
+        title: "Access Granted",
+        description: "Welcome to the Elite.",
         variant: "success",
       });
       const t = setTimeout(() => {
         navigate(user.role === "admin" ? "/admin/dashboard" : "/shopping/home");
-      }, 800);
+      }, 3000);
       return () => clearTimeout(t);
     }
-  }, [user, navigate]);
+  }, [user, navigate, showSuccess]);
 
   useEffect(() => {
     if (seconds <= 0) return;
@@ -102,62 +109,137 @@ const VerifyOtp = () => {
   })();
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">One last step</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Confirm<br />your email.
-      </h1>
-      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-        We sent a four-digit code to{" "}
-        <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>. Enter it below.
-      </p>
-
-      <form onSubmit={handleSubmit} className="mt-10 md:mt-12">
-        <div className="flex justify-center">
-          <OtpCells
-            length={4}
-            value={otp}
-            onChange={setOtp}
-            disabled={isLoading}
-          />
-        </div>
-
-        <Btn
-          variant="default"
-          size="lg"
-          className="w-full mt-10"
-          iconRight={ArrowRight}
-          type="submit"
-          disabled={isLoading || otp.length < 4}
-        >
-          {isLoading ? "Verifying" : "Verify code"}
-        </Btn>
-      </form>
-
-      <div className="mt-8 text-center">
-        {seconds > 0 ? (
-          <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
-            Resend in {seconds}s
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resending}
-            className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50 disabled:pointer-events-none"
+    <div className="relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        {!showSuccess ? (
+          <motion.div
+            key="verify-form"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            {resending ? "Sending" : "Resend the code"}
-          </button>
-        )}
-      </div>
+            <Link
+              to="/auth/login"
+              className="inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors mb-6"
+            >
+              <ArrowLeft size={12} strokeWidth={1.5} /> Back
+            </Link>
+            <Eyebrow tone="gold" size="md">Almost inside</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Confirm<br />your access.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              A four-digit code is on its way to{" "}
+              <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>.
+            </p>
 
-      <Link
-        to="/auth/login"
-        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
-      >
-        <ArrowLeft size={12} strokeWidth={1.5} />
-        Back to sign in
-      </Link>
+            <form onSubmit={handleSubmit} className="mt-10 md:mt-12 space-y-8">
+              <div className="flex justify-center md:justify-start">
+                <OtpCells
+                  length={4}
+                  value={otp}
+                  onChange={setOtp}
+                  disabled={isLoading}
+                  success={showSuccess}
+                />
+              </div>
+
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading || otp.length < 4}
+              >
+                {isLoading ? "Verifying" : "Confirm access"}
+              </Btn>
+            </form>
+
+            <div className="mt-8">
+              {seconds > 0 ? (
+                <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">
+                  Resend in <span className="text-[#e5e2e1]">{seconds}s</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] transition-colors disabled:opacity-50"
+                >
+                  {resending ? "Sending..." : "Resend code"}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="success-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <motion.div
+                className="absolute w-32 h-32 rounded-full border border-[#f2ca50]/30"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: [0.6, 1.2, 1.0], opacity: [0, 0.6, 0.3] }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              />
+              <motion.div
+                className="relative w-16 h-16 rounded-full bg-[#f2ca50]/10 border border-[#f2ca50]/40 flex items-center justify-center"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  delay: 0.3,
+                  duration: 0.5,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6, duration: 0.3 }}
+                >
+                  <CheckCheck
+                    size={28}
+                    strokeWidth={1.5}
+                    className="text-[#f2ca50]"
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="mt-10"
+            >
+              <p className="se-label text-[11px] tracking-[0.5em] text-[#f2ca50]">
+                ACCESS GRANTED
+              </p>
+              <p className="se-serif text-[#e5e2e1] text-2xl md:text-3xl mt-3">
+                Welcome to the elite.
+              </p>
+              <p className="se-label text-[10px] tracking-[0.28em] text-[#99907c] mt-4">
+                Entering your atelier
+              </p>
+            </motion.div>
+
+            <div className="w-12 h-px bg-[#4d4635] mt-10 overflow-hidden">
+              <motion.div
+                className="h-full bg-[#f2ca50]"
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2.5, ease: "linear" }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

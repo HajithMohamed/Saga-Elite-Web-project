@@ -8,6 +8,9 @@ const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
 
+const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
+const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
+
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +19,17 @@ const { broadcastNotification } = require("../Utils/notification-service");
 */
 
 const getAllProducts = catchAsync(async (req, res, next) => {
+    const isAdmin = isAdminUser(req.userInfo);
+
+    // Safety: Strip costPrice for non-admins if present in paginated results
+    if (!isAdmin && res.paginatedResults && res.paginatedResults.data) {
+        res.paginatedResults.data = res.paginatedResults.data.map(p => {
+            const productObj = p.toObject ? p.toObject({ virtuals: true }) : { ...p };
+            delete productObj.costPrice;
+            return productObj;
+        });
+    }
+
     res.status(200).json({
         success: true,
         message: "Products fetched successfully",
@@ -49,10 +63,19 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
+    const isAdmin = isAdminUser(req.userInfo);
+    let productResponse = product.toObject({ virtuals: true });
+
+    if (!isAdmin) {
+        delete productResponse.costPrice;
+        // Fire-and-forget viewCount increment (only for non-admin reads)
+        Product.updateOne({ _id: product._id }, { $inc: { viewCount: 1 } }).catch(() => {});
+    }
+
     res.status(200).json({
         success: true,
         message: "Product fetched successfully",
-        product
+        product: productResponse
     });
 });
 
@@ -71,9 +94,22 @@ const addProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
+        "costPrice",
+        "isFeatured",
+        "isLimited",
+        "isActive",
+        "maxPerUser",
         "variants"
     );
 
@@ -81,18 +117,17 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
-    // Validate Drop ID — required by schema
-    if (!productData.drop) {
-        return next(new AppError("Drop is required", 400));
-    }
-
-    if (!mongoose.isValidObjectId(productData.drop)) {
-        return next(new AppError("Invalid drop id", 400));
-    }
-
-    const dropExists = await Drop.exists({ _id: productData.drop });
-    if (!dropExists) {
-        return next(new AppError("Drop not found", 404));
+    // Drop is optional. Products without a drop fall back to "Independent Release".
+    if (productData.drop) {
+        if (!mongoose.isValidObjectId(productData.drop)) {
+            return next(new AppError("Invalid drop id", 400));
+        }
+        const dropExists = await Drop.exists({ _id: productData.drop });
+        if (!dropExists) {
+            return next(new AppError("Drop not found", 404));
+        }
+    } else {
+        productData.drop = null;
     }
 
     const existingProduct = await Product.findOne({ artNo: productData.artNo });
@@ -141,9 +176,18 @@ const updateProduct = catchAsync(async (req, res, next) => {
         "description",
         "brand",
         "category",
+        "categoryPath",
+        "tags",
+        "relatedProductIds",
+        "trendScore",
+        "isDeal",
+        "dealEndsAt",
         "drop",
         "basePrice",
+        "originalPrice",
+        "salePrice",
         "discountPercent",
+        "costPrice",
         "isFeatured",
         "isActive",
         "maxPerUser",
@@ -157,11 +201,18 @@ const updateProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("At least one field is required to update", 400));
     }
 
-    // Validate Drop exists if being updated
-    if (productData.drop) {
-        const dropExists = await Drop.exists({ _id: productData.drop });
-        if (!dropExists) {
-            return next(new AppError("Drop not found", 404));
+    // Validate Drop only if being attached. Allow detaching to standalone via "" / null.
+    if (Object.prototype.hasOwnProperty.call(productData, "drop")) {
+        if (productData.drop) {
+            if (!mongoose.isValidObjectId(productData.drop)) {
+                return next(new AppError("Invalid drop id", 400));
+            }
+            const dropExists = await Drop.exists({ _id: productData.drop });
+            if (!dropExists) {
+                return next(new AppError("Drop not found", 404));
+            }
+        } else {
+            productData.drop = null;
         }
     }
 
@@ -255,6 +306,136 @@ const getAdminAnalytics = catchAsync(async (req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
+| Get Aging Products (HTTP twin of aging-stock-job.js)
+|--------------------------------------------------------------------------
+*/
+
+const getAgingProducts = catchAsync(async (req, res) => {
+    const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const agingProducts = await Product.find({
+        isActive: true,
+        $or: [
+            { lastSoldAt: { $lte: ninetyDaysAgo } },
+            { lastSoldAt: null, createdAt: { $lte: ninetyDaysAgo } },
+        ],
+    })
+        .select("name slug artNo basePrice salePrice costPrice totalStock variants soldCount lastSoldAt createdAt drop")
+        .populate("drop", "name slug")
+        .lean();
+
+    const productsWithStock = agingProducts.filter((p) => {
+        if (typeof p.totalStock === "number" && p.totalStock > 0) return true;
+        if (!Array.isArray(p.variants)) return false;
+        return p.variants.some((v) => (v?.stock || 0) > 0);
+    });
+
+    if (countOnly) {
+        return res.status(200).json({
+            success: true,
+            data: { count: productsWithStock.length },
+        });
+    }
+
+    const enriched = productsWithStock.map((p) => {
+        const referenceDate = p.lastSoldAt || p.createdAt;
+        const daysUnsold = referenceDate
+            ? Math.floor((Date.now() - new Date(referenceDate).getTime()) / (1000 * 60 * 60 * 24))
+            : null;
+        return {
+            ...p,
+            daysUnsold,
+            dropName: p.drop?.name || "Independent Release",
+        };
+    });
+
+    res.status(200).json({
+        success: true,
+        data: {
+            count: enriched.length,
+            products: enriched,
+        },
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Product Analytics (per-product counters for the admin editor)
+|--------------------------------------------------------------------------
+*/
+
+const getProductAnalytics = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    const productQuery = mongoose.Types.ObjectId.isValid(id)
+        ? { _id: id }
+        : { slug: id };
+
+    const product = await Product.findOne(productQuery)
+        .select("name slug viewCount cartAddCount wishCount soldCount totalStock lastSoldAt")
+        .lean();
+
+    if (!product) {
+        return next(new AppError("Product not found", 404));
+    }
+
+    const conversionRate = product.viewCount > 0
+        ? Number(((product.soldCount || 0) / product.viewCount).toFixed(4))
+        : 0;
+
+    res.status(200).json({
+        success: true,
+        data: {
+            productId: product._id,
+            slug: product.slug,
+            name: product.name,
+            viewCount: product.viewCount || 0,
+            cartAddCount: product.cartAddCount || 0,
+            wishCount: product.wishCount || 0,
+            soldCount: product.soldCount || 0,
+            totalStock: product.totalStock || 0,
+            lastSoldAt: product.lastSoldAt,
+            conversionRate,
+        },
+    });
+});
+
+const getLandingProducts = catchAsync(async (req, res) => {
+    const { category, tag, isDeal, hasDeal, limit = 8 } = req.query;
+    const filter = { isActive: true };
+
+    if (category) {
+        filter.category = new RegExp(`^${String(category)}$`, "i");
+    }
+    if (tag) {
+        filter.tags = { $in: [String(tag)] };
+    }
+    if (typeof isDeal !== "undefined") {
+        filter.isDeal = String(isDeal) === "true";
+    }
+    if (typeof hasDeal !== "undefined") {
+        filter.isDeal = String(hasDeal) === "true";
+    }
+
+    const products = await Product.find(filter)
+        .sort({ arrivedAt: -1, createdAt: -1 })
+        .limit(Math.max(1, Number(limit) || 8))
+        .populate("images")
+        .populate("relatedProductIds", "name slug category basePrice salePrice");
+
+    res.status(200).json({
+        success: true,
+        results: products.length,
+        data: products,
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
 | Delete Product (with image cleanup & transaction)
 |--------------------------------------------------------------------------
 */
@@ -309,11 +490,85 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Get Recommendations
+|--------------------------------------------------------------------------
+*/
+const getRecommendations = catchAsync(async (req, res, next) => {
+  const { productId, userId } = req.query;
+  let recommendations = [];
+
+  if (productId) {
+    // Contextual: find products in the same category or via relatedProductIds
+    const product = await Product.findById(productId);
+    if (!product) return next(new AppError("Product not found", 404));
+
+    // Combine related products and same category
+    recommendations = await Product.find({
+      $or: [
+        { _id: { $in: product.relatedProductIds } },
+        { category: product.category, _id: { $ne: product._id } }
+      ],
+      isActive: true
+    }).limit(10).populate("images");
+
+  } else {
+    // Fallback: Trending / Bestsellers
+    recommendations = await Product.find({ isActive: true })
+      .sort({ soldCount: -1 })
+      .limit(10)
+      .populate("images");
+  }
+
+  res.status(200).json({
+    status: "success",
+    results: recommendations.length,
+    data: { recommendations },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Instant / Full Search
+|--------------------------------------------------------------------------
+*/
+const searchProducts = catchAsync(async (req, res, next) => {
+  const { q, limit = 10, page = 1 } = req.query;
+  if (!q) return next(new AppError("Search query is required", 400));
+
+  const skip = (page - 1) * limit;
+
+  // MongoDB text search
+  const products = await Product.find(
+    { $text: { $search: q }, isActive: true },
+    { score: { $meta: "textScore" } }
+  )
+    .sort({ score: { $meta: "textScore" } })
+    .skip(Number(skip))
+    .limit(Number(limit))
+    .populate("images");
+
+  const total = await Product.countDocuments({ $text: { $search: q }, isActive: true });
+
+  res.status(200).json({
+    status: "success",
+    results: products.length,
+    total,
+    data: { products },
+  });
+});
+
 module.exports = {
     getAllProducts,
+    getLandingProducts,
     getSingleProduct,
     addProduct,
     updateProduct,
     deleteProduct,
-    getAdminAnalytics
+    getAdminAnalytics,
+    getAgingProducts,
+    getProductAnalytics,
+    getRecommendations,
+    searchProducts,
 };

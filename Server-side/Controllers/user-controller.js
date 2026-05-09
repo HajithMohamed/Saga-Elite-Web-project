@@ -5,6 +5,12 @@ const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
 const { isAdminRole } = require("../Utils/admin-roles");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -75,6 +81,7 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   profilePicture: user.profilePicture || null,
   isVerified: user.isVerified,
   isActive: user.isActive,
+  membership: user.membership || "standard",
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -82,11 +89,11 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
     cartCount: user.cart?.length || 0,
     wishlistCount: user.wishlist?.length || 0,
     addressesCount: user.addresses?.length || 0,
-    orderCount: orderStats.orderCount || 0,
+    orderCount: orderStats.orderCount || user.orderCount || 0,
     deliveredOrders: orderStats.deliveredOrders || 0,
     pendingOrders: orderStats.pendingOrders || 0,
-    totalSpent: orderStats.totalSpent || 0,
-    lastOrderAt: orderStats.lastOrderAt || null,
+    totalSpent: orderStats.totalSpent || user.totalSpent || 0,
+    lastOrderAt: orderStats.lastOrderAt || user.lastOrderAt || null,
     lastOrderStatus: orderStats.lastOrderStatus || null,
     notificationCount: notificationStats.notificationCount || 0,
     unreadNotifications: notificationStats.unreadNotifications || 0,
@@ -222,10 +229,15 @@ const buildActivityTimeline = ({ user, recentOrders = [], recentNotifications = 
     .slice(0, 10);
 };
 
+const escapeCsvValue = (value) => {
+  const normalized = value === null || value === undefined ? "" : String(value);
+  return `"${normalized.replace(/"/g, '""')}"`;
+};
+
 const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = await User.find()
     .select(
-      "email role provider profilePicture isVerified isActive savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .sort({ createdAt: -1 })
     .lean();
@@ -280,7 +292,7 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
 const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id)
     .select(
-      "email role provider profilePicture isVerified isActive savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .lean();
 
@@ -293,8 +305,8 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const [recentOrders, recentNotifications] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
-      .limit(5)
-      .select("items totalAmount status paymentStatus paymentMethod createdAt")
+      .limit(10)
+      .select("items totalAmount status paymentStatus paymentMethod referenceNumber createdAt")
       .lean(),
     Notification.find({ user: user._id })
       .sort({ createdAt: -1 })
@@ -327,10 +339,12 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 });
 
 const updateAdminUserStatus = catchAsync(async (req, res, next) => {
-  const { isActive } = req.body;
+  const { isActive, membership } = req.body;
 
-  if (typeof isActive !== "boolean") {
-    return next(new AppError("isActive must be provided as true or false", 400));
+  if (typeof isActive === "undefined" && typeof membership === "undefined") {
+    return next(
+      new AppError("isActive or membership must be provided", 400)
+    );
   }
 
   const user = await User.findById(req.params.id);
@@ -347,19 +361,91 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Only customer accounts can be updated from user management", 403));
   }
 
-  user.isActive = isActive;
+  const changes = [];
+  if (typeof isActive === "boolean") {
+    user.isActive = isActive;
+    changes.push(isActive ? "activated" : "deactivated");
+  }
+  if (typeof membership === "string") {
+    user.membership = membership;
+    changes.push(`membership → ${membership}`);
+  }
+
   await user.save({ validateBeforeSave: false });
 
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
   res.status(200).json({
     success: true,
-    message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+    message: changes.length ? `User ${changes.join(", ")}` : "User updated",
     data: buildAdminUserSummary(
       user.toObject(),
       orderStatsMap.get(user._id.toString()),
       notificationStatsMap.get(user._id.toString())
     ),
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin-triggered password reset (sends OTP email — same as forgotPassword)
+|--------------------------------------------------------------------------
+*/
+const triggerAdminPasswordReset = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.params.id).select(
+    "email role provider isActive resetPasswordOtp resetPasswordOtpExpires"
+  );
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (isAdminRole(user.role)) {
+    return next(
+      new AppError(
+        "Admin accounts must reset their password through the auth flow",
+        403
+      )
+    );
+  }
+
+  if (user.provider && user.provider !== "local") {
+    return next(
+      new AppError(
+        `User signed in with ${user.provider}; they cannot reset a local password`,
+        400
+      )
+    );
+  }
+
+  if (!user.email) {
+    return next(new AppError("User has no email on file", 400));
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const otpExpiryMinutes = Number(process.env.OTP_EXPIRY_MINUTES) || 10;
+  user.resetPasswordOtp = otp;
+  user.resetPasswordOtpExpires = new Date(Date.now() + otpExpiryMinutes * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  const html = buildEmailTemplate(
+    "Password Reset Request",
+    `<p>Hi,</p>
+     <p>An admin at Saga Elite has triggered a password reset for your account.</p>
+     <p>Your one-time code is:</p>
+     <p style="font-size:28px;letter-spacing:6px;font-weight:bold;text-align:center;color:#f2ca50;">${otp}</p>
+     <p>This code expires in ${otpExpiryMinutes} minutes. If you did not request this, you can safely ignore this email.</p>`
+  );
+
+  await sendEmail({
+    email: user.email,
+    subject: "Saga Elite — password reset requested",
+    html,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Password reset email sent to ${user.email}`,
   });
 });
 
@@ -420,7 +506,7 @@ const getCart = catchAsync(async (req, res, next) => {
     return next(new AppError("Authenticated user not found", 404));
   }
 
-  const cart = user.cart
+  const cart = (user.cart || [])
     .map(normalizeCartItem)
     .filter((item) => item !== null);
 
@@ -523,6 +609,12 @@ const addToCart = catchAsync(async (req, res, next) => {
       variant: selectedVariant._id,
       quantity,
     });
+    // Track add-to-cart events on the product (only on first add per user, to mirror
+    // viewCount semantics — increasing quantity later does not re-fire).
+    Product.updateOne(
+      { _id: product._id },
+      { $inc: { cartAddCount: 1 } }
+    ).catch(() => {});
   }
 
   await user.save({ validateBeforeSave: false });
@@ -817,12 +909,164 @@ const getAllUsers = catchAsync(async (req, res, next) => {
   });
 });
 
+const exportCustomersCsv = catchAsync(async (_req, res) => {
+  const customers = await User.find({ role: { $in: ["customer", "user"] } })
+    .select("email name createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const customerIds = customers.map((customer) => customer._id);
+  const orderStats = customerIds.length
+    ? await Order.aggregate([
+        { $match: { user: { $in: customerIds } } },
+        {
+          $group: {
+            _id: "$user",
+            orderCount: { $sum: 1 },
+            totalSpend: { $sum: "$totalAmount" },
+          },
+        },
+      ])
+    : [];
+
+  const statsMap = new Map(orderStats.map((entry) => [String(entry._id), entry]));
+  const rows = [
+    ["email", "name", "orderCount", "totalSpend", "createdAt"].map(escapeCsvValue).join(","),
+    ...customers.map((customer) => {
+      const stats = statsMap.get(String(customer._id)) || {};
+      return [
+        customer.email || "",
+        customer.name || "",
+        stats.orderCount || 0,
+        stats.totalSpend || 0,
+        customer.createdAt ? new Date(customer.createdAt).toISOString() : "",
+      ].map(escapeCsvValue).join(",");
+    }),
+  ];
+
+  const csv = rows.join("\n");
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="customers-export.csv"');
+  res.status(200).send(csv);
+});
+
+// Self-service profile read. Returns the fields a customer can see/edit on
+// their account page. Kept narrow on purpose — auth fields, role, and
+// permissions never leak through here.
+const getMyProfile = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.userInfo._id || req.userInfo.id).select(
+    "email name phoneNumber profilePicture provider isVerified membership createdAt"
+  );
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      _id: user._id,
+      email: user.email,
+      name: user.name || "",
+      phoneNumber: user.phoneNumber || "",
+      profilePicture: user.profilePicture || null,
+      provider: user.provider,
+      isVerified: user.isVerified,
+      membership: user.membership || "standard",
+      requiresPhone: !user.phoneNumber, // Surfaces banner on shopping pages.
+    },
+  });
+});
+
+// Self-service profile update. Customers can edit only their own name and
+// phone number through this endpoint. Phone is validated + normalized to
+// canonical "+947XXXXXXXX" form before persist.
+const updateMyProfile = catchAsync(async (req, res, next) => {
+  const { name, phoneNumber } = req.body || {};
+
+  const update = {};
+
+  if (name !== undefined) {
+    const trimmed = String(name).trim();
+    if (trimmed.length > 120) {
+      return next(new AppError("Name cannot exceed 120 characters", 400));
+    }
+    update.name = trimmed || null;
+  }
+
+  if (phoneNumber !== undefined) {
+    if (phoneNumber === null || String(phoneNumber).trim() === "") {
+      // Allow clearing the phone (rare, but valid).
+      update.phoneNumber = null;
+    } else {
+      if (!isValidSriLankanMobile(phoneNumber)) {
+        return next(
+          new AppError(
+            "Phone number must be a valid Sri Lankan mobile (e.g. 077 123 4567).",
+            400
+          )
+        );
+      }
+      const normalized = normalizeSriLankanMobile(phoneNumber);
+
+      // Reject if another user already owns this number — prevents two
+      // accounts diverting WhatsApp OTPs to the same phone.
+      const owner = await User.findOne({
+        phoneNumber: normalized,
+        _id: { $ne: req.userInfo._id || req.userInfo.id },
+      }).select("_id");
+      if (owner) {
+        return next(
+          new AppError(
+            "This phone number is already linked to another account.",
+            400
+          )
+        );
+      }
+      update.phoneNumber = normalized;
+    }
+  }
+
+  if (Object.keys(update).length === 0) {
+    return next(new AppError("No changes supplied", 400));
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    req.userInfo._id || req.userInfo.id,
+    { $set: update },
+    { new: true, runValidators: true }
+  ).select("email name phoneNumber profilePicture provider isVerified membership");
+
+  if (!updated) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: {
+      _id: updated._id,
+      email: updated.email,
+      name: updated.name || "",
+      phoneNumber: updated.phoneNumber || "",
+      profilePicture: updated.profilePicture || null,
+      provider: updated.provider,
+      isVerified: updated.isVerified,
+      membership: updated.membership || "standard",
+      requiresPhone: !updated.phoneNumber,
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  triggerAdminPasswordReset,
   deleteAdminUser,
   getAllUsers,
+  exportCustomersCsv,
   getCart,
   addToCart,
   updateCartItem,
@@ -830,4 +1074,6 @@ module.exports = {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  getMyProfile,
+  updateMyProfile,
 };

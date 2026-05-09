@@ -12,15 +12,18 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, RefreshCcw, LayoutGrid, Table2, Search } from "lucide-react";
+import { Loader2, RefreshCcw, LayoutGrid, Table2, Search, FileDown } from "lucide-react";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 
-import { fetchAdminOrders, updateOrderStatus } from "@/store/order-slice";
+import { fetchAdminOrders, updateOrderStatus, refundOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
 import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
+import RefundOrderModal from "@/components/admin-components/RefundOrderModal";
 
 const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
@@ -32,7 +35,34 @@ const STATUS_OPTIONS = [
   { value: "shipped", label: "Shipped" },
   { value: "delivered", label: "Delivered" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "refund_requested", label: "Refund Requested" },
+  { value: "refunded", label: "Refunded" },
 ];
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "expiring", label: "Pending payment expiring soonest" },
+];
+
+const cleanPhoneForWhatsApp = (raw) => {
+  if (!raw) return "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return `94${digits.slice(1)}`;
+  if (digits.length <= 9) return `94${digits}`;
+  return digits;
+};
+
+const getOrderPhone = (order) => {
+  if (!order) return "";
+  return (
+    order.contactNumber ||
+    order.shippingAddress?.phone ||
+    order.shippingAddress?.contactNumber ||
+    ""
+  );
+};
 
 const KANBAN_COLUMNS = [
   {
@@ -193,9 +223,13 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [listStatusFilter, setListStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("newest");
   const [orderStatusDraft, setOrderStatusDraft] = useState({});
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [successFlashId, setSuccessFlashId] = useState(null);
+  const [refundOrderTarget, setRefundOrderTarget] = useState(null);
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [invoiceDownloadingId, setInvoiceDownloadingId] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
@@ -241,7 +275,7 @@ const Orders = () => {
 
   const filteredOrders = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return orders.filter((order) => {
+    const base = orders.filter((order) => {
       const email =
         (order.user && (order.user.email || order.user.userName)) ||
         order.guestEmail ||
@@ -256,7 +290,30 @@ const Orders = () => {
       const payOk = paymentFilter === "all" || pm === paymentFilter.toLowerCase();
       return searchOk && statusOk && payOk;
     });
-  }, [orders, searchTerm, listStatusFilter, paymentFilter]);
+
+    if (sortMode === "oldest") {
+      return [...base].sort(
+        (a, b) =>
+          new Date(a.createdAt || 0).getTime() -
+          new Date(b.createdAt || 0).getTime()
+      );
+    }
+    if (sortMode === "expiring") {
+      const now = Date.now();
+      const withExpiry = base.filter(
+        (o) => o.expiresAt && new Date(o.expiresAt).getTime() > now
+      );
+      const withoutExpiry = base.filter(
+        (o) => !o.expiresAt || new Date(o.expiresAt).getTime() <= now
+      );
+      withExpiry.sort(
+        (a, b) =>
+          new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
+      );
+      return [...withExpiry, ...withoutExpiry];
+    }
+    return base;
+  }, [orders, searchTerm, listStatusFilter, paymentFilter, sortMode]);
 
   const paymentMethods = useMemo(() => {
     const set = new Set();
@@ -303,6 +360,74 @@ const Orders = () => {
       }
     },
     [dispatch]
+  );
+
+  const handleDownloadInvoice = useCallback(
+    async (order) => {
+      if (!order?._id) return;
+      try {
+        setInvoiceDownloadingId(order._id);
+        const res = await axios.get(
+          `${API_BASE}/admin/orders/${order._id}/invoice`,
+          { withCredentials: true, responseType: "blob" }
+        );
+        const blob = new Blob([res.data], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const ref = order.referenceNumber || String(order._id).slice(-12);
+        a.download = `saga-elite-invoice-${ref}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        toast({
+          title: "Could not download invoice",
+          description:
+            err?.response?.data?.message ||
+            err?.message ||
+            "Unexpected error.",
+          variant: "destructive",
+        });
+      } finally {
+        setInvoiceDownloadingId(null);
+      }
+    },
+    []
+  );
+
+  const handleRefundSubmit = useCallback(
+    async ({ amount, reason, note }) => {
+      if (!refundOrderTarget?._id) return;
+      try {
+        setRefundSubmitting(true);
+        await dispatch(
+          refundOrder({
+            orderId: refundOrderTarget._id,
+            amount: Number(amount),
+            reason,
+            note,
+          })
+        ).unwrap();
+        toast({
+          title: "Refund issued",
+          description: `LKR ${formatCurrency(amount)} refunded.`,
+          variant: "success",
+        });
+        setRefundOrderTarget(null);
+        await loadOrders();
+      } catch (error) {
+        toast({
+          title: "Refund failed",
+          description: error || "Unable to issue refund.",
+          variant: "destructive",
+        });
+      } finally {
+        setRefundSubmitting(false);
+      }
+    },
+    [dispatch, loadOrders, refundOrderTarget]
   );
 
   const handleDragStart = (event) => {
@@ -449,6 +574,17 @@ description="Monitor customer orders and update fulfillment status in board or t
               </option>
             ))}
           </select>
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {showLoading ? (
@@ -548,6 +684,25 @@ description="Monitor customer orders and update fulfillment status in board or t
                                   </li>
                                 ))}
                               </ul>
+                              {(() => {
+                                const phone = getOrderPhone(order);
+                                const waPhone = cleanPhoneForWhatsApp(phone);
+                                if (!waPhone) return null;
+                                const ref = order.referenceNumber || String(order._id).slice(-8);
+                                const msg = encodeURIComponent(
+                                  `Hi, regarding your Saga Elite order ${ref}`
+                                );
+                                return (
+                                  <a
+                                    href={`https://wa.me/${waPhone}?text=${msg}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-3 inline-flex items-center gap-2 text-[10px] tracking-[0.22em] uppercase text-[#25D366] hover:text-[#25D366]/80"
+                                  >
+                                    Contact on WhatsApp ({phone})
+                                  </a>
+                                );
+                              })()}
                             </motion.div>
                           ) : null}
                         </AnimatePresence>
@@ -598,20 +753,48 @@ description="Monitor customer orders and update fulfillment status in board or t
                               </motion.button>
                             ))}
                           </div>
-                          <PrimaryButton
-                            type="button"
-                            disabled={isBusy || draft === order.status}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50"
-                            onClick={() => applyTableStatusUpdate(order._id)}
-                          >
-                            {isBusy ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" /> Updating…
-                              </>
-                            ) : (
-                              "Update"
-                            )}
-                          </PrimaryButton>
+                          <div className="flex items-center gap-2">
+                            <PrimaryButton
+                              type="button"
+                              disabled={isBusy || draft === order.status}
+                              className="inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50"
+                              onClick={() => applyTableStatusUpdate(order._id)}
+                            >
+                              {isBusy ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" /> Updating…
+                                </>
+                              ) : (
+                                "Update"
+                              )}
+                            </PrimaryButton>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadInvoice(order)}
+                              disabled={invoiceDownloadingId === order._id}
+                              className="inline-flex items-center gap-2 rounded-sm border border-[#4d4635] bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-[#d0c5af] transition hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-50"
+                              title="Download invoice PDF"
+                            >
+                              {invoiceDownloadingId === order._id ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF…
+                                </>
+                              ) : (
+                                <>
+                                  <FileDown className="h-3.5 w-3.5" /> Invoice
+                                </>
+                              )}
+                            </button>
+                            {(order.status === "delivered" || order.status === "refund_requested") ? (
+                              <button
+                                type="button"
+                                onClick={() => setRefundOrderTarget(order)}
+                                className="inline-flex items-center gap-2 rounded-sm border border-[#ffb4ab]/40 bg-[#ffb4ab]/10 px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-[#ffb4ab] hover:bg-[#ffb4ab]/20"
+                              >
+                                Issue Refund
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                     </motion.tr>
@@ -622,6 +805,13 @@ description="Monitor customer orders and update fulfillment status in board or t
           </motion.div>
         )}
       </motion.div>
+      <RefundOrderModal
+        order={refundOrderTarget}
+        isOpen={Boolean(refundOrderTarget)}
+        submitting={refundSubmitting}
+        onClose={() => (refundSubmitting ? null : setRefundOrderTarget(null))}
+        onSubmit={handleRefundSubmit}
+      />
     </AdminPage>
   );
 };

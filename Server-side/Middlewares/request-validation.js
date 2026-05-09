@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
 
-const PRODUCT_CATEGORIES = ["Unisex", "Boys", "Girls"];
+const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
-const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled"];
+const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled", "refund_requested", "refunded"];
 const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "system"];
 const IMAGE_REF_MODELS = ["Product", "Drop", "System", "Review"];
 const IMAGE_SYSTEM_TYPES = ["hero", "ad", "logo", "category-logo"];
@@ -378,6 +378,12 @@ const validateGoogleAuth = createValidationMiddleware((req) => {
   };
 });
 
+const validateFacebookAuth = createValidationMiddleware((req) => {
+  req.body = {
+    accessToken: sanitizeString(req.body.accessToken, "accessToken", { required: true, minLength: 10, maxLength: 4096 }),
+  };
+});
+
 const validateContactSubmission = createValidationMiddleware((req) => {
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 2, maxLength: 120 }),
@@ -407,6 +413,12 @@ const validateDropCreate = createValidationMiddleware((req) => {
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
     releaseDate,
     endDate,
+    isPublished: req.body.isPublished !== undefined
+      ? sanitizeBoolean(req.body.isPublished, "isPublished")
+      : undefined,
+    isArchived: req.body.isArchived !== undefined
+      ? sanitizeBoolean(req.body.isArchived, "isArchived")
+      : undefined,
   };
 });
 
@@ -416,7 +428,12 @@ const validateDropUpdate = createValidationMiddleware((req) => {
   if (req.body.name !== undefined) body.name = sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 });
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
   if (req.body.releaseDate !== undefined) body.releaseDate = sanitizeDate(req.body.releaseDate, "releaseDate", { required: true });
-  if (req.body.endDate !== undefined) body.endDate = sanitizeDate(req.body.endDate, "endDate");
+  if (req.body.endDate !== undefined) {
+    body.endDate =
+      req.body.endDate === null || req.body.endDate === ""
+        ? null
+        : sanitizeDate(req.body.endDate, "endDate");
+  }
   if (req.body.isPublished !== undefined) body.isPublished = sanitizeBoolean(req.body.isPublished, "isPublished");
   if (req.body.isArchived !== undefined) body.isArchived = sanitizeBoolean(req.body.isArchived, "isArchived");
 
@@ -432,15 +449,35 @@ const validateDropUpdate = createValidationMiddleware((req) => {
 });
 
 const validateProductCreate = createValidationMiddleware((req) => {
+  const tags = Array.isArray(req.body.tags)
+    ? req.body.tags.map((tag, index) => sanitizeString(tag, `tags[${index}]`, { required: true, maxLength: 40 }))
+    : [];
+  const relatedProductIds = Array.isArray(req.body.relatedProductIds)
+    ? req.body.relatedProductIds.map((id, index) => sanitizeObjectId(id, `relatedProductIds[${index}]`))
+    : [];
+
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 }),
     artNo: sanitizeString(req.body.artNo, "artNo", { required: true, minLength: 2, maxLength: 50 }),
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
     brand: sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 }),
     category: sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true }),
-    drop: sanitizeObjectId(req.body.drop, "drop"),
+    drop: req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null,
     basePrice: sanitizeNumber(req.body.basePrice, "basePrice", { required: true, min: 0 }),
+    originalPrice: sanitizeNumber(req.body.originalPrice ?? req.body.basePrice, "originalPrice", { min: 0 }),
+    salePrice: sanitizeNumber(req.body.salePrice ?? req.body.basePrice, "salePrice", { min: 0 }),
     discountPercent: sanitizeNumber(req.body.discountPercent ?? 0, "discountPercent", { min: 0, max: 100 }),
+    costPrice: sanitizeNumber(req.body.costPrice, "costPrice", { min: 0 }),
+    categoryPath: sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 }),
+    tags,
+    relatedProductIds,
+    trendScore: sanitizeNumber(req.body.trendScore ?? 0, "trendScore", { min: 0 }),
+    isDeal: sanitizeBoolean(req.body.isDeal ?? false, "isDeal"),
+    dealEndsAt: req.body.dealEndsAt ? sanitizeDate(req.body.dealEndsAt, "dealEndsAt") : undefined,
+    isFeatured: sanitizeBoolean(req.body.isFeatured ?? false, "isFeatured"),
+    isActive: sanitizeBoolean(req.body.isActive ?? true, "isActive"),
+    isLimited: sanitizeBoolean(req.body.isLimited ?? false, "isLimited"),
+    maxPerUser: sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true }),
     variants: sanitizeVariants(req.body.variants, { required: true }),
   };
 });
@@ -452,9 +489,24 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
   if (req.body.brand !== undefined) body.brand = sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 });
   if (req.body.category !== undefined) body.category = sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true });
-  if (req.body.drop !== undefined) body.drop = sanitizeObjectId(req.body.drop, "drop");
+  if (req.body.drop !== undefined) body.drop = req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null;
   if (req.body.basePrice !== undefined) body.basePrice = sanitizeNumber(req.body.basePrice, "basePrice", { min: 0 });
+  if (req.body.originalPrice !== undefined) body.originalPrice = sanitizeNumber(req.body.originalPrice, "originalPrice", { min: 0 });
+  if (req.body.salePrice !== undefined) body.salePrice = sanitizeNumber(req.body.salePrice, "salePrice", { min: 0 });
   if (req.body.discountPercent !== undefined) body.discountPercent = sanitizeNumber(req.body.discountPercent, "discountPercent", { min: 0, max: 100 });
+  if (req.body.costPrice !== undefined) body.costPrice = sanitizeNumber(req.body.costPrice, "costPrice", { min: 0 });
+  if (req.body.categoryPath !== undefined) body.categoryPath = sanitizeOptionalPlainText(req.body.categoryPath, "categoryPath", { maxLength: 180 });
+  if (req.body.tags !== undefined) {
+    if (!Array.isArray(req.body.tags)) fail("tags must be an array");
+    body.tags = req.body.tags.map((tag, index) => sanitizeString(tag, `tags[${index}]`, { required: true, maxLength: 40 }));
+  }
+  if (req.body.relatedProductIds !== undefined) {
+    if (!Array.isArray(req.body.relatedProductIds)) fail("relatedProductIds must be an array");
+    body.relatedProductIds = req.body.relatedProductIds.map((id, index) => sanitizeObjectId(id, `relatedProductIds[${index}]`));
+  }
+  if (req.body.trendScore !== undefined) body.trendScore = sanitizeNumber(req.body.trendScore, "trendScore", { min: 0 });
+  if (req.body.isDeal !== undefined) body.isDeal = sanitizeBoolean(req.body.isDeal, "isDeal");
+  if (req.body.dealEndsAt !== undefined) body.dealEndsAt = sanitizeDate(req.body.dealEndsAt, "dealEndsAt");
   if (req.body.isFeatured !== undefined) body.isFeatured = sanitizeBoolean(req.body.isFeatured, "isFeatured");
   if (req.body.isActive !== undefined) body.isActive = sanitizeBoolean(req.body.isActive, "isActive");
   if (req.body.maxPerUser !== undefined) body.maxPerUser = sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true });
@@ -466,6 +518,443 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   }
 
   req.body = body;
+});
+
+const COUPON_DISCOUNT_TYPES = ["percent", "fixed"];
+const COUPON_ISSUED_FOR = [
+  "manual",
+  "campaign",
+  "vip",
+  "review_reward",
+  "referral",
+  "birthday",
+];
+
+const sanitizeCouponPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (!isUpdate) {
+    const code = sanitizeString(body.code, "code", {
+      required: true,
+      minLength: 3,
+      maxLength: 40,
+    });
+    out.code = code.toUpperCase();
+  }
+
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 200,
+    });
+  }
+
+  const discountType = sanitizeEnum(
+    body.discountType,
+    COUPON_DISCOUNT_TYPES,
+    "discountType",
+    { required: !isUpdate }
+  );
+  if (discountType !== undefined) out.discountType = discountType;
+
+  if (body.discountValue !== undefined || !isUpdate) {
+    const value = sanitizeNumber(body.discountValue, "discountValue", {
+      required: !isUpdate,
+      min: 0,
+    });
+    if (value !== undefined) {
+      const effectiveType = discountType || body.discountType;
+      if (effectiveType === "percent" && value > 100) {
+        fail("Percent discount cannot exceed 100");
+      }
+      out.discountValue = value;
+    }
+  }
+
+  if (body.minOrderValue !== undefined) {
+    out.minOrderValue = sanitizeNumber(body.minOrderValue, "minOrderValue", {
+      min: 0,
+    });
+  }
+
+  if (body.maxUses !== undefined && body.maxUses !== null && body.maxUses !== "") {
+    out.maxUses = sanitizeNumber(body.maxUses, "maxUses", {
+      min: 0,
+      integer: true,
+    });
+  } else if (body.maxUses === null || body.maxUses === "") {
+    out.maxUses = null;
+  }
+
+  if (body.startsAt !== undefined && body.startsAt !== null && body.startsAt !== "") {
+    out.startsAt = sanitizeDate(body.startsAt, "startsAt");
+  } else if (body.startsAt === null || body.startsAt === "") {
+    out.startsAt = null;
+  }
+
+  if (body.endsAt !== undefined && body.endsAt !== null && body.endsAt !== "") {
+    out.endsAt = sanitizeDate(body.endsAt, "endsAt");
+  } else if (body.endsAt === null || body.endsAt === "") {
+    out.endsAt = null;
+  }
+
+  if (out.startsAt && out.endsAt && out.endsAt <= out.startsAt) {
+    fail("endsAt must be after startsAt");
+  }
+
+  if (body.applicableProducts !== undefined) {
+    if (!Array.isArray(body.applicableProducts)) {
+      fail("applicableProducts must be an array");
+    }
+    out.applicableProducts = body.applicableProducts.map((id, index) =>
+      sanitizeObjectId(id, `applicableProducts[${index}]`)
+    );
+  }
+
+  if (body.applicableCategories !== undefined) {
+    if (!Array.isArray(body.applicableCategories)) {
+      fail("applicableCategories must be an array");
+    }
+    out.applicableCategories = body.applicableCategories.map((cat, index) =>
+      sanitizeEnum(cat, PRODUCT_CATEGORIES, `applicableCategories[${index}]`, {
+        required: true,
+      })
+    );
+  }
+
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  if (body.issuedFor !== undefined) {
+    out.issuedFor = sanitizeEnum(body.issuedFor, COUPON_ISSUED_FOR, "issuedFor");
+  }
+
+  return out;
+};
+
+const validateCouponCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeCouponPayload(req.body, { isUpdate: false });
+});
+
+const validateCouponUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeCouponPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const SRI_LANKAN_PROVINCES = [
+  "Western",
+  "Central",
+  "Southern",
+  "Northern",
+  "Eastern",
+  "North Western",
+  "North Central",
+  "Uva",
+  "Sabaragamuwa",
+];
+
+const sanitizeBannerPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.title !== undefined || !isUpdate) {
+    out.title = sanitizeString(body.title, "title", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.imageUrl !== undefined || !isUpdate) {
+    out.imageUrl = sanitizeUrl(body.imageUrl, "imageUrl", { required: !isUpdate });
+  }
+  if (body.headline !== undefined) {
+    out.headline = sanitizeOptionalPlainText(body.headline, "headline", {
+      maxLength: 200,
+    });
+  }
+  if (body.ctaText !== undefined) {
+    out.ctaText = sanitizeOptionalPlainText(body.ctaText, "ctaText", { maxLength: 60 });
+  }
+  if (body.redirectUrl !== undefined || !isUpdate) {
+    out.redirectUrl = sanitizeUrl(body.redirectUrl, "redirectUrl", {
+      required: !isUpdate,
+    });
+  }
+  if (body.activeFrom !== undefined && body.activeFrom !== null && body.activeFrom !== "") {
+    out.activeFrom = sanitizeDate(body.activeFrom, "activeFrom");
+  }
+  if (body.activeTo !== undefined && body.activeTo !== null && body.activeTo !== "") {
+    out.activeTo = sanitizeDate(body.activeTo, "activeTo");
+  } else if (body.activeTo === null || body.activeTo === "") {
+    out.activeTo = null;
+  }
+  if (out.activeFrom && out.activeTo && out.activeTo <= out.activeFrom) {
+    fail("activeTo must be after activeFrom");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  return out;
+};
+
+const validateBannerCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeBannerPayload(req.body, { isUpdate: false });
+});
+
+const validateBannerUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeBannerPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const OFFER_TYPES = [
+  "clearance",
+  "tier-discount",
+  "mystery-box",
+  "aging_stock",
+  "new_product",
+  "seasonal",
+  "flash",
+];
+
+const sanitizeOfferPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.badgeText !== undefined) {
+    out.badgeText = sanitizeOptionalPlainText(body.badgeText, "badgeText", { maxLength: 60 });
+  }
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 2000,
+    });
+  }
+  const type = sanitizeEnum(body.type, OFFER_TYPES, "type", { required: !isUpdate });
+  if (type !== undefined) out.type = type;
+
+  if (body.discountPercent !== undefined) {
+    out.discountPercent = sanitizeNumber(body.discountPercent, "discountPercent", {
+      min: 0,
+      max: 100,
+    });
+  }
+
+  if (body.products !== undefined) {
+    if (!Array.isArray(body.products)) fail("products must be an array");
+    out.products = body.products.map((id, index) =>
+      sanitizeObjectId(id, `products[${index}]`)
+    );
+  }
+
+  if (body.applicableCategories !== undefined) {
+    if (!Array.isArray(body.applicableCategories)) {
+      fail("applicableCategories must be an array");
+    }
+    out.applicableCategories = body.applicableCategories.map((cat, index) =>
+      sanitizeEnum(cat, PRODUCT_CATEGORIES, `applicableCategories[${index}]`, {
+        required: true,
+      })
+    );
+  }
+
+  if (body.startsAt !== undefined && body.startsAt !== null && body.startsAt !== "") {
+    out.startsAt = sanitizeDate(body.startsAt, "startsAt");
+  } else if (body.startsAt === null || body.startsAt === "") {
+    out.startsAt = null;
+  }
+  if (body.endsAt !== undefined && body.endsAt !== null && body.endsAt !== "") {
+    out.endsAt = sanitizeDate(body.endsAt, "endsAt");
+  } else if (body.endsAt === null || body.endsAt === "") {
+    out.endsAt = null;
+  }
+  if (out.startsAt && out.endsAt && out.endsAt <= out.startsAt) {
+    fail("endsAt must be after startsAt");
+  }
+
+  if (body.showOnHomepage !== undefined) {
+    out.showOnHomepage = sanitizeBoolean(body.showOnHomepage, "showOnHomepage");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+  if (body.estimatedMarginAfterDiscount !== undefined) {
+    out.estimatedMarginAfterDiscount = sanitizeNumber(
+      body.estimatedMarginAfterDiscount,
+      "estimatedMarginAfterDiscount"
+    );
+  }
+
+  return out;
+};
+
+const validateOfferCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeOfferPayload(req.body, { isUpdate: false });
+});
+
+const validateOfferUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeOfferPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const sanitizeCollectionPayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 200,
+    });
+  }
+  if (body.description !== undefined) {
+    out.description = sanitizeOptionalPlainText(body.description, "description", {
+      maxLength: 2000,
+    });
+  }
+  if (body.bannerImageUrl !== undefined && body.bannerImageUrl !== "") {
+    out.bannerImageUrl = sanitizeUrl(body.bannerImageUrl, "bannerImageUrl");
+  }
+  if (body.products !== undefined) {
+    if (!Array.isArray(body.products)) fail("products must be an array");
+    out.products = body.products.map((id, index) =>
+      sanitizeObjectId(id, `products[${index}]`)
+    );
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+  if (body.isFeatured !== undefined) {
+    out.isFeatured = sanitizeBoolean(body.isFeatured, "isFeatured");
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+
+  return out;
+};
+
+const validateCollectionCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeCollectionPayload(req.body, { isUpdate: false });
+});
+
+const validateCollectionUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeCollectionPayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const validateCollectionReorder = createValidationMiddleware((req) => {
+  if (!Array.isArray(req.body.orders) || req.body.orders.length === 0) {
+    fail("orders must be a non-empty array");
+  }
+  req.body = {
+    orders: req.body.orders.map((entry, index) => {
+      if (!entry || typeof entry !== "object") {
+        fail(`orders[${index}] must be an object`);
+      }
+      return {
+        id: sanitizeObjectId(entry.id, `orders[${index}].id`),
+        displayOrder: sanitizeNumber(
+          entry.displayOrder,
+          `orders[${index}].displayOrder`,
+          { required: true, integer: true, min: 0 }
+        ),
+      };
+    }),
+  };
+});
+
+const sanitizeShippingZonePayload = (body, { isUpdate = false } = {}) => {
+  const out = {};
+
+  if (body.name !== undefined || !isUpdate) {
+    out.name = sanitizeString(body.name, "name", {
+      required: !isUpdate,
+      minLength: 2,
+      maxLength: 120,
+    });
+  }
+  if (body.provinces !== undefined) {
+    if (!Array.isArray(body.provinces)) fail("provinces must be an array");
+    out.provinces = body.provinces.map((p, index) =>
+      sanitizeEnum(p, SRI_LANKAN_PROVINCES, `provinces[${index}]`, { required: true })
+    );
+  }
+  if (body.deliveryFee !== undefined || !isUpdate) {
+    out.deliveryFee = sanitizeNumber(body.deliveryFee, "deliveryFee", {
+      required: !isUpdate,
+      min: 0,
+    });
+  }
+  if (body.estimatedDays !== undefined) {
+    out.estimatedDays = sanitizeOptionalPlainText(body.estimatedDays, "estimatedDays", {
+      maxLength: 80,
+    });
+  }
+  if (body.freeAbove !== undefined) {
+    out.freeAbove = sanitizeNumber(body.freeAbove, "freeAbove", { min: 0 });
+  }
+  if (body.displayOrder !== undefined) {
+    out.displayOrder = sanitizeNumber(body.displayOrder, "displayOrder", {
+      integer: true,
+      min: 0,
+    });
+  }
+  if (body.isActive !== undefined) {
+    out.isActive = sanitizeBoolean(body.isActive, "isActive");
+  }
+
+  return out;
+};
+
+const validateShippingZoneCreate = createValidationMiddleware((req) => {
+  req.body = sanitizeShippingZonePayload(req.body, { isUpdate: false });
+});
+
+const validateShippingZoneUpdate = createValidationMiddleware((req) => {
+  const body = sanitizeShippingZonePayload(req.body, { isUpdate: true });
+  if (!Object.keys(body).length) {
+    fail("At least one field is required to update");
+  }
+  req.body = body;
+});
+
+const validateNewsletterSubscribe = createValidationMiddleware((req) => {
+  req.body = {
+    email: sanitizeEmail(req.body.email),
+    source: sanitizeOptionalPlainText(req.body.source, "source", { maxLength: 120 }),
+  };
 });
 
 const validateOrderCreate = createValidationMiddleware((req) => {
@@ -503,6 +992,7 @@ const validateManualPaymentProof = createValidationMiddleware((req) => {
   req.body = {
     referenceNumber: sanitizeString(req.body.referenceNumber, "referenceNumber", { required: true, minLength: 4, maxLength: 100 }),
     proofUrl: sanitizeUrl(req.body.proofUrl, "proofUrl", { required: true }),
+    email: req.body.email ? sanitizeEmail(req.body.email, "email", { required: false }) : undefined,
   };
 });
 
@@ -607,9 +1097,25 @@ const validateNotificationUpdate = createValidationMiddleware((req) => {
   req.body = body;
 });
 
+const MEMBERSHIP_TIERS = ["standard", "elite", "rare", "legend", "vip"];
+
 const validateAdminUserStatus = createValidationMiddleware((req) => {
+  const hasIsActive = typeof req.body.isActive !== "undefined";
+  const hasMembership = typeof req.body.membership !== "undefined";
+
+  if (!hasIsActive && !hasMembership) {
+    fail("isActive or membership must be provided");
+  }
+
   req.body = {
-    isActive: sanitizeBoolean(req.body.isActive, "isActive", { required: true }),
+    isActive: hasIsActive
+      ? sanitizeBoolean(req.body.isActive, "isActive", { required: true })
+      : undefined,
+    membership: hasMembership
+      ? sanitizeEnum(req.body.membership, MEMBERSHIP_TIERS, "membership", {
+          required: true,
+        })
+      : undefined,
   };
 });
 
@@ -674,12 +1180,25 @@ module.exports = {
   validateVerifyResetOtp,
   validateResetPassword,
   validateGoogleAuth,
+  validateFacebookAuth,
   validateContactSubmission,
   validateContactUpdate,
   validateDropCreate,
   validateDropUpdate,
   validateProductCreate,
   validateProductUpdate,
+  validateCouponCreate,
+  validateCouponUpdate,
+  validateBannerCreate,
+  validateBannerUpdate,
+  validateOfferCreate,
+  validateOfferUpdate,
+  validateCollectionCreate,
+  validateCollectionUpdate,
+  validateCollectionReorder,
+  validateShippingZoneCreate,
+  validateShippingZoneUpdate,
+  validateNewsletterSubscribe,
   validateOrderCreate,
   validateOrderStatusUpdate,
   validateManualPaymentReference,

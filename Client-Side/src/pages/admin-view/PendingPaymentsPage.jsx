@@ -15,26 +15,34 @@ import { Link, useLocation } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
-import { fetchPendingManualPayments, verifyManualPayment } from "@/store/manualPaymentSlice";
+import {
+  fetchPendingManualPayments,
+  verifyManualPayment,
+} from "@/store/manualPaymentSlice";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const MotionLink = motion.create(Link);
 
 const statusOptions = [
   { label: "All", value: "all" },
-  { label: "Pending", value: "proof_submitted" },
+  { label: "Pending review", value: "proof_submitted" },
+  { label: "Awaiting bank", value: "pending_bank_confirmation" },
   { label: "Verified", value: "verified" },
   { label: "Rejected", value: "rejected" },
 ];
 
 const statusMeta = {
   proof_submitted: {
-    label: "Pending",
+    label: "Pending review",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-300",
   },
   pending_payment: {
-    label: "Pending",
+    label: "Awaiting receipt",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+  },
+  pending_bank_confirmation: {
+    label: "Awaiting bank",
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-300",
   },
   verified: {
     label: "Verified",
@@ -47,16 +55,9 @@ const statusMeta = {
 };
 
 const formatDateTime = (value) => {
-  if (!value) {
-    return "—";
-  }
-
+  if (!value) return "—";
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleString("en-LK", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -87,27 +88,28 @@ const resolveCustomerName = (payment) => {
 
 const resolveOrderId = (payment) => {
   const order = resolveOrder(payment);
-
   return order._id || order.id || payment?.orderId || "—";
 };
 
 const resolvePaymentMethod = (payment) => {
   const order = resolveOrder(payment);
-
   return order.paymentMethod || payment?.paymentMethod || "—";
 };
 
 const PendingPaymentsPage = () => {
   const dispatch = useDispatch();
-  const { pendingPayments, pagination, isAdminLoading, isVerifying } = useSelector(
-    (state) => state.manualPayment,
-  );
+  const { pendingPayments, pagination, isAdminLoading, isVerifying } =
+    useSelector((state) => state.manualPayment);
 
   const location = useLocation();
   const defaultStatusFilter = useMemo(
-    () => (location.pathname.includes("/admin/manual-payments") ? "all" : "proof_submitted"),
-    [location.pathname],
+    () =>
+      location.pathname.includes("/admin/manual-payments")
+        ? "all"
+        : "proof_submitted",
+    [location.pathname]
   );
+
   const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -118,6 +120,7 @@ const PendingPaymentsPage = () => {
     action: null,
     notes: "",
   });
+
   const [flashIds, setFlashIds] = useState(() => new Set());
 
   const requestParams = useMemo(
@@ -126,7 +129,7 @@ const PendingPaymentsPage = () => {
       limit,
       ...(statusFilter === "all" ? {} : { status: statusFilter }),
     }),
-    [limit, page, statusFilter],
+    [limit, page, statusFilter]
   );
 
   const loadQueue = useCallback(async () => {
@@ -145,13 +148,7 @@ const PendingPaymentsPage = () => {
     loadQueue();
   }, [loadQueue]);
 
-  useSocketEvent(
-    "payment:refresh",
-    () => {
-      loadQueue();
-    },
-    [loadQueue],
-  );
+  useSocketEvent("payment:refresh", loadQueue, [loadQueue]);
 
   useSocketEvent(
     "payment:new_pending",
@@ -159,7 +156,7 @@ const PendingPaymentsPage = () => {
       const id = payload?.paymentId || payload?._id || payload?.id;
       if (id) {
         setFlashIds((prev) => new Set(prev).add(String(id)));
-        window.setTimeout(() => {
+        setTimeout(() => {
           setFlashIds((prev) => {
             const next = new Set(prev);
             next.delete(String(id));
@@ -169,38 +166,24 @@ const PendingPaymentsPage = () => {
       }
       loadQueue();
     },
-    [loadQueue],
+    [loadQueue]
   );
 
   const openDecisionModal = (payment, action) => {
-    setDecisionModal({
-      open: true,
-      payment,
-      action,
-      notes: "",
-    });
+    setDecisionModal({ open: true, payment, action, notes: "" });
   };
 
   const closeDecisionModal = () => {
-    if (isVerifying) {
-      return;
-    }
-
-    setDecisionModal({
-      open: false,
-      payment: null,
-      action: null,
-      notes: "",
-    });
+    if (isVerifying) return;
+    setDecisionModal({ open: false, payment: null, action: null, notes: "" });
   };
 
   const confirmDecision = async () => {
-    if (!decisionModal.payment || !decisionModal.action) {
-      return;
-    }
+    if (!decisionModal.payment || !decisionModal.action) return;
 
     const notes = decisionModal.notes.trim();
-    const action = decisionModal.action === "verify" ? "approve" : "reject";
+    const action =
+      decisionModal.action === "verify" ? "approve" : "reject";
 
     try {
       await dispatch(
@@ -208,16 +191,18 @@ const PendingPaymentsPage = () => {
           paymentId: decisionModal.payment._id,
           action,
           adminNotes: notes || undefined,
-          rejectionReason: decisionModal.action === "reject" ? notes || undefined : undefined,
-        }),
+          rejectionReason:
+            decisionModal.action === "reject"
+              ? notes || undefined
+              : undefined,
+        })
       ).unwrap();
 
       toast({
-        title: decisionModal.action === "verify" ? "Payment verified" : "Payment rejected",
-        description:
+        title:
           decisionModal.action === "verify"
-            ? "The payment queue has been updated."
-            : "The payment has been marked as rejected.",
+            ? "Payment verified"
+            : "Payment rejected",
         variant: "success",
       });
 
@@ -232,10 +217,12 @@ const PendingPaymentsPage = () => {
     }
   };
 
-  const currentStatusLabel = (status) => statusMeta[status]?.label || status.replace(/_/g, " ");
+  const currentStatusLabel = (status) =>
+    statusMeta[status]?.label || status.replace(/_/g, " ");
 
   const currentStatusClass = (status) =>
-    statusMeta[status]?.className || "border-white/10 bg-white/5 text-gray-300";
+    statusMeta[status]?.className ||
+    "border-white/10 bg-white/5 text-gray-300";
 
   return (
     <motion.div
@@ -244,7 +231,7 @@ const PendingPaymentsPage = () => {
       animate="visible"
       className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
     >
-      <div className="flex w-full flex-col gap-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -268,31 +255,23 @@ const PendingPaymentsPage = () => {
           </div>
         </section>
 
-        <section className="grid gap-6 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.28em] text-gray-500">Status filter</p>
-            <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
-              {statusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setStatusFilter(option.value)}
-                  className={`relative rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
-                    statusFilter === option.value ? "text-black" : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {statusFilter === option.value ? (
-                    <motion.span
-                      layoutId="pending-payment-status-pill"
-                      className="absolute inset-0 -z-10 rounded-full bg-[#D4AF37]"
-                      transition={{ type: "spring", stiffness: 400, damping: 34 }}
-                    />
-                  ) : null}
-                  <span className="relative z-10">{option.label}</span>
-                </button>
-              ))}
+        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
+          <label className="space-y-2 text-sm text-gray-300">
+            Status filter
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="w-full appearance-none rounded-2xl border border-white/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
+          </label>
 
           <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-400">
             <div className="flex items-center gap-2 text-[#D4AF37]">
@@ -300,35 +279,16 @@ const PendingPaymentsPage = () => {
               Queue summary
             </div>
             <p className="mt-2 text-white">
-              {pagination.totalCount || 0} records in this view.
+              {pagination?.totalCount || 0} records in this view.
             </p>
           </div>
         </section>
 
         {isAdminLoading ? (
-          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b0b]">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-black/40 text-[10px] uppercase tracking-[0.24em] text-gray-400">
-                <tr>
-                  <th className="px-6 py-4">Reference</th>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Amount</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <SkeletonRow key={i} colSpan={5} />
-                ))}
-              </tbody>
-            </table>
-            <div className="flex items-center justify-center gap-2 border-t border-white/10 py-4 text-gray-400">
-              <Loader2 className="h-5 w-5 animate-spin text-[#D4AF37]" />
-              <span>Loading pending payments…</span>
-            </div>
+          <div className="flex items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] py-16 text-gray-400">
+            <Loader2 className="mr-3 h-5 w-5 animate-spin text-[#D4AF37]" /> Loading pending payments...
           </div>
-        ) : pendingPayments.length === 0 ? (
+        ) : !pendingPayments || pendingPayments.length === 0 ? (
           <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-10 text-center text-sm text-gray-400">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]">
               <ShieldAlert className="h-7 w-7" />
@@ -358,28 +318,9 @@ const PendingPaymentsPage = () => {
                 <tbody className="divide-y divide-white/5">
                   {pendingPayments.map((payment) => {
                     const status = payment.status || "proof_submitted";
-                    const rowKey = String(payment._id || payment.referenceNumber);
-                    const flash = flashIds.has(rowKey);
 
                     return (
-                      <motion.tr
-                        key={rowKey}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          boxShadow: flash
-                            ? ["inset 5px 0 0 0 #D4AF37", "inset 5px 0 0 0 rgba(212,175,55,0)"]
-                            : "inset 0 0 0 0 transparent",
-                        }}
-                        transition={{
-                          layout: { type: "spring", stiffness: 300, damping: 30 },
-                          boxShadow: { duration: 1.8, ease: "easeOut" },
-                          default: { duration: 0.25 },
-                        }}
-                        className="align-top hover:bg-white/[0.02]"
-                      >
+                      <tr key={payment._id || payment.referenceNumber} className="align-top hover:bg-white/[0.02]">
                         <td className="px-6 py-5 font-mono text-xs tracking-[0.2em] text-[#D4AF37]">
                           {payment.referenceNumber || "—"}
                         </td>
@@ -397,32 +338,23 @@ const PendingPaymentsPage = () => {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-wrap gap-2">
-                            <MotionLink
-                              to={`/admin/manual-payments/${payment._id}`}
-                              whileTap={{ scale: 0.96 }}
-                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:border-[#D4AF37]/40"
-                            >
-                              Details
-                            </MotionLink>
-                            <motion.button
+                            <button
                               type="button"
-                              whileTap={{ scale: 0.96 }}
                               onClick={() => openDecisionModal(payment, "verify")}
                               className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-emerald-200 transition hover:border-emerald-500/40 hover:bg-emerald-500/20"
                             >
                               Verify <CheckCircle2 className="h-4 w-4" />
-                            </motion.button>
-                            <motion.button
+                            </button>
+                            <button
                               type="button"
-                              whileTap={{ scale: 0.96 }}
                               onClick={() => openDecisionModal(payment, "reject")}
                               className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-200 transition hover:border-rose-500/40 hover:bg-rose-500/20"
                             >
                               Reject <XCircle className="h-4 w-4" />
-                            </motion.button>
+                            </button>
                           </div>
                         </td>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -433,27 +365,25 @@ const PendingPaymentsPage = () => {
 
         <div className="flex items-center justify-between rounded-[1.5rem] border border-white/10 bg-[#0b0b0b] px-5 py-4 text-sm text-gray-400">
           <span>
-            Page {pagination.page || page} of {pagination.totalPages || 0}
+            Page {pagination?.page || page} of {pagination?.totalPages || 0}
           </span>
           <div className="flex items-center gap-3">
-            <motion.button
+            <button
               type="button"
-              whileTap={{ scale: 0.94 }}
               disabled={page <= 1}
               onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
               className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
-            </motion.button>
-            <motion.button
+            </button>
+            <button
               type="button"
-              whileTap={{ scale: 0.94 }}
-              disabled={page >= (pagination.totalPages || 1)}
+              disabled={page >= (pagination?.totalPages || 1)}
               onClick={() => setPage((currentPage) => currentPage + 1)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Next <ArrowRight className="h-4 w-4" />
-            </motion.button>
+              Next
+            </button>
           </div>
         </div>
       </div>

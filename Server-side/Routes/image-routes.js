@@ -9,6 +9,9 @@ const {
   getLogoImages,
   getCategoryLogoImages,
   getReviewImages,
+  getSocialUgcImages,
+  getEditorialQuoteImages,
+  getTestimonialImages,
   setPrimaryImage,
   deleteImage,
   reorderImages,
@@ -17,6 +20,7 @@ const {
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const { imageUpload, receiptUpload } = require("../Middlewares/multer-middleware");
 const {
   validateObjectIdParam,
@@ -34,6 +38,7 @@ router.post(
   requirePermission("products"),
   imageUpload.array("images", 10),
   validateImageUploadRequest,
+  adminLogMiddleware,
   uploadImages
 );
 
@@ -51,6 +56,7 @@ router.patch(
   requirePermission("products"),
   imageUpload.single("image"),
   validateObjectIdParam("id", "image id"),
+  adminLogMiddleware,
   updateImage
 );
 
@@ -61,10 +67,13 @@ router.get("/get-hero-images", getHeroImages);
 router.get("/get-ad-images", getAdImages);
 router.get("/get-logo-images", getLogoImages);
 router.get("/get-category-logo-images", getCategoryLogoImages);
+router.get("/get-social-ugc-images", getSocialUgcImages);
+router.get("/get-editorial-quote-images", getEditorialQuoteImages);
+router.get("/get-testimonial-images", getTestimonialImages);
 
-router.patch("/set-primary/:id", authMiddleware, adminMiddleware, requirePermission("products"), validateObjectIdParam("id", "image id"), setPrimaryImage);
-router.delete("/delete-image/:id", authMiddleware, adminMiddleware, requirePermission("products"), deleteImage);
-router.delete("/delete-all-images", authMiddleware, adminMiddleware, requirePermission("products"), validateDeleteAllImages, deleteAllImages);
-router.patch("/reorder-images", authMiddleware, adminMiddleware, requirePermission("products"), validateImageReorder, reorderImages);
+router.patch("/set-primary/:id", authMiddleware, adminMiddleware, requirePermission("products"), validateObjectIdParam("id", "image id"), adminLogMiddleware, setPrimaryImage);
+router.delete("/delete-image/:id", authMiddleware, adminMiddleware, requirePermission("products"), adminLogMiddleware, deleteImage);
+router.delete("/delete-all-images", authMiddleware, adminMiddleware, requirePermission("products"), validateDeleteAllImages, adminLogMiddleware, deleteAllImages);
+router.patch("/reorder-images", authMiddleware, adminMiddleware, requirePermission("products"), validateImageReorder, adminLogMiddleware, reorderImages);
 
 module.exports = router;

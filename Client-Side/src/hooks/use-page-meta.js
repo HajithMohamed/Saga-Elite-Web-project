@@ -13,12 +13,19 @@ const ensureMetaTag = (name) => {
   return tag;
 };
 
-const usePageMeta = ({ title, description }) => {
+const usePageMeta = ({ title, description, fullTitle = false }) => {
   useEffect(() => {
     if (typeof document === "undefined") return;
 
     if (title) {
-      document.title = `Saga Elite | ${title}`;
+      if (fullTitle) {
+        document.title = title;
+      } else if (String(title).includes("Saga Elite")) {
+        // already a full title
+        document.title = title;
+      } else {
+        document.title = `${title} — Saga Elite`;
+      }
     }
 
     if (description) {
@@ -27,7 +34,7 @@ const usePageMeta = ({ title, description }) => {
         descriptionTag.setAttribute("content", description);
       }
     }
-  }, [title, description]);
+  }, [title, description, fullTitle]);
 };
 
 export default usePageMeta;

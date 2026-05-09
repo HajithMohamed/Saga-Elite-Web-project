@@ -8,7 +8,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { fetchCartAction } from "@/store/cart-slice";
@@ -16,20 +16,26 @@ import { toast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Btn,
-  Countdown,
   Eyebrow,
   FilterPills,
-  Hairline,
   Marquee,
   Reveal,
   SortDropdown,
-  StatusBadge,
 } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
 import ProductCard from "@/components/shopping-components/ProductCard";
+import CollectionHero from "@/components/listing/CollectionHero";
+import CollectionIntro from "@/components/listing/CollectionIntro";
+import RefineRow from "@/components/listing/RefineRow";
+import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
+import CommunityStylingStrip from "@/components/listing/CommunityStylingStrip";
+import FeaturedHighlightCard from "@/components/listing/FeaturedHighlightCard";
+import CategorySwitcherCards from "@/components/listing/CategorySwitcherCards";
+import { getCollectionHero } from "@/components/listing/collectionConfig";
 
 const CATEGORY_LABELS = {
-  boys: "Boys",
-  girls: "Girls",
+  ladies: "Ladies",
+  gents: "Gents",
   unisex: "Unisex",
 };
 
@@ -41,23 +47,41 @@ const SORT_OPTIONS = [
 
 const PILL_KEYS = [
   { value: "all", label: "All" },
-  { value: "boys", label: "Boys" },
-  { value: "girls", label: "Girls" },
+  { value: "ladies", label: "Ladies" },
+  { value: "gents", label: "Gents" },
   { value: "unisex", label: "Unisex" },
   { value: "drops", label: "Drops" },
+  { value: "offers", label: "Offers" },
   { value: "archive", label: "Archive" },
 ];
 
-const formatLKR = (value = 0) =>
-  `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
-    maximumFractionDigits: 0,
-  })}`;
+const COLLECTION_INTROS = {
+  all: "Every chapter, every piece. From this season's drop to the archived edits — one scroll, no compromise.",
+  ladies:
+    "Minimal silhouettes, oversized fits, and hand-finished pieces inspired by modern street culture.",
+  gents:
+    "Cut sharp, layered loose. Pieces engineered for the man who notices the seams before the label.",
+  unisex:
+    "No gender, no rules. Built to layer, share, and outlast a season — together.",
+  offers:
+    "Selected pieces at members-only prices. Brief windows; the clock is louder than the discount.",
+  archive:
+    "Every chapter that has closed. Held for record — nothing restocks, nothing returns.",
+};
+
+const PAGE_SIZE = 12;
+const FETCH_LIMIT = 60;
+const PRICE_MIN = 0;
+const PRICE_MAX = 50000;
+const MotionDiv = motion.div;
 
 const ProductListing = () => {
+  usePageMeta({ title: "Shop" });
   const [products, setProducts] = useState([]);
-  const [drops, setDrops] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -65,21 +89,54 @@ const ProductListing = () => {
   const location = useLocation();
 
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
+  const cartCount = useSelector(
+    (state) => state.cart?.cart?.totalQuantity || 0
+  );
 
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
+  const filterParam = (searchParams.get("filter") || "").toLowerCase();
   const sortParam = (searchParams.get("sort") || "new").toLowerCase();
   const inStockOnly = searchParams.get("stock") === "in";
   const limitedOnly = searchParams.get("limited") === "1";
-  const isDropListing = categoryParam === "drops";
+  const isOffersListing =
+    categoryParam === "offers" || filterParam === "offers";
 
-  const activePill =
-    categoryParam === "drops"
-      ? "drops"
-      : categoryParam === "archive"
-        ? "archive"
-        : CATEGORY_LABELS[categoryParam]
-          ? categoryParam
-          : "all";
+  // Refine row params (URL-driven, multi-select)
+  const colorsParam = useMemo(
+    () =>
+      (searchParams.get("colors") || "")
+        .split(",")
+        .map((c) => c.trim().toLowerCase())
+        .filter(Boolean),
+    [searchParams]
+  );
+  const sizesParam = useMemo(
+    () =>
+      (searchParams.get("sizes") || "")
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean),
+    [searchParams]
+  );
+  const priceMinParam = Number(searchParams.get("min") || PRICE_MIN);
+  const priceMaxParam = Number(searchParams.get("max") || PRICE_MAX);
+  const colorsKey = colorsParam.join(",");
+  const sizesKey = sizesParam.join(",");
+
+  // /shopping/drops is the dedicated drops page now — redirect old links.
+  useEffect(() => {
+    if (categoryParam === "drops" || filterParam === "drops") {
+      navigate("/shopping/drops", { replace: true });
+    }
+  }, [categoryParam, filterParam, navigate]);
+
+  const activePill = isOffersListing
+    ? "offers"
+    : categoryParam === "archive" || filterParam === "archive"
+      ? "archive"
+      : CATEGORY_LABELS[categoryParam]
+        ? categoryParam
+        : "all";
 
   const updateParams = (mutator) => {
     const next = new URLSearchParams(searchParams);
@@ -89,8 +146,13 @@ const ProductListing = () => {
   };
 
   const setCategoryFilter = (key) => {
+    if (key === "drops") {
+      navigate("/shopping/drops");
+      return;
+    }
     const next = new URLSearchParams();
-    if (key !== "all") next.set("category", key);
+    if (key === "archive" || key === "offers") next.set("filter", key);
+    else if (key !== "all") next.set("category", key);
     if (sortParam !== "new") next.set("sort", sortParam);
     if (inStockOnly) next.set("stock", "in");
     if (limitedOnly) next.set("limited", "1");
@@ -116,10 +178,56 @@ const ProductListing = () => {
       else p.set("limited", "1");
     });
 
-  const clearFilters = () =>
+  const toggleColor = (color) =>
+    updateParams((p) => {
+      const current = (p.get("colors") || "")
+        .split(",")
+        .filter(Boolean);
+      const has = current.includes(color);
+      const next = has
+        ? current.filter((c) => c !== color)
+        : [...current, color];
+      if (next.length) p.set("colors", next.join(","));
+      else p.delete("colors");
+    });
+
+  const toggleSize = (size) =>
+    updateParams((p) => {
+      const current = (p.get("sizes") || "")
+        .split(",")
+        .filter(Boolean);
+      const has = current.includes(size);
+      const next = has
+        ? current.filter((s) => s !== size)
+        : [...current, size];
+      if (next.length) p.set("sizes", next.join(","));
+      else p.delete("sizes");
+    });
+
+  const setPriceRange = ([lo, hi]) =>
+    updateParams((p) => {
+      if (lo > PRICE_MIN) p.set("min", String(lo));
+      else p.delete("min");
+      if (hi < PRICE_MAX) p.set("max", String(hi));
+      else p.delete("max");
+    });
+
+  const clearRefinements = () =>
+    updateParams((p) => {
+      p.delete("colors");
+      p.delete("sizes");
+      p.delete("min");
+      p.delete("max");
+    });
+
+  const clearAllFilters = () =>
     updateParams((p) => {
       p.delete("stock");
       p.delete("limited");
+      p.delete("colors");
+      p.delete("sizes");
+      p.delete("min");
+      p.delete("max");
     });
 
   const unitPrice = (product, variant) => {
@@ -154,8 +262,67 @@ const ProductListing = () => {
           !inStockOnly ||
           (p.variants || []).some((v) => Number(v?.stock || 0) > 0)
       )
-      .filter((p) => !limitedOnly || p.isLimited);
-  }, [sortedProducts, inStockOnly, limitedOnly]);
+      .filter((p) => !limitedOnly || p.isLimited)
+      .filter((p) => {
+        if (!colorsParam.length) return true;
+        return (p.variants || []).some((v) =>
+          colorsParam.includes(String(v?.color || "").toLowerCase())
+        );
+      })
+      .filter((p) => {
+        if (!sizesParam.length) return true;
+        return (p.variants || []).some((v) =>
+          sizesParam.includes(String(v?.size || "").toUpperCase())
+        );
+      })
+      .filter((p) => {
+        const price = Number(p.basePrice || 0);
+        return price >= priceMinParam && price <= priceMaxParam;
+      });
+  }, [
+    sortedProducts,
+    inStockOnly,
+    limitedOnly,
+    colorsParam,
+    sizesParam,
+    priceMinParam,
+    priceMaxParam,
+  ]);
+
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount]
+  );
+  const hasMore = visibleCount < filteredProducts.length;
+
+  // Reset visible window whenever the result set changes.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [
+    categoryParam,
+    filterParam,
+    inStockOnly,
+    limitedOnly,
+    colorsKey,
+    sizesKey,
+    priceMinParam,
+    priceMaxParam,
+  ]);
+
+  // Pick a featured product — prefer a limited piece with low remaining stock.
+  const featuredProduct = useMemo(() => {
+    if (filteredProducts.length < 4) return null;
+    const limited = filteredProducts.find((p) => {
+      const total =
+        Number(p?.totalStock) ||
+        (p?.variants || []).reduce(
+          (sum, v) => sum + Math.max(0, Number(v?.stock || 0)),
+          0
+        );
+      return p?.isLimited && total > 0 && total <= 12;
+    });
+    return limited || filteredProducts[0];
+  }, [filteredProducts]);
 
   useLiveProductUpdates((payload = {}) =>
     products.some(
@@ -174,19 +341,32 @@ const ProductListing = () => {
       setError(null);
 
       try {
-        if (isDropListing) {
-          const response = await axios.get(`${API_BASE}/drops/get-all-drops`);
+        if (isOffersListing) {
+          const response = await axios.get(`${API_BASE}/offers`);
           if (cancelled) return;
-          const allDrops = Array.isArray(response.data?.drops)
-            ? response.data.drops
-            : [];
-          setDrops(allDrops);
-          setProducts([]);
+          const offers = response.data?.data?.offers || [];
+          const seen = new Set();
+          const offerProducts = [];
+          for (const offer of offers) {
+            for (const product of offer.products || []) {
+              const key = String(product?._id || product?.id || "");
+              if (!key || seen.has(key)) continue;
+              seen.add(key);
+              offerProducts.push({
+                ...product,
+                discountPercent:
+                  offer.discountPercent ?? product.discountPercent,
+                offerEndsAt: offer.endsAt,
+                offerBadge: offer.badgeText,
+              });
+            }
+          }
+          setProducts(offerProducts);
           return;
         }
 
-        const query = new URLSearchParams({ limit: "30" });
-        if (categoryParam === "archive") {
+        const query = new URLSearchParams({ limit: String(FETCH_LIMIT) });
+        if (categoryParam === "archive" || filterParam === "archive") {
           query.set("status", "archive");
         } else if (CATEGORY_LABELS[categoryParam]) {
           query.set("category", CATEGORY_LABELS[categoryParam]);
@@ -197,7 +377,6 @@ const ProductListing = () => {
         );
         if (cancelled) return;
         setProducts(response.data?.data || []);
-        setDrops([]);
       } catch (err) {
         if (cancelled) return;
         const msg =
@@ -206,7 +385,7 @@ const ProductListing = () => {
           "Something went wrong";
         setError(msg);
         toast({
-          title: isDropListing ? "Could not load drops" : "Could not load pieces",
+          title: "Could not load pieces",
           description: msg,
           variant: "destructive",
         });
@@ -219,7 +398,7 @@ const ProductListing = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryParam, isDropListing]);
+  }, [categoryParam, filterParam, isOffersListing]);
 
   useEffect(() => {
     if (!products.length) return;
@@ -239,15 +418,29 @@ const ProductListing = () => {
 
   const articleCount = filteredProducts.length;
   const totalCount = sortedProducts.length;
-  const hasFilterActive = inStockOnly || limitedOnly;
-  const cappedAtThirty = sortedProducts.length === 30;
+  const refineActive =
+    colorsParam.length > 0 ||
+    sizesParam.length > 0 ||
+    priceMinParam > PRICE_MIN ||
+    priceMaxParam < PRICE_MAX;
+  const hasFilterActive = inStockOnly || limitedOnly || refineActive;
 
   return (
     <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">
+      {/* CINEMATIC HERO */}
+      <CollectionHero variant={activePill} />
+
+      {/* COLLECTION INTRO */}
+      <CollectionIntro
+        eyebrow={getCollectionHero(activePill).eyebrow}
+        body={COLLECTION_INTROS[activePill]}
+      />
+
+      <CategorySwitcherCards activePill={activePill} />
+
       {/* STICKY FILTER RAIL */}
       <div className="sticky top-16 z-30 bg-[#0a0a0a]/90 backdrop-blur-md border-y border-[#4d4635]/40">
         <div className="px-5 md:px-12 max-w-7xl mx-auto py-3 md:py-4 flex items-center gap-3 md:gap-6 overflow-x-auto custom-scrollbar">
-          {/* Pills */}
           <FilterPills
             items={PILL_KEYS}
             value={activePill}
@@ -258,7 +451,6 @@ const ProductListing = () => {
 
           <div className="hidden lg:block flex-1" />
 
-          {/* Center count */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <Eyebrow tone="muted" size="xs">
               {hasFilterActive
@@ -270,48 +462,76 @@ const ProductListing = () => {
 
           <div className="hidden lg:block flex-1" />
 
-          {/* Toggles + sort */}
-          {!isDropListing && (
-            <>
-              <button
-                type="button"
-                onClick={toggleInStock}
-                aria-pressed={inStockOnly}
-                className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-                  inStockOnly
-                    ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                    : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-                }`}
-              >
-                In stock
-              </button>
-              <button
-                type="button"
-                onClick={toggleLimited}
-                aria-pressed={limitedOnly}
-                className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-                  limitedOnly
-                    ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                    : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-                }`}
-              >
-                Limited
-              </button>
-              <SortDropdown
-                options={SORT_OPTIONS}
-                value={sortParam}
-                onChange={setSort}
-                label="Sort"
-                className="shrink-0"
-              />
-            </>
+          {!isOffersListing && (
+            <button
+              type="button"
+              onClick={() => setRefineOpen((o) => !o)}
+              aria-pressed={refineOpen}
+              className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus flex items-center gap-2 ${
+                refineOpen || refineActive
+                  ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
+                  : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
+              }`}
+            >
+              <SlidersHorizontal size={12} strokeWidth={1.75} />
+              Refine
+              {refineActive ? (
+                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#f2ca50]" />
+              ) : null}
+            </button>
           )}
+
+          <button
+            type="button"
+            onClick={toggleInStock}
+            aria-pressed={inStockOnly}
+            className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
+              inStockOnly
+                ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
+                : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
+            }`}
+          >
+            In stock
+          </button>
+          <button
+            type="button"
+            onClick={toggleLimited}
+            aria-pressed={limitedOnly}
+            className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
+              limitedOnly
+                ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
+                : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
+            }`}
+          >
+            Limited
+          </button>
+          <SortDropdown
+            options={SORT_OPTIONS}
+            value={sortParam}
+            onChange={setSort}
+            label="Sort"
+            className="shrink-0"
+          />
         </div>
+
+        {!isOffersListing && (
+          <RefineRow
+            open={refineOpen}
+            selectedColors={colorsParam}
+            selectedSizes={sizesParam}
+            priceRange={[priceMinParam, priceMaxParam]}
+            priceMin={PRICE_MIN}
+            priceMax={PRICE_MAX}
+            onToggleColor={toggleColor}
+            onToggleSize={toggleSize}
+            onChangePrice={setPriceRange}
+            onClearAll={clearRefinements}
+          />
+        )}
       </div>
 
       {/* MAIN CONTENT */}
       <main className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
-        {/* LOADING */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-32">
             <motion.div
@@ -325,7 +545,6 @@ const ProductListing = () => {
           </div>
         )}
 
-        {/* ERROR */}
         {!isLoading && error && (
           <div className="border border-[#93000a]/40 bg-[#93000a]/10 px-6 py-10 text-center">
             <Eyebrow tone="muted" size="md" className="text-[#ffb4ab]">
@@ -335,15 +554,8 @@ const ProductListing = () => {
           </div>
         )}
 
-        {/* DROPS SUB-MODE — alternating 7/5 lookbook */}
-        {!isLoading && !error && isDropListing && (
-          <DropsLookbook drops={drops} />
-        )}
-
-        {/* PRODUCT GRID */}
-        {!isLoading && !error && !isDropListing && (
+        {!isLoading && !error && (
           <>
-            {/* Empty state */}
             {filteredProducts.length === 0 && (
               <Reveal>
                 <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 md:py-20 text-center max-w-2xl mx-auto">
@@ -362,7 +574,7 @@ const ProductListing = () => {
                     {hasFilterActive ? (
                       <button
                         type="button"
-                        onClick={clearFilters}
+                        onClick={clearAllFilters}
                         className="inline-flex"
                       >
                         <Btn variant="default" iconRight={ArrowRight}>
@@ -381,62 +593,111 @@ const ProductListing = () => {
               </Reveal>
             )}
 
-            {/* Grid */}
             {filteredProducts.length > 0 && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${categoryParam}-${sortParam}-${inStockOnly}-${limitedOnly}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40"
-                >
-                  {filteredProducts.map((product, idx) => (
-                    <ProductCard
-                      key={product._id}
-                      product={product}
-                      index={idx}
-                    />
-                  ))}
-                </motion.div>
-              </AnimatePresence>
-            )}
+              <>
+                {/* Featured highlight (skipped for tiny collections) */}
+                {featuredProduct ? (
+                  <FeaturedHighlightCard
+                    product={featuredProduct}
+                    eyebrow={
+                      isOffersListing ? "Members Offer" : "Drop Exclusive"
+                    }
+                  />
+                ) : null}
 
-            {/* End-of-chapter CTA */}
-            {filteredProducts.length > 0 && cappedAtThirty && (
-              <Reveal>
-                <div className="mt-16 md:mt-24 border border-[#4d4635] bg-[#0e0e0e]">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 md:p-12 items-end">
-                    <div className="lg:col-span-8">
-                      <Eyebrow tone="gold" size="md">
-                        Eighty-four pieces, then a new chapter
-                      </Eyebrow>
-                      <h2 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-                        Read the archive.
-                      </h2>
-                      <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base max-w-xl leading-relaxed">
-                        Every chapter that has closed. Held for record — nothing
-                        restocks, nothing returns. Members may request a private
-                        viewing of any single archived piece.
-                      </p>
-                    </div>
-                    <div className="lg:col-span-4 flex flex-wrap items-center gap-3 lg:justify-end">
-                      <Link to="/shopping/product-list?category=archive">
-                        <Btn variant="outline" iconRight={ArrowRight}>
-                          Browse the archive
-                        </Btn>
+                {/* Mystery Gift inline promo */}
+                {filteredProducts.length >= 6 && (
+                  <MotionDiv
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="my-10 md:my-14 relative overflow-hidden border border-[#4d4635]/60 bg-[#0e0e0e]"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #0e0e0e 0%, #1a1200 50%, #0e0e0e 100%)",
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          "radial-gradient(ellipse at 30% 50%, rgba(242,202,80,0.08) 0%, transparent 60%)",
+                      }}
+                    />
+
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 px-6 md:px-16 py-10 md:py-12">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 md:gap-6">
+                        <div className="w-16 h-16 rounded-lg bg-[#1c1b1b] border border-[#f2ca50]/30 flex items-center justify-center shrink-0 [box-shadow:0_0_20px_rgba(242,202,80,0.15)]">
+                          <Gift className="w-7 h-7 text-[#f2ca50]" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.35em] mb-1">
+                            EVERY ORDER
+                          </p>
+                          <h3 className="se-serif text-[#e5e2e1] text-2xl md:text-3xl leading-[1.1]">
+                            Unlocks a mystery gift.
+                          </h3>
+                          <p className="mt-2 se-body text-[#99907c] text-sm max-w-xl">
+                            Stickers, exclusive tees, discount codes, and rare surprise items can arrive with your order.
+                          </p>
+                        </div>
+                      </div>
+
+                      <Link
+                        to="/shopping/product-list"
+                        className="shrink-0 inline-flex items-center gap-2 bg-[#f2ca50] hover:bg-[#ffe088] hover:[box-shadow:0_0_20px_rgba(242,202,80,0.35)] text-[#1b1c1c] se-label text-[10px] tracking-[0.28em] px-8 py-4 transition-all duration-200"
+                      >
+                        SHOP NOW
+                        <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
                       </Link>
                     </div>
-                  </div>
-                </div>
-              </Reveal>
+                  </MotionDiv>
+                )}
+
+                {/* Premium product grid */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`${categoryParam}-${filterParam}-${sortParam}-${inStockOnly}-${limitedOnly}-${colorsParam.join(",")}-${sizesParam.join(",")}-${priceMinParam}-${priceMaxParam}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40"
+                  >
+                    {visibleProducts.map((product, idx) => (
+                      <ProductCard
+                        key={product._id}
+                        product={product}
+                        index={idx}
+                      />
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Infinite-scroll sentinel — appends 12 at a time */}
+                <LoadMoreSentinel
+                  hasMore={hasMore}
+                  onLoadMore={() =>
+                    setVisibleCount((c) =>
+                      Math.min(c + PAGE_SIZE, filteredProducts.length)
+                    )
+                  }
+                  count={Math.min(
+                    PAGE_SIZE,
+                    Math.max(0, filteredProducts.length - visibleCount)
+                  )}
+                />
+              </>
             )}
           </>
         )}
       </main>
 
-      {/* CLOSING MARQUEE — sits above the global footer */}
+      {/* COMMUNITY STYLING STRIP */}
+      <CommunityStylingStrip />
+
+      {/* CLOSING MARQUEE */}
       <Marquee
         tone="gold"
         items={[
@@ -448,147 +709,34 @@ const ProductListing = () => {
           "Rare fit, forever",
         ]}
       />
-    </div>
-  );
-};
 
-// ─── DROPS LOOKBOOK ──────────────────────────────────────────────────────────
-const DropsLookbook = ({ drops }) => {
-  if (!drops || drops.length === 0) {
-    return (
-      <Reveal>
-        <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 md:py-20 text-center max-w-2xl mx-auto">
-          <Eyebrow tone="muted" size="xs">Between chapters</Eyebrow>
-          <h3 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-4xl">
-            No drops live just now.
-          </h3>
-          <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-            The next chapter opens soon. Members will hear first.
-          </p>
-          <div className="mt-8">
-            <Link to="/auth/register">
-              <Btn variant="default" iconRight={ArrowRight}>
-                Become a member
-              </Btn>
-            </Link>
-          </div>
-        </div>
-      </Reveal>
-    );
-  }
+      {/* Mobile floating cart */}
+      <Link
+        to="/shopping/cart"
+        className="fixed bottom-6 right-5 z-40 md:hidden w-14 h-14 rounded-full bg-[#f2ca50] flex items-center justify-center [box-shadow:0_4px_20px_rgba(242,202,80,0.40)] hover:[box-shadow:0_4px_30px_rgba(242,202,80,0.60)] transition-all duration-200 active:scale-95"
+        aria-label="Go to cart"
+      >
+        <ShoppingBag size={20} strokeWidth={2} className="text-[#1b1c1c]" />
+        {cartCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#0a0a0a] border border-[#f2ca50] flex items-center justify-center se-mono text-[#f2ca50] text-[9px]">
+            {cartCount > 9 ? "9+" : cartCount}
+          </span>
+        )}
+      </Link>
 
-  return (
-    <div className="space-y-16 md:space-y-24">
-      {drops.map((drop, i) => {
-        const release = drop?.releaseDate ? new Date(drop.releaseDate) : null;
-        const end = drop?.endDate ? new Date(drop.endDate) : null;
-        const now = Date.now();
-        const isUpcoming = release && release.getTime() > now;
-        const isLive =
-          (!release || release.getTime() <= now) &&
-          (!end || end.getTime() > now);
-        const isExpired = end && end.getTime() < now;
-
-        const target = isUpcoming ? release : end;
-        const mirror = i % 2 === 1;
-
-        return (
-          <Reveal key={drop._id || drop.slug || i}>
-            <article
-              className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 ${
-                isExpired ? "opacity-80" : ""
-              }`}
-            >
-              {/* IMAGE */}
-              <Link
-                to={`/shopping/drop/${drop.slug}`}
-                className={`lg:col-span-7 group relative overflow-hidden border border-[#4d4635] hover:border-[#99907c] transition-colors ${
-                  mirror ? "lg:order-2" : ""
-                }`}
-                style={{ aspectRatio: "16/10" }}
-              >
-                <img
-                  src={drop?.images?.[0]?.url || "/LOGO.png"}
-                  alt={drop?.name || "Drop"}
-                  loading={i < 2 ? "eager" : "lazy"}
-                  className={`w-full h-full object-cover transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] ${
-                    isExpired ? "grayscale" : ""
-                  }`}
-                  draggable={false}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/70 via-transparent to-transparent" />
-                <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-                  <span className="bg-[#0a0a0a]/85 backdrop-blur-sm border border-[#4d4635] px-3 py-1.5 se-label text-[9px] tracking-[0.32em] text-[#f2ca50]">
-                    Chapter · {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {isExpired && <StatusBadge status="archived" />}
-                  {isLive && <StatusBadge status="live" />}
-                  {isUpcoming && <StatusBadge status="pending" label="Soon" />}
-                </div>
-                <div className="absolute bottom-4 right-4">
-                  <ArrowUpRight
-                    size={20}
-                    strokeWidth={1.25}
-                    className="text-[#f2ca50] transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                  />
-                </div>
-              </Link>
-
-              {/* COPY */}
-              <div
-                className={`lg:col-span-5 flex flex-col justify-end pb-2 lg:pb-6 ${
-                  mirror ? "lg:order-1" : ""
-                }`}
-              >
-                <Eyebrow tone="muted" size="xs">
-                  {drop?.products?.length ?? 0} pieces
-                </Eyebrow>
-                <h3 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-4xl lg:text-5xl leading-tight">
-                  {drop?.name || "Untitled chapter"}
-                </h3>
-                <Hairline className="mt-5 max-w-[60px]" tone="strong" />
-                <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed max-w-md line-clamp-3">
-                  {drop?.description ||
-                    "Open the chapter to read every piece in this release."}
-                </p>
-
-                {/* Status / Countdown */}
-                <div className="mt-7">
-                  {isUpcoming && target && (
-                    <Countdown
-                      target={target}
-                      variant="compact"
-                      showSeconds={false}
-                      eyebrow="Opens in"
-                    />
-                  )}
-                  {isLive && target && (
-                    <Countdown
-                      target={target}
-                      variant="compact"
-                      showSeconds={false}
-                      eyebrow="Closes in"
-                    />
-                  )}
-                  {isExpired && (
-                    <Eyebrow tone="muted" size="xs">
-                      The chapter has passed.
-                    </Eyebrow>
-                  )}
-                </div>
-
-                <div className="mt-7 flex items-center gap-4">
-                  <Link to={`/shopping/drop/${drop.slug}`}>
-                    <Btn variant="outline" iconRight={ArrowRight}>
-                      Open the chapter
-                    </Btn>
-                  </Link>
-                </div>
-              </div>
-            </article>
-          </Reveal>
-        );
-      })}
+      {/* Mobile sticky filter pill */}
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 180, behavior: "smooth" })}
+        className="fixed bottom-6 left-5 z-40 md:hidden h-12 px-5 rounded-full bg-[#1c1b1b] border border-[#4d4635] flex items-center gap-2 [box-shadow:0_4px_16px_rgba(0,0,0,0.5)] se-label text-[11px] tracking-[0.18em] text-[#d0c5af] hover:border-[#f2ca50]/50 hover:text-[#f2ca50] transition-all duration-200 active:scale-95"
+        aria-label="Jump to filters"
+      >
+        <SlidersHorizontal size={14} strokeWidth={1.5} />
+        FILTER
+        {hasFilterActive && (
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f2ca50] ml-0.5" />
+        )}
+      </button>
     </div>
   );
 };

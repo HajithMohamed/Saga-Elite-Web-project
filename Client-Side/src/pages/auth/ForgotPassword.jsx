@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { forgotPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
-import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -54,9 +54,9 @@ const ForgotPassword = () => {
 
   return (
     <div>
-      <Eyebrow tone="gold" size="md">Forgotten</Eyebrow>
+      <Eyebrow tone="gold" size="md">Lost access</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Reset your<br />password.
+        Recover<br />elite access.
       </h1>
       <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed max-w-md">
         Tell us the email tied to your account. We'll send a four-digit code to confirm it's
@@ -74,24 +74,19 @@ const ForgotPassword = () => {
             onBlur={() => setTouched(true)}
             placeholder="your.name@email.com"
             aria-invalid={Boolean(touched && error)}
-            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-              touched && error
-                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                : "border-[#4d4635] focus:border-[#f2ca50]"
-            }`}
+            className={`mt-2 ${AUTH_INPUT} ${touched && error ? "border-[#ffb4ab] focus:border-[#ffb4ab]" : ""}`}
           />
           <FieldError>{touched ? error : null}</FieldError>
         </div>
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? "Sending code" : "Send the code"}
+          {isLoading ? "Sending code" : "Send access code"}
         </Btn>
       </form>
 
@@ -100,7 +95,7 @@ const ForgotPassword = () => {
         className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
-        Back to sign in
+        Return to sign in
       </Link>
     </div>
   );

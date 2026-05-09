@@ -69,11 +69,17 @@ const userSchema = new mongoose.Schema(
 
     provider: {
       type: String,
-      enum: ["local", "google"],
+      enum: ["local", "google", "facebook"],
       default: "local",
     },
 
     googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    facebookId: {
       type: String,
       unique: true,
       sparse: true,
@@ -90,6 +96,28 @@ const userSchema = new mongoose.Schema(
 
     profilePicture: String,
 
+    // Sri Lankan mobile number, stored in canonical "+947XXXXXXXX" form so
+    // that WhatsApp / SMS / lookup all see the same value. Required for
+    // local signups (controller validates + normalizes before save). Google
+    // signups land here with null because the OAuth profile doesn't carry
+    // a phone — the client surfaces a "complete profile" prompt to backfill.
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      validate: {
+        validator: function (value) {
+          if (value === null || value === undefined || value === "") return true;
+          // Accept canonical form. Free-form input is normalized in the
+          // controller before reaching the model — anything else here is a
+          // bug worth catching.
+          return /^\+947\d{8}$/.test(value);
+        },
+        message:
+          "Phone number must be a Sri Lankan mobile in +947XXXXXXXX format.",
+      },
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
@@ -98,6 +126,28 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    membership: {
+      type: String,
+      enum: ["standard", "elite", "rare", "legend", "vip"],
+      default: "standard",
+      index: true,
+    },
+
+    totalSpent: {
+      type: Number,
+      default: 0,
+    },
+
+    orderCount: {
+      type: Number,
+      default: 0,
+    },
+
+    lastOrderAt: {
+      type: Date,
+      default: null,
     },
 
     otp: String,

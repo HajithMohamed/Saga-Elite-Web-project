@@ -1,22 +1,24 @@
-const SAFE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+// Reference format: "SE" + 6 random alphanumeric uppercase chars (8 chars total).
+// Sized to fit Sri Lankan bank transfer remarks fields, which truncate at 10–18
+// characters across most local banks. The character set excludes look-alike
+// glyphs (0/O, 1/I/L) so customers can re-type from a printed ATM slip without
+// confusion.
 
-const generateRandomCode = (length = 4) =>
+const SAFE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const REFERENCE_PREFIX = "SE";
+const RANDOM_LENGTH = 6;
+
+const generateRandomCode = (length) =>
   Array.from({ length }, () => SAFE_CHARS[Math.floor(Math.random() * SAFE_CHARS.length)]).join("");
 
-const generateReference = (orderId) => {
-  const shortId = String(orderId).slice(-4).toUpperCase();
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const code = generateRandomCode(4);
-
-  return `SAGA-${shortId}-${date}-${code}`;
-};
+const generateReference = () => `${REFERENCE_PREFIX}${generateRandomCode(RANDOM_LENGTH)}`;
 
 const generateUniqueReference = async (orderId, ManualPaymentModel) => {
   let referenceNumber;
   let existing;
 
   do {
-    referenceNumber = generateReference(orderId);
+    referenceNumber = generateReference();
     existing = await ManualPaymentModel.findOne({ referenceNumber });
   } while (existing);
 
@@ -25,4 +27,6 @@ const generateUniqueReference = async (orderId, ManualPaymentModel) => {
 
 module.exports = {
   generateUniqueReference,
+  generateReference,
+  REFERENCE_PREFIX,
 };
