@@ -4,6 +4,8 @@ import {
   fetchMyManualPaymentStatus as fetchMyManualPaymentStatusApi,
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
+  lookupManualPayment as lookupManualPaymentApi,
+  sendManualPaymentLink as sendManualPaymentLinkApi,
   submitManualPaymentProof as submitManualPaymentProofApi,
   submitManualPaymentReceipt as submitManualPaymentReceiptApi,
   verifyManualPayment as verifyManualPaymentApi,
@@ -94,9 +96,9 @@ export const generateManualPaymentReference = createAsyncThunk(
 
 export const submitManualPaymentProof = createAsyncThunk(
   "manualPayment/submitProof",
-  async ({ referenceNumber, proofUrl }, thunkAPI) => {
+  async ({ referenceNumber, proofUrl, email }, thunkAPI) => {
     try {
-      return await submitManualPaymentProofApi({ referenceNumber, proofUrl });
+      return await submitManualPaymentProofApi({ referenceNumber, proofUrl, email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit proof"));
     }
@@ -105,9 +107,9 @@ export const submitManualPaymentProof = createAsyncThunk(
 
 export const submitManualPaymentReceipt = createAsyncThunk(
   "manualPayment/submitReceipt",
-  async ({ referenceNumber, file }, thunkAPI) => {
+  async ({ referenceNumber, file, email }, thunkAPI) => {
     try {
-      return await submitManualPaymentReceiptApi({ referenceNumber, file });
+      return await submitManualPaymentReceiptApi({ referenceNumber, file, email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit receipt"));
     }
@@ -116,11 +118,35 @@ export const submitManualPaymentReceipt = createAsyncThunk(
 
 export const fetchMyManualPaymentStatus = createAsyncThunk(
   "manualPayment/fetchMyStatus",
-  async (referenceNumber, thunkAPI) => {
+  async (arg, thunkAPI) => {
+    const { referenceNumber, email } =
+      typeof arg === "string" ? { referenceNumber: arg } : arg || {};
     try {
-      return await fetchMyManualPaymentStatusApi(referenceNumber);
+      return await fetchMyManualPaymentStatusApi(referenceNumber, { email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to fetch payment status"));
+    }
+  },
+);
+
+export const sendManualPaymentLink = createAsyncThunk(
+  "manualPayment/sendLink",
+  async ({ slug, email }, thunkAPI) => {
+    try {
+      return await sendManualPaymentLinkApi({ slug, email });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to send payment link"));
+    }
+  },
+);
+
+export const lookupManualPayment = createAsyncThunk(
+  "manualPayment/lookup",
+  async ({ email, identifier }, thunkAPI) => {
+    try {
+      return await lookupManualPaymentApi({ email, identifier });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Could not find a matching payment"));
     }
   },
 );
@@ -175,6 +201,14 @@ const manualPaymentSlice = createSlice({
     },
     storeManualPaymentContext: (state, action) => {
       state.paymentContext = action.payload || null;
+      persistManualPayment(state);
+    },
+    setManualPaymentEmail: (state, action) => {
+      const email = (action.payload || "").trim().toLowerCase();
+      state.paymentContext = {
+        ...(state.paymentContext || {}),
+        email: email || null,
+      };
       persistManualPayment(state);
     },
   },
@@ -375,7 +409,11 @@ const manualPaymentSlice = createSlice({
   },
 });
 
-export const { clearCurrentPayment, resetManualPaymentError, storeManualPaymentContext } =
-  manualPaymentSlice.actions;
+export const {
+  clearCurrentPayment,
+  resetManualPaymentError,
+  storeManualPaymentContext,
+  setManualPaymentEmail,
+} = manualPaymentSlice.actions;
 
 export default manualPaymentSlice.reducer;

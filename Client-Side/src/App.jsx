@@ -75,6 +75,7 @@ import Cart from "./pages/shopping-view/Cart";
 import Wishlist from "./pages/shopping-view/Wishlist";
 import OrderTracking from "./pages/shopping-view/OrderTracking";
 import ManualPaymentPage from "./pages/ManualPaymentPage";
+import FindPaymentPage from "./pages/FindPaymentPage";
 
 // unauthorized page
 import UnauthPage from "./pages/unauth-page/UnauthPage";
@@ -268,6 +269,7 @@ function App() {
             <Route path="checkout-success" element={<OrderSuccess />} />
             <Route path="manual-payment" element={<ManualPaymentPage />} />
             <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+            <Route path="find-payment" element={<FindPaymentPage />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="order-tracking" element={<OrderTracking />} />
             <Route path="account/my-reviews" element={<MyReviewsPage />} />

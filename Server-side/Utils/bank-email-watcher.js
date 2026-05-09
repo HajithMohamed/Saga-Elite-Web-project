@@ -77,7 +77,7 @@ const alertAdmin = async (subject, body) => {
 const fireConfirmationNotifications = async ({ payment, order, parsed, bankName }) => {
   const orderId = order?._id;
   const customerUserId = order?.user?._id || order?.user || payment.userId;
-  const customerEmail = order?.user?.email || null;
+  const customerEmail = order?.user?.email || order?.guestEmail || null;
   const customerPhone = cleanPhoneNumber(order?.contactNumber);
 
   if (customerUserId) {

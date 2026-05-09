@@ -423,6 +423,9 @@ const Checkout = () => {
 
       const newOrderId = response?.orderId || response?.data?._id;
       const totalAmount = checkoutTotal;
+      const manualPaymentSlug = response?.manualPayment?.slug || null;
+      const manualPaymentRef = response?.manualPayment?.referenceNumber || null;
+      const guestEmailReturned = response?.guestEmail || formData.email || null;
 
       persistBuyNowItem(null);
 
@@ -435,12 +438,23 @@ const Checkout = () => {
         });
       }
 
-      navigate("/shopping/manual-payment", {
-        state: {
-          orderId: newOrderId,
-          amount: totalAmount,
-        },
-      });
+      const target = manualPaymentSlug
+        ? `/shopping/manual-payment/${encodeURIComponent(manualPaymentSlug)}`
+        : "/shopping/manual-payment";
+
+      navigate(
+        guestEmailReturned
+          ? `${target}?email=${encodeURIComponent(guestEmailReturned)}`
+          : target,
+        {
+          state: {
+            orderId: newOrderId,
+            amount: totalAmount,
+            referenceNumber: manualPaymentRef,
+            slug: manualPaymentSlug,
+          },
+        }
+      );
     } catch (err) {
       toast({
         title: "Checkout failed",

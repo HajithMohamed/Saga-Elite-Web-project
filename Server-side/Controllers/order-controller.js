@@ -407,9 +407,10 @@ const createOrder = catchAsync(async (req, res, next) => {
   }
 
   // If guest or registered, send payment instructions
+  let createdManualPayment = null;
   if (isBankTransferPayment) {
     const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
-    const manualPayment = await ManualPayment.create({
+    createdManualPayment = await ManualPayment.create({
       referenceNumber,
       orderId: createdOrder._id,
       userId: user ? user._id : undefined,
@@ -417,6 +418,7 @@ const createOrder = catchAsync(async (req, res, next) => {
       amount: createdOrder.totalAmount,
       currency: "LKR",
     });
+    const manualPayment = createdManualPayment;
 
     const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
     const customerEmail = user?.email || guestEmailNormalized;
@@ -460,6 +462,14 @@ const createOrder = catchAsync(async (req, res, next) => {
     message: "Order placed successfully",
     orderId: createdOrder._id,
     data: createdOrder,
+    manualPayment: createdManualPayment
+      ? {
+          slug: createdManualPayment.slug,
+          referenceNumber: createdManualPayment.referenceNumber,
+          amount: createdManualPayment.amount,
+        }
+      : null,
+    guestEmail: guestEmailNormalized || null,
   });
 });
 

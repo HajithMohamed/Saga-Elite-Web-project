@@ -4,6 +4,7 @@ const AppError = require("../Utils/appError");
 const Order = require("../Models/Order");
 const ManualPayment = require("../Models/ManualPayment");
 const User = require("../Models/User");
+const Guest = require("../Models/Guest");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
@@ -16,6 +17,97 @@ const uploadToCloudinary = require("../Utils/image-upload");
 const { processReceipt } = require("../Utils/receipt-ocr");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
+
+const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
+
+const normalizeEmail = (value) =>
+  typeof value === "string" ? value.trim().toLowerCase() : "";
+
+// Resolve the canonical email tied to a manual payment — registered user
+// email if userId is set, otherwise the order's guestEmail, otherwise the
+// guest record. Used both for guest-auth checks and for resending payment
+// links.
+const resolvePaymentEmail = async (payment) => {
+  if (!payment) return "";
+
+  if (payment.userId) {
+    const userId =
+      payment.userId?._id || payment.userId?.id || payment.userId;
+    if (payment.userId?.email) return normalizeEmail(payment.userId.email);
+    if (userId) {
+      const user = await User.findById(userId).select("email").lean();
+      if (user?.email) return normalizeEmail(user.email);
+    }
+  }
+
+  const order = payment.orderId && typeof payment.orderId === "object"
+    ? payment.orderId
+    : null;
+
+  if (order?.guestEmail) return normalizeEmail(order.guestEmail);
+  if (order?.user?.email) return normalizeEmail(order.user.email);
+
+  if (payment.guestId) {
+    const guestId =
+      payment.guestId?._id || payment.guestId?.id || payment.guestId;
+    if (payment.guestId?.email) return normalizeEmail(payment.guestId.email);
+    if (guestId) {
+      const guest = await Guest.findById(guestId).select("email").lean();
+      if (guest?.email) return normalizeEmail(guest.email);
+    }
+  }
+
+  if (!order && payment.orderId) {
+    const fallbackOrder = await Order.findById(payment.orderId)
+      .select("guestEmail user")
+      .populate("user", "email")
+      .lean();
+    if (fallbackOrder?.guestEmail) return normalizeEmail(fallbackOrder.guestEmail);
+    if (fallbackOrder?.user?.email) return normalizeEmail(fallbackOrder.user.email);
+  }
+
+  return "";
+};
+
+// Authorize access to a manual payment for either an authenticated user
+// (via userId match) OR an unauthenticated visitor presenting the email
+// used at checkout. Throws AppError on mismatch.
+const authorizePaymentAccess = async (payment, req, providedEmail) => {
+  const userId = req.userInfo?._id ? String(req.userInfo._id) : null;
+
+  if (userId) {
+    const paymentUserId = payment.userId?._id || payment.userId;
+    if (paymentUserId && String(paymentUserId) === userId) {
+      return { matchedBy: "user" };
+    }
+  }
+
+  const candidateEmail = normalizeEmail(
+    providedEmail ||
+      req.body?.email ||
+      req.query?.email ||
+      req.headers?.["x-payment-email"] ||
+      ""
+  );
+
+  if (!candidateEmail) {
+    throw new AppError(
+      "Please provide the email address used when placing this order to view or update payment.",
+      401
+    );
+  }
+
+  const expectedEmail = await resolvePaymentEmail(payment);
+
+  if (expectedEmail && expectedEmail === candidateEmail) {
+    return { matchedBy: "email" };
+  }
+
+  throw new AppError(
+    "The email you entered does not match the order on this payment reference.",
+    403
+  );
+};
 
 const formatCurrency = (amount) =>
   Number(amount || 0).toLocaleString("en-LK", {
@@ -281,9 +373,7 @@ const submitProof = catchAsync(async (req, res, next) => {
     return next(new AppError("Payment reference not found", 404));
   }
 
-  if (String(payment.userId?._id || payment.userId) !== String(req.userInfo._id)) {
-    return next(new AppError("You are not authorized to submit proof for this payment", 403));
-  }
+  await authorizePaymentAccess(payment, req);
 
   const now = new Date();
   if (payment.expiresAt && payment.expiresAt <= now && payment.status !== "verified") {
@@ -467,9 +557,7 @@ const submitWithReceipt = catchAsync(async (req, res, next) => {
     return next(new AppError("Payment reference not found", 404));
   }
 
-  if (String(payment.userId?._id || payment.userId) !== String(req.userInfo._id)) {
-    return next(new AppError("You are not authorized to submit proof for this payment", 403));
-  }
+  await authorizePaymentAccess(payment, req);
 
   const now = new Date();
   if (payment.expiresAt && payment.expiresAt <= now && payment.status !== "verified") {
@@ -758,9 +846,7 @@ const getMyPaymentStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("Payment reference not found", 404));
   }
 
-  if (String(payment.userId?._id || payment.userId) !== String(req.userInfo._id)) {
-    return next(new AppError("You are not authorized to view this payment", 403));
-  }
+  await authorizePaymentAccess(payment, req);
 
   return res.status(200).json({
     success: true,
@@ -1121,16 +1207,16 @@ const getMyPendingPayments = catchAsync(async (req, res) => {
 });
 
 const requestExtension = catchAsync(async (req, res, next) => {
-  if (!req.userInfo) {
-    return next(new AppError('Please sign in to request an extension.', 401));
-  }
-
-  const payment = await ManualPayment.findOne({ slug: req.params.slug });
+  const payment = await ManualPayment.findOne({ slug: req.params.slug })
+    .populate({
+      path: "orderId",
+      populate: { path: "user", select: "email" },
+    })
+    .populate("userId", "email")
+    .populate("guestId", "email");
   if (!payment) return next(new AppError('Payment not found', 404));
 
-  if (String(payment.userId || '') !== String(req.userInfo._id)) {
-    return next(new AppError('You are not authorized to extend this payment.', 403));
-  }
+  await authorizePaymentAccess(payment, req);
 
   if (payment.extensionGranted) {
     return next(new AppError('Extension already used. Contact support.', 400));
@@ -1158,6 +1244,150 @@ const requestExtension = catchAsync(async (req, res, next) => {
   res.status(200).json({ success: true, newExpiresAt: payment.expiresAt });
 });
 
+// Public lookup so a guest (or logged-in user) who lost their payment link
+// can recover it with the email + reference number / order ID they used at
+// checkout. Returns the slug for redirect; never reveals payment details.
+const lookupPayment = catchAsync(async (req, res, next) => {
+  const email = normalizeEmail(req.body?.email);
+  const identifier = String(req.body?.identifier || "").trim();
+
+  if (!email) {
+    return next(new AppError("Email is required", 400));
+  }
+  if (!identifier) {
+    return next(new AppError("Reference number or order ID is required", 400));
+  }
+
+  const orFilters = [
+    { referenceNumber: identifier.toUpperCase() },
+    { slug: identifier.toLowerCase() },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(identifier)) {
+    orFilters.push({ orderId: identifier });
+  }
+
+  const candidates = await ManualPayment.find({ $or: orFilters })
+    .populate({
+      path: "orderId",
+      populate: { path: "user", select: "email" },
+    })
+    .populate("userId", "email")
+    .populate("guestId", "email")
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+  for (const payment of candidates) {
+    const expectedEmail = await resolvePaymentEmail(payment);
+    if (expectedEmail && expectedEmail === email) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment found",
+        data: {
+          slug: payment.slug,
+          referenceNumber: payment.referenceNumber,
+          status: payment.status,
+        },
+      });
+    }
+  }
+
+  return next(
+    new AppError(
+      "We could not find a payment matching that email and reference. Double-check both and try again.",
+      404
+    )
+  );
+});
+
+// Resend the payment link by email + WhatsApp. Used when the customer
+// chooses to pay later, or has lost their email. Email-gated like the rest
+// of the guest endpoints — caller must prove they own the order.
+const sendPaymentLink = catchAsync(async (req, res, next) => {
+  const slug = String(req.params.slug || "").trim();
+  if (!slug) {
+    return next(new AppError("Payment slug is required", 400));
+  }
+
+  const payment = await ManualPayment.findOne({ slug })
+    .populate({
+      path: "orderId",
+      populate: { path: "user", select: "email" },
+    })
+    .populate("userId", "email")
+    .populate("guestId", "email");
+
+  if (!payment) {
+    return next(new AppError("Payment not found", 404));
+  }
+
+  await authorizePaymentAccess(payment, req);
+
+  const recipientEmail = await resolvePaymentEmail(payment);
+  const order = payment.orderId && typeof payment.orderId === "object"
+    ? payment.orderId
+    : null;
+  const phone = cleanPhoneNumber(order?.contactNumber);
+  const link = `${clientShopUrl()}/shopping/manual-payment/${payment.slug}`;
+  const amount = Number(payment.amount || 0).toLocaleString("en-LK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  let emailSent = false;
+  if (recipientEmail) {
+    try {
+      const html = buildEmailTemplate(
+        "Your Saga Elite payment link",
+        `<p>Here's the payment link for your order. You can pay any time within 24 hours.</p>
+         <p><strong>Reference:</strong> ${payment.referenceNumber}</p>
+         <p><strong>Amount:</strong> ${payment.currency || "LKR"} ${amount}</p>
+         <p><strong>Bank:</strong> Sampath Bank, Hatton — A/C N.Gayathree — 108052612262</p>
+         <p>Use the reference exactly as shown in the transfer remarks.</p>
+         <p><a href="${link}">Open my payment page →</a></p>`
+      );
+      await sendEmail({
+        email: recipientEmail,
+        subject: `Your Saga Elite payment link (${payment.referenceNumber})`,
+        html,
+      });
+      emailSent = true;
+    } catch (err) {
+      logger.error("sendPaymentLink: email failed", { error: err?.message });
+    }
+  }
+
+  let whatsAppSent = false;
+  if (phone) {
+    try {
+      const result = await sendWhatsAppMessage({
+        to: phone,
+        message:
+          `*Saga Elite Payment Link*\n` +
+          `Reference: *${payment.referenceNumber}*\n` +
+          `Amount: *LKR ${amount}*\n` +
+          `Pay here: ${link}`,
+      });
+      whatsAppSent = !result?.skipped;
+    } catch (err) {
+      logger.error("sendPaymentLink: whatsapp failed", { error: err?.message });
+    }
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Payment link sent",
+    data: {
+      emailSent,
+      whatsAppSent,
+      maskedEmail: recipientEmail
+        ? recipientEmail.replace(/(.{2}).+(@.+)/, "$1***$2")
+        : null,
+      maskedPhone: phone ? `••• ${phone.slice(-4)}` : null,
+    },
+  });
+});
+
 module.exports = {
   generateReference,
   submitProof,
@@ -1168,4 +1398,6 @@ module.exports = {
   getPaymentById,
   verifyPayment,
   requestExtension,
+  lookupPayment,
+  sendPaymentLink,
 };

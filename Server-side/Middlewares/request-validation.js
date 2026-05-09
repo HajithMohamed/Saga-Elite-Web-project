@@ -992,6 +992,7 @@ const validateManualPaymentProof = createValidationMiddleware((req) => {
   req.body = {
     referenceNumber: sanitizeString(req.body.referenceNumber, "referenceNumber", { required: true, minLength: 4, maxLength: 100 }),
     proofUrl: sanitizeUrl(req.body.proofUrl, "proofUrl", { required: true }),
+    email: req.body.email ? sanitizeEmail(req.body.email, "email", { required: false }) : undefined,
   };
 });
 
