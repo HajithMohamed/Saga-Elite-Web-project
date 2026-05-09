@@ -83,7 +83,9 @@ const markExpiredManualPayments = async () => {
             message: `Saga Elite: your payment reference ${payment.referenceNumber} expired because no proof was submitted within 24 hours. Please place a new order if you still want to continue.`,
           });
         } catch (whatsAppError) {
-          logger.error("Failed to send manual payment expiry WhatsApp message", { whatsAppError });
+          logger.error("Failed to send manual payment expiry WhatsApp message", {
+            error: whatsAppError?.message || String(whatsAppError),
+          });
         }
       }
     }

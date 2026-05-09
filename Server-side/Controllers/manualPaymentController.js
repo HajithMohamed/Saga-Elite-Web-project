@@ -387,7 +387,26 @@ const submitProof = catchAsync(async (req, res, next) => {
         html: proofEmail,
       });
     } catch (emailError) {
-      logger.error("Failed to send proof submission email to customer", { emailError });
+      logger.error("Failed to send proof submission email to customer", {
+        error: emailError?.message || String(emailError),
+      });
+    }
+  }
+
+  // WhatsApp parity for the proof-received notification — same lifecycle
+  // event the email above covers, so customers who opted into WhatsApp also
+  // see it in real time.
+  const customerProofPhone = cleanPhoneNumber(order?.contactNumber);
+  if (customerProofPhone) {
+    try {
+      await sendWhatsAppMessage({
+        to: customerProofPhone,
+        message: `Saga Elite: we received your payment proof for reference ${payment.referenceNumber}. It is now pending verification by our team.`,
+      });
+    } catch (whatsAppError) {
+      logger.error("Failed to send proof submission WhatsApp message", {
+        error: whatsAppError?.message || String(whatsAppError),
+      });
     }
   }
 
@@ -403,7 +422,9 @@ const submitProof = catchAsync(async (req, res, next) => {
       `Saga Elite: new payment proof submitted for order ${orderId}. Reference ${payment.referenceNumber}.`
     );
   } catch (whatsAppError) {
-    logger.error("Failed to dispatch admin WhatsApp proof alert", { whatsAppError });
+    logger.error("Failed to dispatch admin WhatsApp proof alert", {
+      error: whatsAppError?.message || String(whatsAppError),
+    });
   }
 
   return res.status(200).json({
@@ -636,16 +657,25 @@ const submitWithReceipt = catchAsync(async (req, res, next) => {
     }
   }
 
-  // WhatsApp customer when their slip OCR-matched — sets expectation that
-  // bank confirmation is the next step (no premature "verified" message).
-  if (ocrResult.decision === "ocr_matched" && customerPhone) {
-    try {
-      await sendWhatsAppMessage({
-        to: customerPhone,
-        message: `Saga Elite: receipt received for order ${orderId} (${payment.referenceNumber}). Awaiting bank confirmation — usually within minutes.`,
-      });
-    } catch (whatsAppError) {
-      logger.error("Failed to send ocr_matched WhatsApp message", { whatsAppError });
+  // WhatsApp customer for every receipt-decision branch. Customers expect
+  // updates on the same channel as order confirmation, and silence between
+  // upload and bank confirmation breeds support tickets.
+  if (customerPhone) {
+    const customerWhatsAppByDecision = {
+      ocr_matched: `Saga Elite: receipt received for order ${orderId} (${payment.referenceNumber}). Awaiting bank confirmation — usually within minutes.`,
+      auto_rejected: `Saga Elite: your receipt for order ${orderId} (${payment.referenceNumber}) couldn't be matched. ${ocrResult.decisionReason || ""} Please upload a clearer copy.`.trim(),
+      manual_review: `Saga Elite: receipt received for order ${orderId} (${payment.referenceNumber}). Our team will verify it shortly and message you back.`,
+    };
+    const whatsAppBody = customerWhatsAppByDecision[ocrResult.decision];
+    if (whatsAppBody) {
+      try {
+        await sendWhatsAppMessage({ to: customerPhone, message: whatsAppBody });
+      } catch (whatsAppError) {
+        logger.error("Failed to send receipt-decision WhatsApp message", {
+          error: whatsAppError?.message || String(whatsAppError),
+          decision: ocrResult.decision,
+        });
+      }
     }
   }
 
@@ -928,7 +958,9 @@ const verifyPayment = catchAsync(async (req, res, next) => {
           message: `Saga Elite: your payment for order ${orderId} has been verified successfully. Thank you for your purchase.`,
         });
       } catch (whatsAppError) {
-        logger.error("Failed to send payment verification WhatsApp message", { whatsAppError });
+        logger.error("Failed to send payment verification WhatsApp message", {
+          error: whatsAppError?.message || String(whatsAppError),
+        });
       }
     }
 
@@ -1023,7 +1055,9 @@ const verifyPayment = catchAsync(async (req, res, next) => {
         message: `Saga Elite: your payment proof for order ${orderId} was rejected. ${payment.rejectionReason} Please submit an updated receipt within 24 hours to avoid cancellation.`,
       });
     } catch (whatsAppError) {
-      logger.error("Failed to send payment rejection WhatsApp message", { whatsAppError });
+      logger.error("Failed to send payment rejection WhatsApp message", {
+        error: whatsAppError?.message || String(whatsAppError),
+      });
     }
   }
 

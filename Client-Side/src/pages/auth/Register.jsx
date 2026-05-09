@@ -3,10 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { registerUserAction, googleSignUpAction } from "@/store/auth-slice";
+import {
+  registerUserAction,
+  googleSignUpAction,
+  facebookSignUpAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import usePageMeta from "@/hooks/use-page-meta";
 import {
@@ -19,7 +24,23 @@ import {
 } from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Sri Lankan mobile prefixes (the carriers that ship 7X numbers).
+const SL_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
+// Validates that the digits-only phone is a real SL mobile in any of:
+// "07X XXX XXXX", "7X XXX XXXX", "+947X XXX XXXX". Mirrors the server-side
+// rule in Server-Side/Utils/phone-validator.js so we fail fast in the UI.
+const isValidSLPhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return false;
+  let local = digits;
+  if (local.startsWith("0094")) local = local.slice(4);
+  else if (local.startsWith("94") && local.length === 11) local = local.slice(2);
+  else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
+  if (local.length !== 9) return false;
+  return SL_MOBILE_PREFIXES.includes(local.slice(0, 2));
+};
 
 if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
   console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
@@ -72,6 +93,7 @@ const summarizeBlocking = (errs) => {
   if (fields.length === 1) {
     const k = fields[0];
     if (k === "email") return "Check your email address.";
+    if (k === "phoneNumber") return "Add a valid Sri Lankan mobile number.";
     if (k === "password") return "Password doesn't meet the requirements yet.";
     if (k === "confirmPassword") return "Confirm your password to match.";
   }
@@ -84,6 +106,12 @@ const validateRegister = (data, touched = {}) => {
     errs.email = "Tell us your email.";
   } else if (data.email && !EMAIL_REGEX.test(data.email)) {
     errs.email = "Please enter a valid email address.";
+  }
+  if (touched.phoneNumber && !data.phoneNumber) {
+    errs.phoneNumber = "We need your phone for WhatsApp updates.";
+  } else if (data.phoneNumber && !isValidSLPhone(data.phoneNumber)) {
+    errs.phoneNumber =
+      "Enter a valid Sri Lankan mobile (e.g. 077 123 4567).";
   }
   if (touched.password && !data.password) {
     errs.password = "Choose a password.";
@@ -116,6 +144,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     gender: "",
@@ -159,7 +188,12 @@ const Register = () => {
 
   const handleNextStep = (e) => {
     e.preventDefault();
-    const allTouched = { email: true, password: true, confirmPassword: true };
+    const allTouched = {
+      email: true,
+      phoneNumber: true,
+      password: true,
+      confirmPassword: true,
+    };
     setTouched(allTouched);
 
     const fresh = validateRegister(formData, allTouched);
@@ -260,6 +294,54 @@ const Register = () => {
     });
   };
 
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignUpAction({ accessToken: access_token })
+      ).unwrap();
+
+      toast({
+        title: "Welcome to the atelier",
+        description: response?.message || "Signed up.",
+        variant: "success",
+      });
+
+      const role = String(
+        response?.data?.user?.role || response?.data?.role || ""
+      ).toLowerCase();
+
+      navigate(
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+          ? "/admin/dashboard"
+          : "/shopping/home",
+        { replace: true }
+      );
+    } catch (err) {
+      console.error("[facebook sign-up] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title:
+          title === "Registration failed" ? "Facebook sign-up failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = (err) => {
+    if (err?.status === "unknown" || err?.status === "not_authorized") {
+      return; // user closed popup or denied
+    }
+    toast({
+      title: "Facebook sign-up failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
+
   const toggleDropInterest = (value) => {
     setFormData((prev) => {
       const next = prev.dropInterest.includes(value)
@@ -341,6 +423,29 @@ const Register = () => {
                   className={`mt-2 ${AUTH_INPUT} ${inputState("email")}`}
                 />
                 <FieldError>{touched.email ? errors.email : null}</FieldError>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">
+                  Mobile (for WhatsApp updates)
+                </Eyebrow>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, phoneNumber: e.target.value }));
+                    setTouched((p) => ({ ...p, phoneNumber: true }));
+                  }}
+                  onBlur={() => setTouched((p) => ({ ...p, phoneNumber: true }))}
+                  placeholder="077 123 4567"
+                  aria-invalid={Boolean(touched.phoneNumber && errors.phoneNumber)}
+                  className={`mt-2 ${AUTH_INPUT} ${inputState("phoneNumber")}`}
+                />
+                <FieldError>
+                  {touched.phoneNumber ? errors.phoneNumber : null}
+                </FieldError>
               </div>
 
               <div>
@@ -428,7 +533,7 @@ const Register = () => {
               </Btn>
             </form>
 
-            {GOOGLE_ENABLED && (
+            {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
               <>
                 <div className="my-8 flex items-center gap-4">
                   <Hairline tone="soft" />
@@ -437,12 +542,25 @@ const Register = () => {
                   </span>
                   <Hairline tone="soft" />
                 </div>
-                <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
-                  <GoogleAuthButton
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    label="Quick Access with Google"
-                  />
+                <div className="space-y-3">
+                  {GOOGLE_ENABLED && (
+                    <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <GoogleAuthButton
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        label="Quick Access with Google"
+                      />
+                    </div>
+                  )}
+                  {FACEBOOK_ENABLED && (
+                    <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <FacebookAuthButton
+                        onSuccess={handleFacebookSuccess}
+                        onError={handleFacebookError}
+                        label="Quick Access with Facebook"
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             )}

@@ -2,9 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
+import {
+  loginUserAction,
+  googleSignInAction,
+  facebookSignInAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import usePageMeta from "@/hooks/use-page-meta";
 import {
   AUTH_INPUT,
@@ -17,6 +22,7 @@ import {
 import { motion } from "framer-motion";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
@@ -221,6 +227,43 @@ const Login = () => {
     });
   };
 
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignInAction({ accessToken: access_token })
+      ).unwrap();
+
+      const u = resolveUserFromPayload(response);
+
+      toast({
+        title: "Welcome back",
+        description: response?.message || "Signed in.",
+        variant: "success",
+      });
+
+      navigate(resolveDestination(u), { replace: true });
+    } catch (err) {
+      console.error("[facebook sign-in] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title: title === "Login failed" ? "Facebook sign-in failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = () => {
+    toast({
+      title: "Facebook sign-in failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
+
   const inputState = (field) =>
     touched[field] && errors[field]
       ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
@@ -312,7 +355,7 @@ const Login = () => {
         </Btn>
       </form>
 
-      {GOOGLE_ENABLED && (
+      {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
         <>
           <div className="my-8 flex items-center gap-4">
             <Hairline tone="soft" />
@@ -321,12 +364,25 @@ const Login = () => {
             </span>
             <Hairline tone="soft" />
           </div>
-          <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
-            <GoogleAuthButton
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              label="Quick Access with Google"
-            />
+          <div className="space-y-3">
+            {GOOGLE_ENABLED && (
+              <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  label="Quick Access with Google"
+                />
+              </div>
+            )}
+            {FACEBOOK_ENABLED && (
+              <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <FacebookAuthButton
+                  onSuccess={handleFacebookSuccess}
+                  onError={handleFacebookError}
+                  label="Quick Access with Facebook"
+                />
+              </div>
+            )}
           </div>
         </>
       )}

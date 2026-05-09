@@ -378,6 +378,12 @@ const validateGoogleAuth = createValidationMiddleware((req) => {
   };
 });
 
+const validateFacebookAuth = createValidationMiddleware((req) => {
+  req.body = {
+    accessToken: sanitizeString(req.body.accessToken, "accessToken", { required: true, minLength: 10, maxLength: 4096 }),
+  };
+});
+
 const validateContactSubmission = createValidationMiddleware((req) => {
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 2, maxLength: 120 }),
@@ -1173,6 +1179,7 @@ module.exports = {
   validateVerifyResetOtp,
   validateResetPassword,
   validateGoogleAuth,
+  validateFacebookAuth,
   validateContactSubmission,
   validateContactUpdate,
   validateDropCreate,

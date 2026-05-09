@@ -25,7 +25,7 @@ const SOCKET_EVENTS = require("./socket-events");
 const { emitToAll, emitToUser } = require("./socket-service");
 const sendEmail = require("./send-mail");
 const buildEmailTemplate = require("./email-template");
-const { cleanPhoneNumber, sendWhatsAppMessage } = require("./whatsapp-service");
+const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("./whatsapp-service");
 const logger = require("./logger");
 
 let watcherStarted = false;
@@ -326,6 +326,32 @@ const processBankNotification = async ({
       },
       filter: { role: { $in: ADMIN_ROLES } },
     });
+
+    // Admin WhatsApp blast — mismatches are time-sensitive (potential
+    // fraud or wrong-amount transfer) and admins shouldn't have to wait
+    // for an email to land.
+    const adminWhatsAppRecipients = parsePhoneList(
+      process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS ||
+        process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBER ||
+        ""
+    );
+    for (const adminNumber of adminWhatsAppRecipients) {
+      try {
+        await sendWhatsAppMessage({
+          to: adminNumber,
+          message:
+            `Saga Elite admin alert: bank credit AMOUNT MISMATCH on order ` +
+            `${order._id}. Reference ${payment.referenceNumber} expected ` +
+            `LKR ${payment.amount} but bank reported LKR ${expectedAmount}. ` +
+            `Verify in queue before approving.`,
+        });
+      } catch (whatsAppError) {
+        logger.error("Failed to send admin mismatch WhatsApp alert", {
+          error: whatsAppError?.message || String(whatsAppError),
+          adminNumber,
+        });
+      }
+    }
 
     emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
       source: "bank-imap-mismatch",

@@ -7,6 +7,10 @@ const Notification = require("../Models/Notification");
 const { isAdminRole } = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -947,6 +951,114 @@ const exportCustomersCsv = catchAsync(async (_req, res) => {
   res.status(200).send(csv);
 });
 
+// Self-service profile read. Returns the fields a customer can see/edit on
+// their account page. Kept narrow on purpose — auth fields, role, and
+// permissions never leak through here.
+const getMyProfile = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.userInfo._id || req.userInfo.id).select(
+    "email name phoneNumber profilePicture provider isVerified membership createdAt"
+  );
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      _id: user._id,
+      email: user.email,
+      name: user.name || "",
+      phoneNumber: user.phoneNumber || "",
+      profilePicture: user.profilePicture || null,
+      provider: user.provider,
+      isVerified: user.isVerified,
+      membership: user.membership || "standard",
+      requiresPhone: !user.phoneNumber, // Surfaces banner on shopping pages.
+    },
+  });
+});
+
+// Self-service profile update. Customers can edit only their own name and
+// phone number through this endpoint. Phone is validated + normalized to
+// canonical "+947XXXXXXXX" form before persist.
+const updateMyProfile = catchAsync(async (req, res, next) => {
+  const { name, phoneNumber } = req.body || {};
+
+  const update = {};
+
+  if (name !== undefined) {
+    const trimmed = String(name).trim();
+    if (trimmed.length > 120) {
+      return next(new AppError("Name cannot exceed 120 characters", 400));
+    }
+    update.name = trimmed || null;
+  }
+
+  if (phoneNumber !== undefined) {
+    if (phoneNumber === null || String(phoneNumber).trim() === "") {
+      // Allow clearing the phone (rare, but valid).
+      update.phoneNumber = null;
+    } else {
+      if (!isValidSriLankanMobile(phoneNumber)) {
+        return next(
+          new AppError(
+            "Phone number must be a valid Sri Lankan mobile (e.g. 077 123 4567).",
+            400
+          )
+        );
+      }
+      const normalized = normalizeSriLankanMobile(phoneNumber);
+
+      // Reject if another user already owns this number — prevents two
+      // accounts diverting WhatsApp OTPs to the same phone.
+      const owner = await User.findOne({
+        phoneNumber: normalized,
+        _id: { $ne: req.userInfo._id || req.userInfo.id },
+      }).select("_id");
+      if (owner) {
+        return next(
+          new AppError(
+            "This phone number is already linked to another account.",
+            400
+          )
+        );
+      }
+      update.phoneNumber = normalized;
+    }
+  }
+
+  if (Object.keys(update).length === 0) {
+    return next(new AppError("No changes supplied", 400));
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    req.userInfo._id || req.userInfo.id,
+    { $set: update },
+    { new: true, runValidators: true }
+  ).select("email name phoneNumber profilePicture provider isVerified membership");
+
+  if (!updated) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: {
+      _id: updated._id,
+      email: updated.email,
+      name: updated.name || "",
+      phoneNumber: updated.phoneNumber || "",
+      profilePicture: updated.profilePicture || null,
+      provider: updated.provider,
+      isVerified: updated.isVerified,
+      membership: updated.membership || "standard",
+      requiresPhone: !updated.phoneNumber,
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
@@ -962,4 +1074,6 @@ module.exports = {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  getMyProfile,
+  updateMyProfile,
 };

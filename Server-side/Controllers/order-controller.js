@@ -388,6 +388,24 @@ const createOrder = catchAsync(async (req, res, next) => {
     });
   }
 
+  // Customer-facing order-placed WhatsApp. The bank-transfer branch below
+  // sends its own (with payment instructions), so we only fire this for
+  // other payment methods (card, gpay, payhere, cash, etc.).
+  if (!isBankTransferPayment) {
+    const customerOrderPhone = cleanPhoneNumber(contactNumber);
+    if (customerOrderPhone) {
+      sendWhatsAppMessage({
+        to: customerOrderPhone,
+        message:
+          `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+          `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+          `We'll message you when it ships.`,
+      }).catch((err) =>
+        logger.error("Customer order-placed WhatsApp failed", { error: err?.message })
+      );
+    }
+  }
+
   // If guest or registered, send payment instructions
   if (isBankTransferPayment) {
     const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
@@ -652,6 +670,55 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       });
     }
 
+    // Customer email + WhatsApp for the headline status changes that
+    // customers care about. Skip noisy intermediate states (pending,
+    // pending_payment, verification_pending) — those don't need an
+    // outbound message.
+    const customerFacingStatuses = new Set(["confirmed", "shipped"]);
+    if (customerFacingStatuses.has(status)) {
+      const populatedForUpdate = await Order.findById(order._id).populate("user", "email");
+      const customer = populatedForUpdate?.user;
+      const customerPhone = cleanPhoneNumber(populatedForUpdate?.contactNumber || order.contactNumber || "");
+
+      const statusCopy = {
+        confirmed: {
+          subject: "Your Saga Elite order is confirmed",
+          headline: "Order confirmed",
+          body: "Your payment has been received and your order is now being prepared.",
+          whatsapp: `Saga Elite: your order #${order._id} is confirmed and being prepared. We'll message you again when it ships.`,
+        },
+        shipped: {
+          subject: "Your Saga Elite order has shipped",
+          headline: "Order shipped",
+          body: "Your order is on its way. You'll receive a delivery confirmation once it arrives.",
+          whatsapp: `Saga Elite: your order #${order._id} has shipped! You'll get another message when it's delivered.`,
+        },
+      }[status];
+
+      if (customer?.email && statusCopy) {
+        sendEmail({
+          email: customer.email,
+          subject: statusCopy.subject,
+          html: buildEmailTemplate(
+            statusCopy.headline,
+            `<p>Hi,</p>
+             <p>${statusCopy.body}</p>
+             <p>Order: <strong>#${order._id}</strong></p>`
+          ),
+        }).catch((err) =>
+          logger.error("[order:status-update] Email failed", { error: err?.message, status })
+        );
+      }
+      if (customerPhone && statusCopy) {
+        sendWhatsAppMessage({
+          to: customerPhone,
+          message: statusCopy.whatsapp,
+        }).catch((err) =>
+          logger.error("[order:status-update] WhatsApp failed", { error: err?.message, status })
+        );
+      }
+    }
+
     await broadcastNotification({
       type: "admin",
       title: `Order ${order._id} status changed`,
@@ -913,6 +980,25 @@ const refundOrder = catchAsync(async (req, res, next) => {
       ),
     }).catch((err) =>
       logger.error("Refund email notify failed", {
+        orderId: order._id,
+        error: err?.message,
+      })
+    );
+  }
+
+  // WhatsApp parity — refunds are time-sensitive enough that customers
+  // should hear about them on the same channel as order updates.
+  const refundPhone = cleanPhoneNumber(order.contactNumber);
+  if (refundPhone) {
+    sendWhatsAppMessage({
+      to: refundPhone,
+      message:
+        `Saga Elite: a refund of LKR ${numericAmount.toLocaleString("en-LK")} ` +
+        `has been issued for order ${order.referenceNumber || order._id}. ` +
+        `Reason: ${normalizedReason.replace(/_/g, " ")}. ` +
+        `Funds usually clear within 5–10 business days.`,
+    }).catch((err) =>
+      logger.error("Refund WhatsApp notify failed", {
         orderId: order._id,
         error: err?.message,
       })
