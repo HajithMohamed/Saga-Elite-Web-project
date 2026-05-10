@@ -1,86 +1,17 @@
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
-const FALLBACK_SLIDES = [
-  {
-    id: "slide-1",
-    label: "New Season",
-    headline: "She Leads in Style",
-    subheadline: "Ladies' collection — just arrived",
-    ctaText: "Shop Now",
-    ctaLink: "/shopping/product-list?category=ladies",
-    imageUrl: "",
-    fallback: "linear-gradient(120deg, #8C2D40, #6B1A2A)",
-    order: 1,
-  },
-  {
-    id: "slide-2",
-    label: "Flash Sale",
-    headline: "Up to 60% Off",
-    subheadline: "Limited time — ladies' & gents' picks",
-    ctaText: "Shop Now",
-    ctaLink: "/sale",
-    imageUrl: "",
-    fallback: "linear-gradient(120deg, #6B1A2A, #2C2C2A)",
-    order: 2,
-  },
-  {
-    id: "slide-3",
-    label: "Gents' Edit",
-    headline: "Refined. Modern. Sri Lankan.",
-    subheadline: "Formal & casual — new in store",
-    ctaText: "Shop Now",
-    ctaLink: "/shopping/product-list?category=gents",
-    imageUrl: "",
-    fallback: "linear-gradient(120deg, #2C2C2A, #4A4A47)",
-    order: 3,
-  },
-  {
-    id: "slide-4",
-    label: "Exclusive",
-    headline: "Saree & Ethnic Wear",
-    subheadline: "Crafted for every occasion",
-    ctaText: "Shop Now",
-    ctaLink: "/shopping/product-list?category=ladies&sub=Sarees",
-    imageUrl: "",
-    fallback: "linear-gradient(120deg, #712B13, #6B1A2A)",
-    order: 4,
-  },
-];
 
-const FALLBACK_AD_IMAGES = [
-  "",
-  "",
-  "",
-  "",
-  "",
-  "",
-];
-
-const FALLBACK_HERO_FROM_SYSTEM = [
-  {
-    id: "system-hero-1",
-    label: "Saga Elite",
-    headline: "Curated Drop Collection",
-    subheadline: "Luxury essentials for your next look",
-    ctaText: "Shop Now",
-    ctaLink: "/shopping/product-list",
-    imageUrl: "",
-    fallback: "linear-gradient(120deg, #0e0e0e, #1f1f1f)",
-    order: 1,
-  },
-];
 
 const normalizeBanner = (banner, index) => ({
   id: banner._id || banner.id || `banner-${index}`,
   label: banner.title || "Saga Elite",
-  headline: banner.headline || FALLBACK_SLIDES[index % FALLBACK_SLIDES.length].headline,
-  subheadline:
-    banner.subheadline || FALLBACK_SLIDES[index % FALLBACK_SLIDES.length].subheadline,
+  headline: banner.headline || "",
+  subheadline: banner.subheadline || "",
   ctaText: banner.ctaText || "Shop Now",
   ctaLink: banner.redirectUrl || banner.ctaLink || "/shopping/product-list",
   imageUrl: banner.imageUrl || "",
-  fallback: FALLBACK_SLIDES[index % FALLBACK_SLIDES.length].fallback,
+  fallback: "linear-gradient(120deg, #0e0e0e, #1f1f1f)",
   order: banner.displayOrder ?? banner.order ?? index + 1,
 });
 
@@ -255,7 +186,7 @@ export const getLandingData = async () => {
       ? bannerPayload.map(normalizeBanner)
       : systemHeroPayload.length
         ? systemHeroPayload.map(normalizeSystemHeroImage)
-        : [...FALLBACK_SLIDES, ...FALLBACK_HERO_FROM_SYSTEM]
+        : []
   ).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const categoryLogoImages = categoryLogosRes.status === "fulfilled" ? categoryLogosRes.value : [];
@@ -301,7 +232,7 @@ export const getLandingData = async () => {
         Unisex: findImageForCategory(categoryLogoImages, "Unisex"),
       },
     },
-    socialImages: adImages.length ? adImages : FALLBACK_AD_IMAGES,
+    socialImages: adImages,
   };
 };
 

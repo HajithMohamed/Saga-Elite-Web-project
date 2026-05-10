@@ -89,6 +89,24 @@
     box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
   }
 
+  /* ── Cinematic Effects ──────────────────────────────── */
+  .bg-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .cursor-open {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='rgba(0,0,0,0.6)' stroke='rgba(255,255,255,0.2)' stroke-width='1' style='backdrop-filter: blur(4px)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' font-family='sans-serif' font-size='10' font-weight='600' letter-spacing='2'%3EOPEN%3C/text%3E%3C/svg%3E") 32 32, pointer;
+  }
+
+  .clip-reveal {
+    clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    transition: clip-path 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  .clip-reveal.is-revealed {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
   /* ── ADMIN UI ──────────────────────────────── */
 
   .admin-page-shell {

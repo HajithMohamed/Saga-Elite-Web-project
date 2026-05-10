@@ -125,6 +125,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
              srcSet={`${heroImage}?w=640 640w, ${heroImage}?w=1280 1280w, ${heroImage}?w=1920 1920w`}
              sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
+        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
         <div className="absolute bottom-0 left-0 right-0 px-6 md:px-16 pb-16">
           <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-3">
             🔴 LIVE DROP
@@ -167,6 +168,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
           ))}
         </div>
         <div className="absolute inset-0 bg-[#0a0a0a]/70" />
+        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
           <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4">
             ⚡ COMING SOON
@@ -233,7 +235,10 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
                 )}
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
-              
+              <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full overflow-hidden flex justify-center mix-blend-overlay">
+                <span className="font-display text-[20vw] font-black text-[#ffffff] opacity-10 leading-none whitespace-nowrap" style={{ transform: `translate(${mouseOffset.x * -0.5}px, ${mouseOffset.y * -0.5}px)` }}>RARE</span>
+              </div>
               <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center md:items-start text-center md:text-left`}>
                 <motion.p
                   initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
@@ -438,11 +443,18 @@ export const ProductSlider = ({ title, subtitle, products = [], deal = false }) 
         </div>
       </div>
       
-      <div ref={scrollerRef} className="flex gap-6 overflow-x-auto snap-x scroll-smooth pb-8 hide-scrollbar">
-        {products.map((product) => (
-           <div key={product.id} className="snap-start shrink-0">
+      <div ref={scrollerRef} className="flex gap-6 overflow-x-auto snap-x scroll-smooth pb-8 hide-scrollbar group/slider">
+        {products.map((product, i) => (
+           <motion.div 
+             key={product.id} 
+             initial={{ opacity: 0, y: 30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true, margin: "-50px" }}
+             transition={{ duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+             className="snap-start shrink-0 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] hover:scale-[1.03] hover:z-10 hover:shadow-2xl group-hover/slider:opacity-30 hover:!opacity-100 cursor-open"
+           >
              <ProductCard product={product} badge={deal ? "deal" : "new"} />
-           </div>
+           </motion.div>
         ))}
       </div>
     </section>
