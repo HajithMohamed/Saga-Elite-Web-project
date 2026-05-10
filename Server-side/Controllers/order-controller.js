@@ -1050,6 +1050,19 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
   const revenueMatch = { status: { $ne: "cancelled" } };
 
+  // Helper: wraps a Mongoose query so CastErrors from corrupt ref fields
+  // (e.g. a product whose `drop` is "SS26" instead of a valid ObjectId)
+  // don't crash the entire dashboard — they just return the fallback value.
+  const safe = (promise, fallback = null) =>
+    promise.catch((err) => {
+      logger.error("Dashboard query failed (non-fatal)", {
+        error: err?.message,
+        path: err?.path,
+        value: err?.value,
+      });
+      return fallback;
+    });
+
   const [
     revenueSummary,
     totalOrders,
@@ -1095,7 +1108,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       status: { $in: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped"] },
     }),
     Product.countDocuments(),
-    User.countDocuments({ role: "user" }),
+    User.countDocuments({ role: { $in: ["user", "customer"] } }),
     Drop.countDocuments(),
     Drop.countDocuments({ isPublished: true, isArchived: false }),
     Drop.countDocuments({ isArchived: true }),
@@ -1132,34 +1145,49 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         },
       },
     ]),
-    Product.findOne({ soldCount: { $gt: 0 } })
-      .sort({ soldCount: -1, wishCount: -1, createdAt: 1 })
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.findOne({ wishCount: { $gt: 0 } })
-      .sort({ wishCount: -1, soldCount: -1, createdAt: 1 })
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.find({ soldCount: { $gt: 0 } })
-      .sort({ soldCount: -1, wishCount: -1, totalStock: 1 })
-      .limit(5)
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.find({ isActive: true, totalStock: { $lte: 5 } })
-      .sort({ totalStock: 1, soldCount: -1, wishCount: -1 })
-      .limit(6)
-      .select("name slug artNo totalStock soldCount wishCount drop")
-      .populate("drop", "name slug")
-      .lean(),
-    Order.find()
-      .sort({ createdAt: -1 })
-      .limit(6)
-      .select("_id totalAmount status paymentMethod paymentStatus createdAt items user")
-      .populate("user", "email")
-      .lean(),
+    // Wrap populate() calls in safe() — corrupt ref fields (non-ObjectId
+    // strings stored in `drop` or `user`) cause CastErrors on populate.
+    safe(
+      Product.findOne({ soldCount: { $gt: 0 } })
+        .sort({ soldCount: -1, wishCount: -1, createdAt: 1 })
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
+    safe(
+      Product.findOne({ wishCount: { $gt: 0 } })
+        .sort({ wishCount: -1, soldCount: -1, createdAt: 1 })
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
+    safe(
+      Product.find({ soldCount: { $gt: 0 } })
+        .sort({ soldCount: -1, wishCount: -1, totalStock: 1 })
+        .limit(5)
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean(),
+      []
+    ),
+    safe(
+      Product.find({ isActive: true, totalStock: { $lte: 5 } })
+        .sort({ totalStock: 1, soldCount: -1, wishCount: -1 })
+        .limit(6)
+        .select("name slug artNo totalStock soldCount wishCount drop")
+        .populate("drop", "name slug")
+        .lean(),
+      []
+    ),
+    safe(
+      Order.find()
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select("_id totalAmount status paymentMethod paymentStatus createdAt items user")
+        .populate("user", "email")
+        .lean(),
+      []
+    ),
     Product.aggregate([
       {
         $group: {
@@ -1221,13 +1249,15 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
-    Drop.findOne({
-      releaseDate: { $gt: now },
-      isArchived: false,
-    })
-      .sort({ releaseDate: 1 })
-      .select("name slug releaseDate isPublished isArchived")
-      .lean(),
+    safe(
+      Drop.findOne({
+        releaseDate: { $gt: now },
+        isArchived: false,
+      })
+        .sort({ releaseDate: 1 })
+        .select("name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
     Review.countDocuments({ status: "approved", category: "uncategorized" }),
     ManualPayment.countDocuments({ status: "proof_submitted" }),
     Product.find({
@@ -1290,7 +1320,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     };
   }
 
-  const recentOrders = recentOrdersDocs.map((order) => ({
+  const recentOrders = (recentOrdersDocs || []).map((order) => ({
     _id: order._id,
     customerEmail: order.user?.email || "Unknown customer",
     status: order.status,
@@ -1301,13 +1331,13 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     createdAt: order.createdAt,
   }));
 
-  const topProducts = topProductsDocs.map((product) => ({
+  const topProducts = (topProductsDocs || []).map((product) => ({
     ...product,
     dropName: product.drop?.name || "Independent Release",
     dropSlug: product.drop?.slug || null,
   }));
 
-  const inventoryAlerts = inventoryAlertsDocs.map((product) => ({
+  const inventoryAlerts = (inventoryAlertsDocs || []).map((product) => ({
     ...product,
     dropName: product.drop?.name || "Independent Release",
     dropSlug: product.drop?.slug || null,
