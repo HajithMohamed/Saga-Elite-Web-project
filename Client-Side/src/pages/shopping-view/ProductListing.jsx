@@ -24,18 +24,11 @@ import {
   SortDropdown,
 } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
-import CollectionHero from "@/components/listing/CollectionHero";
-import CollectionIntro from "@/components/listing/CollectionIntro";
 import FilterSidebar from "@/components/listing/FilterSidebar";
 import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 
-
-import CategorySwitcherCards from "@/components/listing/CategorySwitcherCards";
 import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
 import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
-
-
-import { getCollectionHero } from "@/components/listing/collectionConfig";
 
 const CATEGORY_LABELS = {
   ladies: "Ladies",
@@ -59,19 +52,7 @@ const PILL_KEYS = [
   { value: "archive", label: "Archive" },
 ];
 
-const COLLECTION_INTROS = {
-  all: "Every chapter, every piece. From this season's drop to the archived edits — one scroll, no compromise.",
-  ladies:
-    "Minimal silhouettes, oversized fits, and hand-finished pieces inspired by modern street culture.",
-  gents:
-    "Cut sharp, layered loose. Pieces engineered for the man who notices the seams before the label.",
-  unisex:
-    "No gender, no rules. Built to layer, share, and outlast a season — together.",
-  offers:
-    "Selected pieces at members-only prices. Brief windows; the clock is louder than the discount.",
-  archive:
-    "Every chapter that has closed. Held for record — nothing restocks, nothing returns.",
-};
+
 
 const PAGE_SIZE = 12;
 const FETCH_LIMIT = 60;
@@ -430,17 +411,7 @@ const ProductListing = () => {
   const hasFilterActive = inStockOnly || limitedOnly || refineActive;
 
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">
-      {/* CINEMATIC HERO */}
-      <CollectionHero variant={activePill} />
-
-      {/* COLLECTION INTRO */}
-      <CollectionIntro
-        eyebrow={getCollectionHero(activePill).eyebrow}
-        body={COLLECTION_INTROS[activePill]}
-      />
-
-      <CategorySwitcherCards activePill={activePill} />
+    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-28">
 
       {/* STICKY FILTER RAIL */}
       
@@ -560,28 +531,7 @@ const ProductListing = () => {
                   motionKey={activePill + filterParam + sortParam}
                 />
                 
-                {/* Simulated "Mystery Gift" Cinematic Banner */}
-                {visibleProducts.length >= 6 && (
-                  <div className="my-16 w-full rounded-2xl overflow-hidden relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/80 z-10" />
-                    <img 
-                      src="https://images.unsplash.com/photo-1549439602-43ebca2327af?q=80&w=2670&auto=format&fit=crop" 
-                      alt="Cinematic Mystery Gift" 
-                      className="w-full h-80 object-cover brightness-50 group-hover:scale-105 transition-transform duration-1000"
-                    />
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-6">
-                      <p className="text-[#D4AF37] se-label text-[10px] uppercase tracking-[0.3em] font-semibold mb-3 tracking-widest">
-                        Cinematic Promotional Banner
-                      </p>
-                      <h2 className="text-white text-3xl md:text-5xl font-display font-medium tracking-tight mb-8">
-                        Every Order Unlocks<br/>a Mystery Gift
-                      </h2>
-                      <button className="bg-[#D4AF37] text-black font-semibold uppercase tracking-widest px-8 py-3.5 rounded-full hover:scale-105 transition-transform">
-                        Explore Collection →
-                      </button>
-                    </div>
-                  </div>
-                )}
+
 
                 {hasMore && (
                   <div className="mt-16 text-center">

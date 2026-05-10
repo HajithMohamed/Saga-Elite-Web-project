@@ -157,6 +157,24 @@ export const refundOrder = createAsyncThunk(
   }
 );
 
+export const bulkUpdateOrderStatus = createAsyncThunk(
+  "/order/bulkUpdateStatus",
+  async ({ ids, status, cancellationReason }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `${ORDER_API_BASE}/bulk/status`,
+        { ids, status, cancellationReason },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to bulk-update orders";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState,

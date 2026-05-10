@@ -7,12 +7,14 @@ const {
   validateCartAdd,
   validateCartUpdate,
   validateWishlistAdd,
+  validateBulkUserTag,
 } = require("../Middlewares/request-validation");
 const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  bulkTagUsers,
   triggerAdminPasswordReset,
   deleteAdminUser,
   getCart,
@@ -41,6 +43,7 @@ router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), vali
 router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
 router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);
 router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, deleteAdminUser);
+router.patch("/admin/users/bulk/tag", adminMiddleware, requirePermission("users"), validateBulkUserTag, adminLogMiddleware, bulkTagUsers);
 
 router.get("/cart", getCart);
 router.post("/cart", validateCartAdd, addToCart);

@@ -116,10 +116,14 @@ const seedDemoAdmins = async () => {
   await mongoose.disconnect();
 };
 
-seedDemoAdmins().catch(async (error) => {
-  console.error("Demo admin seeding failed:", error.message);
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect();
-  }
-  process.exit(1);
-});
+module.exports = { seedDemoAdmins, DEMO_ADMINS };
+
+if (require.main === module) {
+  seedDemoAdmins().catch(async (error) => {
+    console.error("Demo admin seeding failed:", error.message);
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+    process.exit(1);
+  });
+}

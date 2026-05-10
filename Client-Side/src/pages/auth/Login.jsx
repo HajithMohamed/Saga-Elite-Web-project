@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import {
   loginUserAction,
   googleSignInAction,
@@ -11,12 +11,11 @@ import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import usePageMeta from "@/hooks/use-page-meta";
+import LuxuryInput from "@/components/auth-components/LuxuryInput";
 import {
-  AUTH_INPUT,
   AUTH_PRIMARY_BTN,
   Btn,
   Eyebrow,
-  FieldError,
   Hairline,
 } from "@/components/ui/editorial";
 import { motion } from "framer-motion";
@@ -273,94 +272,83 @@ const Login = () => {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.1 }}
     >
-      <Eyebrow tone="gold" size="md">Members entrance</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Enter the<br />atelier.
-      </h1>
-      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-        Sign in to unlock premium streetwear, order updates, and early drop access.
-      </p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <Eyebrow tone="gold" size="md">Welcome Back</Eyebrow>
+        <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+          Continue your<br />elite experience.
+        </h1>
+        <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+          Sign in to unlock exclusive collections, order updates, and early drop access.
+        </p>
+      </motion.div>
 
       <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
-        <div>
-          <Eyebrow tone="muted" size="xs">Email</Eyebrow>
-          <div className="mt-2">
-            <input
-              type="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={(e) => {
-                setFormData((p) => ({ ...p, email: e.target.value }));
-                setTouched((p) => ({ ...p, email: true }));
-              }}
-              onBlur={() => setTouched((p) => ({ ...p, email: true }))}
-              placeholder="your.name@email.com"
-              aria-invalid={Boolean(touched.email && errors.email)}
-              className={`${AUTH_INPUT} ${inputState("email")}`}
-            />
-          </div>
-          <FieldError>{touched.email ? errors.email : null}</FieldError>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <LuxuryInput
+            id="email"
+            type="email"
+            label="Email Address"
+            autoComplete="email"
+            value={formData.email}
+            error={touched.email ? errors.email : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, email: e.target.value }));
+              setTouched((p) => ({ ...p, email: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+          />
+        </motion.div>
 
-        <div>
-          <div className="flex items-center justify-between gap-4">
-            <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <LuxuryInput
+            id="password"
+            type="password"
+            label="Your Private Key"
+            autoComplete="current-password"
+            value={formData.password}
+            error={touched.password ? errors.password : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, password: e.target.value }));
+              setTouched((p) => ({ ...p, password: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+          />
+          <div className="flex items-center justify-end mt-2">
             <Link
               to="/auth/forgot-password"
-              className="se-label text-[9px] tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              className="se-label text-[9px] uppercase tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
             >
-              Recover access
+              Reset your access
             </Link>
           </div>
-          <div className="relative mt-2">
-            <input
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={(e) => {
-                setFormData((p) => ({ ...p, password: e.target.value }));
-                setTouched((p) => ({ ...p, password: true }));
-              }}
-              onBlur={() => setTouched((p) => ({ ...p, password: true }))}
-              placeholder="Your private key"
-              aria-invalid={Boolean(touched.password && errors.password)}
-              className={`${AUTH_INPUT} pr-10 ${inputState("password")}`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors se-focus"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.password ? errors.password : null}</FieldError>
-        </div>
+        </motion.div>
 
-        <Btn
-          variant="default"
-          className={AUTH_PRIMARY_BTN}
-          iconRight={ArrowRight}
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Opening" : "Enter the elite"}
-        </Btn>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Btn
+            variant="default"
+            className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
+            iconRight={isLoading ? undefined : ArrowRight}
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? "Entering Your Elite Space..." : "Enter the elite"}
+          </Btn>
+        </motion.div>
       </form>
 
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="mt-6 flex items-center justify-center gap-2 text-xs text-[#99907c]">
+        <ShieldCheck size={14} className="text-[#f2ca50]" />
+        <span>Secure & Encrypted Authentication</span>
+      </motion.div>
+
       {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
-        <>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           <div className="my-8 flex items-center gap-4">
             <Hairline tone="soft" />
             <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
-              Or
+              Or continue with
             </span>
             <Hairline tone="soft" />
           </div>
@@ -370,7 +358,7 @@ const Login = () => {
                 <GoogleAuthButton
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
-                  label="Quick Access with Google"
+                  label="Continue with Google"
                 />
               </div>
             )}
@@ -379,23 +367,23 @@ const Login = () => {
                 <FacebookAuthButton
                   onSuccess={handleFacebookSuccess}
                   onError={handleFacebookError}
-                  label="Quick Access with Facebook"
+                  label="Continue with Facebook"
                 />
               </div>
             )}
           </div>
-        </>
+        </motion.div>
       )}
 
-      <p className="mt-10 se-body text-sm text-[#99907c]">
-        New here?{" "}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-10 se-body text-sm text-[#99907c] text-center">
+        Not an elite member yet?{" "}
         <Link
           to="/auth/register"
           className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
         >
-          Join the elite
+          Join the brand experience
         </Link>
-      </p>
+      </motion.p>
     </motion.div>
   );
 };

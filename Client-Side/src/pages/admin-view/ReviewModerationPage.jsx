@@ -15,6 +15,7 @@ import {
   replyToReview,
   featureReview,
   fetchReviewAnalytics,
+  bulkModerateReviews,
 } from "@/store/reviewSlice";
 import { toast } from "@/hooks/use-toast";
 import StarRating from "@/components/Review/StarRating";
@@ -22,6 +23,8 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
 
 const CATEGORY_OPTIONS = [
   { value: "uncategorized", label: "Uncategorized" },
@@ -213,6 +216,39 @@ const ReviewModerationPage = () => {
 
   const totalCount = filteredReviews.length || adminPagination?.total || 0;
 
+  const bulk = useBulkSelection(filteredReviews);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState("fit");
+
+  const runBulkReviewAction = async (action) => {
+    const ids = bulk.selectedIds;
+    if (ids.length === 0) return;
+    setBulkPending(true);
+    try {
+      const payload = action === "category" ? { ids, action, category: bulkCategory } : { ids, action };
+      const result = await dispatch(bulkModerateReviews(payload)).unwrap();
+      const ok = result.succeeded?.length || 0;
+      const fail = result.failed?.length || 0;
+      toast({
+        title:
+          fail === 0
+            ? `Bulk ${action === "category" ? `set category → ${bulkCategory}` : action}: ${ok}`
+            : `${ok} updated, ${fail} skipped`,
+        variant: fail === 0 ? "success" : "destructive",
+      });
+      bulk.clear();
+      dispatch(fetchAdminReviews({ page: 1, limit: 20 }));
+    } catch (err) {
+      toast({
+        title: "Bulk moderation failed",
+        description: typeof err === "string" ? err : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkPending(false);
+    }
+  };
+
   const sentimentTotals = adminAnalytics?.sentimentBreakdown || {
     positive: 0,
     neutral: 0,
@@ -349,6 +385,34 @@ const ReviewModerationPage = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-[#0a0a0a] px-5 py-3">
+              <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60">
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible reviews"
+                  checked={bulk.isAllSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = bulk.isSomeSelected;
+                  }}
+                  onChange={bulk.toggleAll}
+                  className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                  data-testid="admin-bulk-select-all"
+                />
+                Select all
+              </label>
+              <span className="text-[10px] uppercase tracking-widest text-white/40">
+                Bulk category target:
+              </span>
+              <select
+                value={bulkCategory}
+                onChange={(e) => setBulkCategory(e.target.value)}
+                className="rounded-md border border-white/10 bg-black px-2 py-1 text-xs text-white"
+              >
+                {CATEGORY_OPTIONS.filter((c) => c.value !== "uncategorized").map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
             <AnimatePresence initial={false}>
               {filteredReviews.map((review) => {
                 const isExpanded = expandedId === review._id;
@@ -358,6 +422,7 @@ const ReviewModerationPage = () => {
                 const replyDraft =
                   replyDrafts[review._id] ?? review.brandReply ?? "";
                 const reviewCategory = review.category || "uncategorized";
+                const isChecked = bulk.isSelected(review._id);
                 return (
                   <motion.div
                     key={review._id}
@@ -366,9 +431,19 @@ const ReviewModerationPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.22 }}
-                    className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-6"
+                    className={`relative rounded-3xl border bg-[#0b0b0b] p-6 ${
+                      isChecked ? "border-[#D4AF37]/60" : "border-white/10"
+                    }`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select review by ${reviewer}`}
+                      checked={isChecked}
+                      onChange={() => bulk.toggle(review._id)}
+                      className="absolute top-4 left-4 h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-row-select"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-4 pl-7">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold">{productName}</p>
@@ -678,6 +753,17 @@ const ReviewModerationPage = () => {
           </div>
         )}
       </motion.div>
+      <BulkActionBar
+        count={bulk.count}
+        onClear={bulk.clear}
+        pending={bulkPending}
+        label="reviews selected"
+        actions={[
+          { label: "Feature", onClick: () => runBulkReviewAction("feature") },
+          { label: "Unfeature", onClick: () => runBulkReviewAction("unfeature") },
+          { label: `Set → ${bulkCategory}`, onClick: () => runBulkReviewAction("category") },
+        ]}
+      />
     </AdminPage>
   );
 };

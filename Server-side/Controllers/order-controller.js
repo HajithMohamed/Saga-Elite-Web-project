@@ -1430,6 +1430,105 @@ const getOrderInvoice = catchAsync(async (req, res, next) => {
   streamInvoicePdf({ order, bankConfig, stream: res });
 });
 
+// Bulk status transition. Validates each row through ORDER_STATUS_FLOW, sets
+// the new status, and restores stock on cancellation. Intentionally SKIPS the
+// per-order customer email + WhatsApp side effects from updateOrderStatus —
+// bulk operations should not blast 50 individual emails. A single admin
+// broadcast summarizes the change. If a row can't transition, it lands in
+// `failed[]` with the state-machine reason; the rest still succeed.
+const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
+  const { ids, status, cancellationReason } = req.body;
+  const succeeded = [];
+  const failed = [];
+
+  for (const id of ids) {
+    try {
+      const order = await Order.findById(id);
+      if (!order) {
+        failed.push({ id, reason: "order not found" });
+        continue;
+      }
+
+      const allowedNext = ORDER_STATUS_FLOW[order.status] || [];
+      if (!allowedNext.includes(status)) {
+        failed.push({
+          id,
+          reason: `cannot transition from "${order.status}" to "${status}"`,
+        });
+        continue;
+      }
+
+      if (status === "cancelled") {
+        const reason = String(cancellationReason || "").trim();
+        if (!reason) {
+          failed.push({ id, reason: "cancellation reason is required" });
+          continue;
+        }
+        order.cancellationReason = reason;
+        order.cancelledAt = new Date();
+        order.cancelledBy = req.userInfo._id;
+
+        for (const item of order.items) {
+          try {
+            const product = await Product.findById(item.product);
+            if (product) {
+              const variant = product.variants.find((v) => v.sku === item.variantSku);
+              if (variant) variant.stock += item.quantity;
+              product.soldCount = Math.max(0, (product.soldCount || 0) - item.quantity);
+              await product.save({ validateModifiedOnly: true });
+            }
+          } catch (stockErr) {
+            logger.error("Failed to restore stock during bulk cancel", {
+              orderId: order._id,
+              productId: item.product,
+              error: stockErr.message,
+            });
+          }
+        }
+      }
+
+      order.status = status;
+      if (
+        status === "confirmed" &&
+        ["manual", "manual_bank_transfer", "cash", "receipt"].includes(order.paymentMethod)
+      ) {
+        order.paymentStatus = "paid";
+      }
+
+      await order.save({ validateModifiedOnly: true });
+      succeeded.push(id);
+    } catch (err) {
+      failed.push({ id, reason: err.message || "unexpected error" });
+    }
+  }
+
+  if (succeeded.length > 0) {
+    await broadcastNotification({
+      type: "admin",
+      title: `Bulk order update: ${succeeded.length} → ${status}`,
+      message: `${succeeded.length} order${succeeded.length === 1 ? "" : "s"} bulk-updated to "${status}".`,
+      filter: { role: { $in: ADMIN_ROLES } },
+    }).catch((err) => logger.error("[bulk-status] broadcast failed", { error: err.message }));
+  }
+
+  req.adminAction = `Bulk status → ${status} (${succeeded.length}/${ids.length})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount: succeeded.length,
+    failedCount: failed.length,
+    status,
+    succeeded,
+    failed,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded,
+    failed,
+  });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -1439,4 +1538,5 @@ module.exports = {
   refundOrder,
   getOrderInvoice,
   getDashboardStats,
+  bulkUpdateOrderStatus,
 };

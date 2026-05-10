@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   motion,
   AnimatePresence,
@@ -123,7 +123,32 @@ const ProductDetails = () => {
   });
   const heroGlowX = useTransform(heroPointerX, [0, 1], ["30%", "70%"]);
   const heroGlowY = useTransform(heroPointerY, [0, 1], ["30%", "70%"]);
-  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(242,202,80,0.18), transparent 55%)`;
+  
+  const activeColorHex = useMemo(() => {
+    if (selectedVariantSku && product?.variants) {
+      const v = product.variants.find(v => v.sku === selectedVariantSku);
+      if (v?.colorCode) return v.colorCode;
+    }
+    const colorMap = {
+      black: "10,10,10", white: "245,245,245", red: "127,29,29",
+      crimson: "127,29,29", green: "20,83,45", olive: "63,74,60",
+      gold: "212,175,55", beige: "245,245,220", sand: "245,245,220"
+    };
+    if (selectedColor && colorMap[selectedColor.toLowerCase()]) {
+      return colorMap[selectedColor.toLowerCase()];
+    }
+    return "242,202,80"; // default gold RGB
+  }, [selectedColor, selectedVariantSku, product?.variants]);
+
+  const hexToRgbStr = (hex) => {
+    if (hex.includes(",")) return hex; // Already RGB string
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : "242,202,80";
+  };
+
+  const dynamicRgb = hexToRgbStr(activeColorHex);
+  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(${dynamicRgb}, 0.25), transparent 65%)`;
+
 
   const handleHeroPointerMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -590,13 +615,14 @@ const ProductDetails = () => {
             </div>
             {/* Thumbnails */}
             {product.images?.length > 1 && (
-              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
+              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 mt-4">
                 {product.images.map((img, i) => (
                   <button
                     key={img._id || i}
                     onClick={() => setActiveImageIndex(i)}
+                    style={i === activeImageIndex ? { borderColor: `rgba(${dynamicRgb}, 0.8)`, boxShadow: `0 0 15px rgba(${dynamicRgb}, 0.2)` } : {}}
                     className={`relative shrink-0 w-24 h-32 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      i === activeImageIndex ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)] scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                      i === activeImageIndex ? "scale-105" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={img.url} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
@@ -641,12 +667,8 @@ const ProductDetails = () => {
                       onSizeChange={handleSizeChange}
                       onColorChange={handleColorChange}
                       errors={variantErrors}
+                      activeColorRgb={dynamicRgb}
                     />
-                    {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 ? (
-                      <p className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] mt-2">
-                        Only {selectedVariant.stock} left in this size
-                      </p>
-                    ) : null}
                   </>
                 ) : (
                   <p className="se-body text-sm text-[#d0c5af]">One size fits all</p>
@@ -685,41 +707,45 @@ const ProductDetails = () => {
 
             {/* CTAs */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-[#4d4635]/40 lg:relative lg:p-0 lg:bg-transparent lg:border-none z-50 flex flex-col gap-4">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleBuyNow}
-                disabled={
-                  !hasVariants ||
-                  !selectedVariant ||
-                  selectedVariant.stock === 0
-                }
-                className="flex h-14 w-full items-center justify-center rounded-full bg-[#f2ca50] text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] hover:bg-[#ffe088] hover:shadow-[0_6px_20px_rgba(212,175,55,0.23)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Proceed to Secure Checkout
-              </motion.button>
+              <div className="flex gap-4 w-full">
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddToCart}
+                  disabled={
+                    !hasVariants ||
+                    !selectedVariant ||
+                    selectedVariant.stock === 0
+                  }
+                  style={{ borderColor: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, color: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, backgroundColor: cartAddedPulse ? `rgba(${dynamicRgb}, 0.1)` : undefined }}
+                  className={`flex h-14 flex-1 items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    cartAddedPulse ? "" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
+                  }`}
+                >
+                  {cartAddedPulse ? (
+                    <>
+                      <Check className="h-5 w-5 mr-2" /> Added to Bag
+                    </>
+                  ) : (
+                    "Add to Bag"
+                  )}
+                </motion.button>
 
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleAddToCart}
-                disabled={
-                  !hasVariants ||
-                  !selectedVariant ||
-                  selectedVariant.stock === 0
-                }
-                className={`flex h-14 w-full items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  cartAddedPulse ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
-                }`}
-              >
-                {cartAddedPulse ? (
-                  <>
-                    <Check className="h-5 w-5 mr-2" /> Added to Bag
-                  </>
-                ) : (
-                  "Add to Bag"
-                )}
-              </motion.button>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleBuyNow}
+                  disabled={
+                    !hasVariants ||
+                    !selectedVariant ||
+                    selectedVariant.stock === 0
+                  }
+                  style={{ backgroundColor: `rgb(${dynamicRgb})`, boxShadow: `0 4px 14px 0 rgba(${dynamicRgb}, 0.39)` }}
+                  className="flex h-14 flex-1 items-center justify-center rounded-full text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Buy Now
+                </motion.button>
+              </div>
 
               {/* Urgency Signal */}
               {hasVariants && selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
@@ -732,21 +758,35 @@ const ProductDetails = () => {
               )}
             </div>
 
-            <div className="mb-10">
+            {/* Product Story Section */}
+            {product.story && (
+              <div className="my-12 py-8 border-y border-[#4d4635]/20">
+                <p className="text-xs uppercase tracking-[0.3em] font-semibold text-[#99907c] mb-4">
+                  CHAPTER {product.drop?.name ? "— " + product.drop.name : ""}
+                </p>
+                <div className="se-body text-[#e5e2e1] text-sm leading-relaxed whitespace-pre-wrap">
+                  {product.story}
+                </div>
+              </div>
+            )}
+
+            <div className="mb-10 mt-8">
               <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-800 pb-2">
                 {[
-                  { id: "description", label: "Description" },
-                  { id: "size", label: "Size Guide" },
+                  { id: "description", label: "Details" },
+                  { id: "size", label: "Size & Fit" },
+                  { id: "care", label: "Care" },
                   { id: "reviews", label: "Reviews" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setProductTab(tab.id)}
+                    style={productTab === tab.id ? { backgroundColor: `rgba(${dynamicRgb}, 0.1)`, color: `rgb(${dynamicRgb})`, border: `1px solid rgba(${dynamicRgb}, 0.5)` } : {}}
                     className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
                       productTab === tab.id
-                        ? "bg-[#D4AF37] text-black"
-                        : "text-gray-400 hover:text-white"
+                        ? "font-bold"
+                        : "text-gray-400 hover:text-white border border-transparent"
                     }`}
                   >
                     {tab.label}
@@ -760,40 +800,64 @@ const ProductDetails = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.22 }}
-                  className="min-h-[120px] text-gray-400 leading-relaxed"
+                  className="min-h-[120px] text-gray-400 leading-relaxed text-sm"
                 >
                   {productTab === "description" ? (
-                    <p>{product.description || "No description provided."}</p>
+                    <div className="space-y-4">
+                      <p>{product.description || "No description provided."}</p>
+                      {(product.fabric || product.gsm) && (
+                        <div className="pt-4 border-t border-gray-800/50 flex flex-col gap-2">
+                          {product.fabric && <p><strong className="text-white">Material:</strong> {product.fabric}</p>}
+                          {product.gsm && <p><strong className="text-white">Weight:</strong> {product.gsm} GSM</p>}
+                        </div>
+                      )}
+                    </div>
                   ) : null}
                   {productTab === "size" ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[280px] text-left text-sm text-on-surface dark:text-gray-300">
-                        <thead>
-                          <tr className="border-b border-gray-700">
-                            <th className="py-2 pr-4">Size</th>
-                            <th className="py-2 pr-4">Chest (cm)</th>
-                            <th className="py-2">Length (cm)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[
-                            ["XS", "86–91", "66"],
-                            ["S", "91–96", "68"],
-                            ["M", "96–101", "70"],
-                            ["L", "101–106", "72"],
-                            ["XL", "106–111", "74"],
-                          ].map(([sz, c, l]) => (
-                            <tr key={sz} className="border-b border-gray-800/80">
-                              <td className="py-2 pr-4">{sz}</td>
-                              <td className="py-2 pr-4">{c}</td>
-                              <td className="py-2">{l}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <p className="mt-3 text-xs text-gray-500">
-                        Generic Sri Lanka sizing — measurements are approximate.
-                      </p>
+                    <div className="space-y-4">
+                      {product.fitType && (
+                        <p className="mb-4 text-white se-label tracking-widest text-xs">Fit: {product.fitType}</p>
+                      )}
+                      {product.sizeGuide ? (
+                        <div className="whitespace-pre-wrap">{product.sizeGuide}</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[280px] text-left text-sm text-gray-300">
+                            <thead>
+                              <tr className="border-b border-gray-700">
+                                <th className="py-2 pr-4">Size</th>
+                                <th className="py-2 pr-4">Chest (cm)</th>
+                                <th className="py-2">Length (cm)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[
+                                ["XS", "86–91", "66"],
+                                ["S", "91–96", "68"],
+                                ["M", "96–101", "70"],
+                                ["L", "101–106", "72"],
+                                ["XL", "106–111", "74"],
+                              ].map(([sz, c, l]) => (
+                                <tr key={sz} className="border-b border-gray-800/80">
+                                  <td className="py-2 pr-4">{sz}</td>
+                                  <td className="py-2 pr-4">{c}</td>
+                                  <td className="py-2">{l}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <p className="mt-3 text-xs text-gray-500">
+                            Generic Sri Lanka sizing — measurements are approximate.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                  {productTab === "care" ? (
+                    <div className="space-y-4">
+                      <div className="whitespace-pre-wrap">
+                        {product.careInstructions || "Dry clean only or cold wash inside out.\nDo not iron on print."}
+                      </div>
                     </div>
                   ) : null}
                   {productTab === "reviews" ? (

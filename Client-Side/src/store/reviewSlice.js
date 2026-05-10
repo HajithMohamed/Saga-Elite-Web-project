@@ -12,6 +12,7 @@ import {
   replyToReviewApi,
   featureReviewApi,
   fetchReviewAnalyticsApi,
+  bulkModerateReviewsApi,
 } from "@/api/reviewAPI";
 
 const unwrapError = (error, fallback) => {
@@ -231,6 +232,20 @@ export const fetchReviewAnalytics = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         unwrapError(error, "Failed to load review analytics")
+      );
+    }
+  }
+);
+
+export const bulkModerateReviews = createAsyncThunk(
+  "review/bulkModerate",
+  async ({ ids, action, category }, thunkAPI) => {
+    try {
+      const response = await bulkModerateReviewsApi({ ids, action, category });
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to bulk-moderate reviews")
       );
     }
   }

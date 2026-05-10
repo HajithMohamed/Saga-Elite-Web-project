@@ -92,3 +92,13 @@ export const featureReviewApi = (reviewId, isFeatured) =>
 
 export const fetchReviewAnalyticsApi = () =>
   axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });
+
+export const bulkModerateReviewsApi = ({ ids, action, category }) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/bulk`,
+    { ids, action, category },
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );

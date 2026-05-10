@@ -115,19 +115,17 @@ export const fetchUpcomingDrop = async () => {
     .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))[0] || null;
 };
 
-const fetchActiveDrop = async () => {
+const fetchActiveDrops = async () => {
   const res = await axios.get(`${API_BASE}/drops/get-all-drops`);
   const drops = Array.isArray(res?.data?.drops) ? res.data.drops : [];
   const now = Date.now();
-  return (
-    drops.find((d) => {
-      const release = d?.releaseDate ? new Date(d.releaseDate).getTime() : null;
-      const end = d?.endDate ? new Date(d.endDate).getTime() : null;
-      const started = !release || release <= now;
-      const ongoing = !end || end >= now;
-      return started && ongoing;
-    }) || null
-  );
+  return drops.filter((d) => {
+    const release = d?.releaseDate ? new Date(d.releaseDate).getTime() : null;
+    const end = d?.endDate ? new Date(d.endDate).getTime() : null;
+    const started = !release || release <= now;
+    const ongoing = !end || end >= now;
+    return started && ongoing;
+  }).sort((a, b) => new Date(b.releaseDate) - new Date(a.releaseDate));
 };
 
 const fetchHomepageOffers = async () => {
@@ -176,7 +174,7 @@ export const getLandingData = async () => {
     fetchCategoryLogoImages(),
     fetchAdImages(),
     fetchHomepageOffers(),
-    fetchActiveDrop(),
+    fetchActiveDrops(),
   ]);
 
   const bannerPayload = bannersRes.status === "fulfilled" ? bannersRes.value?.data?.data?.banners || [] : [];
@@ -204,7 +202,8 @@ export const getLandingData = async () => {
   return {
     heroSlides,
     offers: offersRes.status === "fulfilled" ? offersRes.value : [],
-    activeDrop: activeDropRes.status === "fulfilled" ? activeDropRes.value : null,
+    activeDrops: activeDropRes.status === "fulfilled" ? activeDropRes.value : [],
+    activeDrop: activeDropRes.status === "fulfilled" && activeDropRes.value.length > 0 ? activeDropRes.value[0] : null,
     ladiesArrivals: ladiesArrivals.status === "fulfilled" ? ladiesArrivals.value : [],
     ladiesDeals,
     gentsArrivals: gentsArrivals.status === "fulfilled" ? gentsArrivals.value : [],

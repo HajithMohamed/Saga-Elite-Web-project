@@ -480,6 +480,12 @@ const validateProductCreate = createValidationMiddleware((req) => {
     isActive: sanitizeBoolean(req.body.isActive ?? true, "isActive"),
     isLimited: sanitizeBoolean(req.body.isLimited ?? false, "isLimited"),
     maxPerUser: sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true }),
+    lowStockThreshold:
+      req.body.lowStockThreshold === undefined ||
+      req.body.lowStockThreshold === null ||
+      req.body.lowStockThreshold === ""
+        ? undefined
+        : sanitizeNumber(req.body.lowStockThreshold, "lowStockThreshold", { min: 0, integer: true }),
     variants: sanitizeVariants(req.body.variants, { required: true }),
   };
 });
@@ -513,6 +519,12 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.isActive !== undefined) body.isActive = sanitizeBoolean(req.body.isActive, "isActive");
   if (req.body.maxPerUser !== undefined) body.maxPerUser = sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true });
   if (req.body.isLimited !== undefined) body.isLimited = sanitizeBoolean(req.body.isLimited, "isLimited");
+  if (req.body.lowStockThreshold !== undefined) {
+    body.lowStockThreshold =
+      req.body.lowStockThreshold === null || req.body.lowStockThreshold === ""
+        ? null
+        : sanitizeNumber(req.body.lowStockThreshold, "lowStockThreshold", { min: 0, integer: true });
+  }
   if (req.body.variants !== undefined) body.variants = sanitizeVariants(req.body.variants, { required: true });
 
   if (!Object.keys(body).length) {
@@ -1107,6 +1119,78 @@ const validateSuperAdminActivation = createValidationMiddleware((req) => {
   };
 });
 
+// ── Bulk operation validators ────────────────────────────────────────
+// Shared shape: every bulk endpoint takes `ids: ObjectId[]` plus action-specific fields.
+
+const sanitizeBulkIds = (ids, { max = 200 } = {}) => {
+  if (!Array.isArray(ids)) fail("ids must be an array");
+  if (ids.length === 0) fail("ids must contain at least one entry");
+  if (ids.length > max) fail(`ids cannot contain more than ${max} entries`);
+  // De-duplicate so the same row isn't double-processed if the client double-clicks.
+  const seen = new Set();
+  const cleaned = [];
+  ids.forEach((id, index) => {
+    const normalized = sanitizeObjectId(id, `ids[${index}]`);
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      cleaned.push(normalized);
+    }
+  });
+  return cleaned;
+};
+
+const BULK_PRODUCT_ACTIONS = ["activate", "deactivate", "delete"];
+const BULK_ORDER_STATUSES = ["confirmed", "shipped", "delivered", "cancelled"];
+const BULK_REVIEW_ACTIONS = ["feature", "unfeature", "category"];
+const BULK_USER_TAG_MODES = ["add", "remove"];
+const BULK_USER_TAG_VALUES = [
+  "vip",
+  "high_spender",
+  "drop_collector",
+  "frequent_buyer",
+  "refund_risk",
+  "early_supporter",
+];
+
+const validateBulkProductAction = createValidationMiddleware((req) => {
+  req.body = {
+    ids: sanitizeBulkIds(req.body.ids),
+    action: sanitizeEnum(req.body.action, BULK_PRODUCT_ACTIONS, "action", { required: true }),
+  };
+});
+
+const validateBulkOrderStatus = createValidationMiddleware((req) => {
+  const status = sanitizeEnum(req.body.status, BULK_ORDER_STATUSES, "status", { required: true });
+  req.body = {
+    ids: sanitizeBulkIds(req.body.ids),
+    status,
+    cancellationReason:
+      status === "cancelled"
+        ? sanitizeOptionalPlainText(req.body.cancellationReason, "cancellationReason", { maxLength: 500 })
+        : undefined,
+  };
+});
+
+const validateBulkReviewAction = createValidationMiddleware((req) => {
+  const action = sanitizeEnum(req.body.action, BULK_REVIEW_ACTIONS, "action", { required: true });
+  const body = {
+    ids: sanitizeBulkIds(req.body.ids),
+    action,
+  };
+  if (action === "category") {
+    body.category = sanitizeEnum(req.body.category, REVIEW_CATEGORIES, "category", { required: true });
+  }
+  req.body = body;
+});
+
+const validateBulkUserTag = createValidationMiddleware((req) => {
+  req.body = {
+    ids: sanitizeBulkIds(req.body.ids),
+    tag: sanitizeEnum(req.body.tag, BULK_USER_TAG_VALUES, "tag", { required: true }),
+    mode: sanitizeEnum(req.body.mode || "add", BULK_USER_TAG_MODES, "mode", { required: true }),
+  };
+});
+
 module.exports = {
   validateObjectIdParam,
   validateAuthRegister,
@@ -1154,4 +1238,9 @@ module.exports = {
   validateSuperAdminCreate,
   validateSuperAdminPermissions,
   validateSuperAdminActivation,
+  validateBulkProductAction,
+  validateBulkOrderStatus,
+  validateBulkReviewAction,
+  validateBulkUserTag,
+  BULK_USER_TAG_VALUES,
 };

@@ -17,6 +17,8 @@
     "lint": "npm --prefix Server-side run lint && npm --prefix Client-Side run lint",
     "audit": "npm --prefix Server-side audit && npm --prefix Client-Side audit",
     "test": "npm --prefix Server-side test && npm --prefix Client-Side test",
+    "test:e2e": "playwright test --config=e2e/playwright.config.js",
+    "test:e2e:ui": "playwright test --config=e2e/playwright.config.js --ui",
     "seed:demo-admins": "npm --prefix Server-side run seed:demo-admins"
   },
   "repository": {
@@ -41,6 +43,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "tailwindcss": "^3.4.19"
   }
 }

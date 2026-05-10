@@ -57,6 +57,7 @@ const Alerts = lazy(() => import("./pages/admin-view/Alerts"));
 const AboutSiteConfig = lazy(() => import("./pages/admin-view/AboutSiteConfig"));
 const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
 const NewsletterSubscribersPage = lazy(() => import("./pages/admin-view/NewsletterSubscribersPage"));
+const ActivityTimeline = lazy(() => import("./pages/admin-view/ActivityTimeline"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
@@ -246,6 +247,7 @@ function App() {
             <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
             <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
+            <Route path="activity" element={<ActivityTimeline />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
             <Route path="account" element={<Navigate to="/shopping/account" replace />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
