@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Layers3,
   Layout,
+  ScrollText,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -42,7 +43,7 @@ import { API_V1_URL } from "@/lib/api";
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
   Store: ["Products", "Drops", "Mystery Collectibles"],
-  Sales: ["Orders", "Manual Payments", "Customers", "Reviews", "Contact Inquiries"],
+  Sales: ["Orders", "Manual Payments", "Customers", "Reviews", "Contact Inquiries", "Activity"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Analytics: ["Analytics", "Recommendations"],
   Settings: ["Shipping", "About Content", "SEO & Branding", "Admin Team"],
@@ -75,6 +76,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const [uncategorizedReviewCount, setUncategorizedReviewCount] = useState(0);
   const [agingAlertCount, setAgingAlertCount] = useState(0);
   const [smartAlertCount, setSmartAlertCount] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
   const [isLg, setIsLg] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
@@ -82,10 +84,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const prevReviewRef = useRef(0);
   const prevAgingRef = useRef(0);
   const prevSmartAlertRef = useRef(0);
+  const prevLowStockRef = useRef(0);
   const [paymentBounce, setPaymentBounce] = useState(0);
   const [reviewBounce, setReviewBounce] = useState(0);
   const [agingBounce, setAgingBounce] = useState(0);
   const [smartAlertBounce, setSmartAlertBounce] = useState(0);
+  const [lowStockBounce, setLowStockBounce] = useState(0);
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -93,7 +97,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       // permission shouldn't break the others. Catch per-request so a 403
       // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
       const fallback = { data: { success: true, data: { count: 0 } } };
-      const [paymentRes, reviewRes, agingRes, smartAlertRes] = await Promise.all([
+      const [paymentRes, reviewRes, agingRes, smartAlertRes, lowStockRes] = await Promise.all([
         // Count anything that needs admin eyes — both manual-review proofs
         // and provisional OCR-matches still waiting on bank confirmation.
         axios
@@ -115,6 +119,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
         axios
           .get(`${API_V1_URL}/admin/alerts?countOnly=true`, { withCredentials: true })
           .catch(() => fallback),
+        // Low-stock badge specifically for the Products entry. Pulls warning
+        // AND critical so the admin sees one combined number on the row.
+        axios
+          .get(
+            `${API_V1_URL}/admin/alerts?countOnly=true&kind=low_stock_warning,low_stock_critical`,
+            { withCredentials: true }
+          )
+          .catch(() => fallback),
       ]);
 
       if (paymentRes.data?.success) {
@@ -132,11 +144,16 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       if (smartAlertRes.data?.success) {
         setSmartAlertCount(smartAlertRes.data.data?.count || 0);
       }
+
+      if (lowStockRes.data?.success) {
+        setLowStockCount(lowStockRes.data.data?.count || 0);
+      }
     } catch {
       setPendingPaymentCount(0);
       setUncategorizedReviewCount(0);
       setAgingAlertCount(0);
       setSmartAlertCount(0);
+      setLowStockCount(0);
     }
   }, []);
 
@@ -191,6 +208,16 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   }, [agingAlertCount]);
 
   useEffect(() => {
+    const l = lowStockCount;
+    if (l > 0 && prevLowStockRef.current === 0 && l !== prevLowStockRef.current) {
+      setLowStockBounce((k) => k + 1);
+    } else if (l > prevLowStockRef.current && prevLowStockRef.current > 0) {
+      setLowStockBounce((k) => k + 1);
+    }
+    prevLowStockRef.current = l;
+  }, [lowStockCount]);
+
+  useEffect(() => {
     const s = smartAlertCount;
     if (s > 0 && prevSmartAlertRef.current === 0 && s !== prevSmartAlertRef.current) {
       setSmartAlertBounce((k) => k + 1);
@@ -231,6 +258,9 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
       permission: "products",
+      badge: lowStockCount,
+      bounceKey: lowStockBounce,
+      tooltip: lowStockCount > 0 ? `${lowStockCount} product${lowStockCount === 1 ? "" : "s"} at or below low-stock threshold` : undefined,
     },
     {
       label: "Drops",
@@ -278,6 +308,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Contact Inquiries",
       path: "/admin/contact-inquiries",
       icon: <Inbox className="h-5 w-5" />,
+      permission: null,
+    },
+    {
+      label: "Activity",
+      path: "/admin/activity",
+      icon: <ScrollText className="h-5 w-5" />,
+      // No permission gate — server filters logs per role; sub-admins just
+      // see less. Avoids hiding the menu item entirely from sub-admins who
+      // have at least one permission.
       permission: null,
     },
 

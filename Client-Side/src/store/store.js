@@ -13,6 +13,7 @@ import recommendationsReducer from "./recommendationsSlice";
 import smartAlertsReducer from "./smartAlertsSlice";
 import liveProductReducer from "./live-product-slice";
 import adminSearchReducer from "./adminSearchSlice";
+import adminLogReducer from "./adminLogSlice";
 
 const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ const store = configureStore({
     smartAlerts: smartAlertsReducer,
     liveProduct: liveProductReducer,
     adminSearch: adminSearchReducer,
+    adminLog: adminLogReducer,
   },
 });
 

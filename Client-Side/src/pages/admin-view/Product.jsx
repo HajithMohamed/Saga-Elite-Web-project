@@ -951,6 +951,22 @@ const Product = () => {
                 }
               />
             </FormField>
+
+            <FormField
+              label="Low Stock Threshold"
+              optional
+              helper="Alert when total stock drops to this level or below. Leave blank to use the global default."
+            >
+              <LuxuryInput
+                type="number"
+                min="0"
+                placeholder="Use global default"
+                value={formData.lowStockThreshold}
+                onChange={(e) =>
+                  setFormData({ ...formData, lowStockThreshold: e.target.value })
+                }
+              />
+            </FormField>
           </div>
 
           <FormField

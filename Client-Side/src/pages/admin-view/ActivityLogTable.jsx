@@ -7,14 +7,18 @@ import { MethodBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
 import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 
-const ActivityLogTable = () => {
-  const { activityLogs, logsLoading } = useSelector((s) => s.superAdmin);
+const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = false }) => {
+  // Default to the SuperAdmin slice so existing SuperAdminDashboard.jsx
+  // mounts unchanged. New ActivityTimeline page passes its own data via props.
+  const fallback = useSelector((s) => s.superAdmin);
+  const activityLogs = logsProp ?? fallback.activityLogs;
+  const logsLoading = loadingProp ?? fallback.logsLoading;
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return activityLogs;
-    return activityLogs.filter((log) => {
+    return (activityLogs || []).filter((log) => {
       const email = (log.adminId?.email || "").toLowerCase();
       const action = (log.action || "").toLowerCase();
       const route = (log.route || "").toLowerCase();
@@ -44,7 +48,7 @@ const ActivityLogTable = () => {
     );
   }
 
-  if (!activityLogs.length) {
+  if (!activityLogs?.length) {
     return (
       <EmptyState
         icon={ScrollText}
@@ -56,16 +60,18 @@ const ActivityLogTable = () => {
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter by email, action, or route…"
-          className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
-        />
-      </div>
+      {hideSearch ? null : (
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Filter by email, action, or route…"
+            className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+          />
+        </div>
+      )}
 
       {!filtered.length ? (
         <p className="text-sm text-gray-500">No logs match your search.</p>

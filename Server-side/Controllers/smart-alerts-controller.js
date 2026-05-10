@@ -5,9 +5,19 @@ const mongoose = require("mongoose");
 const { runAllChecks } = require("../Utils/smart-alerts-job");
 
 const listAlerts = catchAsync(async (req, res) => {
-  const { countOnly, includeAcknowledged } = req.query;
+  const { countOnly, includeAcknowledged, kind } = req.query;
   const filter = {};
   if (!includeAcknowledged) filter.acknowledged = false;
+
+  // Comma-separated list of kinds — used by the sidebar Products badge to
+  // count only low-stock alerts (`?kind=low_stock_warning,low_stock_critical`).
+  if (kind) {
+    const kinds = String(kind)
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+    if (kinds.length > 0) filter.kind = { $in: kinds };
+  }
 
   if (countOnly === "true") {
     const count = await SmartAlert.countDocuments(filter);
