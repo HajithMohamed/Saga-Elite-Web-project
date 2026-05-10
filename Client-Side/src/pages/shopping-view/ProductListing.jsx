@@ -8,7 +8,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
@@ -87,7 +87,7 @@ const ProductListing = () => {
   const [refineOpen, setRefineOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -453,9 +453,10 @@ const ProductListing = () => {
             {/* Top Bar inside main pane */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
               <FilterPills
-                items={pills}
-                active={activePill}
-                onChange={handlePillChange}
+                items={PILL_KEYS}
+                value={activePill}
+                onChange={setCategoryFilter}
+                layoutId="atelier-pill"
               />
               <div className="flex items-center gap-4">
                 <SortDropdown
@@ -474,7 +475,7 @@ const ProductListing = () => {
                 >
                   <SlidersHorizontal size={14} />
                   Filters
-                  {activeFilterCount > 0 && (
+                  {hasFilterActive && (
                     <span className="ml-1 w-2 h-2 rounded-full bg-[#f2ca50]" />
                   )}
                 </button>
@@ -519,7 +520,7 @@ const ProductListing = () => {
                       if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
                       setSearchParams(p);
                     }}
-                    onClearAll={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                    onClearAll={() => clearAllFilters()}
                     priceMin={PRICE_MIN}
                     priceMax={PRICE_MAX}
                   />
@@ -528,11 +529,7 @@ const ProductListing = () => {
             </AnimatePresence>
 
             {isLoading ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-y-12">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <ProductGridSkeleton key={i} />
-                ))}
-              </div>
+              <ProductGridSkeleton count={8} featuredEvery={Infinity} />
             ) : filteredProducts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -549,7 +546,7 @@ const ProductListing = () => {
                   Try exploring another collection or reducing your filter criteria.
                 </p>
                 <button
-                  onClick={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                  onClick={() => clearAllFilters()}
                   className="mt-8 px-8 py-3 bg-transparent border border-[#d4af37]/40 text-[#f2ca50] se-label text-[11px] uppercase tracking-widest hover:bg-[#d4af37]/10 transition-colors"
                 >
                   Clear Filters
@@ -589,7 +586,11 @@ const ProductListing = () => {
                 {hasMore && (
                   <div className="mt-16 text-center">
                     <button
-                      onClick={loadMore}
+                      onClick={() =>
+                        setVisibleCount((c) =>
+                          Math.min(c + PAGE_SIZE, filteredProducts.length)
+                        )
+                      }
                       className="px-12 py-4 bg-transparent border border-[#D4AF37] text-[#D4AF37] font-semibold tracking-[0.2em] text-xs uppercase hover:bg-[#D4AF37] hover:text-black transition-colors"
                     >
                       Load More
@@ -630,7 +631,7 @@ const ProductListing = () => {
                   if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
                   setSearchParams(p);
                 }}
-                onClearAll={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                onClearAll={() => clearAllFilters()}
                 priceMin={PRICE_MIN}
                 priceMax={PRICE_MAX}
              />

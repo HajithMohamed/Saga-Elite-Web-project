@@ -24,10 +24,11 @@ const RecentlyViewedCarousel = () => {
 
   useEffect(() => {
     if (!emblaApi) return;
-    onSelect();
+    emblaApi.on("init", onSelect);
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
     return () => {
+      emblaApi.off("init", onSelect);
       emblaApi.off("select", onSelect);
       emblaApi.off("reInit", onSelect);
     };
