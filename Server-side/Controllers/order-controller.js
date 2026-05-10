@@ -110,9 +110,9 @@ const GUEST_OTP_REVERIFY_MS = 30 * 60 * 1000;
 
 const addressMatchesOrder = (a, b) =>
   String(a?.street || "").trim().toLowerCase() ===
-    String(b?.street || "").trim().toLowerCase() &&
+  String(b?.street || "").trim().toLowerCase() &&
   String(a?.postalCode || "").trim().toLowerCase() ===
-    String(b?.postalCode || "").trim().toLowerCase();
+  String(b?.postalCode || "").trim().toLowerCase();
 
 const createOrder = catchAsync(async (req, res, next) => {
   const {
@@ -313,26 +313,16 @@ const createOrder = catchAsync(async (req, res, next) => {
     const dropId = req.body.dropId || null;
     let selectedGift = null;
 
-<<<<<<< HEAD
-    if (dropId) {
-      selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
-    }
-
-    if (!selectedGift) {
-      selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
-    }
-=======
-      // Surprise gifts are a registered-user perk only (Fix #7).
-      if (user) {
-        if (dropId) {
-          selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
-        }
-
-        if (!selectedGift) {
-          selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
-        }
+    // Surprise gifts are a registered-user perk only (Fix #7).
+    if (user) {
+      if (dropId) {
+        selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
       }
->>>>>>> 85da37a784b3e22db3ef94974480f60e3f7e7584
+
+      if (!selectedGift) {
+        selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
+      }
+    }
 
     const orderPayload = {
       user: user ? user._id : undefined,
@@ -367,7 +357,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     }
 
     const [orderDocument] = await Order.create([orderPayload], { session });
-    
+
     // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
     if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
       const purchaseRows = orderPayload.items.map((item) => ({
@@ -377,7 +367,7 @@ const createOrder = catchAsync(async (req, res, next) => {
         category: item.category || "",
         metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
       }));
-      UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
+      UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => { });
     }
 
     if (user && normalizedCheckoutMode === "cart") {
@@ -387,154 +377,139 @@ const createOrder = catchAsync(async (req, res, next) => {
 
     if (guest) {
       guest.orderCount += 1;
-      await guest.save({ session });
-    }
 
-<<<<<<< HEAD
-    return orderDocument;
-  });
-=======
-      if (user && normalizedCheckoutMode === "cart") {
-        user.cart = [];
-        await user.save({ session, validateModifiedOnly: true });
-      }
-
-      if (guest) {
-        guest.orderCount += 1;
-
-        // Persist address for guest if structured form provided (Fix #4).
-        if (
-          structuredAddress &&
-          structuredAddress.street &&
-          structuredAddress.city &&
-          structuredAddress.postalCode &&
-          !guest.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
-        ) {
-          guest.addresses.push({
-            label: structuredAddress.label,
-            street: String(structuredAddress.street).trim(),
-            city: String(structuredAddress.city).trim(),
-            postalCode: String(structuredAddress.postalCode).trim(),
-            country: String(structuredAddress.country || "Sri Lanka").trim(),
-            isDefault: guest.addresses.length === 0,
-          });
-        }
-
-        await guest.save({ session });
-      }
-
-      // Persist address for registered user (Fix #4).
+      // Persist address for guest if structured form provided (Fix #4).
       if (
-        user &&
         structuredAddress &&
         structuredAddress.street &&
         structuredAddress.city &&
         structuredAddress.postalCode &&
-        !user.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
+        !guest.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
       ) {
-        user.addresses.push({
+        guest.addresses.push({
           label: structuredAddress.label,
           street: String(structuredAddress.street).trim(),
           city: String(structuredAddress.city).trim(),
           postalCode: String(structuredAddress.postalCode).trim(),
           country: String(structuredAddress.country || "Sri Lanka").trim(),
-          isDefault: user.addresses.length === 0,
+          isDefault: guest.addresses.length === 0,
         });
-        await user.save({ session, validateModifiedOnly: true });
       }
-    });
-  } finally {
-    session.endSession();
-  }
->>>>>>> 85da37a784b3e22db3ef94974480f60e3f7e7584
 
-  const orderNotification = {
-    userId: user ? user._id : null,
-    type: "order",
-    title: "Order placed successfully",
-    message: `Your order ${createdOrder._id} has been placed and is ${createdOrder.status}.`,
-    entityRef: createdOrder._id,
-    entityType: "Order",
-    meta: { orderId: createdOrder._id },
-  };
+      await guest.save({ session });
+    }
 
-  if (user) {
-    await createNotification(orderNotification);
-  }
+    // Persist address for registered user (Fix #4).
+    if (
+      user &&
+      structuredAddress &&
+      structuredAddress.street &&
+      structuredAddress.city &&
+      structuredAddress.postalCode &&
+      !user.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
+    ) {
+      user.addresses.push({
+        label: structuredAddress.label,
+        street: String(structuredAddress.street).trim(),
+        city: String(structuredAddress.city).trim(),
+        postalCode: String(structuredAddress.postalCode).trim(),
+        country: String(structuredAddress.country || "Sri Lanka").trim(),
+        isDefault: user.addresses.length === 0,
+      });
+      await user.save({ session, validateModifiedOnly: true });
+    }
 
-  await broadcastNotification({
-    type: "admin",
-    title: `New order received: ${createdOrder._id}`,
-    message: `Order ${createdOrder._id} was placed by ${user ? user.email : guestEmailNormalized || "a guest"} for ${createdOrder.totalAmount}.`,
-    entityRef: createdOrder._id,
-    entityType: "Order",
-    meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
-    filter: { role: { $in: ADMIN_ROLES } },
+    return orderDocument;
   });
 
-  const orderNotifyPhones = parsePhoneList(
-    process.env.WHATSAPP_ORDER_NOTIFY_NUMBERS ||
-      process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS ||
-      ""
-  );
 
-  if (orderNotifyPhones.length > 0) {
-    const customerLabel = user?.email || guestEmailNormalized || "Guest";
-    const notifyBody =
-      `New order — Saga Elite\n` +
-      `Order: ${createdOrder._id}\n` +
-      `Total: LKR ${createdOrder.totalAmount}\n` +
-      `Contact: ${contactNumber.trim()}\n` +
-      `Customer: ${customerLabel}\n` +
-      `Payment: ${paymentMethod}`;
+const orderNotification = {
+  userId: user ? user._id : null,
+  type: "order",
+  title: "Order placed successfully",
+  message: `Your order ${createdOrder._id} has been placed and is ${createdOrder.status}.`,
+  entityRef: createdOrder._id,
+  entityType: "Order",
+  meta: { orderId: createdOrder._id },
+};
 
-    orderNotifyPhones.forEach((to) => {
-      sendWhatsAppMessage({ to, message: notifyBody }).catch((err) =>
-        logger.error("WhatsApp order notify failed", { error: err.message })
-      );
-    });
+if (user) {
+  await createNotification(orderNotification);
+}
+
+await broadcastNotification({
+  type: "admin",
+  title: `New order received: ${createdOrder._id}`,
+  message: `Order ${createdOrder._id} was placed by ${user ? user.email : guestEmailNormalized || "a guest"} for ${createdOrder.totalAmount}.`,
+  entityRef: createdOrder._id,
+  entityType: "Order",
+  meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
+  filter: { role: { $in: ADMIN_ROLES } },
+});
+
+const orderNotifyPhones = parsePhoneList(
+  process.env.WHATSAPP_ORDER_NOTIFY_NUMBERS ||
+  process.env.MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS ||
+  ""
+);
+
+if (orderNotifyPhones.length > 0) {
+  const customerLabel = user?.email || guestEmailNormalized || "Guest";
+  const notifyBody =
+    `New order — Saga Elite\n` +
+    `Order: ${createdOrder._id}\n` +
+    `Total: LKR ${createdOrder.totalAmount}\n` +
+    `Contact: ${contactNumber.trim()}\n` +
+    `Customer: ${customerLabel}\n` +
+    `Payment: ${paymentMethod}`;
+
+  orderNotifyPhones.forEach((to) => {
+    sendWhatsAppMessage({ to, message: notifyBody }).catch((err) =>
+      logger.error("WhatsApp order notify failed", { error: err.message })
+    );
+  });
+}
+
+// Customer-facing order-placed WhatsApp. The bank-transfer branch below
+// sends its own (with payment instructions), so we only fire this for
+// other payment methods (card, gpay, payhere, cash, etc.).
+if (!isBankTransferPayment) {
+  const customerOrderPhone = cleanPhoneNumber(contactNumber);
+  if (customerOrderPhone) {
+    sendWhatsAppMessage({
+      to: customerOrderPhone,
+      message:
+        `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+        `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+        `We'll message you when it ships.`,
+    }).catch((err) =>
+      logger.error("Customer order-placed WhatsApp failed", { error: err?.message })
+    );
   }
+}
 
-  // Customer-facing order-placed WhatsApp. The bank-transfer branch below
-  // sends its own (with payment instructions), so we only fire this for
-  // other payment methods (card, gpay, payhere, cash, etc.).
-  if (!isBankTransferPayment) {
-    const customerOrderPhone = cleanPhoneNumber(contactNumber);
-    if (customerOrderPhone) {
-      sendWhatsAppMessage({
-        to: customerOrderPhone,
-        message:
-          `Saga Elite: your order #${createdOrder._id} has been placed. ` +
-          `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
-          `We'll message you when it ships.`,
-      }).catch((err) =>
-        logger.error("Customer order-placed WhatsApp failed", { error: err?.message })
-      );
-    }
-  }
+// If guest or registered, send payment instructions
+let createdManualPayment = null;
+if (isBankTransferPayment) {
+  const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
+  createdManualPayment = await ManualPayment.create({
+    referenceNumber,
+    orderId: createdOrder._id,
+    userId: user ? user._id : undefined,
+    guestId: guest ? guest._id : undefined,
+    amount: createdOrder.totalAmount,
+    currency: "LKR",
+  });
+  const manualPayment = createdManualPayment;
 
-  // If guest or registered, send payment instructions
-  let createdManualPayment = null;
-  if (isBankTransferPayment) {
-    const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
-    createdManualPayment = await ManualPayment.create({
-      referenceNumber,
-      orderId: createdOrder._id,
-      userId: user ? user._id : undefined,
-      guestId: guest ? guest._id : undefined,
-      amount: createdOrder.totalAmount,
-      currency: "LKR",
-    });
-    const manualPayment = createdManualPayment;
+  const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
+  const customerEmail = user?.email || guestEmailNormalized;
+  const customerPhone = cleanPhoneNumber(contactNumber);
 
-    const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
-    const customerEmail = user?.email || guestEmailNormalized;
-    const customerPhone = cleanPhoneNumber(contactNumber);
-
-    if (customerEmail) {
-      const emailHtml = buildEmailTemplate(
-        "Complete your payment",
-        `<p>Thank you for your order! Here are your payment instructions:</p>
+  if (customerEmail) {
+    const emailHtml = buildEmailTemplate(
+      "Complete your payment",
+      `<p>Thank you for your order! Here are your payment instructions:</p>
          <p><strong>Reference:</strong> ${manualPayment.referenceNumber}</p>
          <p><strong>Amount:</strong> LKR ${createdOrder.totalAmount.toLocaleString()}</p>
          <p><strong>Bank:</strong> Sampath Bank, Hatton Branch</p>
@@ -543,41 +518,41 @@ const createOrder = catchAsync(async (req, res, next) => {
          <p><strong>IMPORTANT:</strong> Write ${manualPayment.referenceNumber} in the transfer remarks or on your ATM deposit slip.</p>
          <p><strong>You have 24 hours.</strong> After that your order expires.</p>
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
-      );
-      sendEmail({
-        email: customerEmail,
-        subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
-        html: emailHtml,
-      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
-    }
-
-    if (customerPhone) {
-      sendWhatsAppMessage({
-        to: customerPhone,
-        message:
-          `*Saga Elite Order*\n` +
-          `Reference: *${manualPayment.referenceNumber}*\n` +
-          `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
-          `Upload your receipt: ${paymentLink}\n` +
-          `You have 24 hours to complete payment.`
-      }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
-    }
+    );
+    sendEmail({
+      email: customerEmail,
+      subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
+      html: emailHtml,
+    }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
   }
 
-  res.status(201).json({
-    success: true,
-    message: "Order placed successfully",
-    orderId: createdOrder._id,
-    data: createdOrder,
-    manualPayment: createdManualPayment
-      ? {
-          slug: createdManualPayment.slug,
-          referenceNumber: createdManualPayment.referenceNumber,
-          amount: createdManualPayment.amount,
-        }
-      : null,
-    guestEmail: guestEmailNormalized || null,
-  });
+  if (customerPhone) {
+    sendWhatsAppMessage({
+      to: customerPhone,
+      message:
+        `*Saga Elite Order*\n` +
+        `Reference: *${manualPayment.referenceNumber}*\n` +
+        `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
+        `Upload your receipt: ${paymentLink}\n` +
+        `You have 24 hours to complete payment.`
+    }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
+  }
+}
+
+res.status(201).json({
+  success: true,
+  message: "Order placed successfully",
+  orderId: createdOrder._id,
+  data: createdOrder,
+  manualPayment: createdManualPayment
+    ? {
+      slug: createdManualPayment.slug,
+      referenceNumber: createdManualPayment.referenceNumber,
+      amount: createdManualPayment.amount,
+    }
+    : null,
+  guestEmail: guestEmailNormalized || null,
+});
 });
 
 const getUserOrders = catchAsync(async (req, res, next) => {
@@ -680,7 +655,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     return next(
       new AppError(
         `Cannot transition order from "${currentStatus}" to "${status}". ` +
-          (allowedNext.length ? `Allowed next statuses: ${allowedNext.join(", ")}.` : "This status is final."),
+        (allowedNext.length ? `Allowed next statuses: ${allowedNext.join(", ")}.` : "This status is final."),
         400
       )
     );
@@ -962,9 +937,8 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
         html: buildEmailTemplate(
           "How was your order? Leave a review!",
           `<p>Hi ${greeting},</p>
-           <p>Your Saga Elite order #${order._id} has been delivered. We hope you love ${productName}${
-             itemCount > 1 ? ` and your other ${itemCount - 1} item(s)` : ""
-           }!</p>
+           <p>Your Saga Elite order #${order._id} has been delivered. We hope you love ${productName}${itemCount > 1 ? ` and your other ${itemCount - 1} item(s)` : ""
+          }!</p>
            <p>Your feedback helps other customers and helps us improve. It only takes a moment.</p>
            <p style="text-align:center;margin:24px 0;">
              <a href="${reviewUrl}"
