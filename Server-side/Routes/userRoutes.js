@@ -26,6 +26,9 @@ const {
   removeFromWishlist,
   getMyProfile,
   updateMyProfile,
+  getMyAddresses,
+  addMyAddress,
+  removeMyAddress,
 } = require("../Controllers/user-controller");
 
 const router = express.Router();
@@ -53,5 +56,9 @@ router.delete("/cart/:itemId", validateObjectIdParam("itemId", "cart item id"), 
 router.get("/wishlist", getWishlist);
 router.post("/wishlist", validateWishlistAdd, addToWishlist);
 router.delete("/wishlist/:productId", validateObjectIdParam("productId", "product id"), removeFromWishlist);
+
+router.get("/addresses", getMyAddresses);
+router.post("/addresses", addMyAddress);
+router.delete("/addresses/:addressId", validateObjectIdParam("addressId", "address id"), removeMyAddress);
 
 module.exports = router;

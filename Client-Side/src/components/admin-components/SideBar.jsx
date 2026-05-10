@@ -45,8 +45,17 @@ const SECTION_LABELS = {
   Store: ["Products", "Drops", "Mystery Collectibles"],
   Sales: ["Orders", "Manual Payments", "Customers", "Reviews", "Contact Inquiries", "Activity"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
+  Content: [
+    "Content Hub",
+    "Brand & About",
+    "Home Images",
+    "Policies",
+    "Footer",
+    "Announcement Bar",
+    "Contact & FAQ",
+  ],
   Analytics: ["Analytics", "Recommendations"],
-  Settings: ["Shipping", "About Content", "SEO & Branding", "Admin Team"],
+  Settings: ["Shipping", "SEO & Branding", "Admin Team"],
 };
 
 const SECTION_ORDER = [
@@ -54,6 +63,7 @@ const SECTION_ORDER = [
   "Store",
   "Sales",
   "Marketing",
+  "Content",
   "Analytics",
   "Settings",
 ];
@@ -362,19 +372,62 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "manageReviews",
     },
 
+    // Content
+    {
+      label: "Content Hub",
+      path: "/admin/content",
+      icon: <Layers3 className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Brand & About",
+      path: "/admin/about-content",
+      icon: <Layout className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Home Images",
+      path: "/admin/home-images",
+      icon: <ImagePlus className="h-5 w-5" />,
+      permission: "products",
+    },
+    {
+      label: "Policies",
+      path: "/admin/policies",
+      icon: <ScrollText className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Footer",
+      path: "/admin/footer",
+      icon: <FileText className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Announcement Bar",
+      path: "/admin/announcement",
+      icon: <Bell className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Contact & FAQ",
+      path: "/admin/contact-content",
+      icon: <MessageSquare className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+
     // Settings
     {
       label: "Shipping",
       path: "/admin/shipping",
       icon: <Truck className="h-5 w-5" />,
       permission: "manageInventory",
-    },
-    {
-      label: "About Content",
-      path: "/admin/about-content",
-      icon: <FileText className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
     },
     {
       label: "SEO & Branding",

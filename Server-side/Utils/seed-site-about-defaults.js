@@ -50,6 +50,18 @@ const DEFAULT_ABOUT_ROWS = [
     label: "Team Section Subtext",
     value: "Team imagery coming soon — the spotlight is on you.",
   },
+  {
+    key: "bank_details",
+    label: "Manual Bank Transfer Details",
+    value: {
+      bankName: "Sampath Bank",
+      branch: "Hatton",
+      accountName: "N.Gayathree",
+      accountNumber: "108052612262",
+      whatsapp: "+94 77 070 4274",
+      deadline: "Pay within 24 hours to confirm your order.",
+    },
+  },
 ];
 
 const seedAboutSiteDefaults = async () => {
