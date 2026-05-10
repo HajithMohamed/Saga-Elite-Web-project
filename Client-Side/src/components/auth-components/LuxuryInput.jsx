@@ -18,7 +18,7 @@ const LuxuryInput = React.forwardRef(({
   const isPassword = type === "password";
 
   return (
-    <div className={`relative mb-6 ${className}`}>
+    <div className={`relative ${className}`}>
       <div 
         className={`relative flex items-center bg-[#111111] border-b transition-all duration-300 ease-in-out ${
           error ? 'border-[#ffb4ab]' : isFocused ? 'border-[#f2ca50] shadow-[0_4px_20px_-4px_rgba(242,202,80,0.15)]' : 'border-[#333333]'

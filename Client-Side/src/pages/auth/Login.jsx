@@ -263,28 +263,29 @@ const Login = () => {
     });
   };
 
-  const inputState = (field) =>
-    touched[field] && errors[field]
-      ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-      : "border-[#4d4635] focus:border-[#f2ca50]";
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.1 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
         <Eyebrow tone="gold" size="md">Welcome Back</Eyebrow>
-        <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        <h1 className="mt-3 se-serif text-[#e5e2e1] leading-[1.05] text-3xl sm:text-4xl md:text-5xl">
           Continue your<br />elite experience.
         </h1>
-        <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+        <p className="mt-4 se-body text-sm text-[#d0c5af] leading-relaxed max-w-sm">
           Sign in to unlock exclusive collections, order updates, and early drop access.
         </p>
       </motion.div>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+      {/* Form */}
+      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <LuxuryInput
             id="email"
@@ -301,7 +302,7 @@ const Login = () => {
           />
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <LuxuryInput
             id="password"
             type="password"
@@ -315,7 +316,7 @@ const Login = () => {
             }}
             onBlur={() => setTouched((p) => ({ ...p, password: true }))}
           />
-          <div className="flex items-center justify-end mt-2">
+          <div className="flex items-center justify-end mt-1">
             <Link
               to="/auth/forgot-password"
               className="se-label text-[9px] uppercase tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
@@ -325,7 +326,7 @@ const Login = () => {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Btn
             variant="default"
             className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
@@ -338,16 +339,23 @@ const Login = () => {
         </motion.div>
       </form>
 
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="mt-6 flex items-center justify-center gap-2 text-xs text-[#99907c]">
+      {/* Trust Badge */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25 }}
+        className="mt-5 flex items-center justify-center gap-2 text-xs text-[#99907c]"
+      >
         <ShieldCheck size={14} className="text-[#f2ca50]" />
         <span>Secure & Encrypted Authentication</span>
       </motion.div>
 
+      {/* Social Auth Divider */}
       {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-          <div className="my-8 flex items-center gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <div className="my-6 flex items-center gap-4">
             <Hairline tone="soft" />
-            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500] whitespace-nowrap">
               Or continue with
             </span>
             <Hairline tone="soft" />
@@ -375,7 +383,13 @@ const Login = () => {
         </motion.div>
       )}
 
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-10 se-body text-sm text-[#99907c] text-center">
+      {/* Switch to Register */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.35 }}
+        className="mt-8 se-body text-sm text-[#99907c] text-center"
+      >
         Not an elite member yet?{" "}
         <Link
           to="/auth/register"
