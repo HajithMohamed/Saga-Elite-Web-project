@@ -1,129 +1,337 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOrderById } from "@/store/order-slice";
+import { Check, Package, ShieldCheck, Truck, Copy, Clock, MessageCircle, ArrowRight, Star } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { resolveColor } from "@/components/ui/editorial";
+import AppLoader from "@/components/ui/AppLoader";
+import { toast } from "@/hooks/use-toast";
 
 const OrderSuccess = () => {
   const location = useLocation();
-  const orderId = location.state?.orderId || `TEM-${Math.floor(Math.random() * 100000000)}`;
-  const totalAmount = location.state?.totalAmount || "0.00";
-  const referenceNumber = location.state?.referenceNumber;
-  const paymentMethod = location.state?.paymentMethod;
+  const dispatch = useDispatch();
+  
+  const stateOrderId = location.state?.orderId;
+  const fallbackOrderId = `TEM-${Math.floor(Math.random() * 100000000)}`;
+  const displayOrderId = stateOrderId || fallbackOrderId;
+  const totalAmountState = location.state?.amount || location.state?.totalAmount;
+  
+  const { currentOrder, isLoading } = useSelector((state) => state.order);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (stateOrderId) {
+      dispatch(fetchOrderById(stateOrderId));
+    }
+  }, [dispatch, stateOrderId]);
+
+  // Use currentOrder if available, otherwise fallback to location.state data
+  const order = currentOrder || {
+    _id: displayOrderId,
+    totalAmount: totalAmountState || "0.00",
+    orderStatus: "pending",
+    items: [],
+    guestEmail: location.state?.email || "your email",
+    shippingAddress: "",
+  };
+
+  const primaryItem = order.items?.[0];
+  const primaryProduct = primaryItem?.product;
+  const primaryVariant = primaryItem?.variant || primaryItem; // Depending on API response structure
+  
+  const colorName = primaryVariant?.color || primaryItem?.color;
+  const themeColor = colorName ? resolveColor(colorName) : "#f2ca50";
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", themeColor);
+    document.documentElement.style.setProperty("--accent-glow", `${themeColor}40`);
+    return () => {
+      document.documentElement.style.removeProperty("--accent");
+      document.documentElement.style.removeProperty("--accent-glow");
+    };
+  }, [themeColor]);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(order._id);
+    setCopied(true);
+    toast({ title: "Order ID copied", variant: "success" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const formatLKR = (value = 0) =>
+    `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
+      maximumFractionDigits: 0,
+    })}`;
+
+  const getStatusIndex = (status) => {
+    const statuses = ["pending", "inProcess", "inShipping", "delivered"];
+    return statuses.indexOf(status) !== -1 ? statuses.indexOf(status) : 0;
+  };
+
+  const statusIndex = getStatusIndex(order.orderStatus);
+
+  if (isLoading && !currentOrder) {
+    return <AppLoader message="Securing your selection..." />;
+  }
 
   return (
-    <main className="min-h-screen bg-[#060606] text-white flex flex-col items-center pt-12 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
-      {/* Hero Section: Celebratory & Minimal */}
-      <section className="w-full text-center mb-16 mt-8">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-[#D4AF37]/10 border border-[#D4AF37] rounded-full mb-8 text-[#D4AF37] shadow-[0_0_30px_rgba(212,175,55,0.2)]">
-          <Check className="w-10 h-10" />
-        </div>
-        <h1 className="font-bold text-4xl md:text-5xl tracking-tighter text-white mb-4">
-          The transaction is complete.
-        </h1>
-        <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
-          Thank you for your order. We are preparing your selection with the same premium quality expected.
-        </p>
-        <div className="mt-8 bg-[#111] p-6 rounded-2xl border border-gray-800 inline-block">
-          <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Order Reference</span>
-          <p className="font-bold text-2xl tracking-widest text-[#D4AF37]">#{orderId}</p>
-          {["manual", "manual_bank_transfer"].includes(paymentMethod) && referenceNumber && (
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <span className="uppercase tracking-widest text-xs text-gray-500 font-semibold block mb-2">Payment Reference</span>
-              <p className="font-bold text-lg tracking-widest text-[#D4AF37]">{referenceNumber}</p>
-              <p className="text-xs text-gray-400 mt-1">Use this reference for your bank transfer</p>
+    <main className="min-h-screen bg-[#060606] text-[#e5e2e1] pb-32 md:pb-24 relative overflow-hidden font-sans">
+      {/* Cinematic Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div 
+          className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
+          style={{ background: `radial-gradient(circle, var(--accent) 0%, transparent 70%)` }}
+        />
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay"></div>
+      </div>
+
+      <div className="max-w-[1280px] mx-auto px-6 md:px-8 pt-16 md:pt-24 relative z-10">
+        
+        {/* SUCCESS HERO */}
+        <section className="w-full text-center mb-16">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-8 relative"
+          >
+            <div className="absolute inset-0 rounded-full border border-[var(--accent)]/30 animate-[spin_4s_linear_infinite]" />
+            <div className="absolute inset-2 rounded-full border border-[var(--accent)]/10" />
+            <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-full flex items-center justify-center shadow-[0_0_40px_var(--accent-glow)] backdrop-blur-md border border-[var(--accent)]/50">
+              <Check className="w-8 h-8 text-[var(--accent)]" />
             </div>
-          )}
-        </div>
-      </section>
+          </motion.div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 w-full mt-8">
-        {/* Left Column: Shipping & Details */}
-        <div className="lg:col-span-7 space-y-12">
-          {/* Shipping Timeline */}
-          <div className="bg-[#0a0a0a] border border-[#222] p-8 rounded-3xl">
-            <h2 className="font-bold text-xl mb-8 tracking-tight text-[#D4AF37]">Delivery Timeline</h2>
-            <div className="relative space-y-8">
-              {/* Vertical Line */}
-              <div className="absolute left-[11px] top-2 bottom-2 w-[1px] bg-gray-800"></div>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+          >
+            <h1 className="se-serif text-4xl md:text-6xl tracking-tight text-white mb-6">
+              Your Exclusive Drop Is Confirmed
+            </h1>
+            <p className="text-[#99907c] text-lg max-w-2xl mx-auto leading-relaxed">
+              Welcome to the elite collection. Every Saga Elite piece is carefully prepared and hand-inspected before dispatch. 
+            </p>
+          </motion.div>
 
-              {/* Step 1 */}
-              <div className="flex items-start gap-6 relative">
-                <div className="w-[23px] h-[23px] rounded-full bg-[#D4AF37] flex items-center justify-center z-10 border-4 border-[#0a0a0a]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-black"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-white">Order Confirmed</h3>
-                  <p className="text-xs text-gray-500 mt-1">Verification pending</p>
-                </div>
+          {/* Smart Order Number UI */}
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="mt-10 inline-flex flex-col items-center"
+          >
+            <div className="bg-[#0d0d0d] border border-[#1c1b1b] rounded-2xl p-6 shadow-2xl flex items-center gap-6">
+              <div>
+                <span className="se-label text-[9px] uppercase tracking-[0.28em] text-[#574500] block mb-2">Order Reference</span>
+                <p className="se-mono text-xl md:text-2xl tracking-widest text-white">{order._id}</p>
               </div>
-
-              {/* Step 2 */}
-              <div className="flex items-start gap-6 relative">
-                <div className="w-[23px] h-[23px] rounded-full bg-transparent border-2 border-gray-700 flex items-center justify-center z-10 box-content outline outline-4 outline-[#0a0a0a]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-transparent"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-gray-400">Preparation & Hand-Crafting</h3>
-                  <p className="text-xs text-gray-600 mt-1">Expected within 1-2 days</p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex items-start gap-6 relative">
-                 <div className="w-[23px] h-[23px] rounded-full bg-transparent border-2 border-gray-700 flex items-center justify-center z-10 box-content outline outline-4 outline-[#0a0a0a]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-transparent"></div>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm text-gray-400">Dispatch</h3>
-                  <p className="text-xs text-gray-600 mt-1">Pending shipping allocation</p>
-                </div>
-              </div>
+              <div className="w-px h-12 bg-[#1c1b1b]"></div>
+              <button 
+                onClick={copyToClipboard}
+                className="w-12 h-12 rounded-xl bg-[#1a1a1a] border border-[#333] flex items-center justify-center text-[#99907c] hover:text-[var(--accent)] hover:border-[var(--accent)]/50 transition-all group"
+              >
+                {copied ? <Check className="w-5 h-5 text-[var(--accent)]" /> : <Copy className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+              </button>
             </div>
+            {order.guestEmail && (
+              <p className="text-sm text-[#99907c] mt-4 flex items-center gap-2">
+                <Check className="w-4 h-4 text-[var(--accent)]" /> 
+                Confirmation sent to <span className="text-white font-medium">{order.guestEmail}</span>
+              </p>
+            )}
+          </motion.div>
+        </section>
+
+        {/* MAIN CONTENT GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-12">
+          
+          {/* Left Column: Delivery Journey & Packaging */}
+          <div className="lg:col-span-7 space-y-8">
+            
+            {/* Delivery Journey */}
+            <section className="bg-[#0d0d0d] border border-[#1c1b1b] p-8 md:p-10 rounded-[2rem] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                <Truck className="w-32 h-32 text-[var(--accent)]" />
+              </div>
+              <h2 className="se-serif text-2xl text-white mb-8">Your Delivery Journey</h2>
+              
+              <div className="relative space-y-8 mt-10">
+                <div className="absolute left-[15px] top-4 bottom-4 w-px bg-[#1c1b1b]"></div>
+                
+                {[
+                  { label: "Order Confirmed", desc: "Secured & verified", status: "pending", index: 0 },
+                  { label: "Quality Inspection", desc: "Hand-checked by our team", status: "inProcess", index: 1 },
+                  { label: "Premium Packaging", desc: "Signature unboxing preparation", status: "inProcess", index: 1 },
+                  { label: "Dispatched", desc: "En route to you", status: "inShipping", index: 2 },
+                  { label: "Delivered", desc: "Enjoy your Saga Elite piece", status: "delivered", index: 3 }
+                ].map((step, idx) => {
+                  // Slightly hacky logic to handle the 5 steps UI vs 4 API statuses
+                  const isCompleted = statusIndex >= step.index;
+                  const isActive = statusIndex === step.index && (idx === 0 || idx === 1 || idx === 3 || idx === 4); // simplistic active state
+                  
+                  return (
+                    <div key={idx} className="flex items-start gap-6 relative z-10">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-4 border-[#0d0d0d] transition-colors duration-500",
+                        isCompleted ? "bg-[var(--accent)]" : "bg-[#1a1a1a] border-[#333]"
+                      )}>
+                        {isCompleted && <Check className="w-3.5 h-3.5 text-[#000]" strokeWidth={3} />}
+                      </div>
+                      <div className={cn("pt-1", !isCompleted && "opacity-50")}>
+                        <h3 className={cn("font-semibold text-base", isCompleted ? "text-white" : "text-[#99907c]")}>{step.label}</h3>
+                        <p className="text-sm text-[#574500] mt-1">{step.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Unboxing Experience Preview */}
+            <section className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#1c1b1b] p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-8">
+              <div className="w-full md:w-1/3 aspect-square bg-[#060606] rounded-xl border border-[#222] flex items-center justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[var(--accent)]/5 group-hover:bg-[var(--accent)]/10 transition-colors"></div>
+                <Package className="w-16 h-16 text-[#333] group-hover:text-[var(--accent)] transition-colors duration-500" strokeWidth={1} />
+              </div>
+              <div className="w-full md:w-2/3">
+                <div className="inline-flex items-center gap-2 bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-3 py-1 rounded-full mb-4">
+                  <Star className="w-3 h-3 text-[var(--accent)]" />
+                  <span className="se-label text-[9px] uppercase tracking-widest text-[var(--accent)]">Signature Experience</span>
+                </div>
+                <h3 className="se-serif text-xl text-white mb-2">Delivered In Premium Packaging</h3>
+                <p className="text-[#99907c] text-sm leading-relaxed mb-4">
+                  Your selection includes authenticity protection, secure wrapping, and our signature Saga Elite matte-black box.
+                </p>
+              </div>
+            </section>
+            
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-            <Link
-              to={`/shopping/order-tracking?orderId=${orderId}`}
-              className="w-full sm:w-auto px-10 py-4 bg-[#D4AF37] hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)] flex items-center justify-center"
-            >
-              Track Order
-            </Link>
-            <Link
+          {/* Right Column: Product Hero & Order Summary */}
+          <aside className="lg:col-span-5 space-y-8">
+            
+            {/* Product Hero Showcase */}
+            {primaryProduct && (
+              <div className="bg-[#0d0d0d] border border-[var(--accent)]/20 p-6 md:p-8 rounded-[2rem] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 bg-[var(--accent)] text-black se-label text-[9px] tracking-widest px-4 py-2 rounded-bl-xl font-bold z-10">
+                  LIMITED RELEASE
+                </div>
+                
+                <div className="aspect-[4/5] bg-[#111] rounded-xl overflow-hidden mb-6 relative">
+                  <img 
+                    src={primaryProduct.image || primaryProduct.images?.[0] || "/placeholder-image.jpg"} 
+                    alt={primaryProduct.title}
+                    className="w-full h-full object-cover mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-transparent to-transparent opacity-80"></div>
+                </div>
+
+                <div>
+                  <h3 className="se-serif text-2xl text-white mb-2">{primaryProduct.title}</h3>
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    {primaryVariant?.size && (
+                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white uppercase font-medium">
+                        Size: {primaryVariant.size}
+                      </div>
+                    )}
+                    {primaryVariant?.color && (
+                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white capitalize flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full border border-gray-600" style={{ backgroundColor: themeColor }}></span>
+                        {primaryVariant.color}
+                      </div>
+                    )}
+                    {primaryItem?.quantity > 1 && (
+                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white">
+                        Qty: {primaryItem.quantity}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {order.items?.length > 1 && (
+                    <p className="text-[#574500] text-xs mt-4 italic">
+                      + {order.items.length - 1} more item(s) in this collection
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Financial Summary */}
+            <div className="bg-[#0d0d0d] border border-[#1c1b1b] p-8 rounded-[2rem]">
+              <h2 className="se-serif text-xl text-white mb-6">Order Summary</h2>
+              
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#99907c]">Total Processed</span>
+                  <span className="font-medium text-white">{formatLKR(order.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-[#1c1b1b]">
+                  <span className="text-[#99907c]">Estimated Arrival</span>
+                  <span className="font-medium text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[var(--accent)]" /> 3-5 Business Days
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex items-center gap-3 bg-[var(--accent)]/5 border border-[var(--accent)]/20 px-4 py-3 rounded-xl">
+                <ShieldCheck className="text-[var(--accent)] w-5 h-5 shrink-0" />
+                <span className="text-[10px] uppercase tracking-widest text-[var(--accent)] font-bold leading-relaxed">
+                  Secure Payment Verified
+                </span>
+              </div>
+            </div>
+
+            {/* Customer Support & Sharing */}
+            <div className="grid grid-cols-2 gap-4">
+              <a 
+                href="https://wa.me/94770704274" 
+                target="_blank" 
+                rel="noreferrer"
+                className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
+              >
+                <MessageCircle className="w-6 h-6 text-[#99907c] group-hover:text-green-500 transition-colors" />
+                <span className="text-xs text-[#e5e2e1] font-medium">WhatsApp Help</span>
+              </a>
+              <Link 
+                to="/shopping/home" 
+                className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
+              >
+                <ArrowRight className="w-6 h-6 text-[#99907c] group-hover:text-[var(--accent)] transition-colors" />
+                <span className="text-xs text-[#e5e2e1] font-medium">Explore More</span>
+              </Link>
+            </div>
+
+          </aside>
+        </div>
+
+        {/* Recommended Products (Static for now to mimic luxury upsell) */}
+        <section className="mt-24 mb-12 border-t border-[#1c1b1b] pt-16">
+          <h2 className="se-serif text-3xl text-center text-white mb-12">Complete The Collection</h2>
+          <div className="flex justify-center">
+             <Link 
               to="/shopping/product-list"
-              className="w-full sm:w-auto px-10 py-4 text-[#D4AF37] font-bold rounded-xl text-center transition-all hover:bg-[#D4AF37]/10 border border-transparent hover:border-[#D4AF37]/30"
-            >
-              Continue Shopping
-            </Link>
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#111] border border-[#333] hover:border-[var(--accent)] text-white text-sm tracking-widest uppercase rounded-full transition-all group"
+             >
+               View Latest Arrivals
+               <ArrowRight className="w-4 h-4 text-[#99907c] group-hover:text-[var(--accent)] transition-colors group-hover:translate-x-1" />
+             </Link>
           </div>
-        </div>
+        </section>
 
-        {/* Right Column: Order Info */}
-        <aside className="lg:col-span-5">
-          <div className="bg-[#0a0a0a] border border-[#222] p-8 rounded-3xl sticky top-8">
-            <h2 className="font-bold text-xl mb-6 tracking-tight text-white">Financial Breakdown</h2>
-            
-            <div className="space-y-4 pt-4 border-t border-gray-800">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Subtotal</span>
-                <span className="font-medium text-white">LKR {totalAmount}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Shipping</span>
-                <span className="font-medium text-[#D4AF37]">Calculated Later</span>
-              </div>
-              <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-800">
-                <span className="font-bold text-lg text-white">Total Processed</span>
-                <span className="font-extrabold text-2xl tracking-tighter text-[#D4AF37]">LKR {totalAmount}</span>
-              </div>
-            </div>
-            
-            <div className="mt-8 flex items-center gap-3 bg-[#111] border border-[#D4AF37]/20 px-4 py-3 rounded-xl w-fit">
-              <Check className="text-[#D4AF37] w-4 h-4" />
-              <span className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">Encrypted Transition Verified</span>
-            </div>
-          </div>
-        </aside>
+      </div>
+
+      {/* Mobile Sticky Track Button */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#060606]/90 backdrop-blur-md border-t border-[#1c1b1b] md:hidden z-50">
+        <Link
+          to={`/shopping/order-tracking?orderId=${displayOrderId}`}
+          className="w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-widest text-xs rounded-xl flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]"
+        >
+          Track My Order
+        </Link>
       </div>
     </main>
   );
