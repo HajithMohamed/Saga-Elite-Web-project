@@ -72,6 +72,7 @@ const defaultVariant = {
   sku: "",
   size: "",
   color: "",
+  colorCode: "",
   stock: "0",
   priceAdjustment: "0",
 };
@@ -80,6 +81,13 @@ const initialProductForm = {
   name: "",
   artNo: "",
   description: "",
+  story: "",
+  fabric: "",
+  gsm: "",
+  fitType: "",
+  careInstructions: "",
+  sizeGuide: "",
+  categoryPath: "",
   brand: "Sovereign Elite",
   category: "Unisex",
   drop: "",
@@ -92,6 +100,41 @@ const initialProductForm = {
   isLimited: false,
   tags: [],
   variants: [defaultVariant],
+};
+
+const SIZE_OPTIONS = [
+  "XS", "S", "M", "L", "XL", "XXL", "3XL", "FREE",
+  "36", "38", "40", "42", "44", "46", "48", "50",
+];
+
+const COLOR_OPTIONS = [
+  { name: "Black", hex: "#000000" },
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Navy", hex: "#1B2A4A" },
+  { name: "Charcoal", hex: "#36454F" },
+  { name: "Olive", hex: "#556B2F" },
+  { name: "Cream", hex: "#FFFDD0" },
+  { name: "Sand", hex: "#C2B280" },
+  { name: "Burgundy", hex: "#800020" },
+  { name: "Forest Green", hex: "#228B22" },
+  { name: "Tan", hex: "#D2B48C" },
+  { name: "Grey", hex: "#808080" },
+  { name: "Red", hex: "#B22222" },
+  { name: "Royal Blue", hex: "#4169E1" },
+  { name: "Camel", hex: "#C19A6B" },
+  { name: "Sage", hex: "#B2AC88" },
+  { name: "Rust", hex: "#B7410E" },
+  { name: "Gold", hex: "#D4AF37" },
+  { name: "Pink", hex: "#FFB6C1" },
+  { name: "Lavender", hex: "#E6E6FA" },
+];
+
+const generateSku = (artNo, size, color) => {
+  if (!artNo) return "";
+  const parts = [artNo.trim().toUpperCase()];
+  if (size) parts.push(size.toUpperCase().replace(/\s+/g, ""));
+  if (color) parts.push(color.toUpperCase().replace(/\s+/g, "").slice(0, 3));
+  return parts.join("-");
 };
 
 // Draft key for the wizard's auto-save. Only used when creating a NEW product
@@ -256,6 +299,13 @@ const Product = () => {
       name: product.name || "",
       artNo: product.artNo || "",
       description: product.description || "",
+      story: product.story || "",
+      fabric: product.fabric || "",
+      gsm: product.gsm || "",
+      fitType: product.fitType || "",
+      careInstructions: product.careInstructions || "",
+      sizeGuide: product.sizeGuide || "",
+      categoryPath: product.categoryPath || "",
       brand: product.brand || "Sovereign Elite",
       category: product.category || "Unisex",
       drop: product.drop?._id || "",
@@ -267,7 +317,9 @@ const Product = () => {
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
       tags: Array.isArray(product.tags) ? product.tags : [],
-      variants: product.variants?.length ? product.variants : [defaultVariant],
+      variants: product.variants?.length
+        ? product.variants.map((v) => ({ ...v, colorCode: v.colorCode || "" }))
+        : [defaultVariant],
     });
     setActiveFormTab("basic");
     setShowForm(true);
@@ -379,7 +431,23 @@ const Product = () => {
 
   const handleVariantChange = (index, field, value) => {
     const updatedVariants = [...formData.variants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    const variant = { ...updatedVariants[index], [field]: value };
+
+    // Auto-set colorCode when color changes to a known preset
+    if (field === "color") {
+      const preset = COLOR_OPTIONS.find((c) => c.name.toLowerCase() === value.toLowerCase());
+      if (preset) variant.colorCode = preset.hex;
+    }
+
+    // Auto-generate SKU when size or color changes (only if sku was auto-generated or empty)
+    if (field === "size" || field === "color") {
+      const currentAuto = generateSku(formData.artNo, updatedVariants[index].size, updatedVariants[index].color);
+      if (!variant.sku || variant.sku === currentAuto) {
+        variant.sku = generateSku(formData.artNo, variant.size, variant.color);
+      }
+    }
+
+    updatedVariants[index] = variant;
     setFormData({ ...formData, variants: updatedVariants });
   };
 
@@ -397,6 +465,7 @@ const Product = () => {
   // Tabs
   const PRODUCT_TABS = [
     { id: "basic", label: "Basic Info", icon: Info },
+    { id: "details", label: "Details", icon: Sparkles },
     { id: "pricing", label: "Pricing", icon: DollarSign },
     { id: "variants", label: "Variants", icon: Layers, count: formData.variants.length },
     { id: "media", label: "Media", icon: ImageIcon, count: productImages.length },
@@ -685,9 +754,109 @@ const Product = () => {
         </FormSection>
       ) : null}
 
-      {activeFormTab === "pricing" ? (
+      {activeFormTab === "details" ? (
         <FormSection
           number="02"
+          title="Product Details"
+          description="Rich content fields for the product detail page — story, materials, fit, and care."
+        >
+          <FormField
+            label="Product Story"
+            optional
+            helper="Editorial narrative about this piece."
+            hint={`${(formData.story || '').length} / 3000`}
+          >
+            <LuxuryTextarea
+              value={formData.story}
+              onChange={(e) => setFormData({ ...formData, story: e.target.value })}
+              placeholder="Tell the story behind this piece — inspiration, craftsmanship, cultural references…"
+              rows={5}
+              maxLength={3000}
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField label="Fabric / Material" optional helper="E.g. 100% Premium Cotton">
+              <LuxuryInput
+                type="text"
+                value={formData.fabric}
+                onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
+                placeholder="100% Premium Cotton"
+                maxLength={200}
+              />
+            </FormField>
+
+            <FormField label="GSM" optional helper="Fabric weight, e.g. 280gsm">
+              <LuxuryInput
+                type="text"
+                value={formData.gsm}
+                onChange={(e) => setFormData({ ...formData, gsm: e.target.value })}
+                placeholder="280gsm"
+                maxLength={100}
+              />
+            </FormField>
+
+            <FormField label="Fit Type" optional helper="E.g. Oversized, Slim, Regular">
+              <LuxurySelect
+                value={formData.fitType}
+                onChange={(e) => setFormData({ ...formData, fitType: e.target.value })}
+              >
+                <option value="">Select fit type</option>
+                <option value="Slim">Slim</option>
+                <option value="Regular">Regular</option>
+                <option value="Relaxed">Relaxed</option>
+                <option value="Oversized">Oversized</option>
+                <option value="Boxy">Boxy</option>
+                <option value="Tailored">Tailored</option>
+              </LuxurySelect>
+            </FormField>
+
+            <FormField label="Category Path" optional helper="Breadcrumb path, e.g. Ladies > Dresses > Midi">
+              <LuxuryInput
+                type="text"
+                value={formData.categoryPath}
+                onChange={(e) => setFormData({ ...formData, categoryPath: e.target.value })}
+                placeholder="Ladies > Tops > T-Shirts"
+                maxLength={200}
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Care Instructions"
+            optional
+            helper="Washing, ironing, dry cleaning notes."
+            hint={`${(formData.careInstructions || '').length} / 1000`}
+          >
+            <LuxuryTextarea
+              value={formData.careInstructions}
+              onChange={(e) => setFormData({ ...formData, careInstructions: e.target.value })}
+              placeholder="Machine wash cold. Hang dry. Do not bleach…"
+              rows={3}
+              maxLength={1000}
+            />
+          </FormField>
+
+          <FormField
+            label="Size Guide"
+            optional
+            helper="Sizing information and measurement notes."
+            hint={`${(formData.sizeGuide || '').length} / 2000`}
+          >
+            <LuxuryTextarea
+              value={formData.sizeGuide}
+              onChange={(e) => setFormData({ ...formData, sizeGuide: e.target.value })}
+              placeholder="Model wears size M. Height 185cm, chest 96cm…"
+              rows={3}
+              maxLength={2000}
+            />
+          </FormField>
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "pricing" ? (
+        <FormSection
+          number="03"
           title="Pricing & Limits"
           description="Storefront price, optional discount, and per-customer limits."
         >
@@ -770,7 +939,7 @@ const Product = () => {
 
       {activeFormTab === "variants" ? (
         <FormSection
-          number="03"
+          number="04"
           title="Variants"
           description="Each combination of size and colour with its own SKU and stock."
           action={
@@ -808,38 +977,110 @@ const Product = () => {
                       transition={{ duration: 0.2 }}
                       className="hover:bg-white/[0.02] transition"
                     >
+                      {/* Auto-generated SKU (editable) */}
                       <td className="px-4 py-2.5">
-                        <LuxuryInput
-                          type="text"
-                          value={v.sku}
-                          onChange={(e) =>
-                            handleVariantChange(i, "sku", e.target.value)
-                          }
-                          placeholder="SKU-001"
-                          className="font-mono uppercase text-xs py-2"
-                        />
+                        <div className="relative">
+                          <LuxuryInput
+                            type="text"
+                            value={v.sku}
+                            onChange={(e) =>
+                              handleVariantChange(i, "sku", e.target.value)
+                            }
+                            placeholder="Auto-generated"
+                            className="font-mono uppercase text-xs py-2"
+                          />
+                          {!v.sku && formData.artNo && (
+                            <button
+                              type="button"
+                              onClick={() => handleVariantChange(i, "sku", generateSku(formData.artNo, v.size, v.color))}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#D4AF37] uppercase tracking-wider hover:underline"
+                              title="Auto-generate SKU"
+                            >
+                              Gen
+                            </button>
+                          )}
+                        </div>
                       </td>
+
+                      {/* Size dropdown with presets */}
                       <td className="px-4 py-2.5">
-                        <LuxuryInput
-                          type="text"
-                          value={v.size}
-                          onChange={(e) =>
-                            handleVariantChange(i, "size", e.target.value)
-                          }
-                          placeholder="EU 42"
+                        <LuxurySelect
+                          value={SIZE_OPTIONS.includes(v.size) ? v.size : (v.size ? "__custom" : "")}
+                          onChange={(e) => {
+                            if (e.target.value === "__custom") {
+                              handleVariantChange(i, "size", "");
+                            } else {
+                              handleVariantChange(i, "size", e.target.value);
+                            }
+                          }}
                           className="text-xs py-2"
-                        />
+                        >
+                          <option value="">Size…</option>
+                          {SIZE_OPTIONS.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                          <option value="__custom">Custom…</option>
+                        </LuxurySelect>
+                        {v.size && !SIZE_OPTIONS.includes(v.size) && (
+                          <LuxuryInput
+                            type="text"
+                            value={v.size}
+                            onChange={(e) => handleVariantChange(i, "size", e.target.value)}
+                            placeholder="Custom size"
+                            className="text-xs py-1.5 mt-1"
+                          />
+                        )}
                       </td>
+
+                      {/* Color dropdown with swatches */}
                       <td className="px-4 py-2.5">
-                        <LuxuryInput
-                          type="text"
-                          value={v.color}
-                          onChange={(e) =>
-                            handleVariantChange(i, "color", e.target.value)
-                          }
-                          placeholder="Obsidian"
-                          className="text-xs py-2"
-                        />
+                        <div className="flex items-center gap-2">
+                          {v.colorCode && (
+                            <span
+                              className="w-4 h-4 shrink-0 rounded-full border border-white/20"
+                              style={{ backgroundColor: v.colorCode }}
+                            />
+                          )}
+                          <LuxurySelect
+                            value={COLOR_OPTIONS.find((c) => c.name.toLowerCase() === (v.color || "").toLowerCase()) ? v.color : (v.color ? "__custom" : "")}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "__custom") {
+                                handleVariantChange(i, "color", "");
+                                handleVariantChange(i, "colorCode", "");
+                              } else {
+                                handleVariantChange(i, "color", val);
+                              }
+                            }}
+                            className="text-xs py-2 flex-1"
+                          >
+                            <option value="">Color…</option>
+                            {COLOR_OPTIONS.map((c) => (
+                              <option key={c.name} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))}
+                            <option value="__custom">Custom…</option>
+                          </LuxurySelect>
+                        </div>
+                        {v.color && !COLOR_OPTIONS.find((c) => c.name.toLowerCase() === v.color.toLowerCase()) && (
+                          <div className="flex gap-2 mt-1">
+                            <LuxuryInput
+                              type="text"
+                              value={v.color}
+                              onChange={(e) => handleVariantChange(i, "color", e.target.value)}
+                              placeholder="Color name"
+                              className="text-xs py-1.5 flex-1"
+                            />
+                            <input
+                              type="color"
+                              value={v.colorCode || "#000000"}
+                              onChange={(e) => handleVariantChange(i, "colorCode", e.target.value)}
+                              className="w-8 h-8 border-0 bg-transparent cursor-pointer"
+                              title="Pick color"
+                            />
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <LuxuryInput
@@ -888,7 +1129,7 @@ const Product = () => {
 
       {activeFormTab === "media" ? (
         <FormSection
-          number="04"
+          number="05"
           title="Media"
           description="Hero and supporting imagery shown on storefront cards and detail pages."
         >
@@ -934,7 +1175,7 @@ const Product = () => {
 
       {activeFormTab === "tags" ? (
         <FormSection
-          number="05"
+          number="06"
           title="Tags & Identity"
           description="Tags drive merchandising — applied tags surface on the storefront and in filters."
         >
