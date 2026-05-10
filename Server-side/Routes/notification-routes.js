@@ -6,6 +6,7 @@ const {
   validateNotificationMessage,
   validateNotificationUpdate,
 } = require("../Middlewares/request-validation");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   getNotifications,
   markNotificationRead,
@@ -21,10 +22,10 @@ const router = express.Router();
 router.use(authMiddleware);
 router.get("/", getNotifications);
 router.patch("/:id/read", validateObjectIdParam("id", "notification id"), markNotificationRead);
-router.post("/admin-message", adminMiddleware, requirePermission("notifications"), validateNotificationMessage, sendAdminMessage);
+router.post("/admin-message", adminMiddleware, requirePermission("notifications"), validateNotificationMessage, adminLogMiddleware, sendAdminMessage);
 router.get("/admin", adminMiddleware, requirePermission("notifications"), getAdminNotifications);
 router.get("/admin/:id", adminMiddleware, requirePermission("notifications"), validateObjectIdParam("id", "notification id"), getAdminNotification);
-router.patch("/admin/:id", adminMiddleware, requirePermission("notifications"), validateObjectIdParam("id", "notification id"), validateNotificationUpdate, updateNotification);
-router.delete("/admin/:id", adminMiddleware, requirePermission("notifications"), validateObjectIdParam("id", "notification id"), deleteNotification);
+router.patch("/admin/:id", adminMiddleware, requirePermission("notifications"), validateObjectIdParam("id", "notification id"), validateNotificationUpdate, adminLogMiddleware, updateNotification);
+router.delete("/admin/:id", adminMiddleware, requirePermission("notifications"), validateObjectIdParam("id", "notification id"), adminLogMiddleware, deleteNotification);
 
 module.exports = router;

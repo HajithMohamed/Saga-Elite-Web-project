@@ -1,8 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   Boxes,
@@ -10,17 +12,23 @@ import {
   CreditCard,
   DollarSign,
   Layers3,
+  Lightbulb,
   Package,
+  Radio,
   ShieldAlert,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
   StarHalf,
+  Timer,
   Truck,
   Users,
   Wallet,
 } from "lucide-react";
 import { fetchDashboardStats } from "@/store/order-slice";
+import { fetchAllRecommendations } from "@/store/recommendationsSlice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
+import { API_V1_URL } from "@/lib/api";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   pageVariants,
@@ -75,6 +83,40 @@ const formatLabel = (value) =>
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+
+const timeAgo = (date) => {
+  if (!date) return "";
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return formatDate(date);
+};
+
+const dropCountdown = (drop, nowMs) => {
+  if (!drop) return null;
+  const release = drop.releaseDate ? new Date(drop.releaseDate).getTime() : null;
+  const end = drop.endDate ? new Date(drop.endDate).getTime() : null;
+  if (release && release > nowMs) return { phase: "Releases in", remaining: release - nowMs };
+  if (end && end > nowMs) return { phase: "Ends in", remaining: end - nowMs };
+  if (end && end <= nowMs) return { phase: "Ended", remaining: 0 };
+  return { phase: "Live", remaining: null };
+};
+
+const formatDuration = (ms) => {
+  if (ms == null) return "Active";
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  const pad = (n) => n.toString().padStart(2, "0");
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m`;
+  return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+};
 
 const quickLinks = [
   {
@@ -165,9 +207,116 @@ const Dashboard = () => {
   const isSuperAdmin = user?.role === "super_admin" || user?.role === "superadmin";
   const userPerms = user?.permissions || {};
 
+  const [activeDrop, setActiveDrop] = useState(null);
+  const [feedEvents, setFeedEvents] = useState([]);
+  const [recHighlights, setRecHighlights] = useState([]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
   useEffect(() => {
     dispatch(fetchDashboardStats());
   }, [dispatch]);
+
+  // 1Hz tick for the drop countdown
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const fetchActiveDrop = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_V1_URL}/drops/get-all-drops`, { withCredentials: true });
+      const drops = res.data?.drops || [];
+      const ts = Date.now();
+      const live = drops.find(
+        (d) =>
+          d.isPublished &&
+          !d.isArchived &&
+          (!d.releaseDate || new Date(d.releaseDate).getTime() <= ts) &&
+          (!d.endDate || new Date(d.endDate).getTime() > ts)
+      );
+      const upcoming = drops
+        .filter(
+          (d) =>
+            d.isPublished &&
+            !d.isArchived &&
+            d.releaseDate &&
+            new Date(d.releaseDate).getTime() > ts
+        )
+        .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))[0];
+      setActiveDrop(live || upcoming || null);
+    } catch {
+      setActiveDrop(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActiveDrop();
+  }, [fetchActiveDrop]);
+
+  useEffect(() => {
+    let cancelled = false;
+    dispatch(fetchAllRecommendations())
+      .unwrap()
+      .then((byType) => {
+        if (cancelled) return;
+        const flat = [];
+        Object.entries(byType || {}).forEach(([type, rec]) => {
+          const items = rec?.recommendations || rec?.items || [];
+          items.slice(0, 2).forEach((item, idx) => {
+            flat.push({
+              type,
+              id: `${type}-${idx}-${item.id || item._id || idx}`,
+              title: item.title || item.name || item.heading || "Insight",
+              text:
+                item.summary ||
+                item.description ||
+                item.recommendation ||
+                item.text ||
+                "",
+            });
+          });
+        });
+        setRecHighlights(flat.slice(0, 5));
+      })
+      .catch(() => {
+        if (!cancelled) setRecHighlights([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+
+  const pushFeed = useCallback((entry) => {
+    setFeedEvents((prev) =>
+      [{ ...entry, at: new Date(), id: `${Date.now()}-${Math.random()}` }, ...prev].slice(0, 12)
+    );
+  }, []);
+
+  const refreshDashboard = useCallback(() => {
+    dispatch(fetchDashboardStats());
+  }, [dispatch]);
+
+  useSocketEvent("order:refresh", () => {
+    refreshDashboard();
+    pushFeed({ icon: "🛒", text: "New order activity", tone: "text-emerald-300" });
+  });
+  useSocketEvent("payment:new_pending", () => {
+    refreshDashboard();
+    pushFeed({ icon: "💳", text: "Payment proof submitted for verification", tone: "text-amber-300" });
+  });
+  useSocketEvent("payment:refresh", () => {
+    refreshDashboard();
+  });
+  useSocketEvent("review:refresh", () => {
+    pushFeed({ icon: "⭐", text: "Review activity", tone: "text-rose-300" });
+  });
+  useSocketEvent("admin:refresh", () => {
+    refreshDashboard();
+  });
+  useSocketEvent("drop:updated", () => {
+    fetchActiveDrop();
+    pushFeed({ icon: "🎁", text: "Drop catalog updated", tone: "text-[#f2ca50]" });
+  });
 
   const overview = dashboardStats?.overview || {};
   const highlights = dashboardStats?.highlights || {};
@@ -178,6 +327,56 @@ const Dashboard = () => {
   const recentOrders = dashboardStats?.recentOrders || [];
   const paymentMethodBreakdown = dashboardStats?.paymentMethodBreakdown || [];
   const orderStatusBreakdown = dashboardStats?.orderStatusBreakdown || {};
+
+  const liveKpis = useMemo(
+    () => [
+      {
+        label: "Revenue",
+        value: Number(overview.totalRevenue) || 0,
+        formatter: (v) => currencyFormatter.format(Math.round(v)),
+        hint: "Lifetime",
+      },
+      {
+        label: "Active Orders",
+        value: Number(overview.activeOrders) || 0,
+        formatter: formatNumber,
+        hint: `${formatNumber(overview.pendingVerification)} to verify`,
+      },
+      {
+        label: "Pending Payments",
+        value: Number(overview.pendingPayments) || 0,
+        formatter: formatNumber,
+        hint: "Manual queue",
+      },
+      {
+        label: "Low Stock",
+        value: Number(overview.lowStockProducts) || 0,
+        formatter: formatNumber,
+        hint: "Below threshold",
+      },
+      {
+        label: "Live Drops",
+        value: Number(overview.liveDrops) || 0,
+        formatter: formatNumber,
+        hint: activeDrop?.name || "—",
+      },
+      {
+        label: "Reviews Queue",
+        value: Number(overview.uncategorizedReviews) || 0,
+        formatter: formatNumber,
+        hint: "Uncategorized",
+      },
+      {
+        label: "Aging Stock",
+        value: Number(overview.agingProductsCount) || 0,
+        formatter: formatNumber,
+        hint: "90+ days",
+      },
+    ],
+    [overview, activeDrop]
+  );
+
+  const dropCd = dropCountdown(activeDrop, nowMs);
 
   // Filter quick links based on user permissions (super admins see everything)
   const visibleQuickLinks = isSuperAdmin
@@ -252,10 +451,10 @@ const Dashboard = () => {
       tone: "text-orange-400",
     },
     {
-      label: "Pending Reviews",
-      numericValue: Number(overview.pendingReviews) || 0,
+      label: "Uncategorized Reviews",
+      numericValue: Number(overview.uncategorizedReviews) || 0,
       formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: "Awaiting moderation",
+      hint: "Tag a topic to surface them",
       icon: StarHalf,
       tone: "text-rose-300",
     },
@@ -285,6 +484,192 @@ const Dashboard = () => {
         animate="visible"
         className="w-full"
       >
+        {/* OPERATIONS CONTROL ROOM — live KPI strip + feed + drop status + AI insights */}
+        <section className="mb-6 space-y-4">
+          <div className="rounded-[28px] border border-[#f2ca50]/20 bg-[#0a0a0a] p-5 shadow-[0_0_60px_rgba(242,202,80,0.06)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Radio className="h-3.5 w-3.5 text-[#f2ca50]" />
+                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[#f2ca50]">
+                  Live Operations Strip
+                </p>
+              </div>
+              <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.28em] text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 xl:grid-cols-7">
+              {liveKpis.map((kpi) => (
+                <div key={kpi.label} className="border-l border-[#2a2a2a] pl-3">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#99907c]">
+                    {kpi.label}
+                  </p>
+                  <p className="mt-1 font-mono text-2xl font-bold leading-none text-white tabular-nums">
+                    <AnimatedNumber value={kpi.value} formatter={kpi.formatter} />
+                  </p>
+                  {kpi.hint ? (
+                    <p className="mt-1 truncate text-[10px] text-gray-500">{kpi.hint}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Live Order Feed */}
+            <div className="rounded-[24px] border border-[#2a2a2a] bg-[#131313] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+                    Live Order Feed
+                  </p>
+                </div>
+                <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                  {feedEvents.length} live
+                </span>
+              </div>
+              <div className="custom-scrollbar max-h-[240px] min-h-[180px] space-y-2 overflow-y-auto pr-1">
+                {feedEvents.length === 0 ? (
+                  <div className="flex h-[180px] items-center justify-center text-center text-xs text-gray-500">
+                    Waiting for live activity…
+                  </div>
+                ) : (
+                  feedEvents.map((event) => (
+                    <motion.div
+                      key={event.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex items-start gap-3 rounded-lg border border-[#2a2a2a] bg-black/40 px-3 py-2"
+                    >
+                      <span className="mt-0.5 text-base leading-none">{event.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-xs font-medium ${event.tone || "text-gray-200"}`}>
+                          {event.text}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
+                          {timeAgo(event.at)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Drop Status Panel */}
+            <div className="rounded-[24px] border border-[#f2ca50]/20 bg-gradient-to-br from-[#1a1408] to-[#0a0a0a] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-[#f2ca50]" />
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#f2ca50]">
+                    Drop Status
+                  </p>
+                </div>
+                <Link
+                  to="/admin/drop"
+                  className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#99907c] transition hover:text-[#f2ca50]"
+                >
+                  Manage
+                </Link>
+              </div>
+              {!activeDrop ? (
+                <div className="flex h-[180px] flex-col items-center justify-center text-center">
+                  <Layers3 className="mb-2 h-8 w-8 text-gray-600" />
+                  <p className="text-sm text-gray-400">No active drop</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Schedule a release to see it here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <p className="truncate text-xl font-bold text-white">{activeDrop.name}</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-gray-500">
+                      {activeDrop.description ? activeDrop.description : "Limited release"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#f2ca50]/20 bg-black/40 p-3">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#f2ca50]">
+                      {dropCd?.phase || "Live"}
+                    </p>
+                    <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-white">
+                      {formatDuration(dropCd?.remaining)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg border border-[#2a2a2a] bg-black/30 p-2">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                        Release
+                      </p>
+                      <p className="mt-1 truncate text-gray-300">
+                        {formatDate(activeDrop.releaseDate)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-[#2a2a2a] bg-black/30 p-2">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                        Ends
+                      </p>
+                      <p className="mt-1 truncate text-gray-300">
+                        {activeDrop.endDate ? formatDate(activeDrop.endDate) : "Open"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* AI Insights Panel */}
+            <div className="rounded-[24px] border border-[#2a2a2a] bg-[#131313] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-violet-400" />
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+                    AI Insights
+                  </p>
+                </div>
+                <Link
+                  to="/admin/recommendations"
+                  className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#99907c] transition hover:text-violet-300"
+                >
+                  See all
+                </Link>
+              </div>
+              {recHighlights.length === 0 ? (
+                <div className="flex h-[180px] flex-col items-center justify-center text-center">
+                  <Sparkles className="mb-2 h-8 w-8 text-gray-600" />
+                  <p className="text-sm text-gray-400">No insights yet</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Recommendations will appear after the next sync.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recHighlights.map((item) => (
+                    <Link
+                      key={item.id}
+                      to="/admin/recommendations"
+                      className="block rounded-lg border border-[#2a2a2a] bg-black/40 p-3 transition hover:border-violet-400/40 hover:bg-black/60"
+                    >
+                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-violet-300">
+                        {item.type}
+                      </p>
+                      <p className="mt-1 line-clamp-1 text-sm font-medium text-white">
+                        {item.title}
+                      </p>
+                      {item.text ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-gray-500">{item.text}</p>
+                      ) : null}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         <section className="overflow-hidden rounded-[36px] border border-white/10 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_28%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
           <div className="grid gap-8 xl:grid-cols-[1.25fr_0.95fr]">
             <div>

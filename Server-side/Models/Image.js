@@ -39,6 +39,7 @@ const imageSchema = new mongoose.Schema(
         "review",
         "logo",
         "system",
+        "social-ugc",
         "other",
       ],
       default: "product",
@@ -98,6 +99,11 @@ const imageSchema = new mongoose.Schema(
     isPrimary: {
       type: Boolean,
       default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
     },
   },
   { timestamps: true },

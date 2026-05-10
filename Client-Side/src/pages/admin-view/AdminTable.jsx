@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleAdminStatus } from "../../store/admin/super-admin-slice";
 import { itemVariants, containerVariants } from "@/components/admin-components/_shared/animations";
@@ -39,9 +39,9 @@ const formatDate = (dateStr) => {
   });
 };
 
-const AdminTable = ({ admins = [], currentUserId }) => {
+const AdminTable = ({ admins = [], currentUserId, onEdit, onDelete }) => {
   const dispatch = useDispatch();
-  const { toggleLoading } = useSelector((s) => s.superAdmin);
+  const { toggleLoading, deleteLoading } = useSelector((s) => s.superAdmin);
 
   if (!admins.length) {
     return (
@@ -131,8 +131,37 @@ const AdminTable = ({ admins = [], currentUserId }) => {
                 </td>
 
                 <td className="px-4 py-4 text-right">
-                  <span className="font-medium text-[#e5e2e1] se-mono">{admin.actionCount ?? 0}</span>
-                  <span className="ml-1 text-[9px] text-[#99907c] se-label tracking-widest">actions</span>
+                  <div className="flex items-center justify-end gap-3">
+                    <span>
+                      <span className="font-medium text-[#e5e2e1] se-mono">{admin.actionCount ?? 0}</span>
+                      <span className="ml-1 text-[9px] text-[#99907c] se-label tracking-widest">actions</span>
+                    </span>
+                    {!(isSelf || isSuperAdmin) ? (
+                      <span className="flex items-center gap-1.5 border-l border-[#4d4635]/60 pl-3">
+                        <button
+                          type="button"
+                          onClick={() => onEdit?.(admin)}
+                          title="Edit admin"
+                          className="rounded-md border border-white/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete?.(admin)}
+                          title="Delete admin"
+                          disabled={deleteLoading === admin._id}
+                          className="rounded-md border border-white/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-rose-400/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deleteLoading === admin._id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
 
                 <td className="px-4 py-4 text-right">

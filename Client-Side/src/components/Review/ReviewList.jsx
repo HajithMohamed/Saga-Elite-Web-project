@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Camera, BadgeCheck, Search, X } from "lucide-react";
 import RatingSummary from "./RatingSummary";
 import ReviewCard, { ReviewCardSkeleton } from "./ReviewCard";
 import ReviewForm from "./ReviewForm";
@@ -21,6 +22,14 @@ const sortOptions = [
   { label: "Lowest Rated", value: "rating_low" },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: "fit", label: "Fit" },
+  { value: "quality", label: "Quality" },
+  { value: "delivery", label: "Delivery" },
+  { value: "style", label: "Style" },
+  { value: "value", label: "Value" },
+];
+
 const ReviewList = ({ productId, initialStats }) => {
   const dispatch = useDispatch();
   const {
@@ -37,21 +46,46 @@ const ReviewList = ({ productId, initialStats }) => {
   const [ratingFilter, setRatingFilter] = useState(null);
   const [sort, setSort] = useState("recent");
   const [page, setPage] = useState(1);
+  const [withPhotos, setWithPhotos] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [category, setCategory] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const reviewList = productReviews?.[productId] || [];
   const stats = ratingStats?.[productId] || initialStats;
   const pagination = productPagination?.[productId];
+  const categoryBreakdown = stats?.categoryBreakdown || {};
+
+  // Debounce search input (350ms) so we don't spam the API on every keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => setSearchQuery(searchInput.trim()), 350);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
+  const filterPayload = useMemo(
+    () => ({
+      productId,
+      rating: ratingFilter,
+      sort,
+      withPhotos,
+      verifiedOnly,
+      category,
+      q: searchQuery,
+    }),
+    [productId, ratingFilter, sort, withPhotos, verifiedOnly, category, searchQuery]
+  );
 
   useEffect(() => {
     if (!productId) return;
-    dispatch(fetchProductReviews({ productId, rating: ratingFilter, sort, page: 1 }));
+    dispatch(fetchProductReviews({ ...filterPayload, page: 1 }));
     setPage(1);
-  }, [dispatch, productId, ratingFilter, sort]);
+  }, [dispatch, filterPayload]);
 
   useEffect(() => {
     if (!productId || page === 1) return;
-    dispatch(fetchProductReviews({ productId, rating: ratingFilter, sort, page }));
-  }, [dispatch, productId, ratingFilter, sort, page]);
+    dispatch(fetchProductReviews({ ...filterPayload, page }));
+  }, [dispatch, filterPayload, page]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -84,7 +118,7 @@ const ReviewList = ({ productId, initialStats }) => {
 
   const handleSubmit = async (formData) => {
     const response = await dispatch(submitReview(formData)).unwrap();
-    dispatch(fetchProductReviews({ productId, rating: ratingFilter, sort, page: 1 }));
+    dispatch(fetchProductReviews({ ...filterPayload, page: 1 }));
     dispatch(fetchUserReviews());
     return response;
   };
@@ -105,7 +139,7 @@ const ReviewList = ({ productId, initialStats }) => {
     if (!window.confirm("Delete this review?")) return;
     try {
       await dispatch(deleteReview(review._id)).unwrap();
-      dispatch(fetchProductReviews({ productId, rating: ratingFilter, sort, page: 1 }));
+      dispatch(fetchProductReviews({ ...filterPayload, page: 1 }));
       dispatch(fetchUserReviews());
     } catch (error) {
       toast({
@@ -132,12 +166,94 @@ const ReviewList = ({ productId, initialStats }) => {
     }
   };
 
+  const activeFilterCount =
+    (ratingFilter ? 1 : 0) +
+    (withPhotos ? 1 : 0) +
+    (verifiedOnly ? 1 : 0) +
+    (category ? 1 : 0) +
+    (searchQuery ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setRatingFilter(null);
+    setWithPhotos(false);
+    setVerifiedOnly(false);
+    setCategory(null);
+    setSearchInput("");
+  };
+
   return (
     <div className="space-y-6">
       <RatingSummary
         stats={stats}
         onFilterChange={(rating) => setRatingFilter(rating)}
       />
+
+      <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setWithPhotos((prev) => !prev)}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
+              withPhotos
+                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
+                : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            <Camera className="h-3.5 w-3.5" /> With photos
+          </button>
+          <button
+            type="button"
+            onClick={() => setVerifiedOnly((prev) => !prev)}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
+              verifiedOnly
+                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
+                : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+            }`}
+          >
+            <BadgeCheck className="h-3.5 w-3.5" /> Verified only
+          </button>
+          {CATEGORY_OPTIONS.map((option) => {
+            const count = categoryBreakdown[option.value] || 0;
+            const isActive = category === option.value;
+            if (count === 0 && !isActive) return null;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setCategory(isActive ? null : option.value)
+                }
+                className={`rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
+                  isActive
+                    ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
+                    : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+                }`}
+              >
+                {option.label} · {count}
+              </button>
+            );
+          })}
+          {activeFilterCount > 0 ? (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-white/50 hover:text-white"
+            >
+              <X className="h-3 w-3" /> Clear ({activeFilterCount})
+            </button>
+          ) : null}
+        </div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search within reviews"
+            className="w-full rounded-full border border-white/10 bg-black/30 py-2.5 pl-11 pr-4 text-sm text-white placeholder:text-white/40 focus:border-[#D4AF37]/50 focus:outline-none"
+          />
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/10 bg-[#0b0b0b] p-2">

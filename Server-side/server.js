@@ -19,15 +19,22 @@ const {
   generalLimiter,
 } = require("./Middlewares/rateLimitinMiddleware");
 const { requestLogger } = require("./Middlewares/customMiddleware");
+const maintenanceMode = require("./Middlewares/maintenance-mode");
 const globalErrorController = require("./Controllers/errorController");
 const {
   setSocketServer,
   registerSocketHandlers,
 } = require("./Utils/socket-service");
 const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
+const { startBankInboxWatcher } = require("./Utils/bank-email-watcher");
 const connectToDB = require("./DataBase/db");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
+const { initRecommendationsJobs } = require('./Utils/recommendations-job');
+const { initSmartAlertsJob } = require('./Utils/smart-alerts-job');
+const { initRecommendationsDigest } = require('./Utils/recommendations-digest');
+const recommendationsRoutes = require('./Routes/recommendationsRoutes');
+const smartAlertsRoutes = require('./Routes/smartAlertsRoutes');
 
 
 const app = express();
@@ -35,6 +42,7 @@ const app = express();
 const authRoutes = require("./Routes/authRoutes");
 const whatsappWebhookRoutes = require("./Routes/whatsapp-webhook-routes");
 const googleAuthRoute = require("./Routes/google-routes");
+const facebookAuthRoute = require("./Routes/facebook-routes");
 const productRoutes = require("./Routes/product-routes");
 const imageRoutes = require("./Routes/image-routes");
 const dropRoutes = require("./Routes/drop-routes");
@@ -51,6 +59,10 @@ const superAdminRoutes = require("./Routes/super-admin-routes");
 const adminRoutes = require("./Routes/admin-routes");
 const newsletterRoutes = require("./Routes/newsletterRoutes");
 const siteConfigRoutes = require("./Routes/siteConfigRoutes");
+const offerRoutes = require("./Routes/offer-routes");
+const couponRoutes = require("./Routes/coupon-routes");
+const influencerRoutes = require("./Routes/influencer-routes");
+const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 
 app.use(
@@ -71,6 +83,7 @@ app.use(
 app.use("/api/v1/auth", authLimiter);
 app.use(generalLimiter);
 app.use(requestLogger);
+app.use(maintenanceMode);
 
 // Allow popup-based OAuth flows to close child windows without being
 // blocked by strict Cross-Origin-Opener-Policy during local development
@@ -88,12 +101,21 @@ app.get("/health", (_req, res) => {
 
 /* ================== API ROUTES ================== */
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
+app.use("/api/webhooks/bank-sms", require("./Routes/bank-sms-webhook-routes"));
+
+// Dev-only test routes. The router self-blocks production via NODE_ENV
+// checks in every handler, but we also gate the mount itself so we don't
+// even register the routes in prod.
+if (String(process.env.NODE_ENV || "").toLowerCase() !== "production") {
+  app.use("/api/v1/dev", require("./Routes/dev-routes"));
+}
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/banners", bannerRoutes);
 app.use("/api/v1/deals", dealRoutes);
 app.use("/api/v1/google", googleAuthRoute);
+app.use("/api/v1/facebook", facebookAuthRoute);
 app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
@@ -108,6 +130,12 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/super-admin", superAdminRoutes);
 app.use("/api/v1/newsletter", newsletterRoutes);
 app.use("/api/v1/site-config", siteConfigRoutes);
+app.use("/api/v1/offers", offerRoutes);
+app.use("/api/v1/coupons", couponRoutes);
+app.use("/api/v1/influencers", influencerRoutes);
+app.use("/api/v1/shipping-zones", shippingZoneRoutes);
+app.use("/api/v1/admin/recommendations", recommendationsRoutes);
+app.use("/api/v1/admin/alerts", smartAlertsRoutes);
 
 app.use(globalErrorController);
 
@@ -184,9 +212,13 @@ const startServer = async () => {
     await connectToDB();
     await seedAboutSiteDefaults();
     startManualPaymentCleanupJob();
+    startBankInboxWatcher();
 
     server.listen(PORT, () => {
       initAgingStockJob();
+      initRecommendationsJobs();
+      initSmartAlertsJob();
+      initRecommendationsDigest();
       logger.info("Server is listening", { port: PORT });
     });
   } catch (error) {

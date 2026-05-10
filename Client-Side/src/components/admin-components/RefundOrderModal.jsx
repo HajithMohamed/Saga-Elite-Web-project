@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, AlertTriangle } from "lucide-react";
 import {
   modalBackdropVariants,
   modalCardVariants,
 } from "@/components/admin-components/_shared/animations";
 import {
-  PrimaryButton,
-  SecondaryButton,
-} from "@/components/admin-components/_shared/Buttons";
+  FormField,
+  LuxuryInput,
+  LuxurySelect,
+  LuxuryTextarea,
+  StatusPill,
+} from "@/components/admin-components/_form";
 
 const REFUND_REASONS = [
   { value: "wrong_item", label: "Wrong item" },
@@ -38,6 +41,16 @@ const RefundOrderModal = ({ order, isOpen, submitting, onClose, onSubmit }) => {
     }
   }, [isOpen, order]);
 
+  // Lock body scroll while modal is open.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [isOpen]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
     setError("");
@@ -55,6 +68,9 @@ const RefundOrderModal = ({ order, isOpen, submitting, onClose, onSubmit }) => {
     onSubmit?.({ amount: numericAmount, reason, note });
   };
 
+  const isPartial =
+    Number(amount) > 0 && Number(amount) < Number(order?.totalAmount || 0);
+
   return (
     <AnimatePresence>
       {isOpen && order ? (
@@ -64,7 +80,7 @@ const RefundOrderModal = ({ order, isOpen, submitting, onClose, onSubmit }) => {
           initial="hidden"
           animate="visible"
           exit="hidden"
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
           onClick={() => (submitting ? null : onClose?.())}
         >
           <motion.div
@@ -74,110 +90,116 @@ const RefundOrderModal = ({ order, isOpen, submitting, onClose, onSubmit }) => {
             animate="visible"
             exit="hidden"
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-lg rounded-[20px] border border-[#4d4635]/60 bg-[#0a0a0a] p-6"
+            className="w-full max-w-lg rounded-2xl border border-white/[0.06] bg-[#0F0F0F] shadow-[0_30px_60px_rgba(0,0,0,0.6)]"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-[#ffb4ab]">
-                  Issue refund
+            <header className="flex items-start justify-between gap-4 border-b border-white/[0.05] p-6">
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
+                  Refund · Order Action
                 </p>
-                <h2 className="mt-2 text-xl font-bold text-[#e5e2e1]">
+                <h2 className="mt-2 text-lg font-semibold text-white truncate">
                   Refund order {order.referenceNumber || String(order._id).slice(-8)}
                 </h2>
-                <p className="mt-1 text-xs text-[#99907c]">
-                  Order total LKR {formatCurrency(order.totalAmount)} · status{" "}
-                  {String(order.status).replace(/_/g, " ")}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusPill status={order.status} size="sm" />
+                  <span className="text-[11px] text-white/50">
+                    Total LKR {formatCurrency(order.totalAmount)}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => (submitting ? null : onClose?.())}
-                className="text-[#99907c] hover:text-[#e5e2e1]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/60 hover:border-white/20 hover:text-white transition"
                 aria-label="Close refund dialog"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
-                  Refund amount (LKR)
-                </span>
-                <input
+            <form onSubmit={handleSubmit} className="space-y-5 p-6">
+              <FormField
+                label="Refund Amount (LKR)"
+                required
+                helper={
+                  isPartial
+                    ? "Partial refund — amount is less than the order total."
+                    : `Maximum LKR ${formatCurrency(order.totalAmount)}. Edit for a partial refund.`
+                }
+              >
+                <LuxuryInput
                   type="number"
                   step="0.01"
                   min="0"
                   max={order.totalAmount}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-[#4d4635] bg-[#131313] px-3 py-2 text-sm text-[#e5e2e1] focus:border-[#f2ca50] focus:outline-none"
                   required
                 />
-                <span className="mt-1 block text-[10px] text-[#574500]">
-                  Maximum LKR {formatCurrency(order.totalAmount)}. Edit for a
-                  partial refund.
-                </span>
-              </label>
+              </FormField>
 
-              <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
-                  Reason
-                </span>
-                <select
+              <FormField
+                label="Reason"
+                required
+                helper="Recorded in the activity log and customer email."
+              >
+                <LuxurySelect
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="mt-2 w-full rounded-md border border-[#4d4635] bg-[#131313] px-3 py-2 text-sm text-[#e5e2e1] focus:border-[#f2ca50] focus:outline-none"
                 >
                   {REFUND_REASONS.map((r) => (
                     <option key={r.value} value={r.value}>
                       {r.label}
                     </option>
                   ))}
-                </select>
-              </label>
+                </LuxurySelect>
+              </FormField>
 
-              <label className="block">
-                <span className="block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
-                  Internal note (optional)
-                </span>
-                <textarea
+              <FormField
+                label="Internal Note"
+                optional
+                helper="Visible to admins; included in the customer email."
+                hint={`${note.length} / 1000`}
+              >
+                <LuxuryTextarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   maxLength={1000}
                   placeholder="Context for the customer email and activity log…"
-                  className="mt-2 w-full resize-none rounded-md border border-[#4d4635] bg-[#131313] px-3 py-2 text-sm text-[#e5e2e1] focus:border-[#f2ca50] focus:outline-none"
                 />
-              </label>
+              </FormField>
 
               {error ? (
-                <p className="rounded-md border border-[#ffb4ab]/40 bg-[#ffb4ab]/10 px-3 py-2 text-xs text-[#ffb4ab]">
+                <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2.5 text-xs text-rose-300">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   {error}
-                </p>
+                </div>
               ) : null}
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <SecondaryButton
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <button
                   type="button"
                   onClick={() => (submitting ? null : onClose?.())}
                   disabled={submitting}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/80 hover:border-white/20 hover:bg-white/[0.08] hover:text-white transition disabled:opacity-50"
                 >
                   Cancel
-                </SecondaryButton>
-                <PrimaryButton
+                </button>
+                <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#D4AF37] px-5 py-2 text-xs font-semibold text-[#0A0A0A] shadow-[0_4px_14px_rgba(212,175,55,0.35)] hover:bg-[#E2BD45] hover:shadow-[0_6px_22px_rgba(212,175,55,0.5)] transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Processing…
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Processing…
                     </>
                   ) : (
                     "Confirm refund"
                   )}
-                </PrimaryButton>
+                </button>
               </div>
             </form>
           </motion.div>

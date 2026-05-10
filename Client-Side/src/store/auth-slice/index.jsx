@@ -170,6 +170,42 @@ export const googleSignUpAction = createAsyncThunk(
   }
 );
 
+export const facebookSignInAction = createAsyncThunk(
+  "auth/facebook-sign-in",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(
+        `/facebook/sign-in`,
+        { accessToken }
+      );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const facebookSignUpAction = createAsyncThunk(
+  "auth/facebook-sign-up",
+  async ({ accessToken }, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(
+        `/facebook/sign-up`,
+        { accessToken }
+      );
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
 export const changePasswordAction = createAsyncThunk(
   "auth/change-password",
   async (formData, thunkAPI) => {
@@ -369,6 +405,36 @@ const authSlice = createSlice({
         state.isAuthenticated = !!user;
       })
       .addCase(googleSignUpAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Facebook Sign In
+      .addCase(facebookSignInAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(facebookSignInAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
+      })
+      .addCase(facebookSignInAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Facebook Sign Up
+      .addCase(facebookSignUpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(facebookSignUpAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const user = action.payload.data?.user ?? action.payload.data ?? null;
+        state.user = user;
+        state.isAuthenticated = !!user;
+      })
+      .addCase(facebookSignUpAction.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;

@@ -6,7 +6,7 @@ import {
   voteReviewHelpfulApi,
   deleteReviewApi,
   fetchAdminReviewsApi,
-  moderateReviewApi,
+  categorizeReviewApi,
   updateReviewApi,
   flagReviewApi,
   replyToReviewApi,
@@ -40,7 +40,20 @@ const initialState = {
 
 export const fetchProductReviews = createAsyncThunk(
   "review/fetchProductReviews",
-  async ({ productId, rating, sort, page, limit = 10 }, thunkAPI) => {
+  async (
+    {
+      productId,
+      rating,
+      sort,
+      page,
+      limit = 10,
+      withPhotos,
+      verifiedOnly,
+      category,
+      q,
+    },
+    thunkAPI
+  ) => {
     try {
       const response = await fetchProductReviewsApi({
         productId,
@@ -48,6 +61,10 @@ export const fetchProductReviews = createAsyncThunk(
         sort,
         page,
         limit,
+        withPhotos,
+        verifiedOnly,
+        category,
+        q,
       });
       return response.data;
     } catch (error) {
@@ -131,9 +148,15 @@ export const deleteReview = createAsyncThunk(
 
 export const fetchAdminReviews = createAsyncThunk(
   "review/fetchAdminReviews",
-  async ({ status, page, limit = 20, search }, thunkAPI) => {
+  async ({ status, page, limit = 20, search, category }, thunkAPI) => {
     try {
-      const response = await fetchAdminReviewsApi({ status, page, limit, search });
+      const response = await fetchAdminReviewsApi({
+        status,
+        page,
+        limit,
+        search,
+        category,
+      });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -157,18 +180,15 @@ export const flagReview = createAsyncThunk(
   }
 );
 
-export const moderateReview = createAsyncThunk(
-  "review/moderateReview",
-  async ({ reviewId, action, rejectionReason }, thunkAPI) => {
+export const categorizeReview = createAsyncThunk(
+  "review/categorizeReview",
+  async ({ reviewId, category }, thunkAPI) => {
     try {
-      const response = await moderateReviewApi(reviewId, {
-        action,
-        rejectionReason,
-      });
+      const response = await categorizeReviewApi(reviewId, category);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        unwrapError(error, "Failed to moderate review")
+        unwrapError(error, "Failed to categorize review")
       );
     }
   }
@@ -334,12 +354,7 @@ const reviewSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-      .addCase(moderateReview.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(moderateReview.fulfilled, (state, action) => {
-        state.loading = false;
+      .addCase(categorizeReview.fulfilled, (state, action) => {
         const updated = action.payload?.review;
         if (updated) {
           state.adminReviews = state.adminReviews.map((review) =>
@@ -347,8 +362,7 @@ const reviewSlice = createSlice({
           );
         }
       })
-      .addCase(moderateReview.rejected, (state, action) => {
-        state.loading = false;
+      .addCase(categorizeReview.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
       })
       .addCase(replyToReview.fulfilled, (state, action) => {

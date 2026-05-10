@@ -3,10 +3,12 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { Search, Download, DollarSign, TrendingUp, TrendingDown, Package, Loader2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAdmins, fetchActivityLogs } from "../../store/admin/super-admin-slice";
+import { fetchAdmins, fetchActivityLogs, deleteAdmin } from "../../store/admin/super-admin-slice";
 import AdminTable from "./AdminTable";
 import ActivityLogTable from "./ActivityLogTable";
 import CreateAdminModal from "./CreateAdminModal";
+import EditAdminModal from "./EditAdminModal";
+import { toast } from "@/hooks/use-toast";
 import { AdminPage, AdminPanel } from "@/components/admin-components/AdminUI";
 import { API_V1_URL } from "@/lib/api";
 import { fetchDashboardStats } from "@/store/order-slice";
@@ -39,9 +41,32 @@ const SuperAdminDashboard = () => {
 
   const [tab, setTab] = useState(TAB.ADMINS);
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [search, setSearch] = useState("");
   const [statsLoading, setStatsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?._id) return;
+    try {
+      await dispatch(deleteAdmin(deleteTarget._id)).unwrap();
+      toast({
+        title: "Admin removed",
+        description: `${deleteTarget.email} no longer has access.`,
+        variant: "success",
+      });
+      setDeleteTarget(null);
+      // Refresh logs so the audit trail catches up immediately.
+      dispatch(fetchActivityLogs({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: typeof err === "string" ? err : err?.message || "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchAdmins());
@@ -236,7 +261,12 @@ const SuperAdminDashboard = () => {
                 <div className="py-10 text-center text-sm text-red-400">{adminsError}</div>
               ) : null}
               {!adminsLoading && !adminsError ? (
-                <AdminTable admins={filteredAdmins} currentUserId={currentUser?._id} />
+                <AdminTable
+                  admins={filteredAdmins}
+                  currentUserId={currentUser?._id}
+                  onEdit={(admin) => setEditTarget(admin)}
+                  onDelete={(admin) => setDeleteTarget(admin)}
+                />
               ) : null}
             </>
           ) : (
@@ -301,6 +331,49 @@ const SuperAdminDashboard = () => {
           </motion.div>
 
         <CreateAdminModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} />
+        <EditAdminModal
+          admin={editTarget}
+          isOpen={Boolean(editTarget)}
+          onClose={() => setEditTarget(null)}
+        />
+
+        {deleteTarget ? (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-[1.5rem] border border-rose-400/30 bg-[#0b0b0b] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-rose-300">
+                Delete admin
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                Remove {deleteTarget.name || deleteTarget.email}?
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-gray-400">
+                This permanently deletes <span className="font-mono text-rose-200">{deleteTarget.email}</span> and revokes all access. The action is logged but cannot be undone from the admin panel.
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="rounded-full border border-white/10 px-5 py-2 text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:border-white/20"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="rounded-full bg-rose-400 px-5 py-2 text-sm font-black uppercase tracking-[0.22em] text-black transition hover:bg-rose-300"
+                >
+                  Yes, delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </AdminPage>
     </motion.div>
   );

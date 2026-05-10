@@ -2,19 +2,53 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { registerUserAction, googleSignUpAction } from "@/store/auth-slice";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  registerUserAction,
+  googleSignUpAction,
+  facebookSignUpAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import usePageMeta from "@/hooks/use-page-meta";
+import {
+  AUTH_INPUT,
+  AUTH_PRIMARY_BTN,
+  Btn,
+  Eyebrow,
+  FieldError,
+  Hairline,
+} from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Sri Lankan mobile prefixes (the carriers that ship 7X numbers).
+const SL_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
+// Validates that the digits-only phone is a real SL mobile in any of:
+// "07X XXX XXXX", "7X XXX XXXX", "+947X XXX XXXX". Mirrors the server-side
+// rule in Server-Side/Utils/phone-validator.js so we fail fast in the UI.
+const isValidSLPhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return false;
+  let local = digits;
+  if (local.startsWith("0094")) local = local.slice(4);
+  else if (local.startsWith("94") && local.length === 11) local = local.slice(2);
+  else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
+  if (local.length !== 9) return false;
+  return SL_MOBILE_PREFIXES.includes(local.slice(0, 2));
+};
 
 if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
   console.warn("[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled.");
 }
+
+const GENDER_OPTIONS = ["Gents", "Ladies", "Unisex"];
+const STYLE_OPTIONS = ["Streetwear", "Oversized", "Minimal", "Luxury", "Sporty"];
+const DROP_OPTIONS = ["Limited Drops", "Streetwear", "Accessories", "Mystery Rewards"];
 
 const describeAuthError = (err) => {
   if (typeof err === "string") return { title: "Registration failed", description: err };
@@ -59,6 +93,7 @@ const summarizeBlocking = (errs) => {
   if (fields.length === 1) {
     const k = fields[0];
     if (k === "email") return "Check your email address.";
+    if (k === "phoneNumber") return "Add a valid Sri Lankan mobile number.";
     if (k === "password") return "Password doesn't meet the requirements yet.";
     if (k === "confirmPassword") return "Confirm your password to match.";
   }
@@ -71,6 +106,12 @@ const validateRegister = (data, touched = {}) => {
     errs.email = "Tell us your email.";
   } else if (data.email && !EMAIL_REGEX.test(data.email)) {
     errs.email = "Please enter a valid email address.";
+  }
+  if (touched.phoneNumber && !data.phoneNumber) {
+    errs.phoneNumber = "We need your phone for WhatsApp updates.";
+  } else if (data.phoneNumber && !isValidSLPhone(data.phoneNumber)) {
+    errs.phoneNumber =
+      "Enter a valid Sri Lankan mobile (e.g. 077 123 4567).";
   }
   if (touched.password && !data.password) {
     errs.password = "Choose a password.";
@@ -90,27 +131,25 @@ const validateRegister = (data, touched = {}) => {
   return errs;
 };
 
-const FieldLabel = ({ children, hint }) => (
-  <div className="flex items-baseline justify-between">
-    <Eyebrow tone="muted" size="xs">{children}</Eyebrow>
-    {hint && (
-      <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">{hint}</span>
-    )}
-  </div>
-);
-
-import AuthLayout from "@/components/auth-components/AuthLayout";
-import { motion, AnimatePresence } from "framer-motion";
+const PILL_BASE =
+  "se-label text-[10px] tracking-[0.18em] px-4 py-2 transition-colors";
+const PILL_INACTIVE =
+  "bg-[#1c1b1b] text-[#d0c5af] border border-[#4d4635] hover:border-[#99907c]";
+const PILL_SINGLE_ACTIVE =
+  "bg-[#f2ca50] text-[#1b1c1c] border border-[#f2ca50]";
+const PILL_MULTI_ACTIVE =
+  "bg-[#f2ca50]/15 text-[#f2ca50] border border-[#f2ca50]";
 
 const Register = () => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
-    stylePreference: "",
     gender: "",
-    dropInterest: "",
+    stylePreference: "",
+    dropInterest: [],
   });
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
@@ -142,9 +181,19 @@ const Register = () => {
     setErrors(validateRegister(formData, touched));
   }, [formData, touched]);
 
+  const inputState = (field) =>
+    touched[field] && errors[field]
+      ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+      : "border-[#4d4635] focus:border-[#f2ca50]";
+
   const handleNextStep = (e) => {
     e.preventDefault();
-    const allTouched = { email: true, password: true, confirmPassword: true };
+    const allTouched = {
+      email: true,
+      phoneNumber: true,
+      password: true,
+      confirmPassword: true,
+    };
     setTouched(allTouched);
 
     const fresh = validateRegister(formData, allTouched);
@@ -245,230 +294,395 @@ const Register = () => {
     });
   };
 
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignUpAction({ accessToken: access_token })
+      ).unwrap();
+
+      toast({
+        title: "Welcome to the atelier",
+        description: response?.message || "Signed up.",
+        variant: "success",
+      });
+
+      const role = String(
+        response?.data?.user?.role || response?.data?.role || ""
+      ).toLowerCase();
+
+      navigate(
+        ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+          ? "/admin/dashboard"
+          : "/shopping/home",
+        { replace: true }
+      );
+    } catch (err) {
+      console.error("[facebook sign-up] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title:
+          title === "Registration failed" ? "Facebook sign-up failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = (err) => {
+    if (err?.status === "unknown" || err?.status === "not_authorized") {
+      return; // user closed popup or denied
+    }
+    toast({
+      title: "Facebook sign-up failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
+
+  const toggleDropInterest = (value) => {
+    setFormData((prev) => {
+      const next = prev.dropInterest.includes(value)
+        ? prev.dropInterest.filter((v) => v !== value)
+        : [...prev.dropInterest, value];
+      return { ...prev, dropInterest: next };
+    });
+  };
+
+  const StepDots = (
+    <div className="flex items-center gap-1.5 mb-6">
+      <div
+        className={`h-1 rounded-full transition-all ${
+          step === 1 ? "w-6 bg-[#f2ca50]" : "w-2 bg-[#4d4635]"
+        }`}
+      />
+      <div
+        className={`h-1 rounded-full transition-all ${
+          step === 2 ? "w-6 bg-[#f2ca50]" : "w-2 bg-[#4d4635]"
+        }`}
+      />
+    </div>
+  );
+
   return (
-    <AuthLayout isImageRight={true}>
-      <div className="w-full max-w-sm mx-auto relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          {step === 1 ? (
-            <motion.div
-              key="step-1"
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col w-full"
-            >
-              <div className="text-center md:text-left mb-8">
-                <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse">
-                  Join The Elite
-                </p>
-                <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
-                  UNLOCK ACCESS
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  Create your profile to access exclusive drops.
-                </p>
+    <div className="relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        {step === 1 ? (
+          <motion.div
+            key="step-1"
+            initial={{ opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 24 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {StepDots}
+            <Eyebrow tone="gold" size="md">Become a member</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Join the<br />elite.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              Create your account to access exclusive drops, members-only chapters,
+              and early releases.
+            </p>
+
+            <form onSubmit={handleNextStep} noValidate className="mt-10 md:mt-12 space-y-6">
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <Eyebrow tone="muted" size="xs">Username</Eyebrow>
+                  <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">
+                    Optional
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  autoComplete="username"
+                  value={formData.username}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, username: e.target.value }))
+                  }
+                  placeholder="Your handle in the atelier"
+                  className={`mt-2 ${AUTH_INPUT} border-[#4d4635] focus:border-[#f2ca50]`}
+                />
               </div>
 
-              <form onSubmit={handleNextStep} className="space-y-4">
-                <div className="space-y-1 group">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Username (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData((p) => ({ ...p, username: e.target.value }))}
-                    placeholder="savage_kid"
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
-                  />
-                </div>
+              <div>
+                <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, email: e.target.value }));
+                    setTouched((p) => ({ ...p, email: true }));
+                  }}
+                  onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+                  placeholder="your.name@email.com"
+                  aria-invalid={Boolean(touched.email && errors.email)}
+                  className={`mt-2 ${AUTH_INPUT} ${inputState("email")}`}
+                />
+                <FieldError>{touched.email ? errors.email : null}</FieldError>
+              </div>
 
-                <div className="space-y-1 group">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Email</label>
+              <div>
+                <Eyebrow tone="muted" size="xs">
+                  Mobile (for WhatsApp updates)
+                </Eyebrow>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, phoneNumber: e.target.value }));
+                    setTouched((p) => ({ ...p, phoneNumber: true }));
+                  }}
+                  onBlur={() => setTouched((p) => ({ ...p, phoneNumber: true }))}
+                  placeholder="077 123 4567"
+                  aria-invalid={Boolean(touched.phoneNumber && errors.phoneNumber)}
+                  className={`mt-2 ${AUTH_INPUT} ${inputState("phoneNumber")}`}
+                />
+                <FieldError>
+                  {touched.phoneNumber ? errors.phoneNumber : null}
+                </FieldError>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+                <div className="relative mt-2">
                   <input
-                    type="email"
-                    value={formData.email}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.password}
                     onChange={(e) => {
-                      setFormData((p) => ({ ...p, email: e.target.value }));
-                      setTouched((p) => ({ ...p, email: true }));
+                      setFormData((p) => ({ ...p, password: e.target.value }));
+                      setTouched((p) => ({ ...p, password: true }));
                     }}
-                    placeholder="your@email.com"
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+                    onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+                    placeholder="Choose with care"
+                    aria-invalid={Boolean(touched.password && errors.password)}
+                    className={`${AUTH_INPUT} pr-10 ${inputState("password")}`}
                   />
-                  {touched.email && errors.email && (
-                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.email}</p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={16} strokeWidth={1.5} />
+                    ) : (
+                      <Eye size={16} strokeWidth={1.5} />
+                    )}
+                  </button>
                 </div>
-
-                <div className="space-y-1 group">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => {
-                        setFormData((p) => ({ ...p, password: e.target.value }));
-                        setTouched((p) => ({ ...p, password: true }));
-                      }}
-                      placeholder="••••••••"
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {touched.password && errors.password && (
-                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.password}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1 group">
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Confirm Password</label>
-                  <div className="relative">
-                    <input
-                      type={showConfirm ? "text" : "password"}
-                      value={formData.confirmPassword}
-                      onChange={(e) => {
-                        setFormData((p) => ({ ...p, confirmPassword: e.target.value }));
-                        setTouched((p) => ({ ...p, confirmPassword: true }));
-                      }}
-                      placeholder="••••••••"
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
-                    />
-                  </div>
-                  {touched.confirmPassword && errors.confirmPassword && (
-                    <p className="text-red-500 text-xs mt-1 pl-1">{errors.confirmPassword}</p>
-                  )}
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-6 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    NEXT STEP
-                    <ArrowRight size={18} />
-                  </span>
-                  <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
-                </motion.button>
-              </form>
-
-              <div className="mt-8 mb-6 flex items-center justify-center gap-4 text-xs font-semibold text-gray-600 uppercase tracking-widest">
-                <div className="h-px bg-white/10 flex-1" />
-                Or
-                <div className="h-px bg-white/10 flex-1" />
+                <FieldError>{touched.password ? errors.password : null}</FieldError>
+                <PasswordStrengthMeter password={formData.password} />
               </div>
 
-              {GOOGLE_ENABLED && (
-                <div className="google-auth-wrapper grayscale hover:grayscale-0 transition-all duration-500 opacity-80 hover:opacity-100">
-                  <GoogleAuthButton
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    text="Quick Access with Google"
+              <div>
+                <Eyebrow tone="muted" size="xs">Confirm password</Eyebrow>
+                <div className="relative mt-2">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => {
+                      setFormData((p) => ({
+                        ...p,
+                        confirmPassword: e.target.value,
+                      }));
+                      setTouched((p) => ({ ...p, confirmPassword: true }));
+                    }}
+                    onBlur={() =>
+                      setTouched((p) => ({ ...p, confirmPassword: true }))
+                    }
+                    placeholder="Once more"
+                    aria-invalid={Boolean(
+                      touched.confirmPassword && errors.confirmPassword
+                    )}
+                    className={`${AUTH_INPUT} pr-10 ${inputState("confirmPassword")}`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                  >
+                    {showConfirm ? (
+                      <EyeOff size={16} strokeWidth={1.5} />
+                    ) : (
+                      <Eye size={16} strokeWidth={1.5} />
+                    )}
+                  </button>
                 </div>
-              )}
+                <FieldError>
+                  {touched.confirmPassword ? errors.confirmPassword : null}
+                </FieldError>
+              </div>
 
-              <p className="text-center text-sm text-gray-500 mt-6">
-                Already Elite?{" "}
-                <Link to="/login" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
-                  ENTER HERE
-                </Link>
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="step-2"
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col w-full"
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Continuing" : "Continue"}
+              </Btn>
+            </form>
+
+            {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
+              <>
+                <div className="my-8 flex items-center gap-4">
+                  <Hairline tone="soft" />
+                  <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+                    Or
+                  </span>
+                  <Hairline tone="soft" />
+                </div>
+                <div className="space-y-3">
+                  {GOOGLE_ENABLED && (
+                    <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <GoogleAuthButton
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        label="Quick Access with Google"
+                      />
+                    </div>
+                  )}
+                  {FACEBOOK_ENABLED && (
+                    <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                      <FacebookAuthButton
+                        onSuccess={handleFacebookSuccess}
+                        onError={handleFacebookError}
+                        label="Quick Access with Facebook"
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <p className="mt-10 se-body text-sm text-[#99907c]">
+              Already elite?{" "}
+              <Link
+                to="/auth/login"
+                className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+              >
+                Enter here
+              </Link>
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="step-2"
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {StepDots}
+            <Eyebrow tone="gold" size="md">Your atelier</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Make it<br />personal.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              Tell us a little so we can shape your feed.
+              Skip if you'd rather come back to it.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-10 md:mt-12 space-y-8">
+              <div>
+                <Eyebrow tone="muted" size="xs">You shop for</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {GENDER_OPTIONS.map((value) => {
+                    const active = formData.gender === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, gender: value }))
+                        }
+                        className={`${PILL_BASE} ${
+                          active ? PILL_SINGLE_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">Your vibe</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {STYLE_OPTIONS.map((value) => {
+                    const active = formData.stylePreference === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, stylePreference: value }))
+                        }
+                        className={`${PILL_BASE} ${
+                          active ? PILL_SINGLE_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <Eyebrow tone="muted" size="xs">What excites you</Eyebrow>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {DROP_OPTIONS.map((value) => {
+                    const active = formData.dropInterest.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleDropInterest(value)}
+                        className={`${PILL_BASE} ${
+                          active ? PILL_MULTI_ACTIVE : PILL_INACTIVE
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Unlocking" : "Unlock access"}
+              </Btn>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="mt-10 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
             >
-              <div className="text-center md:text-left mb-8 relative">
-                <button 
-                  onClick={() => setStep(1)} 
-                  className="absolute -top-6 left-0 text-gray-500 hover:text-white transition-colors text-xs font-bold tracking-widest uppercase flex items-center gap-1"
-                >
-                  ← Back
-                </button>
-                <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse mt-6">
-                  Personalize
-                </p>
-                <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
-                  ELITE PROFILE
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  Customize your feed.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Style Preferences */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 mb-2 block">Style Preference</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Streetwear", "Oversized", "Minimal", "Luxury", "Sporty"].map((style) => (
-                      <button
-                        key={style}
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, stylePreference: style }))}
-                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border ${
-                          formData.stylePreference === style 
-                            ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.4)]" 
-                            : "bg-black/50 text-gray-400 border-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Drop Interest */}
-                <div>
-                  <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 mb-2 block">Drop Interest</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Limited Drops", "Sneakers", "Accessories", "Mystery"].map((interest) => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, dropInterest: interest }))}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border ${
-                          formData.dropInterest === interest 
-                            ? "bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]" 
-                            : "bg-black/50 text-gray-400 border-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-8 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    {isLoading ? "CREATING PROFILE..." : "JOIN THE ELITE"}
-                  </span>
-                  <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
-                </motion.button>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </AuthLayout>
+              ← Back
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

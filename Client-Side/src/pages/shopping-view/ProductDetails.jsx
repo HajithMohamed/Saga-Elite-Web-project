@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  motion,
+  AnimatePresence,
+  useMotionTemplate,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import axios from "axios";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -33,6 +40,7 @@ import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
 
 import usePageMeta from "@/hooks/use-page-meta";
+import useRecentlyViewed from "@/hooks/use-recently-viewed";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -67,6 +75,7 @@ const ProductDetails = () => {
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const cartItems = useSelector((state) => state.cart.cart?.items ?? []);
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
+  const authUser = useSelector((state) => state.auth.user);
 
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,11 +97,69 @@ const ProductDetails = () => {
   const [productTab, setProductTab] = useState("description");
   const [cartAddedPulse, setCartAddedPulse] = useState(false);
 
+  const { push: pushRecentlyViewed } = useRecentlyViewed();
+
+  useEffect(() => {
+    if (product?._id && product?.slug) pushRecentlyViewed(product);
+  }, [product?._id, product?.slug, pushRecentlyViewed]);
+
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
   );
 
   usePageMeta({ title: product?.name || "Product" });
+
+  const heroPointerX = useMotionValue(0.5);
+  const heroPointerY = useMotionValue(0.5);
+  const heroImageX = useSpring(useTransform(heroPointerX, [0, 1], [10, -10]), {
+    stiffness: 90,
+    damping: 18,
+    mass: 0.4,
+  });
+  const heroImageY = useSpring(useTransform(heroPointerY, [0, 1], [10, -10]), {
+    stiffness: 90,
+    damping: 18,
+    mass: 0.4,
+  });
+  const heroGlowX = useTransform(heroPointerX, [0, 1], ["30%", "70%"]);
+  const heroGlowY = useTransform(heroPointerY, [0, 1], ["30%", "70%"]);
+  
+  const activeColorHex = useMemo(() => {
+    if (selectedVariantSku && product?.variants) {
+      const v = product.variants.find(v => v.sku === selectedVariantSku);
+      if (v?.colorCode) return v.colorCode;
+    }
+    const colorMap = {
+      black: "10,10,10", white: "245,245,245", red: "127,29,29",
+      crimson: "127,29,29", green: "20,83,45", olive: "63,74,60",
+      gold: "212,175,55", beige: "245,245,220", sand: "245,245,220"
+    };
+    if (selectedColor && colorMap[selectedColor.toLowerCase()]) {
+      return colorMap[selectedColor.toLowerCase()];
+    }
+    return "242,202,80"; // default gold RGB
+  }, [selectedColor, selectedVariantSku, product?.variants]);
+
+  const hexToRgbStr = (hex) => {
+    if (hex.includes(",")) return hex; // Already RGB string
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : "242,202,80";
+  };
+
+  const dynamicRgb = hexToRgbStr(activeColorHex);
+  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(${dynamicRgb}, 0.25), transparent 65%)`;
+
+
+  const handleHeroPointerMove = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    heroPointerX.set((event.clientX - rect.left) / rect.width);
+    heroPointerY.set((event.clientY - rect.top) / rect.height);
+  };
+
+  const handleHeroPointerLeave = () => {
+    heroPointerX.set(0.5);
+    heroPointerY.set(0.5);
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -197,6 +264,50 @@ const ProductDetails = () => {
     };
 
     fetchReviewPreview();
+  }, [product?._id]);
+
+  // Dwell-time beacon: send seconds-on-page when leaving or hiding the tab.
+  // Skip dwells <3s (just bouncing). Uses sendBeacon so it fires on tab close.
+  useEffect(() => {
+    if (!product?._id) return;
+    const productId = product._id;
+    const startedAt = Date.now();
+    let sent = false;
+
+    const sendDwell = () => {
+      if (sent) return;
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds < 3) return;
+      sent = true;
+      try {
+        const url = `${API_BASE}/products/${productId}/dwell`;
+        const blob = new Blob([JSON.stringify({ seconds })], { type: "application/json" });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(url, blob);
+        } else {
+          // Fallback for browsers without sendBeacon
+          fetch(url, {
+            method: "POST",
+            credentials: "include",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ seconds }),
+          }).catch(() => {});
+        }
+      } catch {
+        // never throw from a beacon
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") sendDwell();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      sendDwell();
+    };
   }, [product?._id]);
 
   useEffect(() => {
@@ -385,7 +496,7 @@ const ProductDetails = () => {
           <img
             src={item.images?.[0]?.url || "/placeholder.jpg"}
             alt={item.name}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="h-12 w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4AF37] backdrop-blur-md">
             {itemDropName}
@@ -426,22 +537,74 @@ const ProductDetails = () => {
 
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start relative">
           {/* LEFT 60%: Image Gallery */}
-          <div className="lg:col-span-7 flex flex-col gap-4">
-            <div className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]">
+          <div className="lg:col-span-6 flex flex-col gap-4">
+            <div
+              className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
+              onMouseMove={handleHeroPointerMove}
+              onMouseLeave={handleHeroPointerLeave}
+            >
+                <motion.div
+                  className="pointer-events-none absolute -inset-12 z-0 opacity-70"
+                  style={{ background: heroGlowBackground }}
+                />
                 <motion.img
                   key={activeImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4 }}
+                  initial={{ opacity: 0, scale: 1.06, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  whileHover={{ scale: 1.08 }}
+                  transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ x: heroImageX, y: heroImageY }}
                   src={product.images?.[activeImageIndex]?.url}
                   alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.3] cursor-zoom-in"
+                  className="relative z-10 w-full h-full object-cover cursor-zoom-in will-change-transform"
                   onClick={() => setLightboxOpen(true)}
                 />
+
+                {/* Cinematic gradient overlays */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/55 via-black/10 to-transparent z-20" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 via-black/15 to-transparent z-20" />
+                <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/[0.04] rounded-[2rem] z-20" />
+
+                {/* Floating badges */}
+                {product.isLimited && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: [0, -3, 0] }}
+                    transition={{
+                      y: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+                      opacity: { duration: 0.5, delay: 0.15 },
+                    }}
+                    className="absolute left-6 top-6 z-30 rounded-full border border-[#f2ca50]/40 bg-black/55 px-4 py-1.5 backdrop-blur-xl shadow-[0_0_28px_rgba(242,202,80,0.18)]"
+                  >
+                    <span className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+                      Limited Drop
+                    </span>
+                  </motion.div>
+                )}
+
+                {selectedVariant &&
+                  selectedVariant.stock > 0 &&
+                  selectedVariant.stock <= 5 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: [0, 3, 0] }}
+                      transition={{
+                        y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                        opacity: { duration: 0.5, delay: 0.25 },
+                      }}
+                      className="absolute right-6 bottom-6 z-30 flex items-center gap-2 rounded-full border border-[#93000a]/45 bg-black/55 px-4 py-1.5 backdrop-blur-xl shadow-[0_0_28px_rgba(147,0,10,0.22)]"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#ffb4ab] animate-pulse" />
+                      <span className="se-label text-[10px] tracking-[0.32em] text-[#ffb4ab]">
+                        Only {selectedVariant.stock} Left
+                      </span>
+                    </motion.div>
+                  )}
+
                 <button
                   type="button"
                   onClick={toggleWishlist}
-                  className="absolute top-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50] hover:scale-110"
+                  className="absolute top-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-[#4d4635] bg-[#0a0a0a]/80 backdrop-blur-md transition hover:border-[#f2ca50] hover:scale-110"
                 >
                   <Heart
                     className={`w-5 h-5 transition-colors ${
@@ -452,13 +615,14 @@ const ProductDetails = () => {
             </div>
             {/* Thumbnails */}
             {product.images?.length > 1 && (
-              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2">
+              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 mt-4">
                 {product.images.map((img, i) => (
                   <button
                     key={img._id || i}
                     onClick={() => setActiveImageIndex(i)}
+                    style={i === activeImageIndex ? { borderColor: `rgba(${dynamicRgb}, 0.8)`, boxShadow: `0 0 15px rgba(${dynamicRgb}, 0.2)` } : {}}
                     className={`relative shrink-0 w-24 h-32 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      i === activeImageIndex ? "border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.2)] scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                      i === activeImageIndex ? "scale-105" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={img.url} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
@@ -469,7 +633,7 @@ const ProductDetails = () => {
           </div>
 
           {/* RIGHT 40%: Sticky Details */}
-          <div className="lg:col-span-5 sticky top-24 flex flex-col py-4">
+          <div className="lg:col-span-6 sticky top-24 flex flex-col py-4">
             <p className="text-[#f2ca50] se-label tracking-[0.28em] text-[10px] mb-4">
               {product.category} {product.isLimited && "• Limited Drop"}
             </p>
@@ -503,12 +667,8 @@ const ProductDetails = () => {
                       onSizeChange={handleSizeChange}
                       onColorChange={handleColorChange}
                       errors={variantErrors}
+                      activeColorRgb={dynamicRgb}
                     />
-                    {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 ? (
-                      <p className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] mt-2">
-                        Only {selectedVariant.stock} left in this size
-                      </p>
-                    ) : null}
                   </>
                 ) : (
                   <p className="se-body text-sm text-[#d0c5af]">One size fits all</p>
@@ -547,41 +707,45 @@ const ProductDetails = () => {
 
             {/* CTAs */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-[#4d4635]/40 lg:relative lg:p-0 lg:bg-transparent lg:border-none z-50 flex flex-col gap-4">
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleBuyNow}
-                disabled={
-                  !hasVariants ||
-                  !selectedVariant ||
-                  selectedVariant.stock === 0
-                }
-                className="flex h-14 w-full items-center justify-center rounded-full bg-[#f2ca50] text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all shadow-[0_4px_14px_0_rgba(212,175,55,0.39)] hover:bg-[#ffe088] hover:shadow-[0_6px_20px_rgba(212,175,55,0.23)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Proceed to Secure Checkout
-              </motion.button>
+              <div className="flex gap-4 w-full">
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleAddToCart}
+                  disabled={
+                    !hasVariants ||
+                    !selectedVariant ||
+                    selectedVariant.stock === 0
+                  }
+                  style={{ borderColor: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, color: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, backgroundColor: cartAddedPulse ? `rgba(${dynamicRgb}, 0.1)` : undefined }}
+                  className={`flex h-14 flex-1 items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    cartAddedPulse ? "" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
+                  }`}
+                >
+                  {cartAddedPulse ? (
+                    <>
+                      <Check className="h-5 w-5 mr-2" /> Added to Bag
+                    </>
+                  ) : (
+                    "Add to Bag"
+                  )}
+                </motion.button>
 
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleAddToCart}
-                disabled={
-                  !hasVariants ||
-                  !selectedVariant ||
-                  selectedVariant.stock === 0
-                }
-                className={`flex h-14 w-full items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  cartAddedPulse ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
-                }`}
-              >
-                {cartAddedPulse ? (
-                  <>
-                    <Check className="h-5 w-5 mr-2" /> Added to Bag
-                  </>
-                ) : (
-                  "Add to Bag"
-                )}
-              </motion.button>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleBuyNow}
+                  disabled={
+                    !hasVariants ||
+                    !selectedVariant ||
+                    selectedVariant.stock === 0
+                  }
+                  style={{ backgroundColor: `rgb(${dynamicRgb})`, boxShadow: `0 4px 14px 0 rgba(${dynamicRgb}, 0.39)` }}
+                  className="flex h-14 flex-1 items-center justify-center rounded-full text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Buy Now
+                </motion.button>
+              </div>
 
               {/* Urgency Signal */}
               {hasVariants && selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 && (
@@ -594,21 +758,35 @@ const ProductDetails = () => {
               )}
             </div>
 
-            <div className="mb-10">
+            {/* Product Story Section */}
+            {product.story && (
+              <div className="my-12 py-8 border-y border-[#4d4635]/20">
+                <p className="text-xs uppercase tracking-[0.3em] font-semibold text-[#99907c] mb-4">
+                  CHAPTER {product.drop?.name ? "— " + product.drop.name : ""}
+                </p>
+                <div className="se-body text-[#e5e2e1] text-sm leading-relaxed whitespace-pre-wrap">
+                  {product.story}
+                </div>
+              </div>
+            )}
+
+            <div className="mb-10 mt-8">
               <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-800 pb-2">
                 {[
-                  { id: "description", label: "Description" },
-                  { id: "size", label: "Size Guide" },
+                  { id: "description", label: "Details" },
+                  { id: "size", label: "Size & Fit" },
+                  { id: "care", label: "Care" },
                   { id: "reviews", label: "Reviews" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setProductTab(tab.id)}
+                    style={productTab === tab.id ? { backgroundColor: `rgba(${dynamicRgb}, 0.1)`, color: `rgb(${dynamicRgb})`, border: `1px solid rgba(${dynamicRgb}, 0.5)` } : {}}
                     className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
                       productTab === tab.id
-                        ? "bg-[#D4AF37] text-black"
-                        : "text-gray-400 hover:text-white"
+                        ? "font-bold"
+                        : "text-gray-400 hover:text-white border border-transparent"
                     }`}
                   >
                     {tab.label}
@@ -622,40 +800,64 @@ const ProductDetails = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.22 }}
-                  className="min-h-[120px] text-gray-400 leading-relaxed"
+                  className="min-h-[120px] text-gray-400 leading-relaxed text-sm"
                 >
                   {productTab === "description" ? (
-                    <p>{product.description || "No description provided."}</p>
+                    <div className="space-y-4">
+                      <p>{product.description || "No description provided."}</p>
+                      {(product.fabric || product.gsm) && (
+                        <div className="pt-4 border-t border-gray-800/50 flex flex-col gap-2">
+                          {product.fabric && <p><strong className="text-white">Material:</strong> {product.fabric}</p>}
+                          {product.gsm && <p><strong className="text-white">Weight:</strong> {product.gsm} GSM</p>}
+                        </div>
+                      )}
+                    </div>
                   ) : null}
                   {productTab === "size" ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[280px] text-left text-sm text-on-surface dark:text-gray-300">
-                        <thead>
-                          <tr className="border-b border-gray-700">
-                            <th className="py-2 pr-4">Size</th>
-                            <th className="py-2 pr-4">Chest (cm)</th>
-                            <th className="py-2">Length (cm)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[
-                            ["XS", "86–91", "66"],
-                            ["S", "91–96", "68"],
-                            ["M", "96–101", "70"],
-                            ["L", "101–106", "72"],
-                            ["XL", "106–111", "74"],
-                          ].map(([sz, c, l]) => (
-                            <tr key={sz} className="border-b border-gray-800/80">
-                              <td className="py-2 pr-4">{sz}</td>
-                              <td className="py-2 pr-4">{c}</td>
-                              <td className="py-2">{l}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <p className="mt-3 text-xs text-gray-500">
-                        Generic Sri Lanka sizing — measurements are approximate.
-                      </p>
+                    <div className="space-y-4">
+                      {product.fitType && (
+                        <p className="mb-4 text-white se-label tracking-widest text-xs">Fit: {product.fitType}</p>
+                      )}
+                      {product.sizeGuide ? (
+                        <div className="whitespace-pre-wrap">{product.sizeGuide}</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[280px] text-left text-sm text-gray-300">
+                            <thead>
+                              <tr className="border-b border-gray-700">
+                                <th className="py-2 pr-4">Size</th>
+                                <th className="py-2 pr-4">Chest (cm)</th>
+                                <th className="py-2">Length (cm)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[
+                                ["XS", "86–91", "66"],
+                                ["S", "91–96", "68"],
+                                ["M", "96–101", "70"],
+                                ["L", "101–106", "72"],
+                                ["XL", "106–111", "74"],
+                              ].map(([sz, c, l]) => (
+                                <tr key={sz} className="border-b border-gray-800/80">
+                                  <td className="py-2 pr-4">{sz}</td>
+                                  <td className="py-2 pr-4">{c}</td>
+                                  <td className="py-2">{l}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <p className="mt-3 text-xs text-gray-500">
+                            Generic Sri Lanka sizing — measurements are approximate.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                  {productTab === "care" ? (
+                    <div className="space-y-4">
+                      <div className="whitespace-pre-wrap">
+                        {product.careInstructions || "Dry clean only or cold wash inside out.\nDo not iron on print."}
+                      </div>
                     </div>
                   ) : null}
                   {productTab === "reviews" ? (
@@ -672,6 +874,21 @@ const ProductDetails = () => {
                           See all reviews
                         </Link>
                       </div>
+                      {authUser ? (
+                        <Link
+                          to={`/product/${product._id}/reviews`}
+                          className="inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-black transition-opacity hover:opacity-90"
+                        >
+                          Write a review
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/auth/login"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/40 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37] hover:bg-[#D4AF37]/10"
+                        >
+                          Sign in to review
+                        </Link>
+                      )}
                       {reviewLoading ? (
                         <div className="space-y-4">
                           {Array.from({ length: 2 }).map((_, index) => (

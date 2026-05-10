@@ -46,11 +46,15 @@ export const fetchAdminUserDetail = createAsyncThunk(
 
 export const updateAdminUserStatus = createAsyncThunk(
   "adminUsers/updateStatus",
-  async ({ userId, isActive, membership }, thunkAPI) => {
+  async ({ userId, isActive, membership, tags, addAdminNote }, thunkAPI) => {
     try {
       const body = {};
       if (typeof isActive === "boolean") body.isActive = isActive;
       if (typeof membership === "string") body.membership = membership;
+      if (Array.isArray(tags)) body.tags = tags;
+      if (typeof addAdminNote === "string" && addAdminNote.trim()) {
+        body.addAdminNote = addAdminNote.trim();
+      }
 
       const response = await axios.patch(
         `${API_BASE}/user/admin/users/${userId}/status`,

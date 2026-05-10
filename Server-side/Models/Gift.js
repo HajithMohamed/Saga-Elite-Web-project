@@ -12,6 +12,11 @@ const giftSchema = new mongoose.Schema(
       default: "always",
     },
     minOrderValue: { type: Number, default: 0 },
+    rarity: {
+      type: String,
+      enum: ["common", "rare", "epic", "legendary"],
+      default: "common",
+    },
     description: { type: String, trim: true },
     internalNotes: { type: String, trim: true },
     imageUrl: { type: String, trim: true },

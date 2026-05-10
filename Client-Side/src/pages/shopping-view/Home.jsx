@@ -1,39 +1,46 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
-import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import {
+  AnnouncementBar,
   HeroCarousel,
-  CountdownWidget,
+  HeroBackdropFX,
+  LiveDropCountdownXL,
   ProductSlider,
-  TrustBar,
   OffersSlider,
-  DropCountdownBand,
-  CategoryLockup,
-  MysteryGiftStrip,
-  RecommendationsSection,
-  LiveDropSection,
-  NewsletterSection
+  MysteryGiftSpline,
+  WhyChooseSaga,
+  TrendingFitsMarquee,
+  CommunityFeed,
+  Testimonials,
+  VipMembership,
 } from "@/components/landing/LandingSections";
+import {
+  BrandManifesto,
+  EditorialMetrics,
+  DropStory,
+  AsymmetricCategoryGrid,
+  CinematicFooter
+} from "@/components/landing/CinematicLanding";
+import ForYouRail from "@/components/landing/ForYouRail";
+import { ReactLenis } from "lenis/react";
 
-const PLACEHOLDER_URLS = {
-  hero: "https://images.unsplash.com/photo-1550614000-4b95dd245ed6?w=1600&q=80",
-  ladies: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80",
-  gents: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=600&q=80",
-  unisex: "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=600&q=80",
-};
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
   const [nextDrop, setNextDrop] = useState(null);
   const [payload, setPayload] = useState({
     heroSlides: [],
+    offers: [],
+    activeDrop: null,
     ladiesArrivals: [],
     gentsArrivals: [],
     trending: [],
     categoryImages: { ladies: {}, gents: {}, unisex: {} },
+    socialImages: [],
   });
 
   useEffect(() => {
@@ -48,7 +55,10 @@ const Home = () => {
         setNextDrop(upcomingDrop);
       } catch (error) {
         console.error(error);
-        toast({ title: "Failed to load", description: "Could not fetch latest drops." });
+        toast({
+          title: "Failed to load",
+          description: "Could not fetch the latest drops.",
+        });
       } finally {
         setLoading(false);
       }
@@ -60,87 +70,117 @@ const Home = () => {
 
   const heroSlides = useMemo(() => {
     if (payload.heroSlides && payload.heroSlides.length > 0) {
-      return payload.heroSlides.map(slide => ({
-        ...slide,
-        imageUrl: slide.imageUrl || PLACEHOLDER_URLS.hero
-      }));
+      return payload.heroSlides;
     }
-    // Default fallback
-    return [{
-      id: "1",
-      label: "Exclusive Collection",
-      headline: "OWN THE DROP\\nLIMITED EDITION",
-      subheadline: "Premium streetwear for the elite. Unlock early access and exclusive drops.",
-      ctaText: "EXPLORE DROP",
-      ctaLink: "/shopping/product-list",
-      imageUrl: PLACEHOLDER_URLS.hero
-    }];
+    return [];
   }, [payload.heroSlides]);
 
-  const identityCategories = useMemo(() => [
-    { name: "Gents", link: "/shopping/product-list?category=gents", image: PLACEHOLDER_URLS.gents },
-    { name: "Ladies", link: "/shopping/product-list?category=ladies", image: PLACEHOLDER_URLS.ladies },
-    { name: "Unisex", link: "/shopping/product-list?category=unisex", image: PLACEHOLDER_URLS.unisex },
-  ], []);
+  // Combine arrivals + trending into a single marquee feed.
+  const trendingFeed = useMemo(
+    () => [
+      ...(payload.gentsArrivals || []),
+      ...(payload.ladiesArrivals || []),
+      ...(payload.trending || []),
+    ],
+    [payload.gentsArrivals, payload.ladiesArrivals, payload.trending]
+  );
 
   if (loading) {
-    return <div className="min-h-screen bg-[#0e0e0e] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-t-2 border-[#f2ca50] animate-spin" /></div>;
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center text-center">
+        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
+        <span className="font-display text-2xl md:text-4xl text-[#FAF7F2] uppercase tracking-[0.3em] animate-pulse">Saga Elite</span>
+        <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mt-4">Preparing Chapter</span>
+      </div>
+    );
   }
 
   return (
-    <div className="bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
-      <DropCountdownBand activeDrop={null} />
-      
-      <HeroCarousel slides={heroSlides} />
-      
-      <TrustBar />
+    <ReactLenis root options={{ lerp: 0.08, smoothWheel: true }}>
+      <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
+        {/* Ambient Three.js particle backdrop */}
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
+          <HeroBackdropFX />
+        </div>
 
-      <LiveDropSection activeDrop={null} />
+        <div className="relative z-10">
+          {/* 1. Announcement bar */}
+          <AnnouncementBar activeDrop={payload.activeDrop} />
 
-      {nextDrop && nextDrop.releaseDate && (
-         <CountdownWidget 
-            targetDate={nextDrop.releaseDate} 
-            title={nextDrop.name}
-            description="The next elite collection drops soon. Do not miss out."
-         />
-      )}
+          {/* 2. Hero — cinematic */}
+          <HeroCarousel
+            slides={heroSlides}
+            activeDrops={payload.activeDrops}
+            nextDrop={nextDrop}
+          />
 
-      {payload.offers && payload.offers.length > 0 && (
-         <OffersSlider offers={payload.offers} />
-      )}
+          {/* NEW: Brand Manifesto */}
+          <BrandManifesto />
 
-      <CategoryLockup />
+          {/* 3. Editorial Metrics Strip */}
+          <EditorialMetrics />
 
-      <MysteryGiftStrip />
+          {/* 4. Collection selector — Asymmetric */}
+          <AsymmetricCategoryGrid categoryImages={payload.categoryImages} />
 
-      {payload.trending && payload.trending.length > 0 && (
-         <RecommendationsSection 
-            title="Highly Recommended" 
-            products={payload.trending} 
-         />
-      )}
-      
-      {payload.gentsArrivals && payload.gentsArrivals.length > 0 && (
-         <ProductSlider 
-            title="Gents Exclusives" 
-            subtitle="NEW ARRIVALS" 
-            products={payload.gentsArrivals} 
-         />
-      )}
-      
-      {payload.ladiesArrivals && payload.ladiesArrivals.length > 0 && (
-         <ProductSlider 
-            title="Ladies Signature" 
-            subtitle="LATEST PIECES" 
-            products={payload.ladiesArrivals} 
-         />
-      )}
+          {/* 5. Next drop countdown */}
+          {!payload.activeDrop && nextDrop?.releaseDate ? (
+            <LiveDropCountdownXL
+              targetDate={nextDrop.releaseDate}
+              title={nextDrop.name}
+              description="The next chapter opens soon. Members enter first."
+            />
+          ) : null}
 
-      <NewsletterSection />
+          {/* NEW: Drop Story */}
+          <DropStory />
 
-      {/* Basic Footer spacer for now */}
-      <div className="h-20 bg-[#131313]" />
-    </div>
+          {/* 6. Featured / Rare Pieces */}
+          {payload.trending && payload.trending.length > 0 && (
+            <ProductSlider
+              title="Rare Pieces"
+              subtitle="Elite Picks · Most Wanted"
+              products={payload.trending}
+            />
+          )}
+
+          {/* 3b. Personalized rails */}
+          <ForYouRail variant="for-you" />
+          <ForYouRail variant="recently-viewed" />
+          <ForYouRail variant="trending-style" />
+
+          {/* 7. Active offers slider */}
+          {payload.offers && payload.offers.length > 0 && (
+            <OffersSlider offers={payload.offers} />
+          )}
+
+          {/* 8. Mystery gift */}
+          <MysteryGiftSpline />
+
+          {/* 9. Why Saga Elite */}
+          <WhyChooseSaga />
+
+          {/* 10. Trending fits */}
+          {trendingFeed.length > 0 && (
+            <TrendingFitsMarquee products={trendingFeed} />
+          )}
+
+          {/* 11. Community / social proof */}
+          {payload.socialImages.length > 0 && (
+            <CommunityFeed images={payload.socialImages} />
+          )}
+
+          {/* 12. Testimonials */}
+          <Testimonials />
+
+          {/* 13. VIP / membership CTA */}
+          <VipMembership />
+
+          {/* NEW: Cinematic Footer */}
+          <CinematicFooter />
+        </div>
+      </div>
+    </ReactLenis>
   );
 };
 

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, Package, ArrowRight } from "lucide-react";
+import { ChevronRight, Package, ArrowRight, Star } from "lucide-react";
 
 import { fetchUserOrders } from "@/store/order-slice";
 import StatusBadge from "@/components/common-components/StatusBadge";
@@ -237,6 +237,48 @@ const Orders = () => {
                     Track Order <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
+
+                {String(order.status).toLowerCase() === "delivered" &&
+                order.items?.length ? (
+                  <div className="mt-5 border-t border-[#D4AF37]/10 pt-4">
+                    <p className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-[#D4AF37]">
+                      <Star className="h-3 w-3" /> Loved your purchase?
+                      Share a review
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(
+                        new Map(
+                          order.items
+                            .filter((item) => item.product?._id || item.product)
+                            .map((item) => {
+                              const id = String(
+                                item.product?._id || item.product
+                              );
+                              return [
+                                id,
+                                {
+                                  id,
+                                  name:
+                                    item.product?.name ||
+                                    item.productName ||
+                                    "Item",
+                                },
+                              ];
+                            })
+                        ).values()
+                      ).map((item) => (
+                        <Link
+                          key={item.id}
+                          to={`/product/${item.id}/reviews`}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/5 px-3 py-1.5 text-xs text-[#D4AF37] transition-colors hover:bg-[#D4AF37] hover:text-black"
+                        >
+                          <Star className="h-3 w-3" />
+                          Review {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </motion.div>
             ))}
           </div>

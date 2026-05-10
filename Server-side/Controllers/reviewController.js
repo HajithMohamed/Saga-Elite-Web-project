@@ -4,12 +4,123 @@ const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const uploadToCloudinary = require("../Utils/image-upload");
-const { isAdminRole } = require("../Utils/admin-roles");
+const sendEmail = require("../Utils/send-mail");
+const buildEmailTemplate = require("../Utils/email-template");
+const logger = require("../Utils/logger");
 const { SOCKET_EVENTS, emitToAll } = require("../Utils/socket-service");
 const reviewFilterConfig = require("../Config/review-filter-config");
+const { enrichReviewAsync } = require("../Utils/review-classifier");
+
+const REWARD_CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+const generateRewardCode = (prefix = "REVIEW") => {
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) {
+    suffix += REWARD_CODE_CHARS.charAt(
+      Math.floor(Math.random() * REWARD_CODE_CHARS.length)
+    );
+  }
+  return `${(prefix || "REVIEW").toUpperCase()}-${suffix}`;
+};
+
+/*
+ * If the reward_review_discount SiteConfig is enabled, issue a one-time
+ * coupon for the review's user. Idempotent: skips if review.rewardCouponIssued.
+ * Failures are logged, never bubbled — review approval must succeed regardless.
+ */
+const tryIssueReviewReward = async (review) => {
+  if (review.rewardCouponIssued) return null;
+
+  let config;
+  try {
+    const doc = await SiteConfig.findOne({ key: "reward_review_discount" }).lean();
+    config = doc?.value;
+  } catch (err) {
+    logger.warn("Review reward config lookup failed", { error: err?.message });
+    return null;
+  }
+
+  if (!config?.enabled) return null;
+
+  const discountType = config.discountType === "fixed" ? "fixed" : "percent";
+  const discountValue = Number(config.discountValue);
+  if (!Number.isFinite(discountValue) || discountValue <= 0) return null;
+  if (discountType === "percent" && discountValue > 100) return null;
+
+  const expiryDays = Number.isFinite(Number(config.expiryDays))
+    ? Math.max(1, Number(config.expiryDays))
+    : 30;
+  const maxUses = Number.isFinite(Number(config.maxUses))
+    ? Math.max(1, Number(config.maxUses))
+    : 1;
+
+  // Generate a unique code (retry up to 5 times on collision)
+  let code = generateRewardCode(config.codePrefix);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const exists = await Coupon.exists({ code });
+    if (!exists) break;
+    code = generateRewardCode(config.codePrefix);
+  }
+
+  const startsAt = new Date();
+  const endsAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
+  try {
+    const coupon = await Coupon.create({
+      code,
+      description: `Thanks-for-reviewing reward for review ${review._id}`,
+      discountType,
+      discountValue,
+      maxUses,
+      startsAt,
+      endsAt,
+      isActive: true,
+      issuedFor: "review_reward",
+    });
+
+    review.rewardCouponIssued = true;
+    review.rewardCouponCode = code;
+    await review.save({ validateBeforeSave: false });
+
+    // Best-effort email to the customer
+    const user = await User.findById(review.userId).select("email").lean();
+    if (user?.email) {
+      const human =
+        discountType === "percent"
+          ? `${discountValue}% off`
+          : `LKR ${discountValue.toLocaleString("en-LK")} off`;
+      sendEmail({
+        email: user.email,
+        subject: "A thank-you from Saga Elite",
+        html: buildEmailTemplate(
+          "Your review reward",
+          `<p>Thanks for sharing your thoughts.</p>
+           <p>Use this one-time code at checkout for ${human}:</p>
+           <p style="font-size:28px;letter-spacing:6px;font-weight:bold;text-align:center;color:#f2ca50;">${code}</p>
+           <p>The code expires on ${endsAt.toLocaleDateString("en-LK")}.</p>`
+        ),
+      }).catch((err) =>
+        logger.warn("Review reward email failed", {
+          reviewId: review._id,
+          error: err?.message,
+        })
+      );
+    }
+
+    return coupon;
+  } catch (err) {
+    logger.warn("Review reward issuance failed", {
+      reviewId: review._id,
+      error: err?.message,
+    });
+    return null;
+  }
+};
 
 const normalizeNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -170,10 +281,18 @@ const createReview = catchAsync(async (req, res, next) => {
     sentiment: getSentiment(rating),
     images: Array.isArray(images) ? images : [],
     verifiedPurchase: true,
-    status: "pending",
+    status: "approved",
+    approvedAt: new Date(),
     isFlagged: Boolean(isSuspicious),
     flagReason: isSuspicious ? "Auto-flagged: suspicious pattern" : null,
   });
+
+  await recalculateProductRating(productId);
+  tryIssueReviewReward(review).catch(() => {});
+  // Fire-and-forget AI enrichment — toxicity/spam/sentimentScore land on the
+  // review document a few seconds later for admin moderation. Never blocks
+  // the create response.
+  enrichReviewAsync(review._id);
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId,
@@ -193,10 +312,19 @@ const createReview = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     success: true,
-    message: "Review submitted for approval",
+    message: "Review published",
     review,
   });
 });
+
+const REVIEW_CATEGORIES = [
+  "uncategorized",
+  "fit",
+  "quality",
+  "delivery",
+  "style",
+  "value",
+];
 
 const getProductReviews = catchAsync(async (req, res, next) => {
   const { productId } = req.params;
@@ -211,10 +339,18 @@ const getProductReviews = catchAsync(async (req, res, next) => {
   const limit = Math.max(1, normalizeNumber(req.query.limit, 10));
   const skip = (page - 1) * limit;
 
+  const withPhotos = String(req.query.withPhotos || "").toLowerCase() === "true";
+  const verifiedOnly = String(req.query.verifiedOnly || "").toLowerCase() === "true";
+  const rawCategory = String(req.query.category || "").toLowerCase();
+  const category = REVIEW_CATEGORIES.includes(rawCategory) ? rawCategory : null;
+  const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
+
   const filter = { productId, status: "approved" };
-  if (rating && rating >= 1 && rating <= 5) {
-    filter.rating = rating;
-  }
+  if (rating && rating >= 1 && rating <= 5) filter.rating = rating;
+  if (withPhotos) filter["images.0"] = { $exists: true };
+  if (verifiedOnly) filter.verifiedPurchase = true;
+  if (category) filter.category = category;
+  if (q) filter.$text = { $search: q };
 
   const sortMap = {
     recent: { createdAt: -1 },
@@ -225,7 +361,9 @@ const getProductReviews = catchAsync(async (req, res, next) => {
 
   const sortOption = sortMap[sort] || sortMap.recent;
 
-  const [reviews, totalReviews, stats] = await Promise.all([
+  // Category counts unaffected by the user's category filter so chips can show totals.
+  const categoryFilter = { productId, status: "approved" };
+  const [reviews, totalReviews, stats, categoryCounts] = await Promise.all([
     Review.find(filter)
       .sort(sortOption)
       .skip(skip)
@@ -234,13 +372,27 @@ const getProductReviews = catchAsync(async (req, res, next) => {
       .lean(),
     Review.countDocuments(filter),
     getRatingStats(productId),
+    Review.aggregate([
+      { $match: categoryFilter },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
   ]);
+
+  const categoryBreakdown = REVIEW_CATEGORIES.reduce((acc, key) => {
+    acc[key] = 0;
+    return acc;
+  }, {});
+  categoryCounts.forEach((entry) => {
+    if (entry._id && categoryBreakdown[entry._id] !== undefined) {
+      categoryBreakdown[entry._id] = entry.count;
+    }
+  });
 
   res.status(200).json({
     success: true,
     message: "Reviews fetched successfully",
     reviews,
-    stats,
+    stats: { ...stats, categoryBreakdown },
     pagination: {
       total: totalReviews,
       page,
@@ -373,9 +525,7 @@ const deleteReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  const isAdmin = isAdminRole(req.userInfo?.role);
-
-  if (!isAdmin && review.userId.toString() !== userId.toString()) {
+  if (review.userId.toString() !== userId.toString()) {
     return next(new AppError("You do not have permission to delete this review", 403));
   }
 
@@ -412,10 +562,6 @@ const updateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("You do not have permission to edit this review", 403));
   }
 
-  if (review.status !== "pending") {
-    return next(new AppError("Only pending reviews can be edited", 400));
-  }
-
   if (rating && (Number(rating) < 1 || Number(rating) > 5)) {
     return next(new AppError("Rating must be between 1 and 5", 400));
   }
@@ -432,12 +578,19 @@ const updateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("You can upload up to 3 images", 400));
   }
 
+  const ratingChanged =
+    rating !== undefined && Number(rating) !== Number(review.rating);
+
   if (rating !== undefined) review.rating = rating;
   if (title !== undefined) review.title = title.trim();
   if (content !== undefined) review.content = content.trim();
   if (images !== undefined) review.images = Array.isArray(images) ? images : [];
 
   await review.save({ validateBeforeSave: false });
+
+  if (ratingChanged) {
+    await recalculateProductRating(review.productId);
+  }
 
   res.status(200).json({
     success: true,
@@ -447,14 +600,27 @@ const updateReview = catchAsync(async (req, res, next) => {
 });
 
 const getAllReviews = catchAsync(async (req, res, next) => {
-  const status = req.query.status || "pending";
   const search = req.query.search || "";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = normalizeNumber(req.query.page, 1);
   const limit = normalizeNumber(req.query.limit, 20);
   const skip = (page - 1) * limit;
 
-  const filter = status ? { status } : {};
+  // Reviews now auto-publish, so the admin defaults to all approved reviews.
+  // Optional `category` filter narrows to a topic (fit / quality / etc.) and
+  // the legacy `status` query is honoured for backward compatibility.
+  const filter = {};
+  const requestedStatus = String(req.query.status || "").toLowerCase();
+  if (["approved", "pending", "rejected"].includes(requestedStatus)) {
+    filter.status = requestedStatus;
+  } else {
+    filter.status = "approved";
+  }
+
+  const requestedCategory = String(req.query.category || "").toLowerCase();
+  if (REVIEW_CATEGORIES.includes(requestedCategory)) {
+    filter.category = requestedCategory;
+  }
 
   if (search) {
     const products = await Product.find({ name: { $regex: search, $options: "i" } }).select("_id");
@@ -503,12 +669,16 @@ const getAllReviews = catchAsync(async (req, res, next) => {
   });
 });
 
-const moderateReview = catchAsync(async (req, res, next) => {
+const categorizeReview = catchAsync(async (req, res, next) => {
   const { reviewId } = req.params;
-  const { action, rejectionReason } = req.body;
+  const { category } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(reviewId)) {
     return next(new AppError("Valid review ID is required", 400));
+  }
+
+  if (!REVIEW_CATEGORIES.includes(category)) {
+    return next(new AppError("Invalid category", 400));
   }
 
   const review = await Review.findById(reviewId);
@@ -516,42 +686,18 @@ const moderateReview = catchAsync(async (req, res, next) => {
     return next(new AppError("Review not found", 404));
   }
 
-  if (!action || !["approve", "reject"].includes(action)) {
-    return next(new AppError("Action must be approve or reject", 400));
-  }
-
-  if (action === "approve") {
-    review.status = "approved";
-    review.approvedAt = new Date();
-    review.rejectionReason = null;
-    await review.save({ validateBeforeSave: false });
-    await recalculateProductRating(review.productId);
-  } else {
-    review.status = "rejected";
-    review.rejectionReason = rejectionReason?.trim() || "Rejected by admin";
-    review.approvedAt = null;
-    await review.save({ validateBeforeSave: false });
-  }
+  review.category = category;
+  await review.save({ validateBeforeSave: false });
 
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
-    userId: review.userId,
     reviewId: review._id,
-    status: review.status,
     productId: review.productId,
-    source: "review-moderated",
-  });
-
-  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
-    userId: review.userId,
-    reviewId: review._id,
-    status: review.status,
-    productId: review.productId,
-    source: "review-moderated",
+    source: "review-categorized",
   });
 
   res.status(200).json({
     success: true,
-    message: "Review moderation updated",
+    message: "Review categorized",
     review,
   });
 });
@@ -757,7 +903,7 @@ const featureReview = catchAsync(async (req, res, next) => {
 |--------------------------------------------------------------------------
 */
 const getReviewsAnalytics = catchAsync(async (_req, res) => {
-  const [totals, sentiment, avgRating] = await Promise.all([
+  const [totals, sentiment, avgRating, categories] = await Promise.all([
     Review.aggregate([
       {
         $group: {
@@ -785,6 +931,10 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
         },
       },
     ]),
+    Review.aggregate([
+      { $match: { status: "approved" } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]),
   ]);
 
   const totalsByStatus = { pending: 0, approved: 0, rejected: 0 };
@@ -795,6 +945,16 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
   const sentimentBreakdown = { positive: 0, neutral: 0, negative: 0 };
   sentiment.forEach((entry) => {
     if (entry._id) sentimentBreakdown[entry._id] = entry.count;
+  });
+
+  const categoryBreakdown = REVIEW_CATEGORIES.reduce((acc, key) => {
+    acc[key] = 0;
+    return acc;
+  }, {});
+  categories.forEach((entry) => {
+    if (entry._id && categoryBreakdown[entry._id] !== undefined) {
+      categoryBreakdown[entry._id] = entry.count;
+    }
   });
 
   const [totalFlagged, totalFeatured] = await Promise.all([
@@ -808,13 +968,12 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
     success: true,
     data: {
       totalApproved: totalsByStatus.approved,
-      totalPending: totalsByStatus.pending,
-      totalRejected: totalsByStatus.rejected,
       totalFlagged,
       totalFeatured,
       averageRating: Math.round((avg.avg || 0) * 10) / 10,
       totalApprovedReviews: avg.total,
       sentimentBreakdown,
+      categoryBreakdown,
     },
   });
 });
@@ -827,7 +986,7 @@ module.exports = {
   voteHelpful,
   deleteReview,
   getAllReviews,
-  moderateReview,
+  categorizeReview,
   uploadReviewImages,
   updateReview,
   flagReview,

@@ -21,6 +21,12 @@ import {
   X,
   RefreshCcw,
   Mail,
+  Sparkles,
+  Crown,
+  RotateCcw,
+  Gift,
+  Heart,
+  Truck,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
@@ -49,6 +55,66 @@ const statusOptions = [
   { value: "all", label: "All" },
   { value: "read", label: "Read" },
   { value: "unread", label: "Unread" },
+];
+
+// Brand-voice templates. Replace the generic "Order shipped" / "New drop" copy
+// with Saga Elite's editorial tone. Click a template to prefill the form;
+// admin still gets the final word in the textarea before sending.
+const CAMPAIGN_TEMPLATES = [
+  {
+    key: "drop_alert",
+    label: "Drop Alert",
+    icon: Sparkles,
+    accent: "border-[#f2ca50]/40 bg-[#f2ca50]/[0.08] text-[#f2ca50] hover:bg-[#f2ca50]/[0.16]",
+    title: "The next drop just landed.",
+    message:
+      "A new Saga Elite release is live. Limited stock, no restock — open the app before it's gone.",
+  },
+  {
+    key: "vip_early",
+    label: "VIP Early Access",
+    icon: Crown,
+    accent: "border-violet-400/40 bg-violet-400/10 text-violet-200 hover:bg-violet-400/20",
+    title: "VIP early access — 24h headstart.",
+    message:
+      "You're in. The next drop opens for VIPs first. Tap through to lock in your size before the public drop.",
+  },
+  {
+    key: "restock",
+    label: "Restock Alert",
+    icon: RotateCcw,
+    accent: "border-sky-400/40 bg-sky-400/10 text-sky-200 hover:bg-sky-400/20",
+    title: "It's back. The piece you wanted is restocked.",
+    message:
+      "The Saga Elite piece you were watching is back in stock for a limited window. Move fast — it sold out the first time.",
+  },
+  {
+    key: "collectible",
+    label: "Collectible Reveal",
+    icon: Gift,
+    accent: "border-rose-400/40 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20",
+    title: "Your mystery collectible is revealed.",
+    message:
+      "The mystery item attached to your Saga Elite order has been unboxed. Open the app to see what landed in your collection.",
+  },
+  {
+    key: "wishlist_back",
+    label: "Wishlist Back",
+    icon: Heart,
+    accent: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20",
+    title: "A wishlist piece is in stock.",
+    message:
+      "Something you wishlisted is back. We pulled it forward so you don't miss it — but stock is thin.",
+  },
+  {
+    key: "shipped",
+    label: "In Transit",
+    icon: Truck,
+    accent: "border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08]",
+    title: "Your Saga Elite package is in transit.",
+    message:
+      "The piece you ordered is on the way. Track it from your account — we'll surface arrival the moment it lands.",
+  },
 ];
 
 const NotificationsManager = () => {
@@ -124,6 +190,13 @@ const NotificationsManager = () => {
   const resetForm = () => {
     setTitle("");
     setMessage("");
+  };
+
+  const applyTemplate = (template) => {
+    if (!template) return;
+    setTitle(template.title);
+    setMessage(template.message);
+    if (error) dispatch(resetNotificationError());
   };
 
   const triggerSendFlash = () => {
@@ -296,6 +369,31 @@ const NotificationsManager = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <div>
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-500">
+            Brand voice templates
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {CAMPAIGN_TEMPLATES.map((tpl) => {
+              const Icon = tpl.icon;
+              return (
+                <button
+                  key={tpl.key}
+                  type="button"
+                  onClick={() => applyTemplate(tpl)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition ${tpl.accent}`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {tpl.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-gray-500">
+            Tap a template to prefill — edit before sending. These match Saga Elite's editorial tone.
+          </p>
+        </div>
+
         <div>
           <label className="mb-2 block text-sm text-gray-300">Title</label>
           <input

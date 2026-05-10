@@ -11,12 +11,27 @@ import {
   Clock3,
   Heart,
   Mail,
+  Phone,
   ShoppingBag,
+  Star,
 } from "lucide-react";
 
-import { logoutUserAction, changePasswordAction } from "@/store/auth-slice";
+import { logoutUserAction, changePasswordAction, checkAuthAction } from "@/store/auth-slice";
 import { fetchWishlistAction } from "@/store/cart-slice";
 import { fetchUserOrders } from "@/store/order-slice";
+import axiosInstance from "@/api/axiosInstance";
+
+const SL_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
+const isValidSLPhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return false;
+  let local = digits;
+  if (local.startsWith("0094")) local = local.slice(4);
+  else if (local.startsWith("94") && local.length === 11) local = local.slice(2);
+  else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
+  if (local.length !== 9) return false;
+  return SL_MOBILE_PREFIXES.includes(local.slice(0, 2));
+};
 import { changePasswordFormControls } from "@/config";
 import CommonForm from "@/components/common-components/CommonForm";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
@@ -37,6 +52,15 @@ const Account = () => {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  // Phone editor — backed by GET/PATCH /user/me. We mirror redux state here
+  // because the auth slice's user object may not include phoneNumber until
+  // the next checkAuth refresh; tracking it locally keeps the UI snappy.
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneOnRecord, setPhoneOnRecord] = useState(user?.phoneNumber || "");
+  const [phoneEditMode, setPhoneEditMode] = useState(false);
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
   const [formData, setFormData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -63,6 +87,68 @@ const Account = () => {
     dispatch(fetchWishlistAction());
     dispatch(fetchUserOrders());
   }, [dispatch]);
+
+  // Pull the current phone from the dedicated /user/me endpoint on first
+  // render. Avoids any case where the cached redux user is stale (e.g.
+  // login happened before the field existed in the response shape).
+  useEffect(() => {
+    let cancelled = false;
+    axiosInstance
+      .get("/user/me")
+      .then((res) => {
+        if (cancelled) return;
+        const phone = res?.data?.data?.phoneNumber || "";
+        setPhoneOnRecord(phone);
+        setPhoneInput(phone);
+      })
+      .catch(() => {
+        // Not fatal — the editor falls back to the redux user's phone, if any.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSavePhone = async () => {
+    setPhoneError(null);
+    if (!isValidSLPhone(phoneInput)) {
+      setPhoneError(
+        "Enter a valid Sri Lankan mobile (e.g. 077 123 4567)."
+      );
+      return;
+    }
+    try {
+      setPhoneSaving(true);
+      const res = await axiosInstance.patch("/user/me", {
+        phoneNumber: phoneInput,
+      });
+      const updated = res?.data?.data?.phoneNumber || "";
+      setPhoneOnRecord(updated);
+      setPhoneInput(updated);
+      setPhoneEditMode(false);
+      // Refresh redux user so headers / banners update too.
+      dispatch(checkAuthAction());
+      toast({
+        title: "Phone updated",
+        description:
+          "WhatsApp notifications will be sent to this number from now on.",
+        variant: "success",
+      });
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Could not update your phone number.";
+      setPhoneError(msg);
+      toast({
+        title: "Update failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
 
   useEffect(() => {
     const passwordRegex =
@@ -172,6 +258,12 @@ const Account = () => {
       icon: Package,
     },
     {
+      to: "/account/my-reviews",
+      label: "My Reviews",
+      sub: "View & manage",
+      icon: Star,
+    },
+    {
       to: "/shopping/wishlist",
       label: "Wishlist",
       sub: `${wishlistItems.length} saved`,
@@ -274,6 +366,110 @@ const Account = () => {
                   )}
                 </p>
               </div>
+            </div>
+
+            {/* Contact details — phone is editable here. Required for WhatsApp
+                OTPs / order updates. Empty state nudges the user with an
+                amber prompt; especially relevant for Google-OAuth signups
+                where no phone was collected. */}
+            <div className="rounded-2xl border border-[#D4AF37]/10 bg-surface-container-low p-6 dark:bg-[#090909]">
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <h3 className="flex items-center gap-2 text-xs uppercase text-[#D4AF37]">
+                  <Phone className="h-3.5 w-3.5" /> Contact Details
+                </h3>
+                {!phoneEditMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneInput(phoneOnRecord || "");
+                      setPhoneError(null);
+                      setPhoneEditMode(true);
+                    }}
+                    className="text-xs uppercase tracking-wider text-[#D4AF37] hover:text-[#D4AF37]/80"
+                  >
+                    {phoneOnRecord ? "Edit" : "Add"}
+                  </button>
+                )}
+              </div>
+
+              {!phoneOnRecord && !phoneEditMode ? (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                  <p className="font-semibold">
+                    Add your mobile number to enable WhatsApp.
+                  </p>
+                  <p className="mt-1 text-amber-200/80">
+                    We use it for OTPs, order confirmations, and shipping
+                    updates. We don't share your number — ever.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneInput("");
+                      setPhoneError(null);
+                      setPhoneEditMode(true);
+                    }}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-bold uppercase tracking-wider text-black transition-opacity hover:opacity-90"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    Add now
+                  </button>
+                </div>
+              ) : null}
+
+              {phoneEditMode ? (
+                <div className="space-y-3">
+                  <label className="block text-xs uppercase tracking-wider text-muted-foreground">
+                    Mobile number
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phoneInput}
+                    onChange={(e) => {
+                      setPhoneInput(e.target.value);
+                      if (phoneError) setPhoneError(null);
+                    }}
+                    placeholder="077 123 4567"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-[#D4AF37] focus:outline-none"
+                  />
+                  {phoneError ? (
+                    <p className="text-xs text-rose-400">{phoneError}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Sri Lankan mobile only — formats: 077 123 4567 or
+                      +94 77 123 4567.
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSavePhone}
+                      disabled={phoneSaving}
+                      className="rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-bold uppercase tracking-wider text-black transition-opacity disabled:opacity-60"
+                    >
+                      {phoneSaving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhoneEditMode(false);
+                        setPhoneInput(phoneOnRecord || "");
+                        setPhoneError(null);
+                      }}
+                      disabled={phoneSaving}
+                      className="rounded-lg border border-border px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : phoneOnRecord ? (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Mobile:</span>{" "}
+                  <span className="font-mono">{phoneOnRecord}</span>
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

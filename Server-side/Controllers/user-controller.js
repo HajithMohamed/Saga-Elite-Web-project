@@ -4,9 +4,15 @@ const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
 const Notification = require("../Models/Notification");
+const LoginActivity = require("../Models/LoginActivity");
+const UserActivityLog = require("../Models/UserActivityLog");
 const { isAdminRole } = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -78,6 +84,8 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   isVerified: user.isVerified,
   isActive: user.isActive,
   membership: user.membership || "standard",
+  tags: Array.isArray(user.tags) ? user.tags : [],
+  adminNotes: Array.isArray(user.adminNotes) ? user.adminNotes : [],
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -233,7 +241,7 @@ const escapeCsvValue = (value) => {
 const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = await User.find()
     .select(
-      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .sort({ createdAt: -1 })
     .lean();
@@ -288,8 +296,9 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
 const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id)
     .select(
-      "email role provider profilePicture isVerified isActive membership totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
+    .populate({ path: "adminNotes.author", select: "email name" })
     .lean();
 
   if (!user) {
@@ -298,7 +307,7 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
-  const [recentOrders, recentNotifications] = await Promise.all([
+  const [recentOrders, recentNotifications, recentLogins] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -309,7 +318,30 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       .limit(5)
       .select("type title message isRead entityType createdAt")
       .lean(),
+    LoginActivity.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(15)
+      .select("success failureReason provider ip deviceHint userAgent createdAt")
+      .lean(),
   ]);
+
+  // Tag entries that look suspicious so the UI can highlight them. "First
+  // sighting" of an IP or device counts as new only if at least one prior
+  // success exists — a brand-new account with one login isn't suspicious.
+  const successCount = recentLogins.filter((l) => l.success).length;
+  const seenIps = new Set();
+  const seenDevices = new Set();
+  const decoratedLogins = [...recentLogins].reverse().map((l) => {
+    const isNewIp = l.ip && !seenIps.has(l.ip);
+    const isNewDevice = l.deviceHint && !seenDevices.has(l.deviceHint);
+    if (l.ip) seenIps.add(l.ip);
+    if (l.deviceHint) seenDevices.add(l.deviceHint);
+    return {
+      ...l,
+      newIp: l.success && successCount > 1 && isNewIp,
+      newDevice: l.success && successCount > 1 && isNewDevice,
+    };
+  }).reverse();
 
   const summary = buildAdminUserSummary(
     user,
@@ -325,6 +357,7 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       addresses: user.addresses || [],
       recentOrders,
       recentNotifications,
+      recentLogins: decoratedLogins,
       activityTimeline: buildActivityTimeline({
         user,
         recentOrders,
@@ -335,11 +368,19 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 });
 
 const updateAdminUserStatus = catchAsync(async (req, res, next) => {
-  const { isActive, membership } = req.body;
+  const { isActive, membership, tags, addAdminNote } = req.body;
 
-  if (typeof isActive === "undefined" && typeof membership === "undefined") {
+  if (
+    typeof isActive === "undefined" &&
+    typeof membership === "undefined" &&
+    typeof tags === "undefined" &&
+    !addAdminNote
+  ) {
     return next(
-      new AppError("isActive or membership must be provided", 400)
+      new AppError(
+        "isActive, membership, tags, or addAdminNote must be provided",
+        400
+      )
     );
   }
 
@@ -365,6 +406,25 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
   if (typeof membership === "string") {
     user.membership = membership;
     changes.push(`membership → ${membership}`);
+  }
+
+  // Tag mutation — accepts the full target set; the model's enum guard
+  // filters anything unknown so the client doesn't need to validate.
+  if (Array.isArray(tags)) {
+    const allowed = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
+    const cleaned = [...new Set(tags.filter((t) => allowed.includes(t)))];
+    user.tags = cleaned;
+    changes.push(`tags: ${cleaned.length ? cleaned.join(", ") : "cleared"}`);
+  }
+
+  // Append-only note. Capture author so the audit trail shows who said what.
+  if (typeof addAdminNote === "string" && addAdminNote.trim()) {
+    user.adminNotes.push({
+      note: addAdminNote.trim().slice(0, 2000),
+      author: req.userInfo._id,
+      createdAt: new Date(),
+    });
+    changes.push("note added");
   }
 
   await user.save({ validateBeforeSave: false });
@@ -502,7 +562,7 @@ const getCart = catchAsync(async (req, res, next) => {
     return next(new AppError("Authenticated user not found", 404));
   }
 
-  const cart = user.cart
+  const cart = (user.cart || [])
     .map(normalizeCartItem)
     .filter((item) => item !== null);
 
@@ -611,6 +671,12 @@ const addToCart = catchAsync(async (req, res, next) => {
       { _id: product._id },
       { $inc: { cartAddCount: 1 } }
     ).catch(() => {});
+    UserActivityLog.create({
+      userId: req.userInfo?.id || null,
+      productId: product._id,
+      action: "cart_add",
+      category: product.category || "",
+    }).catch(() => {});
   }
 
   await user.save({ validateBeforeSave: false });
@@ -808,6 +874,13 @@ const addToWishlist = catchAsync(async (req, res, next) => {
   product.wishCount = (product.wishCount || 0) + 1;
   await product.save({ validateBeforeSave: false });
 
+  UserActivityLog.create({
+    userId: req.userInfo?.id || null,
+    productId: product._id,
+    action: "wishlist_add",
+    category: product.category || "",
+  }).catch(() => {});
+
   const updatedUser = await User.findById(req.userInfo.id)
     .populate({
       path: "wishlist",
@@ -854,6 +927,12 @@ const removeFromWishlist = catchAsync(async (req, res, next) => {
     if (product) {
       product.wishCount = Math.max((product.wishCount || 0) - 1, 0);
       await product.save({ validateBeforeSave: false });
+      UserActivityLog.create({
+        userId: req.userInfo?.id || null,
+        productId,
+        action: "wishlist_remove",
+        category: product.category || "",
+      }).catch(() => {});
     }
   }
 
@@ -947,6 +1026,114 @@ const exportCustomersCsv = catchAsync(async (_req, res) => {
   res.status(200).send(csv);
 });
 
+// Self-service profile read. Returns the fields a customer can see/edit on
+// their account page. Kept narrow on purpose — auth fields, role, and
+// permissions never leak through here.
+const getMyProfile = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.userInfo._id || req.userInfo.id).select(
+    "email name phoneNumber profilePicture provider isVerified membership createdAt"
+  );
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      _id: user._id,
+      email: user.email,
+      name: user.name || "",
+      phoneNumber: user.phoneNumber || "",
+      profilePicture: user.profilePicture || null,
+      provider: user.provider,
+      isVerified: user.isVerified,
+      membership: user.membership || "standard",
+      requiresPhone: !user.phoneNumber, // Surfaces banner on shopping pages.
+    },
+  });
+});
+
+// Self-service profile update. Customers can edit only their own name and
+// phone number through this endpoint. Phone is validated + normalized to
+// canonical "+947XXXXXXXX" form before persist.
+const updateMyProfile = catchAsync(async (req, res, next) => {
+  const { name, phoneNumber } = req.body || {};
+
+  const update = {};
+
+  if (name !== undefined) {
+    const trimmed = String(name).trim();
+    if (trimmed.length > 120) {
+      return next(new AppError("Name cannot exceed 120 characters", 400));
+    }
+    update.name = trimmed || null;
+  }
+
+  if (phoneNumber !== undefined) {
+    if (phoneNumber === null || String(phoneNumber).trim() === "") {
+      // Allow clearing the phone (rare, but valid).
+      update.phoneNumber = null;
+    } else {
+      if (!isValidSriLankanMobile(phoneNumber)) {
+        return next(
+          new AppError(
+            "Phone number must be a valid Sri Lankan mobile (e.g. 077 123 4567).",
+            400
+          )
+        );
+      }
+      const normalized = normalizeSriLankanMobile(phoneNumber);
+
+      // Reject if another user already owns this number — prevents two
+      // accounts diverting WhatsApp OTPs to the same phone.
+      const owner = await User.findOne({
+        phoneNumber: normalized,
+        _id: { $ne: req.userInfo._id || req.userInfo.id },
+      }).select("_id");
+      if (owner) {
+        return next(
+          new AppError(
+            "This phone number is already linked to another account.",
+            400
+          )
+        );
+      }
+      update.phoneNumber = normalized;
+    }
+  }
+
+  if (Object.keys(update).length === 0) {
+    return next(new AppError("No changes supplied", 400));
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    req.userInfo._id || req.userInfo.id,
+    { $set: update },
+    { new: true, runValidators: true }
+  ).select("email name phoneNumber profilePicture provider isVerified membership");
+
+  if (!updated) {
+    return next(new AppError("User not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: {
+      _id: updated._id,
+      email: updated.email,
+      name: updated.name || "",
+      phoneNumber: updated.phoneNumber || "",
+      profilePicture: updated.profilePicture || null,
+      provider: updated.provider,
+      isVerified: updated.isVerified,
+      membership: updated.membership || "standard",
+      requiresPhone: !updated.phoneNumber,
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
@@ -962,4 +1149,6 @@ module.exports = {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  getMyProfile,
+  updateMyProfile,
 };

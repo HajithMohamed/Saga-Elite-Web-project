@@ -9,6 +9,8 @@ const manualPaymentSchema = new mongoose.Schema(
       unique: true,
       index: true,
       trim: true,
+      uppercase: true,
+      maxlength: 12,
     },
     slug: {
       type: String,
@@ -55,7 +57,14 @@ const manualPaymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending_payment", "proof_submitted", "verified", "rejected", "expired"],
+      enum: [
+        "pending_payment",
+        "proof_submitted",
+        "pending_bank_confirmation",
+        "verified",
+        "rejected",
+        "expired",
+      ],
       default: "pending_payment",
       index: true,
     },
@@ -101,8 +110,58 @@ const manualPaymentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // OCR audit trail — populated when the receipt is auto-processed at upload
+    // time. Kept for admin visibility even after auto-decision so an admin can
+    // override if the OCR misread something. `ocr_matched` means the slip
+    // looks correct but the credit hasn't been confirmed by the bank yet.
+    ocr: {
+      extractedText: { type: String, default: null, maxlength: 8000 },
+      extractedReference: { type: String, default: null, trim: true, uppercase: true, maxlength: 24 },
+      extractedAmount: { type: Number, default: null },
+      referenceMatched: { type: Boolean, default: null },
+      amountMatched: { type: Boolean, default: null },
+      decision: {
+        type: String,
+        // "auto_verified" is a legacy value kept for backward compat with
+        // records written before bank confirmation was introduced. New
+        // records use "ocr_matched" instead.
+        enum: ["ocr_matched", "auto_verified", "auto_rejected", "manual_review", null],
+        default: null,
+      },
+      decisionReason: { type: String, default: null, maxlength: 500 },
+      processedAt: { type: Date, default: null },
+    },
+    // Bank-side confirmation of the credit. Populated by the IMAP email
+    // watcher when a matching bank notification arrives, OR by an admin
+    // manually approving from the queue. A payment is only "really verified"
+    // when bankVerification.confirmed is true.
+    bankVerification: {
+      confirmed: { type: Boolean, default: false },
+      confirmedAt: { type: Date, default: null },
+      source: {
+        type: String,
+        enum: ["imap", "csv", "manual_admin", null],
+        default: null,
+      },
+      bankName: { type: String, default: null, trim: true, maxlength: 100 },
+      emailMessageId: { type: String, default: null, trim: true, maxlength: 250 },
+      emailFrom: { type: String, default: null, trim: true, maxlength: 250 },
+      emailSubject: { type: String, default: null, trim: true, maxlength: 500 },
+      extractedAmount: { type: Number, default: null },
+      extractedReference: { type: String, default: null, trim: true, uppercase: true, maxlength: 24 },
+      transactionId: { type: String, default: null, trim: true, maxlength: 100 },
+      amountMismatch: { type: Boolean, default: false },
+      rawSnippet: { type: String, default: null, maxlength: 2000 },
+    },
   },
   { timestamps: true }
+);
+
+// Idempotency for the IMAP watcher — the same email message must never upgrade
+// a payment twice (banks resend, IMAP redelivers on disconnect, etc.).
+manualPaymentSchema.index(
+  { "bankVerification.emailMessageId": 1 },
+  { unique: true, sparse: true }
 );
 
 manualPaymentSchema.pre("save", function setExpiry() {

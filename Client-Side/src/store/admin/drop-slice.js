@@ -17,7 +17,12 @@ export const getAllDrops = createAsyncThunk(
       });
       return response.data.drops;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -30,12 +35,28 @@ export const createDrop = createAsyncThunk(
       return rejectWithValue("Name and release date are required");
     }
     try {
-      const response = await axios.post(`${API_BASE}/drops/create-drop`, dropData, {
+      const payload = {
+        name: dropData.name,
+        description: dropData.description || undefined,
+        releaseDate: dropData.releaseDate,
+        endDate: dropData.endDate || undefined,
+        isPublished:
+          typeof dropData.isPublished === "boolean" ? dropData.isPublished : undefined,
+        isArchived:
+          typeof dropData.isArchived === "boolean" ? dropData.isArchived : undefined,
+      };
+      const response = await axios.post(`${API_BASE}/drops/create-drop`, payload, {
         withCredentials: true,
       });
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      // Always reject with a string so callers get a useful toast.
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to create drop";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -57,25 +78,35 @@ export const updateDrop = createAsyncThunk(
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
 
 export const archiveDrop = createAsyncThunk(
   "drop/archiveDrop",
-  async ({ slug, isArchived }, { rejectWithValue }) => {
+  async (slug, { rejectWithValue }) => {
     try {
       const response = await axios.patch(
         `${API_BASE}/drops/archive-drop/${slug}`,
-        { isArchived },
+        {},
         {
           withCredentials: true,
         }
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -89,7 +120,12 @@ export const deleteDrop = createAsyncThunk(
       });
       return response.data.deletedDropSlug || slug;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );

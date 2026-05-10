@@ -293,6 +293,102 @@ exports.toggleAdminActiveStatus = catchAsync(async (req, res, next) => {
   });
 });
 
+// ── Delete an Admin / Sub-Admin (hard delete) ───────────────────────
+// Same protective guards as the toggle: cannot self-delete, cannot delete
+// another super admin. The audit middleware records who did this.
+exports.deleteAdmin = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const requesterId = req.userInfo?._id?.toString();
+
+  if (requesterId && requesterId === String(id)) {
+    return next(new AppError("You cannot delete your own account.", 400));
+  }
+
+  const target = await User.findById(id);
+  if (!target) {
+    return next(new AppError("No admin found with that ID", 404));
+  }
+
+  if (isSuperAdmin(target.role)) {
+    return next(new AppError("Cannot delete another super admin account.", 403));
+  }
+
+  if (!ADMIN_ROLES.has(target.role)) {
+    return next(new AppError("Target is not an admin account.", 400));
+  }
+
+  const deletedSnapshot = {
+    _id: target._id,
+    email: target.email,
+    name: target.name,
+    role: target.role,
+    subRole: target.subRole,
+  };
+
+  await User.findByIdAndDelete(id);
+
+  req.adminAction = `Deleted admin ${target.email}`;
+  req.adminResourceId = target._id;
+  req.adminCategory = "admin";
+
+  res.status(200).json({
+    status: "success",
+    data: { deleted: deletedSnapshot },
+  });
+});
+
+// ── Reset an Admin's Password (super_admin only) ────────────────────
+// Generates a one-time temporary password, sets mustChangePassword=true so
+// the target admin is forced to rotate on next login. The plaintext is
+// returned exactly once in the HTTP response — never stored, never logged.
+exports.resetAdminPassword = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const requesterId = req.userInfo?._id?.toString();
+
+  if (requesterId && requesterId === String(id)) {
+    return next(
+      new AppError(
+        "You cannot reset your own password here. Use the personal account screen.",
+        400
+      )
+    );
+  }
+
+  const target = await User.findById(id).select("+password");
+  if (!target) {
+    return next(new AppError("No admin found with that ID", 404));
+  }
+
+  if (isSuperAdmin(target.role)) {
+    return next(new AppError("Cannot reset another super admin's password.", 403));
+  }
+
+  if (!ADMIN_ROLES.has(target.role)) {
+    return next(new AppError("Target is not an admin account.", 400));
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
+  target.password = temporaryPassword;
+  target.mustChangePassword = true;
+  // Pre-save hook in User.js hashes the password.
+  await target.save({ validateBeforeSave: false });
+
+  req.adminAction = `Reset password for admin ${target.email}`;
+  req.adminResourceId = target._id;
+  req.adminCategory = "admin";
+
+  res.status(200).json({
+    status: "success",
+    message:
+      "Temporary password generated. Share it through a secure channel — it will not be shown again.",
+    data: {
+      adminId: target._id,
+      email: target.email,
+      temporaryPassword,
+    },
+  });
+});
+
 // ── List All Admins (aggregated with logs) ──────────────────────────
 exports.listAdmins = catchAsync(async (req, res, next) => {
   const admins = await User.aggregate([

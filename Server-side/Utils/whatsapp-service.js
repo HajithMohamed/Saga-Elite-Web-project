@@ -23,14 +23,24 @@ const buildWhatsAppMessagesUrl = () => {
   return `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${phoneNumberId}/messages`;
 };
 
+const isWhatsAppConfigured = () => {
+  const accessToken =
+    process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  return Boolean(accessToken && phoneNumberId);
+};
+
 const sendWhatsAppMessage = async ({ to, message }) => {
   const accessToken =
     process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const url = buildWhatsAppMessagesUrl();
   const recipient = cleanPhoneNumber(to);
 
+  // No creds = silent skip. Throwing here would flood logs from the cleanup
+  // sweep, the order pipeline, etc. Callers don't need to gate every call —
+  // they can just fire-and-forget and we'll no-op when WhatsApp isn't wired.
   if (!accessToken || !url) {
-    throw new Error("WhatsApp API is not configured");
+    return { skipped: true, reason: "WhatsApp API is not configured" };
   }
 
   if (!recipient) {
@@ -70,4 +80,5 @@ module.exports = {
   cleanPhoneNumber,
   parsePhoneList,
   sendWhatsAppMessage,
+  isWhatsAppConfigured,
 };

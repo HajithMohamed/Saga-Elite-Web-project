@@ -6,6 +6,7 @@ import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame } from "lucide
 import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
 import { getRemainingTime } from "@/utils/time";
+import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 
 const AnnouncementBar = ({ items, nextDrop, countdown }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -61,6 +62,9 @@ const AnimatedBadge = ({ count }) => {
   );
 };
 
+const MotionAside = motion.aside;
+const EMPTY_COUNTDOWN = { d: 0, h: "00", m: "00" };
+
 const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,7 +77,7 @@ const MainHeader = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [nextDrop, setNextDrop] = useState(null);
-  const [countdown, setCountdown] = useState(getRemainingTime(new Date(Date.now() + 1000).toISOString()));
+  const [countdown, setCountdown] = useState(EMPTY_COUNTDOWN);
 
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
@@ -113,7 +117,9 @@ const MainHeader = () => {
     try {
       await dispatch(logoutUserAction()).unwrap();
       navigate("/auth/login");
-    } catch (err) {}
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
   };
 
   const navItems = [
@@ -121,7 +127,9 @@ const MainHeader = () => {
     { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents" },
     { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies" },
     { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
-    { key: "drops", label: "Drops", to: "/shopping/product-list?isDrop=true", isHot: true },
+    { key: "drops", label: "Drops", to: "/shopping/drops" },
+    { key: "catalog", label: "Catalog", to: "/shopping/product-list" },
+    { key: "about", label: "About", to: "/about" },
     { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
   ];
 
@@ -152,8 +160,8 @@ const MainHeader = () => {
         role="banner"
         className={`sticky top-0 z-50 w-full transition-all duration-500 ${
           scrolled
-            ? "bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#2a2a2a]/50 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
-            : "bg-[#0e0e0e] border-b border-transparent py-5"
+            ? "bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-[#4d4635]/50 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
+            : "bg-transparent border-b border-transparent py-5"
         }`}
       >
         <div className="max-w-[1600px] w-full mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
@@ -200,6 +208,11 @@ const MainHeader = () => {
               <Heart className="w-[18px] h-[18px]" />
               <AnimatedBadge count={wishlistCount} />
             </Link>
+            {user && <NotificationsDropdown />}
+            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+              <ShoppingBag className="w-[18px] h-[18px]" />
+              <AnimatedBadge count={cartCount} />
+            </Link>
             <div className="relative">
               <button aria-label="Account" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
                 <User className="w-[18px] h-[18px]" />
@@ -215,8 +228,14 @@ const MainHeader = () => {
                     <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
                       {user ? (
                         <>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders">My Fits</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist">Wishlist</Link>
+                          <div className="px-4 py-3 border-b border-[#2a2a2a] mb-1">
+                            <p className="text-[9px] text-[#d0c5af]/60 tracking-[0.2em]">Signed in as</p>
+                            <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
+                          </div>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
                           <div className="h-[1px] bg-[#2a2a2a] my-1" />
                           <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
                         </>
@@ -231,10 +250,6 @@ const MainHeader = () => {
                 )}
               </AnimatePresence>
             </div>
-            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
-              <ShoppingBag className="w-[18px] h-[18px]" />
-              <AnimatedBadge count={cartCount} />
-            </Link>
 
             <button
               className="lg:hidden p-1 text-[#e5e2e1]"
@@ -270,12 +285,12 @@ const MainHeader = () => {
       {/* Mobile Menu */}
       <AnimatePresence>
         {mobileOpen ? (
-          <motion.aside
+          <MotionAside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-            className="fixed inset-0 z-[60] bg-[#0e0e0e] flex flex-col pt-20 px-8 pb-12 lg:hidden"
+            className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col pt-20 px-8 pb-12 lg:hidden"
           >
             <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="absolute top-8 right-8 text-[#d0c5af] hover:text-[#e5e2e1]"><X className="w-8 h-8" /></button>
             <div className="flex flex-col gap-6 mt-12 flex-grow">
@@ -286,7 +301,11 @@ const MainHeader = () => {
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.1 + i * 0.05 }}
                 >
-                  <Link to={item.to} className={`font-display text-4xl block ${item.isHot ? 'text-[#f2ca50]' : 'text-[#e5e2e1] hover:text-[#d0c5af]'}`}>
+                  <Link
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className={`font-display text-4xl block ${item.isHot ? 'text-[#f2ca50]' : 'text-[#e5e2e1] hover:text-[#d0c5af]'}`}
+                  >
                     {item.label}
                   </Link>
                 </motion.div>
@@ -301,7 +320,7 @@ const MainHeader = () => {
                   <Link to="/faq">Track Order</Link>
                </div>
             </div>
-          </motion.aside>
+          </MotionAside>
         ) : null}
       </AnimatePresence>
     </>

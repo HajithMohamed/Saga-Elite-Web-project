@@ -9,9 +9,14 @@ const User = require("../Models/User");
 const Guest = require("../Models/Guest");
 const ManualPayment = require("../Models/ManualPayment");
 const Review = require("../Models/Review");
+const Coupon = require("../Models/Coupon");
+const SiteConfig = require("../Models/SiteConfig");
+const UserActivityLog = require("../Models/UserActivityLog");
 const { computeMembershipTier } = require("../Utils/membership-tier");
+const { evaluateCoupon } = require("./coupon-controller");
+const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
-const { isAdminRole } = require("../Utils/admin-roles");
+const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
 const {
   sendWhatsAppMessage,
@@ -110,6 +115,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     paymentProofUrl,
     notes,
     guestEmail,
+    couponCode,
   } = req.body;
 
   logger.debug("Order creation request received", {
@@ -243,6 +249,39 @@ const createOrder = catchAsync(async (req, res, next) => {
         totalAmount += itemTotal;
       }
 
+      // Coupon evaluation (optional). Throws AppError on validation failure,
+      // which will roll back the transaction.
+      let appliedCoupon = null;
+      let appliedDiscount = 0;
+      if (couponCode && String(couponCode).trim()) {
+        const productIds = items.map((it) => it.productId);
+        const result = await evaluateCoupon({
+          code: couponCode,
+          subtotal: totalAmount,
+          productIds,
+        });
+        if (result) {
+          appliedCoupon = result.coupon;
+          appliedDiscount = result.discount;
+          totalAmount = Math.max(0, totalAmount - appliedDiscount);
+          // Increment usage atomically; respect maxUses if defined.
+          const updateResult = await Coupon.updateOne(
+            {
+              _id: appliedCoupon._id,
+              $or: [
+                { maxUses: null },
+                { $expr: { $lt: ["$usedCount", "$maxUses"] } },
+              ],
+            },
+            { $inc: { usedCount: 1 } },
+            { session }
+          );
+          if (updateResult.modifiedCount === 0) {
+            throw new AppError("Coupon usage limit reached", 400);
+          }
+        }
+      }
+
       const dropId = req.body.dropId || null;
       let selectedGift = null;
 
@@ -266,6 +305,8 @@ const createOrder = catchAsync(async (req, res, next) => {
         paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
         referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
         notes: notes?.trim(),
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: appliedDiscount || 0,
         status: isBankTransferPayment
           ? "pending_payment"
           : ["manual", "cash"].includes(paymentMethod)
@@ -286,6 +327,18 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       const [orderDocument] = await Order.create([orderPayload], { session });
       createdOrder = orderDocument;
+
+      // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
+      if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
+        const purchaseRows = orderPayload.items.map((item) => ({
+          userId: user ? user._id : null,
+          productId: item.productId,
+          action: "purchase",
+          category: item.category || "",
+          metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
+        }));
+        UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
+      }
 
       if (user && normalizedCheckoutMode === "cart") {
         user.cart = [];
@@ -322,7 +375,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     entityRef: createdOrder._id,
     entityType: "Order",
     meta: { orderId: createdOrder._id, customer: user ? user.email : guestEmailNormalized },
-    filter: { role: "admin" },
+    filter: { role: { $in: ADMIN_ROLES } },
   });
 
   const orderNotifyPhones = parsePhoneList(
@@ -348,10 +401,29 @@ const createOrder = catchAsync(async (req, res, next) => {
     });
   }
 
+  // Customer-facing order-placed WhatsApp. The bank-transfer branch below
+  // sends its own (with payment instructions), so we only fire this for
+  // other payment methods (card, gpay, payhere, cash, etc.).
+  if (!isBankTransferPayment) {
+    const customerOrderPhone = cleanPhoneNumber(contactNumber);
+    if (customerOrderPhone) {
+      sendWhatsAppMessage({
+        to: customerOrderPhone,
+        message:
+          `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+          `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+          `We'll message you when it ships.`,
+      }).catch((err) =>
+        logger.error("Customer order-placed WhatsApp failed", { error: err?.message })
+      );
+    }
+  }
+
   // If guest or registered, send payment instructions
+  let createdManualPayment = null;
   if (isBankTransferPayment) {
     const referenceNumber = await generateUniqueReference(createdOrder._id, ManualPayment);
-    const manualPayment = await ManualPayment.create({
+    createdManualPayment = await ManualPayment.create({
       referenceNumber,
       orderId: createdOrder._id,
       userId: user ? user._id : undefined,
@@ -359,8 +431,9 @@ const createOrder = catchAsync(async (req, res, next) => {
       amount: createdOrder.totalAmount,
       currency: "LKR",
     });
+    const manualPayment = createdManualPayment;
 
-    const paymentLink = `${process.env.FRONTEND_URL}/shopping/manual-payment/${manualPayment.slug}`;
+    const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
     const customerEmail = user?.email || guestEmailNormalized;
     const customerPhone = cleanPhoneNumber(contactNumber);
 
@@ -378,7 +451,7 @@ const createOrder = catchAsync(async (req, res, next) => {
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
       );
       sendEmail({
-        to: customerEmail,
+        email: customerEmail,
         subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
         html: emailHtml,
       }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
@@ -402,6 +475,14 @@ const createOrder = catchAsync(async (req, res, next) => {
     message: "Order placed successfully",
     orderId: createdOrder._id,
     data: createdOrder,
+    manualPayment: createdManualPayment
+      ? {
+          slug: createdManualPayment.slug,
+          referenceNumber: createdManualPayment.referenceNumber,
+          amount: createdManualPayment.amount,
+        }
+      : null,
+    guestEmail: guestEmailNormalized || null,
   });
 });
 
@@ -426,7 +507,21 @@ const getUserOrders = catchAsync(async (req, res, next) => {
 });
 
 const getAllOrders = catchAsync(async (req, res, next) => {
-  const orders = await Order.find()
+  // Bank-transfer orders are kept out of the main admin Orders list while the
+  // payment is still awaiting verification — they live in Pending Payments
+  // until the admin approves the receipt (status flips to confirmed) or the
+  // order is cancelled. Keeps the Orders page focused on orders that actually
+  // need fulfilment.
+  const filter = {
+    $nor: [
+      {
+        paymentMethod: "manual_bank_transfer",
+        status: { $in: ["pending_payment", "verification_pending"] },
+      },
+    ],
+  };
+
+  const orders = await Order.find(filter)
     .populate("user", "email role")
     .sort({ createdAt: -1 })
     .lean();
@@ -583,7 +678,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: "cancelled" },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status !== "delivered") {
     if (order.user) {
@@ -598,6 +693,55 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       });
     }
 
+    // Customer email + WhatsApp for the headline status changes that
+    // customers care about. Skip noisy intermediate states (pending,
+    // pending_payment, verification_pending) — those don't need an
+    // outbound message.
+    const customerFacingStatuses = new Set(["confirmed", "shipped"]);
+    if (customerFacingStatuses.has(status)) {
+      const populatedForUpdate = await Order.findById(order._id).populate("user", "email");
+      const customer = populatedForUpdate?.user;
+      const customerPhone = cleanPhoneNumber(populatedForUpdate?.contactNumber || order.contactNumber || "");
+
+      const statusCopy = {
+        confirmed: {
+          subject: "Your Saga Elite order is confirmed",
+          headline: "Order confirmed",
+          body: "Your payment has been received and your order is now being prepared.",
+          whatsapp: `Saga Elite: your order #${order._id} is confirmed and being prepared. We'll message you again when it ships.`,
+        },
+        shipped: {
+          subject: "Your Saga Elite order has shipped",
+          headline: "Order shipped",
+          body: "Your order is on its way. You'll receive a delivery confirmation once it arrives.",
+          whatsapp: `Saga Elite: your order #${order._id} has shipped! You'll get another message when it's delivered.`,
+        },
+      }[status];
+
+      if (customer?.email && statusCopy) {
+        sendEmail({
+          email: customer.email,
+          subject: statusCopy.subject,
+          html: buildEmailTemplate(
+            statusCopy.headline,
+            `<p>Hi,</p>
+             <p>${statusCopy.body}</p>
+             <p>Order: <strong>#${order._id}</strong></p>`
+          ),
+        }).catch((err) =>
+          logger.error("[order:status-update] Email failed", { error: err?.message, status })
+        );
+      }
+      if (customerPhone && statusCopy) {
+        sendWhatsAppMessage({
+          to: customerPhone,
+          message: statusCopy.whatsapp,
+        }).catch((err) =>
+          logger.error("[order:status-update] WhatsApp failed", { error: err?.message, status })
+        );
+      }
+    }
+
     await broadcastNotification({
       type: "admin",
       title: `Order ${order._id} status changed`,
@@ -605,7 +749,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   } else if (status === "delivered") {
     order.gift = order.gift || { giftId: null, revealed: false };
@@ -613,6 +757,22 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     if (hasGift && !order.gift.revealed) {
       order.gift.revealed = true;
       await order.save({ validateModifiedOnly: true });
+    }
+
+    // Stamp lastSoldAt on every product in the order — feeds the aging-stock job.
+    const productIds = (order.items || [])
+      .map((it) => it?.product)
+      .filter(Boolean);
+    if (productIds.length > 0) {
+      Product.updateMany(
+        { _id: { $in: productIds } },
+        { $set: { lastSoldAt: new Date() } }
+      ).catch((err) =>
+        logger.error("[order:delivered] failed to stamp lastSoldAt", {
+          orderId: order._id,
+          error: err?.message,
+        })
+      );
     }
 
     // Update customer membership totals (skip guest orders).
@@ -755,7 +915,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
       entityRef: order._id,
       entityType: "Order",
       meta: { orderId: order._id, status: order.status },
-      filter: { role: "admin" },
+      filter: { role: { $in: ADMIN_ROLES } },
     });
   }
 
@@ -832,7 +992,7 @@ const refundOrder = catchAsync(async (req, res, next) => {
   const customerEmail = order.user?.email || order.guestEmail;
   if (customerEmail) {
     sendEmail({
-      to: customerEmail,
+      email: customerEmail,
       subject: `Refund issued for your Saga Elite order ${order.referenceNumber || order._id}`,
       html: buildEmailTemplate(
         "Your refund is on its way",
@@ -843,6 +1003,25 @@ const refundOrder = catchAsync(async (req, res, next) => {
       ),
     }).catch((err) =>
       logger.error("Refund email notify failed", {
+        orderId: order._id,
+        error: err?.message,
+      })
+    );
+  }
+
+  // WhatsApp parity — refunds are time-sensitive enough that customers
+  // should hear about them on the same channel as order updates.
+  const refundPhone = cleanPhoneNumber(order.contactNumber);
+  if (refundPhone) {
+    sendWhatsAppMessage({
+      to: refundPhone,
+      message:
+        `Saga Elite: a refund of LKR ${numericAmount.toLocaleString("en-LK")} ` +
+        `has been issued for order ${order.referenceNumber || order._id}. ` +
+        `Reason: ${normalizedReason.replace(/_/g, " ")}. ` +
+        `Funds usually clear within 5–10 business days.`,
+    }).catch((err) =>
+      logger.error("Refund WhatsApp notify failed", {
         orderId: order._id,
         error: err?.message,
       })
@@ -892,7 +1071,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     topDrops,
     salesTrendRaw,
     nextScheduledDropDoc,
-    pendingReviewsCount,
+    uncategorizedReviewsCount,
     pendingPaymentsCount,
     agingProductsRaw,
   ] = await Promise.all([
@@ -1049,7 +1228,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       .sort({ releaseDate: 1 })
       .select("name slug releaseDate isPublished isArchived")
       .lean(),
-    Review.countDocuments({ status: "pending" }),
+    Review.countDocuments({ status: "approved", category: "uncategorized" }),
     ManualPayment.countDocuments({ status: "proof_submitted" }),
     Product.find({
       isActive: true,
@@ -1162,7 +1341,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         averageOrderValue: revenueStats.nonCancelledOrders
           ? revenueStats.totalRevenue / revenueStats.nonCancelledOrders
           : 0,
-        pendingReviews: pendingReviewsCount || 0,
+        uncategorizedReviews: uncategorizedReviewsCount || 0,
         pendingPayments: pendingPaymentsCount || 0,
         agingProductsCount,
       },
@@ -1183,6 +1362,44 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
+/*
+|--------------------------------------------------------------------------
+| Stream order invoice as PDF (admin)
+|--------------------------------------------------------------------------
+*/
+const getOrderInvoice = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return next(new AppError("Invalid order id", 400));
+  }
+
+  const order = await Order.findById(id)
+    .populate("user", "email userName name")
+    .lean();
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  // Pull bank details from SiteConfig (key: bank_details). If not set yet
+  // (Wave 8 will surface the editor), pass undefined to render the fallback.
+  let bankConfig;
+  try {
+    const doc = await SiteConfig.findOne({ key: "bank_details" }).lean();
+    bankConfig = doc?.value && typeof doc.value === "object" ? doc.value : undefined;
+  } catch {
+    bankConfig = undefined;
+  }
+
+  const fileName = `saga-elite-invoice-${order.referenceNumber || order._id}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${fileName.replace(/[^A-Za-z0-9_.-]/g, "_")}"`
+  );
+
+  streamInvoicePdf({ order, bankConfig, stream: res });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -1190,5 +1407,6 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   refundOrder,
+  getOrderInvoice,
   getDashboardStats,
 };

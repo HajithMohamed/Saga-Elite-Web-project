@@ -140,26 +140,15 @@ const ReviewCard = ({
               <Flag className="h-3 w-3" /> Report
             </button>
           )}
-          {isOwnReview && review?.status && (
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
-                statusStyle[review.status] || "bg-white/10 text-white/70"
-              }`}
-            >
-              {review.status}
-            </span>
-          )}
           {isOwnReview && (
             <div className="flex items-center gap-2">
-              {review?.status === "pending" && (
-                <button
-                  type="button"
-                  onClick={() => onEdit && onEdit(review)}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-[#D4AF37]/50"
-                >
-                  Edit
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => onEdit && onEdit(review)}
+                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-[#D4AF37]/50"
+              >
+                Edit
+              </button>
               <button
                 type="button"
                 onClick={() => onDelete && onDelete(review)}

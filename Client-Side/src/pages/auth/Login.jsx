@@ -2,12 +2,27 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
+import {
+  loginUserAction,
+  googleSignInAction,
+  facebookSignInAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import usePageMeta from "@/hooks/use-page-meta";
+import {
+  AUTH_INPUT,
+  AUTH_PRIMARY_BTN,
+  Btn,
+  Eyebrow,
+  FieldError,
+  Hairline,
+} from "@/components/ui/editorial";
+import { motion } from "framer-motion";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
@@ -104,9 +119,6 @@ const resolveUserFromPayload = (payload) => {
     null
   );
 };
-
-import AuthLayout from "@/components/auth-components/AuthLayout";
-import { motion } from "framer-motion";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -215,114 +227,176 @@ const Login = () => {
     });
   };
 
-  return (
-    <AuthLayout isImageRight={false}>
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="flex flex-col w-full max-w-sm mx-auto"
-      >
-        <div className="text-center md:text-left mb-10">
-          <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse">
-            Access Exclusive Drops
-          </p>
-          <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
-            ENTER THE ELITE
-          </h1>
-          <p className="text-gray-400 text-sm">
-            Sign in to unlock premium streetwear and early access.
-          </p>
-        </div>
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignInAction({ accessToken: access_token })
+      ).unwrap();
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-1 relative group">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">Email</label>
+      const u = resolveUserFromPayload(response);
+
+      toast({
+        title: "Welcome back",
+        description: response?.message || "Signed in.",
+        variant: "success",
+      });
+
+      navigate(resolveDestination(u), { replace: true });
+    } catch (err) {
+      console.error("[facebook sign-in] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title: title === "Login failed" ? "Facebook sign-in failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = () => {
+    toast({
+      title: "Facebook sign-in failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
+
+  const inputState = (field) =>
+    touched[field] && errors[field]
+      ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
+      : "border-[#4d4635] focus:border-[#f2ca50]";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <Eyebrow tone="gold" size="md">Members entrance</Eyebrow>
+      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+        Enter the<br />atelier.
+      </h1>
+      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+        Sign in to unlock premium streetwear, order updates, and early drop access.
+      </p>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+        <div>
+          <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+          <div className="mt-2">
             <input
               type="email"
+              autoComplete="email"
               value={formData.email}
               onChange={(e) => {
                 setFormData((p) => ({ ...p, email: e.target.value }));
                 setTouched((p) => ({ ...p, email: true }));
               }}
-              placeholder="your@email.com"
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
+              onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+              placeholder="your.name@email.com"
+              aria-invalid={Boolean(touched.email && errors.email)}
+              className={`${AUTH_INPUT} ${inputState("email")}`}
             />
-            {touched.email && errors.email && (
-              <p className="text-red-500 text-xs mt-1 pl-1">{errors.email}</p>
-            )}
           </div>
-
-          <div className="space-y-1 relative group">
-            <div className="flex justify-between items-center pl-1 pr-1">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Password</label>
-              <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-red-400 transition-colors uppercase tracking-wider">
-                Recover Elite Access
-              </Link>
-            </div>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={(e) => {
-                  setFormData((p) => ({ ...p, password: e.target.value }));
-                  setTouched((p) => ({ ...p, password: true }));
-                }}
-                placeholder="••••••••"
-                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            {touched.password && errors.password && (
-              <p className="text-red-500 text-xs mt-1 pl-1">{errors.password}</p>
-            )}
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={isLoading}
-            className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl mt-4 flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              {isLoading ? "Authenticating..." : "ENTER THE ELITE"}
-              {!isLoading && <ArrowRight size={18} />}
-            </span>
-            <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
-          </motion.button>
-        </form>
-
-        <div className="mt-8 mb-6 flex items-center justify-center gap-4 text-xs font-semibold text-gray-600 uppercase tracking-widest">
-          <div className="h-px bg-white/10 flex-1" />
-          Or
-          <div className="h-px bg-white/10 flex-1" />
+          <FieldError>{touched.email ? errors.email : null}</FieldError>
         </div>
 
-        {GOOGLE_ENABLED && (
-          <div className="google-auth-wrapper grayscale hover:grayscale-0 transition-all duration-500 opacity-80 hover:opacity-100">
-            <GoogleAuthButton
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              text="Quick Access with Google"
-            />
+        <div>
+          <div className="flex items-center justify-between gap-4">
+            <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+            <Link
+              to="/auth/forgot-password"
+              className="se-label text-[9px] tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+            >
+              Recover access
+            </Link>
           </div>
-        )}
+          <div className="relative mt-2">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={formData.password}
+              onChange={(e) => {
+                setFormData((p) => ({ ...p, password: e.target.value }));
+                setTouched((p) => ({ ...p, password: true }));
+              }}
+              onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+              placeholder="Your private key"
+              aria-invalid={Boolean(touched.password && errors.password)}
+              className={`${AUTH_INPUT} pr-10 ${inputState("password")}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors se-focus"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff size={16} strokeWidth={1.5} />
+              ) : (
+                <Eye size={16} strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+          <FieldError>{touched.password ? errors.password : null}</FieldError>
+        </div>
 
-        <p className="text-center text-sm text-gray-500 mt-8">
-          New Here?{" "}
-          <Link to="/register" className="text-white hover:text-red-400 font-semibold tracking-wide transition-colors">
-            JOIN THE ELITE
-          </Link>
-        </p>
-      </motion.div>
-    </AuthLayout>
+        <Btn
+          variant="default"
+          className={AUTH_PRIMARY_BTN}
+          iconRight={ArrowRight}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Opening" : "Enter the elite"}
+        </Btn>
+      </form>
+
+      {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
+        <>
+          <div className="my-8 flex items-center gap-4">
+            <Hairline tone="soft" />
+            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+              Or
+            </span>
+            <Hairline tone="soft" />
+          </div>
+          <div className="space-y-3">
+            {GOOGLE_ENABLED && (
+              <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  label="Quick Access with Google"
+                />
+              </div>
+            )}
+            {FACEBOOK_ENABLED && (
+              <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <FacebookAuthButton
+                  onSuccess={handleFacebookSuccess}
+                  onError={handleFacebookError}
+                  label="Quick Access with Facebook"
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <p className="mt-10 se-body text-sm text-[#99907c]">
+        New here?{" "}
+        <Link
+          to="/auth/register"
+          className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+        >
+          Join the elite
+        </Link>
+      </p>
+    </motion.div>
   );
 };
 

@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { verifyOtpAction, resendOtpAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
-
-import AuthLayout from "@/components/auth-components/AuthLayout";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Btn,
+  Eyebrow,
+  AUTH_PRIMARY_BTN,
+} from "@/components/ui/editorial";
 
 const VerifyOtp = () => {
   const dispatch = useDispatch();
@@ -28,7 +31,7 @@ const VerifyOtp = () => {
       });
       const t = setTimeout(() => {
         navigate(user.role === "admin" ? "/admin/dashboard" : "/shopping/home");
-      }, 3000); // give time for animation to run
+      }, 3000);
       return () => clearTimeout(t);
     }
   }, [user, navigate, showSuccess]);
@@ -105,130 +108,139 @@ const VerifyOtp = () => {
     return `${name[0]}${name[1]}***${name[name.length - 1]}@${domain}`;
   })();
 
-  const steps = ["Register", "Verify", "Done"];
-  const currentStep = 1; // Verify
-
   return (
-    <AuthLayout isImageRight={false}>
-      <div className="w-full max-w-sm mx-auto relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          {!showSuccess ? (
-            <motion.div
-              key="verify-form"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col w-full"
+    <div className="relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        {!showSuccess ? (
+          <motion.div
+            key="verify-form"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Link
+              to="/auth/login"
+              className="inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors mb-6"
             >
-              <div className="text-center md:text-left mb-8">
-                <Link to="/auth/login" className="mb-6 text-gray-500 hover:text-white transition-colors text-xs font-bold tracking-widest uppercase flex items-center gap-1">
-                  <ArrowLeft size={12} /> Back
-                </Link>
-                <p className="text-red-500 font-medium tracking-widest text-sm uppercase mb-2 animate-pulse mt-4">
-                  Security Check
-                </p>
-                <h1 className="text-white text-5xl font-['Bebas_Neue',_sans-serif] tracking-wide mb-3">
-                  CONFIRM ACCESS
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  We sent a secure code to {" "}
-                  <span className="text-white font-bold">{masked || "your inbox"}</span>.
-                </p>
-              </div>
+              <ArrowLeft size={12} strokeWidth={1.5} /> Back
+            </Link>
+            <Eyebrow tone="gold" size="md">Almost inside</Eyebrow>
+            <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
+              Confirm<br />your access.
+            </h1>
+            <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+              A four-digit code is on its way to{" "}
+              <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>.
+            </p>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="flex justify-center md:justify-start">
-                  <OtpCells
-                    length={4}
-                    value={otp}
-                    onChange={setOtp}
-                    disabled={isLoading}
-                    className="gap-4"
-                    inputClassName="w-16 h-16 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-300"
-                  />
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={isLoading || otp.length < 4}
-                  className="w-full relative overflow-hidden group bg-white text-black font-bold uppercase tracking-widest py-4 rounded-xl flex justify-center items-center gap-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    {isLoading ? "VERIFYING..." : "VERIFY CODE"}
-                    {!isLoading && <ArrowRight size={18} />}
-                  </span>
-                  {!isLoading && (
-                    <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-[200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out z-0" />
-                  )}
-                </motion.button>
-              </form>
-
-              <div className="mt-8 text-center md:text-left">
-                {seconds > 0 ? (
-                  <span className="text-xs font-bold text-gray-500 tracking-widest uppercase">
-                    Resend in <span className="text-white">{seconds}s</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={resending}
-                    className="text-xs font-bold text-red-500 hover:text-red-400 tracking-widest uppercase transition-colors"
-                  >
-                    {resending ? "SENDING..." : "RESEND CODE"}
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="success-state"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", bounce: 0.5 }}
-              className="flex flex-col items-center justify-center py-12 text-center"
-            >
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", delay: 0.2 }}
-                className="w-24 h-24 bg-green-500/20 rounded-full flex flex-col items-center justify-center mb-6 border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.4)]"
-              >
-                <motion.svg
-                  className="w-12 h-12 text-green-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </motion.svg>
-              </motion.div>
-              <h2 className="text-3xl font-['Bebas_Neue',_sans-serif] text-white tracking-widest mb-2">
-                ACCESS GRANTED
-              </h2>
-              <p className="text-gray-400 font-semibold tracking-wide uppercase text-sm">
-                Welcome To The Elite
-              </p>
-              
-              <div className="w-12 h-1 bg-white/20 rounded-full overflow-hidden mt-8">
-                <motion.div 
-                  className="h-full bg-white"
-                  initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 2.5, ease: "linear" }}
+            <form onSubmit={handleSubmit} className="mt-10 md:mt-12 space-y-8">
+              <div className="flex justify-center md:justify-start">
+                <OtpCells
+                  length={4}
+                  value={otp}
+                  onChange={setOtp}
+                  disabled={isLoading}
+                  success={showSuccess}
                 />
               </div>
+
+              <Btn
+                variant="default"
+                className={AUTH_PRIMARY_BTN}
+                iconRight={ArrowRight}
+                type="submit"
+                disabled={isLoading || otp.length < 4}
+              >
+                {isLoading ? "Verifying" : "Confirm access"}
+              </Btn>
+            </form>
+
+            <div className="mt-8">
+              {seconds > 0 ? (
+                <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">
+                  Resend in <span className="text-[#e5e2e1]">{seconds}s</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] transition-colors disabled:opacity-50"
+                >
+                  {resending ? "Sending..." : "Resend code"}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="success-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <motion.div
+                className="absolute w-32 h-32 rounded-full border border-[#f2ca50]/30"
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: [0.6, 1.2, 1.0], opacity: [0, 0.6, 0.3] }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              />
+              <motion.div
+                className="relative w-16 h-16 rounded-full bg-[#f2ca50]/10 border border-[#f2ca50]/40 flex items-center justify-center"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  delay: 0.3,
+                  duration: 0.5,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6, duration: 0.3 }}
+                >
+                  <CheckCheck
+                    size={28}
+                    strokeWidth={1.5}
+                    className="text-[#f2ca50]"
+                  />
+                </motion.div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="mt-10"
+            >
+              <p className="se-label text-[11px] tracking-[0.5em] text-[#f2ca50]">
+                ACCESS GRANTED
+              </p>
+              <p className="se-serif text-[#e5e2e1] text-2xl md:text-3xl mt-3">
+                Welcome to the elite.
+              </p>
+              <p className="se-label text-[10px] tracking-[0.28em] text-[#99907c] mt-4">
+                Entering your atelier
+              </p>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </AuthLayout>
+
+            <div className="w-12 h-px bg-[#4d4635] mt-10 overflow-hidden">
+              <motion.div
+                className="h-full bg-[#f2ca50]"
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2.5, ease: "linear" }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 

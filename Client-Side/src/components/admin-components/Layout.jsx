@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import SideBar from './SideBar'
 import Header from './Header'
+import AdminBottomNav from './AdminBottomNav'
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -24,10 +25,12 @@ const Layout = () => {
 
       <div className="flex flex-1 flex-col lg:pl-64">
         <Header onMenuToggle={() => setIsSidebarOpen((state) => !state)} />
-        <main className="flex-1 flex-col flex overflow-y-auto">
+        <main className="flex-1 flex-col flex overflow-y-auto pb-16 lg:pb-0">
           <Outlet />
         </main>
       </div>
+
+      <AdminBottomNav onMenuToggle={() => setIsSidebarOpen((state) => !state)} />
     </div>
   )
 }

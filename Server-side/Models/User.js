@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
       validate: [validator.isEmail, "Provide a valid email address"],
     },
 
-    name: {
+    username: {
       type: String,
       trim: true,
       maxlength: 120,
@@ -69,11 +69,17 @@ const userSchema = new mongoose.Schema(
 
     provider: {
       type: String,
-      enum: ["local", "google"],
+      enum: ["local", "google", "facebook"],
       default: "local",
     },
 
     googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    facebookId: {
       type: String,
       unique: true,
       sparse: true,
@@ -90,6 +96,28 @@ const userSchema = new mongoose.Schema(
 
     profilePicture: String,
 
+    // Sri Lankan mobile number, stored in canonical "+947XXXXXXXX" form so
+    // that WhatsApp / SMS / lookup all see the same value. Required for
+    // local signups (controller validates + normalizes before save). Google
+    // signups land here with null because the OAuth profile doesn't carry
+    // a phone — the client surfaces a "complete profile" prompt to backfill.
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: null,
+      validate: {
+        validator: function (value) {
+          if (value === null || value === undefined || value === "") return true;
+          // Accept canonical form. Free-form input is normalized in the
+          // controller before reaching the model — anything else here is a
+          // bug worth catching.
+          return /^\+947\d{8}$/.test(value);
+        },
+        message:
+          "Phone number must be a Sri Lankan mobile in +947XXXXXXXX format.",
+      },
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
@@ -100,12 +128,47 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    // Set true when a super_admin resets this account's password.
+    // Auth login surfaces a `must_change_password` status without issuing a
+    // session token; client-side forced-rotation UI is a follow-up PR.
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+
     membership: {
       type: String,
       enum: ["standard", "elite", "rare", "legend", "vip"],
       default: "standard",
       index: true,
     },
+
+    // Admin-curated tags for fast filtering/segmentation. Distinct from
+    // `membership` (which is a tier) — tags are descriptive, multi-select,
+    // and can stack: a VIP can also be a "drop_collector" + "refund_risk".
+    tags: {
+      type: [String],
+      enum: [
+        "vip",
+        "high_spender",
+        "drop_collector",
+        "frequent_buyer",
+        "refund_risk",
+        "early_supporter",
+      ],
+      default: [],
+      index: true,
+    },
+
+    // Append-only admin commentary. Each entry captures who wrote it and
+    // when so we have a clear audit trail when handling support escalations.
+    adminNotes: [
+      {
+        note: { type: String, trim: true, maxlength: 2000 },
+        author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
 
     totalSpent: {
       type: Number,

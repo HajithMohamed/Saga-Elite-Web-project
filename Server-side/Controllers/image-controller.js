@@ -8,8 +8,48 @@ const uploadToCloudinary = require("../Utils/image-upload");
 const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const winston = require("winston");
+const { imageSize } = require("image-size");
 
 const MAX_IMAGES_PER_ENTITY = 10;
+
+// Per-system-type upload constraints. Reject before Cloudinary touches anything.
+const SYSTEM_IMAGE_LIMITS = {
+  hero:           { minWidth: 1600, minHeight: 600,  maxBytes: 5 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  ad:             { minWidth: 800,  minHeight: 800,  maxBytes: 3 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  logo:           { minWidth: 256,  minHeight: 256,  maxBytes: 1 * 1024 * 1024, mimes: ["image/png", "image/webp", "image/svg+xml"] },
+  "category-logo":{ minWidth: 400,  minHeight: 400,  maxBytes: 2 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+  "social-ugc":   { minWidth: 600,  minHeight: 600,  maxBytes: 4 * 1024 * 1024, mimes: ["image/jpeg", "image/png", "image/webp"] },
+};
+
+const validateSystemImageFile = (file, type) => {
+  const limits = SYSTEM_IMAGE_LIMITS[type];
+  if (!limits) return null;
+  if (!limits.mimes.includes(file.mimetype)) {
+    return `${type} images must be one of: ${limits.mimes.join(", ")} (got ${file.mimetype})`;
+  }
+  if (file.size > limits.maxBytes) {
+    const maxMb = (limits.maxBytes / (1024 * 1024)).toFixed(1);
+    return `${type} images must be ≤${maxMb}MB (got ${(file.size / (1024 * 1024)).toFixed(1)}MB)`;
+  }
+  // SVG dimensions can't be read by image-size reliably; skip dimension check for SVG
+  if (file.mimetype === "image/svg+xml") return null;
+  try {
+    const dims = imageSize(file.buffer);
+    if (!dims?.width || !dims?.height) {
+      return `${type} image dimensions could not be determined`;
+    }
+    if (dims.width < limits.minWidth || dims.height < limits.minHeight) {
+      return `${type} images must be at least ${limits.minWidth}×${limits.minHeight}px (got ${dims.width}×${dims.height})`;
+    }
+  } catch (err) {
+    return `${type} image is not a valid image file`;
+  }
+  return null;
+};
+
+const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
+const isAdminViewer = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
+const visibilityFilter = (req) => (isAdminViewer(req.userInfo) ? {} : { isActive: true });
 
 // Configure Winston logger for image actions
 const actionLogger = winston.createLogger({
@@ -38,7 +78,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
   // Log upload attempt
   actionLogger.info({
     action: "upload_images_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -75,15 +115,27 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   // Validate type for System images
   if (imageData.refModel === "System") {
-    const validSystemTypes = ["hero", "ad", "logo", "category-logo"];
+    const validSystemTypes = [
+      "hero",
+      "ad",
+      "logo",
+      "category-logo",
+      "social-ugc",
+    ];
 
     if (!imageData.type || !validSystemTypes.includes(imageData.type)) {
       return next(
         new AppError(
-          "System images require type: hero, ad, logo, or category-logo",
+          `System images require type: ${validSystemTypes.join(", ")}`,
           400
         )
       );
+    }
+
+    // Per-type size/format/dimension checks
+    for (const file of req.files) {
+      const error = validateSystemImageFile(file, imageData.type);
+      if (error) return next(new AppError(error, 400));
     }
   }
 
@@ -194,7 +246,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
         // Log successful upload with URL for debugging
         actionLogger.info({
           action: "image_upload_success",
-          userId: req.user ? req.user._id : null,
+          userId: req.userInfo ? req.userInfo._id : null,
           refModel: imageData.refModel,
           refId: imageData.refId || null,
           publicId: result.public_id,
@@ -222,7 +274,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
     actionLogger.error({
       action: "upload_images",
-      userId: req.user ? req.user._id : null,
+      userId: req.userInfo ? req.userInfo._id : null,
       refModel: imageData.refModel,
       refId: imageData.refId || null,
       type: imageData.type || null,
@@ -238,7 +290,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "upload_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: imageData.refModel,
     refId: imageData.refId || null,
     type: imageData.type || null,
@@ -278,7 +330,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log update attempt
   actionLogger.info({
     action: "update_image_attempt",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     oldPublicId: image.publicId,
   });
@@ -315,7 +367,7 @@ const updateImage = catchAsync(async (req, res, next) => {
   // Log successful update
   actionLogger.info({
     action: "update_image_success",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId,
     newPublicId: uploadResult.public_id,
     url: uploadResult.secure_url,
@@ -345,7 +397,7 @@ const getProductImages = catchAsync(async (req, res, next) => {
     refId: productRefId,
     refModel: "Product",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -372,7 +424,7 @@ const getDropImages = catchAsync(async (req, res, next) => {
     refId: dropRefId,
     refModel: "Drop",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
@@ -387,7 +439,8 @@ const getHeroImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "hero",
     isDeleted: false,
-  }).sort({ order: 1 });
+    ...visibilityFilter(req),
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!heroImages.length) {
     return next(new AppError("No hero images found", 404));
@@ -405,7 +458,8 @@ const getAdImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "ad",
     isDeleted: false,
-  }).sort({ order: 1 });
+    ...visibilityFilter(req),
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!adImages.length) {
     return next(new AppError("No ad images found", 404));
@@ -423,7 +477,8 @@ const getLogoImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "logo",
     isDeleted: false,
-  }).sort({ order: 1 });
+    ...visibilityFilter(req),
+  }).sort({ isPrimary: -1, order: 1 });
 
   if (!logoImages.length) {
     return next(new AppError("No logo images found", 404));
@@ -445,6 +500,7 @@ const getCategoryLogoImages = catchAsync(async (req, res, next) => {
     refModel: "System",
     type: "category-logo",
     isDeleted: false,
+    ...visibilityFilter(req),
   };
 
   if (req.query.label) {
@@ -478,12 +534,31 @@ const getReviewImages = catchAsync(async (req, res, next) => {
     refId: reviewRefId,
     refModel: "Review",
     isDeleted: false,
-  }).sort({ order: 1 });
+  }).sort({ isPrimary: -1, order: 1 });
 
   res.status(200).json({
     success: true,
     results: reviewImages.length,
     images: reviewImages,
+  });
+});
+
+const getSocialUgcImages = catchAsync(async (req, res, next) => {
+  const images = await Image.find({
+    refModel: "System",
+    type: "social-ugc",
+    isDeleted: false,
+    ...visibilityFilter(req),
+  }).sort({ isPrimary: -1, order: 1 });
+
+  if (!images.length) {
+    return next(new AppError("No social UGC images found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    results: images.length,
+    images,
   });
 });
 
@@ -528,7 +603,7 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "set_primary_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -539,6 +614,33 @@ const setPrimaryImage = catchAsync(async (req, res, next) => {
     success: true,
     message: "Primary image updated successfully",
     image: updatedImage,
+  });
+});
+
+/* ==============================
+   Toggle Active (visibility) — distinct from soft-delete
+============================== */
+const toggleActiveImage = catchAsync(async (req, res, next) => {
+  const imageId = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Invalid image ID", 400));
+  }
+  const image = await Image.findById(imageId);
+  if (!image || image.isDeleted) {
+    return next(new AppError("Image not found", 404));
+  }
+  image.isActive = !image.isActive;
+  await image.save();
+  actionLogger.info({
+    action: "toggle_active_image",
+    userId: req.userInfo ? req.userInfo._id : null,
+    imageId: image._id,
+    isActive: image.isActive,
+  });
+  res.status(200).json({
+    success: true,
+    message: `Image ${image.isActive ? "activated" : "deactivated"}`,
+    image,
   });
 });
 
@@ -563,7 +665,7 @@ const deleteImage = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_image",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     imageId: image._id,
     refModel: image.refModel,
     refId: image.refId || null,
@@ -661,7 +763,7 @@ const reorderImages = catchAsync(async (req, res, next) => {
   const sampleImage = images[0];
   actionLogger.info({
     action: "reorder_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: sampleImage.refModel,
     refId: sampleImage.refId || null,
     type: sampleImage.type || null,
@@ -716,7 +818,7 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
 
   actionLogger.info({
     action: "delete_all_images",
-    userId: req.user ? req.user._id : null,
+    userId: req.userInfo ? req.userInfo._id : null,
     refModel: normalizedRefModel,
     refId: refId || null,
     type: type || null,
@@ -775,7 +877,9 @@ module.exports = {
   getLogoImages,
   getCategoryLogoImages,
   getReviewImages,
+  getSocialUgcImages,
   setPrimaryImage,
+  toggleActiveImage,
   deleteImage,
   reorderImages,
   deleteAllImages,

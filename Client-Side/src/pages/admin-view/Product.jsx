@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, Fragment } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllProducts,
@@ -25,17 +25,37 @@ import {
   Trash,
   Package,
   Eye,
+  Info,
+  DollarSign,
+  Layers,
+  Image as ImageIcon,
+  Tag as TagIcon,
+  Sparkles,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   pageVariants,
   containerVariants,
   itemVariants,
-  slideInPanelVariants,
 } from "@/components/admin-components/_shared/animations";
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import {
+  AdminFormShell,
+  StickyActionBar,
+  FormSection,
+  FormField,
+  LuxuryInput,
+  LuxuryTextarea,
+  LuxurySelect,
+  StatusPill,
+  RightRailPanel,
+  RailToggleRow,
+  LivePreviewCard,
+  FormTabs,
+  ProgressBar,
+} from "@/components/admin-components/_form";
 
 // Helper components for visual consistency
 const PulseDot = ({ active }) => (
@@ -52,6 +72,7 @@ const defaultVariant = {
   sku: "",
   size: "",
   color: "",
+  colorCode: "",
   stock: "0",
   priceAdjustment: "0",
 };
@@ -60,6 +81,13 @@ const initialProductForm = {
   name: "",
   artNo: "",
   description: "",
+  story: "",
+  fabric: "",
+  gsm: "",
+  fitType: "",
+  careInstructions: "",
+  sizeGuide: "",
+  categoryPath: "",
   brand: "Sovereign Elite",
   category: "Unisex",
   drop: "",
@@ -67,12 +95,70 @@ const initialProductForm = {
   discountPercent: "0",
   costPrice: "",
   maxPerUser: "",
-  stockThreshold: "5",
   isFeatured: false,
   isActive: true,
   isLimited: false,
   tags: [],
   variants: [defaultVariant],
+};
+
+const SIZE_OPTIONS = [
+  "XS", "S", "M", "L", "XL", "XXL", "3XL", "FREE",
+  "36", "38", "40", "42", "44", "46", "48", "50",
+];
+
+const COLOR_OPTIONS = [
+  { name: "Black", hex: "#000000" },
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Navy", hex: "#1B2A4A" },
+  { name: "Charcoal", hex: "#36454F" },
+  { name: "Olive", hex: "#556B2F" },
+  { name: "Cream", hex: "#FFFDD0" },
+  { name: "Sand", hex: "#C2B280" },
+  { name: "Burgundy", hex: "#800020" },
+  { name: "Forest Green", hex: "#228B22" },
+  { name: "Tan", hex: "#D2B48C" },
+  { name: "Grey", hex: "#808080" },
+  { name: "Red", hex: "#B22222" },
+  { name: "Royal Blue", hex: "#4169E1" },
+  { name: "Camel", hex: "#C19A6B" },
+  { name: "Sage", hex: "#B2AC88" },
+  { name: "Rust", hex: "#B7410E" },
+  { name: "Gold", hex: "#D4AF37" },
+  { name: "Pink", hex: "#FFB6C1" },
+  { name: "Lavender", hex: "#E6E6FA" },
+];
+
+const generateSku = (artNo, size, color) => {
+  if (!artNo) return "";
+  const parts = [artNo.trim().toUpperCase()];
+  if (size) parts.push(size.toUpperCase().replace(/\s+/g, ""));
+  if (color) parts.push(color.toUpperCase().replace(/\s+/g, "").slice(0, 3));
+  return parts.join("-");
+};
+
+// Draft key for the wizard's auto-save. Only used when creating a NEW product
+// (editing an existing one always loads server state, never a stale draft).
+const PRODUCT_DRAFT_KEY = "saga.admin.product.draft";
+
+const loadProductDraft = () => {
+  try {
+    const raw = localStorage.getItem(PRODUCT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const clearProductDraft = () => {
+  try {
+    localStorage.removeItem(PRODUCT_DRAFT_KEY);
+  } catch {
+    /* storage disabled — silent */
+  }
 };
 
 const PRODUCT_TAG_OPTIONS = [
@@ -82,6 +168,11 @@ const PRODUCT_TAG_OPTIONS = [
   "NEW DROP",
   "BESTSELLER",
 ];
+
+const getErrorMessage = (error, fallback = "Request failed") => {
+  if (typeof error === "string") return error;
+  return error?.message || error?.error || error?.response?.data?.message || fallback;
+};
 
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
@@ -98,6 +189,7 @@ const Product = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
   const [showProductSaved, setShowProductSaved] = useState(false);
+  const [activeFormTab, setActiveFormTab] = useState("basic");
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -123,7 +215,7 @@ const Product = () => {
   useEffect(() => {
     dispatch(getAllDrops());
     fetchProducts();
-  }, [fetchProducts]);
+  }, [dispatch, fetchProducts]);
 
   const resetForm = () => {
     setFormData(initialProductForm);
@@ -131,7 +223,38 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
+    setActiveFormTab("basic");
   };
+
+  const openNewProductForm = () => {
+    const draft = loadProductDraft();
+    setFormData(draft ? { ...initialProductForm, ...draft } : initialProductForm);
+    setSelectedProductSlug(null);
+    setSelectedProductId(null);
+    setProductImages([]);
+    setActiveFormTab("basic");
+    setShowForm(true);
+    if (draft) {
+      toast({
+        title: "Draft restored",
+        description: "Resumed from your last unsaved product draft.",
+      });
+    }
+  };
+
+  // Auto-save the form to localStorage every ~600ms while creating a NEW product.
+  // Editing an existing product never persists a draft (would clobber server state on next open).
+  useEffect(() => {
+    if (!showForm || selectedProductSlug) return undefined;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(formData));
+      } catch {
+        /* quota or disabled — silent */
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [formData, showForm, selectedProductSlug]);
 
   const fetchProductImages = async (id) => {
     try {
@@ -176,6 +299,13 @@ const Product = () => {
       name: product.name || "",
       artNo: product.artNo || "",
       description: product.description || "",
+      story: product.story || "",
+      fabric: product.fabric || "",
+      gsm: product.gsm || "",
+      fitType: product.fitType || "",
+      careInstructions: product.careInstructions || "",
+      sizeGuide: product.sizeGuide || "",
+      categoryPath: product.categoryPath || "",
       brand: product.brand || "Sovereign Elite",
       category: product.category || "Unisex",
       drop: product.drop?._id || "",
@@ -183,13 +313,15 @@ const Product = () => {
       discountPercent: product.discountPercent || "0",
       costPrice: product.costPrice ?? "",
       maxPerUser: product.maxPerUser ?? "",
-      stockThreshold: "5",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
       tags: Array.isArray(product.tags) ? product.tags : [],
-      variants: product.variants?.length ? product.variants : [defaultVariant],
+      variants: product.variants?.length
+        ? product.variants.map((v) => ({ ...v, colorCode: v.colorCode || "" }))
+        : [defaultVariant],
     });
+    setActiveFormTab("basic");
     setShowForm(true);
     fetchProductImages(product._id);
   };
@@ -204,10 +336,52 @@ const Product = () => {
     });
   };
 
+  const validateProductForm = () => {
+    if (!formData.name.trim()) return "Product name is required.";
+    if (!formData.artNo.trim()) return "Art No is required.";
+    if (!formData.basePrice || Number(formData.basePrice) < 0) {
+      return "Base price must be 0 or greater.";
+    }
+    const validVariants = formData.variants.filter(
+      (v) =>
+        v.sku?.trim() &&
+        v.size?.trim() &&
+        v.color?.trim() &&
+        v.stock !== "" &&
+        v.stock !== null &&
+        v.stock !== undefined
+    );
+    if (validVariants.length === 0) {
+      return "At least one variant with SKU, size, color, and stock is required.";
+    }
+    const partialCount = formData.variants.length - validVariants.length;
+    if (partialCount > 0) {
+      return "Each variant needs SKU, size, color, and stock. Remove or complete partial rows.";
+    }
+    return null;
+  };
+
   const handleSubmit = async () => {
+    const validationError = validateProductForm();
+    if (validationError) {
+      toast({ title: "Check the form", description: validationError, variant: "destructive" });
+      return;
+    }
+
     try {
       let result;
-      const cleanData = { ...formData, variants: formData.variants.filter(v => v.sku) };
+      const cleanData = {
+        ...formData,
+        variants: formData.variants.filter(
+          (v) =>
+            v.sku?.trim() &&
+            v.size?.trim() &&
+            v.color?.trim() &&
+            v.stock !== "" &&
+            v.stock !== null &&
+            v.stock !== undefined
+        ),
+      };
 
       if (selectedProductSlug) {
         result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: cleanData })).unwrap();
@@ -235,11 +409,17 @@ const Product = () => {
         title: selectedProductSlug ? "Product updated successfully" : "Product created successfully",
         className: "bg-surface border border-primary-container text-saga-primary",
       });
+      // Successful create — drop the draft so the next "New Product" starts fresh.
+      if (!selectedProductSlug) clearProductDraft();
       setShowProductSaved(true);
       resetForm();
       fetchProducts();
     } catch (e) {
-      toast({ title: "Failed to save product", description: e?.message, variant: "destructive" });
+      toast({
+        title: "Failed to save product",
+        description: getErrorMessage(e, "Something went wrong while saving the product."),
+        variant: "destructive",
+      });
     }
   };
 
@@ -251,7 +431,23 @@ const Product = () => {
 
   const handleVariantChange = (index, field, value) => {
     const updatedVariants = [...formData.variants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    const variant = { ...updatedVariants[index], [field]: value };
+
+    // Auto-set colorCode when color changes to a known preset
+    if (field === "color") {
+      const preset = COLOR_OPTIONS.find((c) => c.name.toLowerCase() === value.toLowerCase());
+      if (preset) variant.colorCode = preset.hex;
+    }
+
+    // Auto-generate SKU when size or color changes (only if sku was auto-generated or empty)
+    if (field === "size" || field === "color") {
+      const currentAuto = generateSku(formData.artNo, updatedVariants[index].size, updatedVariants[index].color);
+      if (!variant.sku || variant.sku === currentAuto) {
+        variant.sku = generateSku(formData.artNo, variant.size, variant.color);
+      }
+    }
+
+    updatedVariants[index] = variant;
     setFormData({ ...formData, variants: updatedVariants });
   };
 
@@ -264,380 +460,790 @@ const Product = () => {
     setFormData({ ...formData, variants: updatedVariants });
   };
 
-  // ----- ATELIER FORM (slide-in panel 2I) -----
+  // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
+
+  // Tabs
+  const PRODUCT_TABS = [
+    { id: "basic", label: "Basic Info", icon: Info },
+    { id: "details", label: "Details", icon: Sparkles },
+    { id: "pricing", label: "Pricing", icon: DollarSign },
+    { id: "variants", label: "Variants", icon: Layers, count: formData.variants.length },
+    { id: "media", label: "Media", icon: ImageIcon, count: productImages.length },
+    { id: "tags", label: "Tags", icon: TagIcon, count: (formData.tags || []).length },
+  ];
+
+  // Computed margin for the right rail.
+  const currentMargin = (() => {
+    const cost = Number(formData.costPrice);
+    const base = Number(formData.basePrice);
+    if (!cost || !base) return null;
+    return Math.round(((base - cost) / base) * 100);
+  })();
+  const discountedMargin = (() => {
+    const cost = Number(formData.costPrice);
+    const base = Number(formData.basePrice);
+    const disc = Number(formData.discountPercent || 0);
+    if (!cost || !base || disc <= 0) return null;
+    const sale = base * (1 - disc / 100);
+    if (sale <= 0) return null;
+    return Math.round(((sale - cost) / sale) * 100);
+  })();
+
+  const totalStock = formData.variants.reduce(
+    (sum, v) => sum + Number(v.stock || 0),
+    0
+  );
+
+  const heroProductImage = productImages[0]?.url || null;
+  const productStatus = formData.isActive ? "live" : "archived";
+
+  // Setup completion progress
+  const completedCount = [
+    formData.name?.trim().length >= 3,
+    formData.artNo?.trim().length >= 2,
+    Number(formData.basePrice) > 0,
+    formData.variants.some(
+      (v) => v.sku?.trim() && v.size?.trim() && v.color?.trim() && v.stock !== ""
+    ),
+    productImages.length > 0,
+    formData.description?.trim().length > 0,
+  ].filter(Boolean).length;
+  const progressValue = completedCount / 6;
+
   const atelierForm = (
-      <motion.div
-        key="product-atelier"
-        variants={slideInPanelVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        className="fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto bg-[#050505]"
-      >
-      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden w-full">
-        <main className="flex-1 w-full flex flex-col overflow-y-auto">
-          {/* Header */}
-          <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
-            <div className="flex flex-col">
-              <h1 className="font-serif text-3xl font-bold tracking-tighter text-saga-primary">Saga Elite</h1>
-              <p className="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant opacity-70 mt-1">Product Atelier / Variant Studio</p>
-            </div>
-            <div className="flex items-center gap-8">
-              <button onClick={resetForm} className="text-sm uppercase tracking-[0.1em] text-on-surface hover:text-saga-primary transition-colors duration-300">
-                Cancel
-              </button>
-              <button onClick={handleSubmit} className="bg-primary-container text-on-primary-container px-8 py-3 text-sm uppercase font-extrabold tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]">
-                Save Product
-              </button>
-            </div>
-          </header>
+    <AdminFormShell
+      onClose={resetForm}
+      header={
+        <StickyActionBar
+          eyebrow={selectedProductSlug ? "Product Atelier · Editing" : "Product Atelier · New Product"}
+          title={formData.name?.trim() || (selectedProductSlug ? "Untitled product" : "New Product")}
+          subtitle={
+            formData.artNo
+              ? `${formData.artNo} · ${formData.category} · ${formData.brand}`
+              : "Set art number and pricing to continue"
+          }
+          onCancel={resetForm}
+          onPublish={handleSubmit}
+          publishLabel={selectedProductSlug ? "Save Product" : "Publish Product"}
+        />
+      }
+      rightRail={
+        <>
+          <RightRailPanel
+            tone="accent"
+            title="Live Preview"
+            description="Storefront card preview."
+          >
+            <LivePreviewCard
+              image={heroProductImage}
+              eyebrow={formData.brand}
+              title={formData.name?.trim() || "Untitled product"}
+              status={productStatus}
+              statusLabel={formData.isActive ? "Live" : "Archived"}
+              meta={[
+                {
+                  label: "Price",
+                  value: formData.basePrice
+                    ? `$${Number(formData.basePrice).toLocaleString()}`
+                    : "—",
+                },
+                ...(Number(formData.discountPercent) > 0
+                  ? [
+                      {
+                        label: "Discount",
+                        value: `${formData.discountPercent}%`,
+                      },
+                    ]
+                  : []),
+                { label: "Stock", value: `${totalStock} units` },
+                { label: "Variants", value: formData.variants.length },
+                ...((formData.tags || []).length > 0
+                  ? [{ label: "Tags", value: formData.tags.join(", ") }]
+                  : []),
+              ]}
+            />
+          </RightRailPanel>
 
-          <div className="w-full px-0 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
+          <RightRailPanel title="Status & Visibility">
+            <RailToggleRow
+              label="Active"
+              helper="Visible in the public storefront."
+              checked={formData.isActive}
+              onChange={(v) => setFormData({ ...formData, isActive: v })}
+            />
+            <RailToggleRow
+              label="Featured"
+              helper="Promote on homepage carousel."
+              checked={formData.isFeatured}
+              onChange={(v) => setFormData({ ...formData, isFeatured: v })}
+            />
+            <RailToggleRow
+              label="Limited"
+              helper="Badge as exclusive drop."
+              checked={formData.isLimited}
+              onChange={(v) => setFormData({ ...formData, isLimited: v })}
+            />
+          </RightRailPanel>
 
-            {/* Left Column: Media & Visuals */}
-            <div className="col-span-1 md:col-span-4 space-y-12">
-              <section>
-                <h2 className="font-serif text-xl mb-6 text-on-surface">Product Visuals</h2>
-                <div className="bg-surface-container-low p-4">
-                  <ImageUpload
-                    images={productImages}
-                    setImages={setProductImages}
-                    isMultiple
-                    refModel="Product"
-                    refId={selectedProductId}
-                    type="product"
-                  />
-                  {productImages.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => openProductGallery({ name: formData.name, _id: selectedProductId, images: productImages })}
-                      className="mt-3 inline-flex items-center justify-center rounded-full border border-saga-primary px-4 py-2 text-sm font-semibold text-saga-primary hover:bg-saga-primary/10 transition"
-                    >
-                      View all images
-                    </button>
-                  )}
-                </div>
-              </section>
-
-              <section className="bg-surface-container-low p-8 space-y-6 border border-outline-variant/10">
-                <h2 className="font-serif text-xl text-on-surface">Status &amp; Visibility</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Featured</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Promote on homepage carousel</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isFeatured}
-                      onChange={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high border-l-2 border-saga-primary">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Active</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Visible in public storefront</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isActive}
-                      onChange={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Limited</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Badge as exclusive drop</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isLimited}
-                      onChange={() => setFormData({ ...formData, isLimited: !formData.isLimited })}
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column: Form Data */}
-            <div className="col-span-1 md:col-span-8 space-y-12">
-
-              {/* Basic Info */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">01</span>
-                  <h2 className="font-serif text-2xl text-on-surface">Basic Information</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Product Name</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30"
-                      placeholder="e.g. Aethelgard Signature Oxford"
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Description</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={e => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30 min-h-[100px] resize-y"
-                      placeholder="Product details..."
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Art No. (SKU Root)</label>
-                    <input
-                      type="text"
-                      value={formData.artNo}
-                      onChange={e => setFormData({ ...formData, artNo: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Brand Identity</label>
-                    <select
-                      value={formData.brand}
-                      onChange={e => setFormData({ ...formData, brand: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="Sovereign Elite">Sovereign Elite</option>
-                      <option value="Atelier Reserve">Atelier Reserve</option>
-                      <option value="Nomad Lux">Nomad Lux</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Category Suite</label>
-                    <select
-                      value={formData.category}
-                      onChange={e => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="Ladies">Ladies</option>
-                      <option value="Gents">Gents</option>
-                      <option value="Unisex">Unisex</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Collection Drop</label>
-                    <select
-                      value={formData.drop}
-                      onChange={e => setFormData({ ...formData, drop: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="">Standalone / Core Collection</option>
-                      {drops.map(d => (
-                        <option key={d._id} value={d._id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </section>
-
-              {/* Fiscal Configuration */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">02</span>
-                  <h2 className="font-serif text-2xl text-on-surface">Fiscal Configuration</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Base Price (USD)</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
-                      <input
-                        type="number"
-                        value={formData.basePrice}
-                        onChange={e => setFormData({ ...formData, basePrice: e.target.value })}
-                        className="w-full bg-surface-container-highest border-none p-4 pl-8 text-on-surface focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Discount (%)</label>
-                    <input
-                      type="number"
-                      value={formData.discountPercent}
-                      onChange={e => setFormData({ ...formData, discountPercent: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Max Per User</label>
-                    <input
-                      type="number"
-                      value={formData.maxPerUser}
-                      onChange={e => setFormData({ ...formData, maxPerUser: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">
-                      Cost / Wholesale Price (LKR) — Admin Only
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.costPrice}
-                      onChange={e => setFormData({ ...formData, costPrice: e.target.value })}
-                      placeholder="0"
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                    <p className="mt-2 text-[10px] tracking-[0.1em] text-on-surface-variant/60">
-                      Never shown to customers. Used for margin calculations and offer suggestions.
-                    </p>
-                    {Number(formData.costPrice) > 0 && Number(formData.basePrice) > 0 ? (
-                      <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-[#99907c]">
-                        Current margin:{" "}
-                        <span className="text-[#f2ca50] font-bold">
-                          {Math.round(
-                            ((Number(formData.basePrice) - Number(formData.costPrice)) / Number(formData.basePrice)) * 100
-                          )}
-                          %
-                        </span>
-                        {Number(formData.discountPercent) > 0 ? (
-                          <>
-                            {" "}→ at {formData.discountPercent}% off:{" "}
-                            <span className="text-[#f2ca50] font-bold">
-                              {(() => {
-                                const sale = Number(formData.basePrice) * (1 - Number(formData.discountPercent) / 100);
-                                if (sale <= 0) return "—";
-                                return `${Math.round(((sale - Number(formData.costPrice)) / sale) * 100)}%`;
-                              })()}
-                            </span>
-                          </>
-                        ) : null}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </section>
-
-              {/* Variant Studio */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex justify-between items-end mb-10 border-b border-outline-variant/20 pb-4">
-                  <div className="flex items-baseline gap-4">
-                    <span className="font-serif text-4xl text-saga-primary opacity-20">03</span>
-                    <h2 className="font-serif text-2xl text-on-surface">Variant Studio</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addVariant}
-                    className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold border border-saga-primary/30 px-6 py-2 hover:bg-saga-primary hover:text-surface transition-all duration-300"
+          {currentMargin !== null ? (
+            <RightRailPanel title="Margin">
+              <div className="rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/50 uppercase tracking-wider">
+                    Base
+                  </span>
+                  <span
+                    className={`tabular-nums font-semibold ${
+                      currentMargin < 15 ? "text-rose-300" : "text-emerald-300"
+                    }`}
                   >
-                    + Add Variant
-                  </button>
+                    {currentMargin}%
+                  </span>
                 </div>
+                {discountedMargin !== null ? (
+                  <div className="mt-2 flex items-center justify-between border-t border-white/[0.05] pt-2">
+                    <span className="text-white/50 uppercase tracking-wider">
+                      After {formData.discountPercent}% off
+                    </span>
+                    <span
+                      className={`tabular-nums font-semibold ${
+                        discountedMargin < 15 ? "text-rose-300" : "text-emerald-300"
+                      }`}
+                    >
+                      {discountedMargin}%
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </RightRailPanel>
+          ) : null}
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left min-w-[600px]">
-                    <thead>
-                      <tr className="border-b border-outline-variant/15 text-on-surface-variant font-bold uppercase tracking-widest text-[10px]">
-                        <th className="py-4 font-normal">SKU Identifier</th>
-                        <th className="py-4 font-normal">Size</th>
-                        <th className="py-4 font-normal">Color/Material</th>
-                        <th className="py-4 font-normal text-right">Price Adj.</th>
-                        <th className="py-4 font-normal text-right">Qty</th>
-                        <th className="py-4"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/10">
-                      <AnimatePresence initial={false}>
-                      {formData.variants.map((v, i) => (
-                        <motion.tr
-                          key={`variant-row-${i}`}
-                          layout
-                          initial={{ opacity: 0, y: -14 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.28, ease: "easeOut" }}
-                          className="hover:bg-surface-bright/10 transition-colors"
-                        >
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.sku} onChange={(e) => handleVariantChange(i, 'sku', e.target.value)}
-                              placeholder="SKU-001"
-                              className="w-full bg-surface-container-highest border-transparent p-3 text-xs font-mono focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.size} onChange={(e) => handleVariantChange(i, 'size', e.target.value)}
-                              placeholder="EU 42"
-                              className="w-[80px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.color} onChange={(e) => handleVariantChange(i, 'color', e.target.value)}
-                              placeholder="Obsidian"
-                              className="w-full bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4 text-right">
-                            <input
-                              type="number" value={v.priceAdjustment} onChange={(e) => handleVariantChange(i, 'priceAdjustment', e.target.value)}
-                              className="w-[100px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary text-right focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </td>
-                          <td className="py-4 text-right">
-                            <input
-                              type="number" value={v.stock} onChange={(e) => handleVariantChange(i, 'stock', e.target.value)}
-                              className="w-[80px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary text-right focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </td>
-                          <td className="py-4 text-right pl-4">
-                            {formData.variants.length > 1 && (
-                              <button onClick={() => removeVariant(i)} className="text-on-surface-variant hover:text-saga-error transition-colors">
-                                <Trash className="w-4 h-4" />
-                              </button>
-                            )}
-                          </td>
-                        </motion.tr>
-                      ))}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+          <RightRailPanel title="Setup Progress">
+            <ProgressBar
+              label="Product completion"
+              value={progressValue}
+              segments={6}
+              filledCount={completedCount}
+            />
+          </RightRailPanel>
 
-              {/* Tags & Identity */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-8">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">04</span>
-                  <h2 className="font-serif text-2xl text-on-surface">Tags & Identity</h2>
-                </div>
-                <p className="mb-6 text-xs text-on-surface-variant/70">
-                  Tags drive merchandising — applied tags surface on the storefront and in filters.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {PRODUCT_TAG_OPTIONS.map((tag) => {
-                    const active = Array.isArray(formData.tags) && formData.tags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={`px-4 py-1.5 text-[10px] tracking-[0.22em] uppercase border transition-colors ${
-                          active
-                            ? "border-[#f2ca50] text-[#f2ca50] bg-[#f2ca50]/10"
-                            : "border-[#4d4635] text-[#99907c] hover:border-[#d0c5af] hover:text-[#d0c5af]"
-                        }`}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+          <RightRailPanel title="Tips">
+            <ul className="space-y-2 text-[11px] leading-relaxed text-white/50">
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Use the tabs above to step through Basic Info → Pricing →
+                Variants → Media → Tags.
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Set <strong>cost price</strong> for accurate margin warnings on
+                offers.
+              </li>
+              <li className="flex gap-2">
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                Hero image at 1600×2000 (4:5) gives the cleanest storefront look.
+              </li>
+            </ul>
+          </RightRailPanel>
+        </>
+      }
+    >
+      <FormTabs tabs={PRODUCT_TABS} active={activeFormTab} onChange={setActiveFormTab} />
 
-            </div>
+      {activeFormTab === "basic" ? (
+        <FormSection
+          number="01"
+          title="Basic Information"
+          description="The product identity. Shown to customers on listing and detail pages."
+        >
+          <FormField
+            label="Product Name"
+            required
+            helper="Shown on the storefront listing and product detail. Keep it concise."
+            hint={`${formData.name.length} / 200`}
+          >
+            <LuxuryInput
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Aethelgard Signature Oxford"
+              maxLength={200}
+            />
+          </FormField>
+
+          <FormField
+            label="Description"
+            optional
+            helper="Long-form copy for the product detail page."
+            hint={`${formData.description.length} / 2000`}
+          >
+            <LuxuryTextarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Describe the materials, fit, and craftsmanship…"
+              rows={5}
+              maxLength={2000}
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField
+              label="Art Number"
+              required
+              helper="Stable internal SKU root. Cannot be changed after orders exist."
+            >
+              <LuxuryInput
+                type="text"
+                value={formData.artNo}
+                onChange={(e) =>
+                  setFormData({ ...formData, artNo: e.target.value })
+                }
+                placeholder="SE-OX-001"
+                className="font-mono uppercase"
+              />
+            </FormField>
+
+            <FormField label="Brand" required>
+              <LuxurySelect
+                value={formData.brand}
+                onChange={(e) =>
+                  setFormData({ ...formData, brand: e.target.value })
+                }
+              >
+                <option value="Sovereign Elite">Sovereign Elite</option>
+                <option value="Atelier Reserve">Atelier Reserve</option>
+                <option value="Nomad Lux">Nomad Lux</option>
+              </LuxurySelect>
+            </FormField>
+
+            <FormField label="Category" required>
+              <LuxurySelect
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+              >
+                <option value="Ladies">Ladies</option>
+                <option value="Gents">Gents</option>
+                <option value="Unisex">Unisex</option>
+              </LuxurySelect>
+            </FormField>
+
+            <FormField
+              label="Collection Drop"
+              optional
+              helper="Attach to a drop, or leave standalone."
+            >
+              <LuxurySelect
+                value={formData.drop}
+                onChange={(e) =>
+                  setFormData({ ...formData, drop: e.target.value })
+                }
+              >
+                <option value="">Standalone / Core Collection</option>
+                {drops.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.name}
+                  </option>
+                ))}
+              </LuxurySelect>
+            </FormField>
           </div>
-        </main>
-      </div>
-      </motion.div>
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "details" ? (
+        <FormSection
+          number="02"
+          title="Product Details"
+          description="Rich content fields for the product detail page — story, materials, fit, and care."
+        >
+          <FormField
+            label="Product Story"
+            optional
+            helper="Editorial narrative about this piece."
+            hint={`${(formData.story || '').length} / 3000`}
+          >
+            <LuxuryTextarea
+              value={formData.story}
+              onChange={(e) => setFormData({ ...formData, story: e.target.value })}
+              placeholder="Tell the story behind this piece — inspiration, craftsmanship, cultural references…"
+              rows={5}
+              maxLength={3000}
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField label="Fabric / Material" optional helper="E.g. 100% Premium Cotton">
+              <LuxuryInput
+                type="text"
+                value={formData.fabric}
+                onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
+                placeholder="100% Premium Cotton"
+                maxLength={200}
+              />
+            </FormField>
+
+            <FormField label="GSM" optional helper="Fabric weight, e.g. 280gsm">
+              <LuxuryInput
+                type="text"
+                value={formData.gsm}
+                onChange={(e) => setFormData({ ...formData, gsm: e.target.value })}
+                placeholder="280gsm"
+                maxLength={100}
+              />
+            </FormField>
+
+            <FormField label="Fit Type" optional helper="E.g. Oversized, Slim, Regular">
+              <LuxurySelect
+                value={formData.fitType}
+                onChange={(e) => setFormData({ ...formData, fitType: e.target.value })}
+              >
+                <option value="">Select fit type</option>
+                <option value="Slim">Slim</option>
+                <option value="Regular">Regular</option>
+                <option value="Relaxed">Relaxed</option>
+                <option value="Oversized">Oversized</option>
+                <option value="Boxy">Boxy</option>
+                <option value="Tailored">Tailored</option>
+              </LuxurySelect>
+            </FormField>
+
+            <FormField label="Category Path" optional helper="Breadcrumb path, e.g. Ladies > Dresses > Midi">
+              <LuxuryInput
+                type="text"
+                value={formData.categoryPath}
+                onChange={(e) => setFormData({ ...formData, categoryPath: e.target.value })}
+                placeholder="Ladies > Tops > T-Shirts"
+                maxLength={200}
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Care Instructions"
+            optional
+            helper="Washing, ironing, dry cleaning notes."
+            hint={`${(formData.careInstructions || '').length} / 1000`}
+          >
+            <LuxuryTextarea
+              value={formData.careInstructions}
+              onChange={(e) => setFormData({ ...formData, careInstructions: e.target.value })}
+              placeholder="Machine wash cold. Hang dry. Do not bleach…"
+              rows={3}
+              maxLength={1000}
+            />
+          </FormField>
+
+          <FormField
+            label="Size Guide"
+            optional
+            helper="Sizing information and measurement notes."
+            hint={`${(formData.sizeGuide || '').length} / 2000`}
+          >
+            <LuxuryTextarea
+              value={formData.sizeGuide}
+              onChange={(e) => setFormData({ ...formData, sizeGuide: e.target.value })}
+              placeholder="Model wears size M. Height 185cm, chest 96cm…"
+              rows={3}
+              maxLength={2000}
+            />
+          </FormField>
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "pricing" ? (
+        <FormSection
+          number="03"
+          title="Pricing & Limits"
+          description="Storefront price, optional discount, and per-customer limits."
+        >
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <FormField label="Base Price" required helper="Customer-facing price.">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                  $
+                </span>
+                <LuxuryInput
+                  type="number"
+                  min="0"
+                  value={formData.basePrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, basePrice: e.target.value })
+                  }
+                  className="pl-7"
+                />
+              </div>
+            </FormField>
+
+            <FormField
+              label="Discount %"
+              optional
+              helper="0 if no discount."
+            >
+              <LuxuryInput
+                type="number"
+                min="0"
+                max="100"
+                value={formData.discountPercent}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    discountPercent: e.target.value,
+                  })
+                }
+              />
+            </FormField>
+
+            <FormField
+              label="Max per User"
+              optional
+              helper="Cap purchases per customer (anti-bot)."
+            >
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.maxPerUser}
+                onChange={(e) =>
+                  setFormData({ ...formData, maxPerUser: e.target.value })
+                }
+              />
+            </FormField>
+          </div>
+
+          <FormField
+            label="Cost / Wholesale Price"
+            optional
+            helper="Admin-only. Powers margin warnings and aging stock recommendations."
+          >
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-white/40">
+                LKR
+              </span>
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.costPrice}
+                onChange={(e) =>
+                  setFormData({ ...formData, costPrice: e.target.value })
+                }
+                className="pl-12"
+                placeholder="0"
+              />
+            </div>
+          </FormField>
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "variants" ? (
+        <FormSection
+          number="04"
+          title="Variants"
+          description="Each combination of size and colour with its own SKU and stock."
+          action={
+            <button
+              type="button"
+              onClick={addVariant}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Variant
+            </button>
+          }
+        >
+          <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+            <table className="w-full text-left min-w-[640px]">
+              <thead className="bg-white/[0.02]">
+                <tr className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/50">
+                  <th className="px-4 py-3 font-semibold">SKU</th>
+                  <th className="px-4 py-3 font-semibold">Size</th>
+                  <th className="px-4 py-3 font-semibold">Color</th>
+                  <th className="px-4 py-3 font-semibold text-right">Price Adj.</th>
+                  <th className="px-4 py-3 font-semibold text-right">Stock</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.05]">
+                <AnimatePresence initial={false}>
+                  {formData.variants.map((v, i) => (
+                    <motion.tr
+                      key={`variant-row-${i}`}
+                      layout
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                      className="hover:bg-white/[0.02] transition"
+                    >
+                      {/* Auto-generated SKU (editable) */}
+                      <td className="px-4 py-2.5">
+                        <div className="relative">
+                          <LuxuryInput
+                            type="text"
+                            value={v.sku}
+                            onChange={(e) =>
+                              handleVariantChange(i, "sku", e.target.value)
+                            }
+                            placeholder="Auto-generated"
+                            className="font-mono uppercase text-xs py-2"
+                          />
+                          {!v.sku && formData.artNo && (
+                            <button
+                              type="button"
+                              onClick={() => handleVariantChange(i, "sku", generateSku(formData.artNo, v.size, v.color))}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#D4AF37] uppercase tracking-wider hover:underline"
+                              title="Auto-generate SKU"
+                            >
+                              Gen
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Size dropdown with presets */}
+                      <td className="px-4 py-2.5">
+                        <LuxurySelect
+                          value={SIZE_OPTIONS.includes(v.size) ? v.size : (v.size ? "__custom" : "")}
+                          onChange={(e) => {
+                            if (e.target.value === "__custom") {
+                              handleVariantChange(i, "size", "");
+                            } else {
+                              handleVariantChange(i, "size", e.target.value);
+                            }
+                          }}
+                          className="text-xs py-2"
+                        >
+                          <option value="">Size…</option>
+                          {SIZE_OPTIONS.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                          <option value="__custom">Custom…</option>
+                        </LuxurySelect>
+                        {v.size && !SIZE_OPTIONS.includes(v.size) && (
+                          <LuxuryInput
+                            type="text"
+                            value={v.size}
+                            onChange={(e) => handleVariantChange(i, "size", e.target.value)}
+                            placeholder="Custom size"
+                            className="text-xs py-1.5 mt-1"
+                          />
+                        )}
+                      </td>
+
+                      {/* Color dropdown with swatches */}
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          {v.colorCode && (
+                            <span
+                              className="w-4 h-4 shrink-0 rounded-full border border-white/20"
+                              style={{ backgroundColor: v.colorCode }}
+                            />
+                          )}
+                          <LuxurySelect
+                            value={COLOR_OPTIONS.find((c) => c.name.toLowerCase() === (v.color || "").toLowerCase()) ? v.color : (v.color ? "__custom" : "")}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "__custom") {
+                                handleVariantChange(i, "color", "");
+                                handleVariantChange(i, "colorCode", "");
+                              } else {
+                                handleVariantChange(i, "color", val);
+                              }
+                            }}
+                            className="text-xs py-2 flex-1"
+                          >
+                            <option value="">Color…</option>
+                            {COLOR_OPTIONS.map((c) => (
+                              <option key={c.name} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))}
+                            <option value="__custom">Custom…</option>
+                          </LuxurySelect>
+                        </div>
+                        {v.color && !COLOR_OPTIONS.find((c) => c.name.toLowerCase() === v.color.toLowerCase()) && (
+                          <div className="flex gap-2 mt-1">
+                            <LuxuryInput
+                              type="text"
+                              value={v.color}
+                              onChange={(e) => handleVariantChange(i, "color", e.target.value)}
+                              placeholder="Color name"
+                              className="text-xs py-1.5 flex-1"
+                            />
+                            <input
+                              type="color"
+                              value={v.colorCode || "#000000"}
+                              onChange={(e) => handleVariantChange(i, "colorCode", e.target.value)}
+                              className="w-8 h-8 border-0 bg-transparent cursor-pointer"
+                              title="Pick color"
+                            />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <LuxuryInput
+                          type="number"
+                          value={v.priceAdjustment}
+                          onChange={(e) =>
+                            handleVariantChange(
+                              i,
+                              "priceAdjustment",
+                              e.target.value
+                            )
+                          }
+                          className="text-xs py-2 text-right w-24"
+                        />
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <LuxuryInput
+                          type="number"
+                          value={v.stock}
+                          onChange={(e) =>
+                            handleVariantChange(i, "stock", e.target.value)
+                          }
+                          className="text-xs py-2 text-right w-20"
+                        />
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        {formData.variants.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(i)}
+                            className="text-white/40 hover:text-rose-400 transition"
+                            title="Remove variant"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "media" ? (
+        <FormSection
+          number="05"
+          title="Media"
+          description="Hero and supporting imagery shown on storefront cards and detail pages."
+        >
+          {!selectedProductId ? (
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/30 p-8 text-center">
+              <ImageIcon className="mx-auto mb-3 h-8 w-8 text-white/20" />
+              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
+                Save the product to upload images
+              </p>
+              <p className="mt-2 text-[11px] text-white/40">
+                Recommended hero size: 1600×2000 · JPG / WEBP · Max 5 MB
+              </p>
+            </div>
+          ) : (
+            <>
+              <ImageUpload
+                images={productImages}
+                setImages={setProductImages}
+                isMultiple
+                refModel="Product"
+                refId={selectedProductId}
+                type="product"
+              />
+              {productImages.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openProductGallery({
+                      name: formData.name,
+                      _id: selectedProductId,
+                      images: productImages,
+                    })
+                  }
+                  className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+                >
+                  View all images
+                </button>
+              ) : null}
+            </>
+          )}
+        </FormSection>
+      ) : null}
+
+      {activeFormTab === "tags" ? (
+        <FormSection
+          number="06"
+          title="Tags & Identity"
+          description="Tags drive merchandising — applied tags surface on the storefront and in filters."
+        >
+          <div className="flex flex-wrap gap-2">
+            {PRODUCT_TAG_OPTIONS.map((tag) => {
+              const active =
+                Array.isArray(formData.tags) && formData.tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] border transition ${
+                    active
+                      ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
+                      : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </FormSection>
+      ) : null}
+
+      {/* Step navigation — wizard Back / Next, with Save & Publish on the final step */}
+      {(() => {
+        const tabIds = PRODUCT_TABS.map((t) => t.id);
+        const idx = tabIds.indexOf(activeFormTab);
+        const isFirst = idx <= 0;
+        const isLast = idx >= tabIds.length - 1;
+        return (
+          <div className="mt-6 flex flex-col gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              disabled={isFirst}
+              onClick={() => !isFirst && setActiveFormTab(tabIds[idx - 1])}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3 w-3" /> Back
+            </button>
+
+            <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/40">
+              Step {idx + 1} of {tabIds.length} · {PRODUCT_TABS[idx]?.label}
+            </span>
+
+            {isLast ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90"
+              >
+                {selectedProductSlug ? "Save product" : "Publish product"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveFormTab(tabIds[idx + 1])}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/[0.08] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+              >
+                Next <ChevronRight className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        );
+      })()}
+    </AdminFormShell>
   );
 
   // ----- LEDGER LIST VIEW -----
@@ -723,10 +1329,7 @@ const Product = () => {
               </button>
             </div>
             <button
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
+              onClick={openNewProductForm}
               className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
             >
               <Plus className="w-3 h-3" />

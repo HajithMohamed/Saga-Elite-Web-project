@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -10,7 +10,8 @@ import {
 } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Mail, MapPin } from "lucide-react";
 import usePageMeta from "@/hooks/use-page-meta";
-import { CONTACT_INFO } from "@/config";
+import { CONTACT_INFO as CONTACT_INFO_FALLBACK } from "@/config";
+import useShopAbout from "@/hooks/use-shop-about";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   AnimatedLogo,
@@ -135,6 +136,37 @@ const AboutPage = () => {
     description:
       "Saga Elite — an atelier of limited-edition streetwear, made in Sri Lanka.",
   });
+
+  // Merge siteConfig (admin-edited shop content) with the literal fallback.
+  // Each field falls through to CONTACT_INFO_FALLBACK if unset, so partial
+  // migration never breaks the page.
+  const { data: about } = useShopAbout();
+  const CONTACT_INFO = useMemo(
+    () => ({
+      email: about?.shop_contact_email || CONTACT_INFO_FALLBACK.email,
+      phone: about?.shop_contact_phone || CONTACT_INFO_FALLBACK.phone,
+      whatsapp: about?.shop_whatsapp_number || CONTACT_INFO_FALLBACK.whatsapp,
+      addressLine1: about?.shop_address_line1 || CONTACT_INFO_FALLBACK.addressLine1,
+      addressLine2:
+        [about?.shop_address_city, about?.shop_address_country]
+          .filter(Boolean)
+          .join(", ") || CONTACT_INFO_FALLBACK.addressLine2,
+      hours:
+        Array.isArray(about?.shop_hours) && about.shop_hours.length > 0
+          ? about.shop_hours
+              .map((h) => `${h.day || ""}: ${h.hours || ""}`.trim())
+              .join(" | ")
+          : CONTACT_INFO_FALLBACK.hours,
+      socials: {
+        instagram:
+          about?.shop_social_instagram || CONTACT_INFO_FALLBACK.socials.instagram,
+        facebook:
+          about?.shop_social_facebook || CONTACT_INFO_FALLBACK.socials.facebook,
+        tiktok: about?.shop_social_tiktok || CONTACT_INFO_FALLBACK.socials.tiktok,
+      },
+    }),
+    [about]
+  );
 
   const reduced = useReducedMotion();
   const [logoUrl, setLogoUrl] = useState(null);
