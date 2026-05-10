@@ -859,25 +859,35 @@ const getMyPaymentStatus = catchAsync(async (req, res, next) => {
 });
 
 const getPendingPayments = catchAsync(async (req, res, next) => {
-  // Accept either a single status ("proof_submitted") or a comma-separated
-  // list ("proof_submitted,pending_bank_confirmation") so the sidebar badge
-  // can count any "needs admin attention" bucket in one call.
+  // Accept either a single status ("proof_submitted"), a comma-separated
+  // list ("proof_submitted,pending_bank_confirmation"), or "all" (no filter
+  // — admin sees every state including pending_payment / expired). The
+  // sidebar badge still counts attention-needed states by passing them
+  // explicitly.
   const statusRaw = String(req.query.status || "proof_submitted").trim();
+  const guestOnly = String(req.query.guestOnly || "").toLowerCase() === "true";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
   const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
   const limit = Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20);
   const skip = (page - 1) * limit;
 
-  const statuses = statusRaw
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-
   const filter = {};
-  if (statuses.length === 1) {
-    filter.status = statuses[0];
-  } else if (statuses.length > 1) {
-    filter.status = { $in: statuses };
+
+  if (statusRaw.toLowerCase() !== "all") {
+    const statuses = statusRaw
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (statuses.length === 1) {
+      filter.status = statuses[0];
+    } else if (statuses.length > 1) {
+      filter.status = { $in: statuses };
+    }
+  }
+
+  if (guestOnly) {
+    filter.guestId = { $exists: true, $ne: null };
   }
 
   if (countOnly) {
@@ -1388,6 +1398,76 @@ const sendPaymentLink = catchAsync(async (req, res, next) => {
   });
 });
 
+// Aggregate summary by payment method (Fix #2). Joins ManualPayment to its
+// Order to expose Order.paymentMethod (manual_bank_transfer, etc.) and totals.
+const getMethodSummary = catchAsync(async (req, res) => {
+  const guestOnly = String(req.query.guestOnly || "").toLowerCase() === "true";
+  const matchStage = guestOnly ? { guestId: { $exists: true, $ne: null } } : {};
+
+  const pipeline = [
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: "orders",
+        localField: "orderId",
+        foreignField: "_id",
+        as: "order",
+      },
+    },
+    { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: {
+          method: { $ifNull: ["$order.paymentMethod", "manual_bank_transfer"] },
+          status: "$status",
+        },
+        count: { $sum: 1 },
+        totalAmount: { $sum: "$amount" },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.method",
+        count: { $sum: "$count" },
+        totalAmount: { $sum: "$totalAmount" },
+        byStatus: {
+          $push: {
+            status: "$_id.status",
+            count: "$count",
+            totalAmount: "$totalAmount",
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        method: "$_id",
+        count: 1,
+        totalAmount: 1,
+        byStatus: 1,
+      },
+    },
+    { $sort: { count: -1 } },
+  ];
+
+  const byMethod = await ManualPayment.aggregate(pipeline);
+
+  const totals = byMethod.reduce(
+    (acc, row) => {
+      acc.count += row.count || 0;
+      acc.totalAmount += row.totalAmount || 0;
+      return acc;
+    },
+    { count: 0, totalAmount: 0 }
+  );
+
+  return res.status(200).json({
+    success: true,
+    data: { byMethod, totals },
+  });
+});
+
 module.exports = {
   generateReference,
   submitProof,
@@ -1395,6 +1475,7 @@ module.exports = {
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,
+  getMethodSummary,
   getPaymentById,
   verifyPayment,
   requestExtension,

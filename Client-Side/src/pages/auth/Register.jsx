@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Check, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, Check, ShieldCheck, SkipForward } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   registerUserAction,
   googleSignUpAction,
@@ -16,12 +16,15 @@ import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton"
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import usePageMeta from "@/hooks/use-page-meta";
 import LuxuryInput from "@/components/auth-components/LuxuryInput";
+import axiosInstance from "@/api/axiosInstance";
 import {
   AUTH_PRIMARY_BTN,
   Btn,
   Eyebrow,
   Hairline,
 } from "@/components/ui/editorial";
+
+const PHONE_REGEX = /^(\+?94|0)?7[0-9]{8}$/;
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
@@ -74,22 +77,34 @@ const BENEFITS = [
 ];
 
 const Register = () => {
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
   });
+  const [extraData, setExtraData] = useState({
+    phoneNumber: "",
+    street: "",
+    city: "",
+    postalCode: "",
+  });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingExtras, setIsSavingExtras] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
+    // Suppress auto-redirect while user is filling step 2 — they may have
+    // been auto-authenticated by the registration response. We'll navigate
+    // ourselves after Skip or Save.
+    if (step === 2) return;
     if (isAuthenticated) navigate(resolveDestination(user), { replace: true });
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, step]);
 
   usePageMeta({ title: "Join Saga Elite" });
 
@@ -109,20 +124,75 @@ const Register = () => {
     setIsLoading(true);
     try {
       const response = await dispatch(registerUserAction(formData)).unwrap();
-      
+
       toast({
         title: "Welcome to the atelier",
-        description: response?.message || "Verification code sent to your email.",
+        description: response?.message || "One last step — add your details.",
         variant: "success",
       });
 
-      navigate("/auth/verify-otp", { state: { email: formData.email } });
+      // Move to step 2 — phone + address (skippable).
+      setStep(2);
     } catch (err) {
       console.error("[register] error", err);
       const { title, description } = describeAuthError(err);
       toast({ title, description, variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const goToOtp = () => {
+    navigate("/auth/verify-otp", { state: { email: formData.email } });
+  };
+
+  const handleSkip = () => {
+    toast({ title: "Skipped — you can add these later from your account." });
+    goToOtp();
+  };
+
+  const handleSaveExtras = async () => {
+    const phone = extraData.phoneNumber.trim();
+    const street = extraData.street.trim();
+    const city = extraData.city.trim();
+    const postalCode = extraData.postalCode.trim();
+
+    if (phone && !PHONE_REGEX.test(phone.replace(/\s/g, ""))) {
+      setErrors((p) => ({ ...p, phoneNumber: "Enter a valid Sri Lankan mobile (e.g. 0771234567)" }));
+      return;
+    }
+
+    const hasAddress = street || city || postalCode;
+    if (hasAddress && (!street || !city || !postalCode)) {
+      setErrors((p) => ({
+        ...p,
+        addressIncomplete: "Fill street, city and postal code — or skip to add later.",
+      }));
+      return;
+    }
+
+    setIsSavingExtras(true);
+    try {
+      if (phone) {
+        await axiosInstance.patch("/user/me", { phoneNumber: phone });
+      }
+      if (hasAddress) {
+        await axiosInstance.post("/user/addresses", {
+          street,
+          city,
+          postalCode,
+          country: "Sri Lanka",
+          isDefault: true,
+        });
+      }
+      toast({ title: "Saved", variant: "success" });
+      goToOtp();
+    } catch (err) {
+      const description =
+        err?.response?.data?.message || err?.message || "Could not save details.";
+      toast({ title: "Save failed", description, variant: "destructive" });
+    } finally {
+      setIsSavingExtras(false);
     }
   };
 
@@ -173,7 +243,17 @@ const Register = () => {
       </motion.div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} noValidate className="mt-7 space-y-5">
+      <AnimatePresence mode="wait">
+      {step === 1 && (
+      <motion.form
+        key="step-1"
+        onSubmit={handleSubmit}
+        noValidate
+        className="mt-7 space-y-5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, y: -20 }}
+      >
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
           <LuxuryInput
             id="username"
@@ -231,13 +311,110 @@ const Register = () => {
             type="submit"
             disabled={isLoading}
           >
-            {isLoading ? "Preparing Your Space..." : "Join the brand experience"}
+            {isLoading ? "Preparing Your Space..." : "Continue"}
           </Btn>
         </motion.div>
-      </form>
+      </motion.form>
+      )}
+
+      {step === 2 && (
+        <motion.div
+          key="step-2"
+          className="mt-7 space-y-5"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+        >
+          <div className="rounded-sm border border-[#1f1f1f] bg-[#111111]/80 p-4">
+            <p className="se-label text-[9px] tracking-[0.28em] text-[#f2ca50] uppercase">
+              Step 2 of 2 · Optional
+            </p>
+            <p className="mt-2 text-sm text-[#d0c5af]">
+              Add your phone and a saved address now for one-tap checkout — or skip and add later.
+            </p>
+          </div>
+
+          <LuxuryInput
+            id="phoneNumber"
+            type="tel"
+            label="Mobile (Sri Lanka)"
+            placeholder="0771234567"
+            autoComplete="tel"
+            value={extraData.phoneNumber}
+            error={errors.phoneNumber}
+            onChange={(e) => {
+              setExtraData((p) => ({ ...p, phoneNumber: e.target.value }));
+              setErrors((p) => ({ ...p, phoneNumber: undefined }));
+            }}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <LuxuryInput
+              id="street"
+              type="text"
+              label="Street address"
+              autoComplete="street-address"
+              value={extraData.street}
+              onChange={(e) => {
+                setExtraData((p) => ({ ...p, street: e.target.value }));
+                setErrors((p) => ({ ...p, addressIncomplete: undefined }));
+              }}
+            />
+            <LuxuryInput
+              id="city"
+              type="text"
+              label="City"
+              autoComplete="address-level2"
+              value={extraData.city}
+              onChange={(e) => {
+                setExtraData((p) => ({ ...p, city: e.target.value }));
+                setErrors((p) => ({ ...p, addressIncomplete: undefined }));
+              }}
+            />
+          </div>
+
+          <LuxuryInput
+            id="postalCode"
+            type="text"
+            label="Postal code"
+            autoComplete="postal-code"
+            value={extraData.postalCode}
+            onChange={(e) => {
+              setExtraData((p) => ({ ...p, postalCode: e.target.value }));
+              setErrors((p) => ({ ...p, addressIncomplete: undefined }));
+            }}
+          />
+
+          {errors.addressIncomplete && (
+            <p className="text-xs text-rose-400">{errors.addressIncomplete}</p>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Btn
+              variant="default"
+              type="button"
+              onClick={handleSaveExtras}
+              disabled={isSavingExtras}
+              iconRight={isSavingExtras ? undefined : ArrowRight}
+              className={`${AUTH_PRIMARY_BTN} flex-1`}
+            >
+              {isSavingExtras ? "Saving..." : "Save & continue"}
+            </Btn>
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={isSavingExtras}
+              className="flex-1 sm:flex-initial sm:px-6 inline-flex items-center justify-center gap-2 border border-[#1f1f1f] text-[#99907c] hover:text-white hover:border-[#4d4635] py-3 transition text-sm se-label tracking-[0.18em] uppercase"
+            >
+              <SkipForward size={14} /> Skip for now
+            </button>
+          </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Social Auth */}
-      {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
+      {step === 1 && (GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
           <div className="my-6 flex items-center gap-4">
             <Hairline tone="soft" />

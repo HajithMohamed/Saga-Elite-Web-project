@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
   fetchManualPaymentById as fetchManualPaymentByIdApi,
+  fetchManualPaymentMethodSummary as fetchManualPaymentMethodSummaryApi,
   fetchMyManualPaymentStatus as fetchMyManualPaymentStatusApi,
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
@@ -77,6 +78,8 @@ const initialState = {
   isFetching: false,
   isAdminLoading: false,
   isVerifying: false,
+  methodSummary: { byMethod: [], totals: { count: 0, totalAmount: 0 } },
+  isSummaryLoading: false,
   error: null,
 };
 
@@ -169,6 +172,17 @@ export const fetchManualPaymentById = createAsyncThunk(
       return await fetchManualPaymentByIdApi(paymentId);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load payment details"));
+    }
+  },
+);
+
+export const fetchManualPaymentMethodSummary = createAsyncThunk(
+  "manualPayment/fetchMethodSummary",
+  async (params = {}, thunkAPI) => {
+    try {
+      return await fetchManualPaymentMethodSummaryApi(params);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load payment summary"));
     }
   },
 );
@@ -404,6 +418,17 @@ const manualPaymentSlice = createSlice({
       })
       .addCase(verifyManualPayment.rejected, (state, action) => {
         state.isVerifying = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchManualPaymentMethodSummary.pending, (state) => {
+        state.isSummaryLoading = true;
+      })
+      .addCase(fetchManualPaymentMethodSummary.fulfilled, (state, action) => {
+        state.isSummaryLoading = false;
+        state.methodSummary = action.payload?.data || initialState.methodSummary;
+      })
+      .addCase(fetchManualPaymentMethodSummary.rejected, (state, action) => {
+        state.isSummaryLoading = false;
         state.error = action.payload || action.error.message;
       });
   },

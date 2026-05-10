@@ -898,11 +898,27 @@ const validateNewsletterSubscribe = createValidationMiddleware((req) => {
   };
 });
 
+const sanitizeStructuredAddress = (input) => {
+  if (!input || typeof input !== "object") return undefined;
+  const street = sanitizeOptionalPlainText(input.street, "structuredAddress.street", { maxLength: 500 });
+  const city = sanitizeOptionalPlainText(input.city, "structuredAddress.city", { maxLength: 200 });
+  const postalCode = sanitizeOptionalPlainText(input.postalCode, "structuredAddress.postalCode", { maxLength: 50 });
+  if (!street || !city || !postalCode) return undefined;
+  return {
+    label: sanitizeOptionalPlainText(input.label, "structuredAddress.label", { maxLength: 100 }) || undefined,
+    street,
+    city,
+    postalCode,
+    country: sanitizeOptionalPlainText(input.country, "structuredAddress.country", { maxLength: 100 }) || "Sri Lanka",
+  };
+};
+
 const validateOrderCreate = createValidationMiddleware((req) => {
   req.body = {
     items: sanitizeOrderItems(req.body.items),
     checkoutMode: req.body.checkoutMode === "buyNow" ? "buyNow" : "cart",
     shippingAddress: sanitizeOptionalPlainText(req.body.shippingAddress, "shippingAddress", { required: true, minLength: 8, maxLength: 1000 }),
+    structuredAddress: sanitizeStructuredAddress(req.body.structuredAddress),
     contactNumber: sanitizeOptionalPlainText(req.body.contactNumber, "contactNumber", { required: true, minLength: 7, maxLength: 50 }),
     paymentMethod: sanitizeEnum(req.body.paymentMethod, PAYMENT_METHODS, "paymentMethod", { required: true }),
     paymentProofUrl: sanitizeUrl(req.body.paymentProofUrl, "paymentProofUrl", { required: false }),

@@ -4,7 +4,9 @@ import { useEffect, lazy, Suspense } from "react";
 import { checkAuthAction } from "./store/auth-slice";
 import usePageMeta from "./hooks/use-page-meta";
 import { useLenis } from "./hooks/use-lenis";
+import { useGuestId } from "./hooks/use-guest-id";
 import AppLoader from "@/components/ui/AppLoader";
+import RegisterPromptModal from "./components/common-components/RegisterPromptModal";
 
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
@@ -127,6 +129,7 @@ function App() {
   );
   const dispatch = useDispatch();
   useLenis();
+  const { guestToken } = useGuestId();
 
   const ADMIN_ROLES = ["admin", "super_admin", "superadmin", "sub_admin"];
   const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
@@ -165,6 +168,7 @@ function App() {
     <div>
       <SocketBridge />
       <RouteMetaManager />
+      <RegisterPromptModal guestToken={guestToken} isAuthenticated={isAuthenticated} />
 
       <ErrorBoundary>
         <Suspense fallback={<AppLoader />}>

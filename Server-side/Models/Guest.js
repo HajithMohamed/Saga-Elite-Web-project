@@ -1,5 +1,26 @@
 const mongoose = require("mongoose");
 
+const addressSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true },
+    street: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
+    postalCode: { type: String, required: true, trim: true },
+    country: { type: String, required: true, trim: true, default: "Sri Lanka" },
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: true }
+);
+
+const activitySchema = new mongoose.Schema(
+  {
+    type: { type: String, required: true, trim: true },
+    at: { type: Date, default: Date.now },
+    meta: { type: mongoose.Schema.Types.Mixed },
+  },
+  { _id: false }
+);
+
 const guestSchema = new mongoose.Schema(
   {
     email: {
@@ -10,6 +31,22 @@ const guestSchema = new mongoose.Schema(
       trim: true,
       validate: [require("validator").isEmail, "Provide a valid email address"],
     },
+    guestToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    name: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    addresses: { type: [addressSchema], default: [] },
+    activityLog: { type: [activitySchema], default: [] },
+    preferences: {
+      promoOptIn: { type: Boolean, default: true },
+    },
+    otp: { type: String },
+    otpExpiresAt: { type: Date },
+    verified: { type: Boolean, default: false },
     lastUsedAt: {
       type: Date,
       default: Date.now,
@@ -26,7 +63,14 @@ const guestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for quick lookup by email
 guestSchema.index({ email: 1 });
+
+// Cap activity log to last 200 entries to prevent unbounded growth.
+guestSchema.pre("save", function (next) {
+  if (Array.isArray(this.activityLog) && this.activityLog.length > 200) {
+    this.activityLog = this.activityLog.slice(-200);
+  }
+  next();
+});
 
 module.exports = mongoose.model("Guest", guestSchema);
