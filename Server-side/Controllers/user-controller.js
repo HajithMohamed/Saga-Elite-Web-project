@@ -14,6 +14,17 @@ const {
   normalizeSriLankanMobile,
 } = require("../Utils/phone-validator");
 
+// Single source of truth for customer tags; mirrored by User.tags enum and
+// referenced by both the per-user status endpoint and the bulk-tag endpoint.
+const USER_TAG_ENUM = Object.freeze([
+  "vip",
+  "high_spender",
+  "drop_collector",
+  "frequent_buyer",
+  "refund_risk",
+  "early_supporter",
+]);
+
 const normalizeCartItem = (item) => {
   const product = item.product;
   const variant = product?.variants?.find(v => v._id?.toString() === item.variant?.toString());
@@ -411,8 +422,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
   // Tag mutation — accepts the full target set; the model's enum guard
   // filters anything unknown so the client doesn't need to validate.
   if (Array.isArray(tags)) {
-    const allowed = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
-    const cleaned = [...new Set(tags.filter((t) => allowed.includes(t)))];
+    const cleaned = [...new Set(tags.filter((t) => USER_TAG_ENUM.includes(t)))];
     user.tags = cleaned;
     changes.push(`tags: ${cleaned.length ? cleaned.join(", ") : "cleared"}`);
   }
@@ -439,6 +449,57 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
       orderStatsMap.get(user._id.toString()),
       notificationStatsMap.get(user._id.toString())
     ),
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Bulk add/remove a single tag across many customers. Body is pre-validated
+| by validateBulkUserTag — `tag` is one of USER_TAG_ENUM and `mode` is
+| 'add' | 'remove'. Excludes admin accounts defensively even though the
+| client should never send admin IDs here.
+|--------------------------------------------------------------------------
+*/
+const bulkTagUsers = catchAsync(async (req, res) => {
+  const { ids, tag, mode } = req.body;
+
+  const filter = {
+    _id: { $in: ids },
+    role: { $in: ["user", "customer"] },
+  };
+  const update =
+    mode === "add"
+      ? { $addToSet: { tags: tag } }
+      : { $pull: { tags: tag } };
+
+  const result = await User.updateMany(filter, update);
+  const matched = result.matchedCount ?? 0;
+  const modified = result.modifiedCount ?? 0;
+
+  // Failure here is an ID that was not a customer (or didn't exist). The
+  // tag set is idempotent so "matched but not modified" is a no-op success
+  // (e.g., tag already present on add, or already absent on remove).
+  const failed = ids
+    .filter((_id, i) => i >= matched)
+    .map((id) => ({ id, reason: "not a customer or not found" }));
+
+  req.adminAction = `Bulk tag ${mode} → ${tag} (${matched}/${ids.length})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount: matched,
+    failedCount: failed.length,
+    modifiedCount: modified,
+    tag,
+    mode,
+    ids,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded: ids.slice(0, matched),
+    failed,
+    modified,
   });
 });
 
@@ -1138,6 +1199,7 @@ module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  bulkTagUsers,
   triggerAdminPasswordReset,
   deleteAdminUser,
   getAllUsers,

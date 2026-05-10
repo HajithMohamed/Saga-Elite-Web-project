@@ -104,6 +104,24 @@ export const deleteAdminUser = createAsyncThunk(
   }
 );
 
+export const bulkTagUsers = createAsyncThunk(
+  "adminUsers/bulkTag",
+  async ({ ids, tag, mode }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/user/admin/users/bulk/tag`,
+        { ids, tag, mode },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to bulk-tag users";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 const syncUserInList = (users, nextUser) =>
   users.map((user) => (user._id === nextUser._id ? nextUser : user));
 

@@ -978,6 +978,65 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
   });
 });
 
+// Bulk moderation: feature/unfeature/category. Mirrors the per-review handlers
+// (categorizeReview, featureReview) but emits the REVIEW_REFRESH socket event
+// ONCE at the end instead of per-row to avoid client-side flooding when an
+// admin selects 50 reviews. Body is pre-validated by validateBulkReviewAction.
+const bulkModerateReviews = catchAsync(async (req, res) => {
+  const { ids, action, category } = req.body;
+  const succeeded = [];
+  const failed = [];
+  const touchedProductIds = new Set();
+
+  for (const id of ids) {
+    try {
+      const review = await Review.findById(id);
+      if (!review) {
+        failed.push({ id, reason: "review not found" });
+        continue;
+      }
+
+      if (action === "feature") review.isFeatured = true;
+      else if (action === "unfeature") review.isFeatured = false;
+      else if (action === "category") review.category = category;
+
+      await review.save({ validateBeforeSave: false });
+      succeeded.push(id);
+      if (review.productId) touchedProductIds.add(String(review.productId));
+    } catch (err) {
+      failed.push({ id, reason: err.message || "unexpected error" });
+    }
+  }
+
+  if (succeeded.length > 0) {
+    emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+      reviewIds: succeeded,
+      productIds: [...touchedProductIds],
+      source: `review-bulk-${action}`,
+    });
+  }
+
+  req.adminAction = `Bulk review ${action}${
+    action === "category" ? ` → ${category}` : ""
+  } (${succeeded.length}/${ids.length})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount: succeeded.length,
+    failedCount: failed.length,
+    action,
+    category: action === "category" ? category : undefined,
+    succeeded,
+    failed,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded,
+    failed,
+  });
+});
+
 module.exports = {
   createReview,
   getFeaturedReviews,
@@ -996,4 +1055,5 @@ module.exports = {
   replyToReview,
   featureReview,
   getReviewsAnalytics,
+  bulkModerateReviews,
 };

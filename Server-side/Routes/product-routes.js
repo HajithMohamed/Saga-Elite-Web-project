@@ -10,6 +10,7 @@ const {
   searchProducts,
   getRecommendations,
   recordDwell,
+  bulkUpdateProducts,
 } = require("../Controllers/product-controller");
 const paginatedResult = require("../Middlewares/pagination-middleware");
 const Product = require("../Models/Product");
@@ -20,6 +21,7 @@ const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const {
   validateProductCreate,
   validateProductUpdate,
+  validateBulkProductAction,
 } = require("../Middlewares/request-validation");
 
 const router = express.Router();
@@ -34,5 +36,6 @@ router.get("/analytics", authMiddleware, adminMiddleware, requirePermission("pro
 router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, adminLogMiddleware, addProduct);
 router.patch("/update-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), validateProductUpdate, adminLogMiddleware, updateProduct);
 router.delete("/delete-product/:slug", authMiddleware, adminMiddleware, requirePermission("products"), adminLogMiddleware, deleteProduct);
+router.patch("/bulk", authMiddleware, adminMiddleware, requirePermission("products"), validateBulkProductAction, adminLogMiddleware, bulkUpdateProducts);
 
 module.exports = router;

@@ -16,7 +16,7 @@ import { Loader2, RefreshCcw, LayoutGrid, Table2, Search, FileDown, Eye } from "
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
-import { fetchAdminOrders, updateOrderStatus, refundOrder } from "@/store/order-slice";
+import { fetchAdminOrders, updateOrderStatus, refundOrder, bulkUpdateOrderStatus } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
@@ -25,6 +25,8 @@ import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import RefundOrderModal from "@/components/admin-components/RefundOrderModal";
 import OrderDetailDrawer from "@/components/admin-components/OrderDetailDrawer";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
 
 const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
@@ -232,6 +234,7 @@ const Orders = () => {
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [invoiceDownloadingId, setInvoiceDownloadingId] = useState(null);
   const [detailOrder, setDetailOrder] = useState(null);
+  const [bulkPending, setBulkPending] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
@@ -324,6 +327,58 @@ const Orders = () => {
     });
     return ["all", ...Array.from(set)];
   }, [orders]);
+
+  const bulk = useBulkSelection(filteredOrders);
+
+  const runBulkStatus = useCallback(
+    async (status) => {
+      const ids = bulk.selectedIds;
+      if (ids.length === 0) return;
+      let cancellationReason;
+      if (status === "cancelled") {
+        cancellationReason = window.prompt(
+          `Cancellation reason for ${ids.length} order${ids.length === 1 ? "" : "s"}?`,
+          "Customer-requested cancellation"
+        );
+        if (!cancellationReason) return;
+      }
+      setBulkPending(true);
+      try {
+        const result = await dispatch(
+          bulkUpdateOrderStatus({ ids, status, cancellationReason })
+        ).unwrap();
+        const ok = result.succeeded?.length || 0;
+        const fail = result.failed?.length || 0;
+        if (fail === 0) {
+          toast({
+            title: `Updated ${ok} order${ok === 1 ? "" : "s"} → ${status}`,
+            variant: "success",
+          });
+        } else {
+          const reasons = (result.failed || [])
+            .slice(0, 3)
+            .map((f) => `• ${f.reason}`)
+            .join("\n");
+          toast({
+            title: `Updated ${ok} of ${ok + fail}. ${fail} skipped.`,
+            description: reasons,
+            variant: "destructive",
+          });
+        }
+        bulk.clear();
+        dispatch(fetchAdminOrders());
+      } catch (err) {
+        toast({
+          title: "Bulk update failed",
+          description: typeof err === "string" ? err : "Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [bulk, dispatch]
+  );
 
   const ordersByColumn = useMemo(() => {
     const map = Object.fromEntries(KANBAN_COLUMNS.map((c) => [c.id, []]));
@@ -639,6 +694,19 @@ description="Monitor customer orders and update fulfillment status in board or t
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+                  <th className="w-10 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all orders"
+                      checked={bulk.isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = bulk.isSomeSelected;
+                      }}
+                      onChange={bulk.toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-select-all"
+                    />
+                  </th>
                   <th className="px-4 py-2">Order</th>
                   <th className="px-4 py-2">Customer</th>
                   <th className="px-4 py-2">Total</th>
@@ -658,6 +726,16 @@ description="Monitor customer orders and update fulfillment status in board or t
                       variants={itemVariants}
                       className="border-t border-[#4d4635]/40 align-top transition-colors hover:bg-[#131313]"
                     >
+                      <td className="w-10 px-3 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select order ${String(order._id).slice(-8)}`}
+                          checked={bulk.isSelected(order._id)}
+                          onChange={() => bulk.toggle(order._id)}
+                          className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                          data-testid="admin-bulk-row-select"
+                        />
+                      </td>
                       <td className="max-w-[200px] px-4 py-3 align-top">
                         <button
                           type="button"
@@ -855,6 +933,27 @@ description="Monitor customer orders and update fulfillment status in board or t
           setDetailOrder(null);
         }}
         onDownloadInvoice={() => detailOrder && handleDownloadInvoice(detailOrder)}
+      />
+      <BulkActionBar
+        count={bulk.count}
+        onClear={bulk.clear}
+        pending={bulkPending}
+        label="orders selected"
+        actions={[
+          { label: "Mark Confirmed", onClick: () => runBulkStatus("confirmed") },
+          { label: "Mark Shipped", onClick: () => runBulkStatus("shipped") },
+          { label: "Mark Delivered", onClick: () => runBulkStatus("delivered") },
+          {
+            label: "Cancel",
+            variant: "destructive",
+            confirm: {
+              title: "Cancel selected orders?",
+              body: "Stock will be restored and customers will be notified individually only via the regular update flow (no per-customer email is sent for bulk cancellations). You'll be prompted for a cancellation reason next.",
+              confirmLabel: "Cancel orders",
+            },
+            onClick: () => runBulkStatus("cancelled"),
+          },
+        ]}
       />
     </AdminPage>
   );

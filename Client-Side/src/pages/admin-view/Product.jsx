@@ -6,7 +6,10 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateProducts,
 } from "@/store/admin/product-slice";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/admin-components/ImageUpload";
@@ -216,6 +219,41 @@ const Product = () => {
     dispatch(getAllDrops());
     fetchProducts();
   }, [dispatch, fetchProducts]);
+
+  // Bulk operations on the product list. Selection wipes when productList
+  // identity changes (filter/page change), so stale IDs can't leak through.
+  const bulk = useBulkSelection(productList);
+  const [bulkPending, setBulkPending] = useState(false);
+  const runBulkProductAction = useCallback(
+    async (action) => {
+      const ids = bulk.selectedIds;
+      if (ids.length === 0) return;
+      setBulkPending(true);
+      try {
+        const result = await dispatch(bulkUpdateProducts({ ids, action })).unwrap();
+        const ok = result.succeeded?.length || 0;
+        const fail = result.failed?.length || 0;
+        toast({
+          title:
+            fail === 0
+              ? `Bulk ${action}: ${ok} product${ok === 1 ? "" : "s"}`
+              : `Bulk ${action}: ${ok} updated, ${fail} skipped`,
+          variant: fail === 0 ? "success" : "destructive",
+        });
+        bulk.clear();
+        fetchProducts();
+      } catch (err) {
+        toast({
+          title: `Bulk ${action} failed`,
+          description: typeof err === "string" ? err : "Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [bulk, dispatch, fetchProducts, toast]
+  );
 
   const resetForm = () => {
     setFormData(initialProductForm);
@@ -1339,13 +1377,26 @@ const Product = () => {
         </div>
 
         {/* Bento Grid List Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
-          <div className="col-span-5">Product Details</div>
-          <div className="col-span-2">Category</div>
-          <div className="col-span-2">Valuation</div>
-          <div className="col-span-1">Stock</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1 text-right">Actions</div>
+        <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
+          <input
+            type="checkbox"
+            aria-label="Select all products on this page"
+            checked={bulk.isAllSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = bulk.isSomeSelected;
+            }}
+            onChange={bulk.toggleAll}
+            className="h-4 w-4 cursor-pointer accent-saga-primary"
+            data-testid="admin-bulk-select-all"
+          />
+          <div className="grid grid-cols-12 gap-4 flex-1">
+            <div className="col-span-5">Product Details</div>
+            <div className="col-span-2">Category</div>
+            <div className="col-span-2">Valuation</div>
+            <div className="col-span-1">Stock</div>
+            <div className="col-span-1">Status</div>
+            <div className="col-span-1 text-right">Actions</div>
+          </div>
         </div>
 
         {/* Product Rows */}

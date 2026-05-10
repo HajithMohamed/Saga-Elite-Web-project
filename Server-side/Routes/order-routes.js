@@ -7,6 +7,7 @@ const {
   validateObjectIdParam,
   validateOrderCreate,
   validateOrderStatusUpdate,
+  validateBulkOrderStatus,
 } = require("../Middlewares/request-validation");
 const {
   createOrder,
@@ -16,6 +17,7 @@ const {
   updateOrderStatus,
   refundOrder,
   getDashboardStats,
+  bulkUpdateOrderStatus,
 } = require("../Controllers/order-controller");
 
 const router = express.Router();
@@ -28,5 +30,6 @@ router.put("/:id/status", authMiddleware, adminMiddleware, requirePermission("or
 router.patch("/update-order-status/:id", authMiddleware, adminMiddleware, requirePermission("orders"), validateObjectIdParam("id", "order id"), validateOrderStatusUpdate, adminLogMiddleware, updateOrderStatus);
 router.patch("/:id/refund", authMiddleware, adminMiddleware, requirePermission("verifyPayments"), validateObjectIdParam("id", "order id"), adminLogMiddleware, refundOrder);
 router.get("/dashboard-stats", authMiddleware, adminMiddleware, getDashboardStats);
+router.patch("/bulk/status", authMiddleware, adminMiddleware, requirePermission("orders"), validateBulkOrderStatus, adminLogMiddleware, bulkUpdateOrderStatus);
 
 module.exports = router;

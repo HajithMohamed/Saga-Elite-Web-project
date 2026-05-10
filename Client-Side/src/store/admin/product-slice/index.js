@@ -173,6 +173,22 @@ export const deleteProduct = createAsyncThunk(
   }
 );
 
+export const bulkUpdateProducts = createAsyncThunk(
+  "product/bulkUpdate",
+  async ({ ids, action }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/products/bulk`,
+        { ids, action },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const productSlice = createSlice({
   name: "product",
   initialState,
@@ -257,6 +273,18 @@ const productSlice = createSlice({
         state.pagination.total -= 1;
       })
       .addCase(deleteProduct.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      // BULK
+      .addCase(bulkUpdateProducts.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(bulkUpdateProducts.fulfilled, (state) => {
+        state.isSubmitting = false;
+      })
+      .addCase(bulkUpdateProducts.rejected, (state, action) => {
+        state.isSubmitting = false;
         state.error = action.payload;
       });
   },
