@@ -8,6 +8,7 @@ const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
+const { emitToAll } = require("../Utils/socket-service");
 
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
@@ -164,6 +165,14 @@ const addProduct = catchAsync(async (req, res, next) => {
             filter: { isActive: true },
         });
     }
+
+    // Real-time emit (Fix #3) so listing pages refetch.
+    emitToAll("product:created", {
+        productId: newlyCreatedProduct._id,
+        slug: newlyCreatedProduct.slug,
+        name: newlyCreatedProduct.name,
+        drop: newlyCreatedProduct.drop,
+    });
 
     res.status(201).json({
         success: true,
@@ -502,6 +511,12 @@ const deleteProduct = catchAsync(async (req, res, next) => {
         );
         await Promise.allSettled(cloudinaryDeletes);
     }
+
+    // Real-time emit (Fix #3) so listing/detail pages can react.
+    emitToAll("product:deleted", {
+        productId: product._id,
+        slug: productSlug,
+    });
 
     res.status(200).json({
         success: true,

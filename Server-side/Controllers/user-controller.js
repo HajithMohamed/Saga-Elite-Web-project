@@ -3,6 +3,7 @@ const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
+const ManualPayment = require("../Models/ManualPayment");
 const Notification = require("../Models/Notification");
 const LoginActivity = require("../Models/LoginActivity");
 const UserActivityLog = require("../Models/UserActivityLog");
@@ -1275,6 +1276,53 @@ const removeMyAddress = catchAsync(async (req, res, next) => {
   });
 });
 
+// ── My pending manual payments (Fix #1) ───────────────────────────
+const PENDING_MANUAL_PAYMENT_STATUSES = [
+  "pending_payment",
+  "proof_submitted",
+  "pending_bank_confirmation",
+];
+
+const getMyManualPayments = catchAsync(async (req, res) => {
+  const userId = req.userInfo._id || req.userInfo.id;
+
+  const payments = await ManualPayment.find({
+    userId,
+    status: { $in: PENDING_MANUAL_PAYMENT_STATUSES },
+  })
+    .populate({
+      path: "orderId",
+      select: "_id totalAmount items createdAt status",
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      payments: payments.map((p) => ({
+        _id: p._id,
+        slug: p.slug,
+        referenceNumber: p.referenceNumber,
+        amount: p.amount,
+        status: p.status,
+        expiresAt: p.expiresAt,
+        createdAt: p.createdAt,
+        order: p.orderId
+          ? {
+              _id: p.orderId._id,
+              totalAmount: p.orderId.totalAmount,
+              itemCount: Array.isArray(p.orderId.items) ? p.orderId.items.length : 0,
+              createdAt: p.orderId.createdAt,
+              status: p.orderId.status,
+            }
+          : null,
+      })),
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
@@ -1296,4 +1344,5 @@ module.exports = {
   getMyAddresses,
   addMyAddress,
   removeMyAddress,
+  getMyManualPayments,
 };

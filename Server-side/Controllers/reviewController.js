@@ -294,16 +294,26 @@ const createReview = catchAsync(async (req, res, next) => {
   // the create response.
   enrichReviewAsync(review._id);
 
+  // Fix #5 — include userName so customer-page toasts can render without
+  // an extra fetch. req.userInfo is populated by auth middleware.
+  const reviewerName =
+    req.userInfo?.userName ||
+    req.userInfo?.name ||
+    (req.userInfo?.email ? String(req.userInfo.email).split("@")[0] : "A customer");
+
   emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
     userId,
+    userName: reviewerName,
     reviewId: review._id,
     status: review.status,
     productId,
+    rating: review.rating,
     source: "review-submitted",
   });
 
   emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
     userId,
+    userName: reviewerName,
     reviewId: review._id,
     status: review.status,
     productId,

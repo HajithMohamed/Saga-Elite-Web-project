@@ -8,6 +8,7 @@ const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { broadcastNotification } = require("../Utils/notification-service");
+const { emitToAll } = require("../Utils/socket-service");
 
 
 /*
@@ -66,6 +67,14 @@ const createDrop = catchAsync(async (req, res, next) => {
         entityType: "Drop",
         meta: { dropId: newDrop._id, dropSlug: newDrop.slug },
         filter: { role: { $in: ADMIN_ROLES } },
+    });
+
+    // Real-time emit (Fix #4) so drops list pages refetch.
+    emitToAll("drop:created", {
+        dropId: newDrop._id,
+        slug: newDrop.slug,
+        name: newDrop.name,
+        releaseDate: newDrop.releaseDate,
     });
 
     res.status(201).json({
@@ -198,13 +207,10 @@ const updateDrop = catchAsync(async (req, res, next) => {
 
     const populatedDrop = await Drop.findById(drop._id).populate("images");
 
-    const io = req.app.get("io");
-    if (io) {
-        io.emit("drop:updated", {
-            dropId: populatedDrop._id,
-            drop: populatedDrop
-        });
-    }
+    emitToAll("drop:updated", {
+        dropId: populatedDrop._id,
+        drop: populatedDrop,
+    });
 
     res.status(200).json({
         success: true,
@@ -306,13 +312,10 @@ const archiveDrop = catchAsync(async (req, res, next) => {
     }
     await drop.save();
 
-    const io = req.app.get("io");
-    if (io) {
-        io.emit("drop:updated", {
-            dropId: drop._id,
-            drop: drop
-        });
-    }
+    emitToAll("drop:updated", {
+        dropId: drop._id,
+        drop: drop,
+    });
 
     res.status(200).json({
         success: true,

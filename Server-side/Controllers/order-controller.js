@@ -18,6 +18,7 @@ const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { emitToUser, emitToAdmins, emitToAll } = require("../Utils/socket-service");
 const {
   sendWhatsAppMessage,
   parsePhoneList,
@@ -995,6 +996,24 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 
   const fresh = await Order.findById(order._id);
 
+  // Real-time emit (Fix #2). SocketBridge `order:refresh` handler matches
+  // payload.userId against the current user — required for the toast/refetch.
+  if (order.user) {
+    emitToUser(order.user, "order:refresh", {
+      orderId: order._id,
+      userId: order.user,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
+      orderId: order._id,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  }
+  emitToAdmins("admin:refresh", { orderId: order._id, status: order.status });
+
   res.status(200).json({
     success: true,
     message: "Order status updated successfully",
@@ -1102,15 +1121,27 @@ const refundOrder = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Socket emit
-  const io = req.app.get("io");
-  if (io) {
-    io.emit("order:refresh", {
+  // Real-time emit (Fix #2 — consistent helpers).
+  if (order.user?._id || order.user) {
+    const userId = order.user?._id || order.user;
+    emitToUser(userId, "order:refresh", {
+      orderId: order._id,
+      userId,
+      status: order.status,
+      refundAmount: numericAmount,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
       orderId: order._id,
       status: order.status,
       refundAmount: numericAmount,
     });
   }
+  emitToAdmins("admin:refresh", {
+    orderId: order._id,
+    status: order.status,
+    refundAmount: numericAmount,
+  });
 
   res.status(200).json({
     success: true,
@@ -1483,6 +1514,7 @@ const getOrderInvoice = catchAsync(async (req, res, next) => {
 const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
   const { ids, status, cancellationReason } = req.body;
   const succeeded = [];
+  const succeededDetails = [];
   const failed = [];
 
   for (const id of ids) {
@@ -1541,6 +1573,7 @@ const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
 
       await order.save({ validateModifiedOnly: true });
       succeeded.push(id);
+      succeededDetails.push({ id: order._id, userId: order.user || null, oldStatus: order.status });
     } catch (err) {
       failed.push({ id, reason: err.message || "unexpected error" });
     }
@@ -1553,6 +1586,25 @@ const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
       message: `${succeeded.length} order${succeeded.length === 1 ? "" : "s"} bulk-updated to "${status}".`,
       filter: { role: { $in: ADMIN_ROLES } },
     }).catch((err) => logger.error("[bulk-status] broadcast failed", { error: err.message }));
+
+    // Real-time emit per affected order (Fix #2).
+    for (const detail of succeededDetails) {
+      if (detail.userId) {
+        emitToUser(detail.userId, "order:refresh", {
+          orderId: detail.id,
+          userId: detail.userId,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      } else {
+        emitToAll("order:refresh:public", {
+          orderId: detail.id,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      }
+    }
+    emitToAdmins("admin:refresh", { bulkOrderIds: succeeded, status });
   }
 
   req.adminAction = `Bulk status → ${status} (${succeeded.length}/${ids.length})`;

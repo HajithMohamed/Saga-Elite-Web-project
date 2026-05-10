@@ -226,6 +226,13 @@ const MainFooter = () => {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <Link to="/shopping/find-payment" className="text-sm text-[#D4AF37] font-medium transition-colors flex items-center group">
+                    <motion.span variants={glowVariants} whileHover="hover" className="relative block">
+                      Find your payment
+                    </motion.span>
+                  </Link>
+                </li>
                 {whatsappHref ? (
                   <li className="pt-4">
                     <a href={whatsappHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#25D366]/10 text-[#25D366] px-3 py-2 border border-[#25D366]/20 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-[#25D366]/20 transition-colors">

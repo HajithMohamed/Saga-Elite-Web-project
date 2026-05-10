@@ -9,6 +9,7 @@ const {
   sendOtp,
   verifyOtp,
   unsubscribe,
+  getGuestManualPayments,
 } = require("../Controllers/guestController");
 
 const router = express.Router();
@@ -17,6 +18,9 @@ const router = express.Router();
 router.post("/identify", identifyGuest);
 router.get("/me", getGuestMe);
 router.post("/activity", appendActivity);
+
+// Pending manual payments owned by the guest cookie (Fix #1).
+router.get("/manual-payments", getGuestManualPayments);
 
 // Addresses
 router.get("/addresses", getAddresses);
