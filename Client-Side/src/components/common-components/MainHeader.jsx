@@ -127,7 +127,7 @@ const MainHeader = () => {
     { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents" },
     { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies" },
     { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
-    { key: "drops", label: "Drops", to: "/shopping/drops", isHot: true },
+    { key: "drops", label: "Drops", to: "/shopping/drops" },
     { key: "catalog", label: "Catalog", to: "/shopping/product-list" },
     { key: "about", label: "About", to: "/about" },
     { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
@@ -209,6 +209,10 @@ const MainHeader = () => {
               <AnimatedBadge count={wishlistCount} />
             </Link>
             {user && <NotificationsDropdown />}
+            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+              <ShoppingBag className="w-[18px] h-[18px]" />
+              <AnimatedBadge count={cartCount} />
+            </Link>
             <div className="relative">
               <button aria-label="Account" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
                 <User className="w-[18px] h-[18px]" />
@@ -246,10 +250,6 @@ const MainHeader = () => {
                 )}
               </AnimatePresence>
             </div>
-            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
-              <ShoppingBag className="w-[18px] h-[18px]" />
-              <AnimatedBadge count={cartCount} />
-            </Link>
 
             <button
               className="lg:hidden p-1 text-[#e5e2e1]"

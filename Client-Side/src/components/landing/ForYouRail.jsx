@@ -135,7 +135,7 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#4d4635] border-t-[#f2ca50]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {products.map((product, idx) => (
             <ProductCard key={product._id} product={product} index={idx} />
           ))}

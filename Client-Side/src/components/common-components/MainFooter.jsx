@@ -169,10 +169,10 @@ const MainFooter = () => {
         {/* 🔥 3️⃣ MAIN FOOTER GRID */}
         <motion.div 
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-x-8 gap-y-12 mb-16"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-12 mb-16"
         >
           {/* COLUMN 1 — BRAND IDENTITY */}
-          <motion.div variants={itemVariants} className="xl:col-span-2 flex flex-col">
+          <motion.div variants={itemVariants} className="lg:col-span-4 flex flex-col">
             <Link to="/shopping/home" className="flex items-center gap-3 group w-fit">
               <div className="relative">
                 <img src="/LOGO.png" alt="Saga Elite Logo" className="h-14 w-14 object-contain group-hover:scale-110 transition-transform duration-300" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -194,7 +194,7 @@ const MainFooter = () => {
           </motion.div>
 
           {/* Desktop Grid Columns (Hidden on mobile) */}
-          <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 col-span-1 xl:col-span-4 gap-8">
+          <div className="hidden md:grid md:grid-cols-4 lg:col-span-8 gap-8">
             
             {/* COLUMN 2 — SHOP */}
             <motion.div variants={itemVariants}>
@@ -377,10 +377,22 @@ const MainFooter = () => {
             <span className="text-[#333] hidden sm:inline">|</span>
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-[#444]" />
-              <div className="flex gap-1.5 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300">
-                <span className="px-2 py-0.5 border border-[#444] rounded uppercase text-[9px] font-bold">Visa</span>
-                <span className="px-2 py-0.5 border border-[#444] rounded uppercase text-[9px] font-bold">MasterCard</span>
-                <span className="px-2 py-0.5 border border-[#444] rounded uppercase text-[9px] font-bold">PayHere</span>
+              <div className="flex gap-2 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300">
+                {/* Visa SVG */}
+                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
+                  <path fill="#1434CB" d="M16.5 6.3h-2.4l-1.5 9.4h2.4l1.5-9.4zM24.7 6.4c-.4-.1-1.1-.3-2-.3-2.2 0-3.7 1.2-3.7 2.9 0 1.2 1.1 1.9 1.9 2.3.8.4 1.1.7 1.1 1.1 0 .6-.8.9-1.5.9-1 0-1.5-.2-2-.4l-.3-.1-.3 2.1c.5.2 1.4.5 2.4.5 2.4 0 3.9-1.2 3.9-3 0-1-.7-1.8-1.9-2.3-.7-.4-1.2-.6-1.2-1 0-.4.5-.8 1.4-.8.8 0 1.4.2 1.8.4l.2.1.3-2.1zM31 6.3h-1.9c-.6 0-1 .2-1.3.8L23.3 15.7h2.5l.5-1.4h3l.3 1.4h2.2L31 6.3zm-2.4 6l.6-1.7c0-.1.1-.3.1-.4 0 .1.1.2.2.3l.4 1.8h-1.3zM12.9 6.3L10 12.8l-.3-1.6c-.5-2.2-2.1-4.4-4-5l2.6 9.5h2.5l4-9.4h-2zM4 6.3H.1l-.1.4c2.5.6 4.2 1.8 5 3.3L3.8 6.3z" />
+                </svg>
+                {/* MasterCard SVG */}
+                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
+                  <path fill="#EB001B" d="M12.3 5.4h1.7v13.2h-1.7V5.4z" />
+                  <circle fill="#EB001B" cx="15.8" cy="12" r="6.6" />
+                  <circle fill="#F79E1B" cx="22.2" cy="12" r="6.6" />
+                  <path fill="#FF5F00" d="M19 18c2-1.3 3.3-3.5 3.3-6s-1.3-4.7-3.3-6c-2 1.3-3.3 3.5-3.3 6s1.3 4.7 3.3 6z" />
+                </svg>
+                {/* PayHere / Generic SVG placeholder for PayHere */}
+                <div className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20">
+                  <span className="text-[#0e0e0e] text-[9px] font-bold">PAYHERE</span>
+                </div>
               </div>
             </div>
           </div>

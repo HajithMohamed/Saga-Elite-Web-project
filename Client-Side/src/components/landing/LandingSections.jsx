@@ -116,7 +116,7 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
 
   // STATE A: Live drop
   if (dropIsLive) {
-    const heroImage = activeDrop.coverImageUrl || slides[0]?.imageUrl || '';
+    const heroImage = activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl || slides[0]?.imageUrl || '';
     return (
       <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
         <img src={heroImage} alt={activeDrop.name}
@@ -726,9 +726,9 @@ export const LiveDropSection = ({ activeDrop }) => {
                  View The Collection
                </Link>
              </div>
-             {activeDrop.coverImageUrl && (
+             {(activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl) && (
                <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-[#131313]">
-                  <img src={activeDrop.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
                </div>
              )}
           </div>

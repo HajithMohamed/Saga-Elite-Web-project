@@ -8,7 +8,6 @@ import {
   AnnouncementBar,
   HeroCarousel,
   HeroBackdropFX,
-  LiveDropSection,
   LiveDropCountdownXL,
   ProductSlider,
   OffersSlider,
@@ -124,10 +123,8 @@ const Home = () => {
           {/* 4. Collection selector — Asymmetric */}
           <AsymmetricCategoryGrid categoryImages={payload.categoryImages} />
 
-          {/* 5. Live drop showcase OR Next drop countdown */}
-          {payload.activeDrop ? (
-            <LiveDropSection activeDrop={payload.activeDrop} />
-          ) : nextDrop?.releaseDate ? (
+          {/* 5. Next drop countdown */}
+          {!payload.activeDrop && nextDrop?.releaseDate ? (
             <LiveDropCountdownXL
               targetDate={nextDrop.releaseDate}
               title={nextDrop.name}
