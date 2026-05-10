@@ -32,6 +32,7 @@ import { formatLkr } from "@/utils/currency";
 import { getRemainingTime } from "@/utils/time";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
+import { toast } from "@/hooks/use-toast";
 
 const MotionDiv = motion.div;
 const seededRandom = (seed) => {
@@ -65,10 +66,8 @@ export const InlineDropCountdown = ({ endDate }) => {
       ))}
     </div>
   );
-};
-
-// 🎬 HERO SECTION (MAIN IMPACT ZONE)
-export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }) => {
+};// 🎬 HERO SECTION (MAIN IMPACT ZONE)
+export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const navigate = useNavigate();
@@ -89,8 +88,23 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
 
   const handleMouseLeave = () => setMouseOffset({ x: 0, y: 0 });
 
-  const dropIsLive = activeDrop && new Date(activeDrop.releaseDate) <= new Date() && new Date(activeDrop.endDate) >= new Date();
+  const displaySlides = activeDrops.length > 0
+    ? activeDrops.map((d, i) => ({
+        id: d._id || d.slug || `drop-${i}`,
+        imageUrl: d.images?.[0]?.url || d.coverImageUrl || '',
+        label: '🔴 LIVE DROP',
+        headline: d.name,
+        subheadline: d.description,
+        ctaText: 'SHOP THE DROP',
+        ctaLink: `/shopping/drop/${d.slug}`,
+        endDate: d.endDate,
+        isDrop: true
+      }))
+    : slides;
+
   const dropIsUpcoming = nextDrop && new Date(nextDrop.releaseDate) > new Date();
+  const daysUntilDrop = nextDrop ? (new Date(nextDrop.releaseDate).getTime() - Date.now()) / 86400000 : 999;
+  const isUpcomingSoon = dropIsUpcoming && daysUntilDrop <= 7;
 
   // Gesture handling for mobile
   const touchStartX = useRef(null);
@@ -99,61 +113,24 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
     if (touchStartX.current === null) return;
     const delta = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(delta) > 50) {
-      if (delta > 0) setActiveIndex(prev => (prev + 1) % slides.length);
-      else setActiveIndex(prev => (prev - 1 + slides.length) % slides.length);
+      if (delta > 0) setActiveIndex(prev => (prev + 1) % displaySlides.length);
+      else setActiveIndex(prev => (prev - 1 + displaySlides.length) % displaySlides.length);
     }
     touchStartX.current = null;
   };
 
   useEffect(() => {
-    if (dropIsLive || dropIsUpcoming) return; // No auto-rotate when drop takes over
-    if (paused || slides.length <= 1) return;
+    // If it's upcoming (and no active drops), it shows static Upcoming state, so no rotation.
+    if (displaySlides.length === 0 && dropIsUpcoming) return; 
+    if (paused || displaySlides.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % slides.length);
+      setActiveIndex((prev) => (prev + 1) % displaySlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [slides.length, paused, dropIsLive, dropIsUpcoming]);
+  }, [displaySlides.length, paused, dropIsUpcoming]);
 
-  // STATE A: Live drop
-  if (dropIsLive) {
-    const heroImage = activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl || slides[0]?.imageUrl || '';
-    return (
-      <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
-        <img src={heroImage} alt={activeDrop.name}
-             className="w-full h-full object-cover"
-             loading="eager"
-             srcSet={`${heroImage}?w=640 640w, ${heroImage}?w=1280 1280w, ${heroImage}?w=1920 1920w`}
-             sizes="100vw" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
-        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
-        <div className="absolute bottom-0 left-0 right-0 px-6 md:px-16 pb-16">
-          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-3">
-            🔴 LIVE DROP
-          </p>
-          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4">
-            {activeDrop.name}
-          </h1>
-          <p className="font-sans text-base text-[#FAF7F2]/80 max-w-lg mb-6">
-            {activeDrop.description}
-          </p>
-          <InlineDropCountdown endDate={activeDrop.endDate} />
-          <div className="flex flex-wrap gap-4 mt-6">
-            <Link to={`/shopping/drop/${activeDrop.slug}`}
-                  className="bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#ffe088] transition-colors font-bold">
-              SHOP THE DROP
-            </Link>
-            <Link to="/shopping/drops"
-                  className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold">
-              VIEW ALL PIECES
-            </Link>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // STATE B: Upcoming drop
-  if (dropIsUpcoming) {
+  // STATE: Upcoming drop (only if no active slides/drops)
+  if (displaySlides.length === 0 && dropIsUpcoming) {
     return (
       <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
         <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-px opacity-40">
@@ -167,43 +144,55 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
             </div>
           ))}
         </div>
-        <div className="absolute inset-0 bg-[#0a0a0a]/70" />
+        <div className="absolute inset-0 bg-[#0a0a0a]/80" />
         <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
           <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4">
             ⚡ COMING SOON
           </p>
-          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4 uppercase">
+          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4 uppercase drop-shadow-2xl">
             {nextDrop.name}
           </h1>
           <p className="font-sans text-base text-[#FAF7F2]/70 max-w-md mb-6">
             {nextDrop.description || 'Something rare is being prepared. Stay ready.'}
           </p>
-          <p className="font-sans text-sm text-[#d0c5af] mb-8 uppercase tracking-widest">
+          <p className="font-sans text-sm text-[#d0c5af] mb-8 uppercase tracking-widest font-bold">
             DROPS {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <a href={`https://wa.me/+94770704274?text=Notify me when ${nextDrop.name} drops`}
-             target="_blank" rel="noopener noreferrer"
-             className="flex items-center gap-2 bg-[#25D366] text-white px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#20bd5a] transition-colors font-bold">
-            <MessageCircle className="w-4 h-4" /> NOTIFY ME ON WHATSAPP
-          </a>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            {isUpcomingSoon && (
+              <button onClick={() => {
+                  toast({ title: "You're on the list", description: `We'll notify you when ${nextDrop.name} goes live.` });
+                }}
+                className="flex items-center justify-center gap-2 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#ffe088] transition-colors font-bold"
+              >
+                🔔 REMIND ME
+              </button>
+            )}
+            <a href={`https://wa.me/+94770704274?text=Notify me when ${nextDrop.name} drops`}
+               target="_blank" rel="noopener noreferrer"
+               className="flex items-center justify-center gap-2 border border-[#FAF7F2]/40 text-white px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#25D366] hover:text-[#25D366] transition-colors font-bold">
+              <MessageCircle className="w-4 h-4" /> WHATSAPP
+            </a>
+          </div>
         </div>
       </section>
     );
   }
 
-  // STATE C: Standard catalogue
+  // STATE: Carousel (Active Drops or Standard Slides)
   return (
     <section 
       ref={sectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative h-[50vh] md:h-[70vh] max-h-[600px] w-full overflow-hidden bg-[#050505]"
+      className="relative h-[60vh] md:h-[80vh] max-h-[700px] w-full overflow-hidden bg-[#050505]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
       <AnimatePresence initial={false} custom={activeIndex}>
-        {slides.map((slide, index) => {
+        {displaySlides.map((slide, index) => {
           if (index !== activeIndex) return null;
           return (
             <motion.div
@@ -234,54 +223,71 @@ export const HeroCarousel = ({ slides = [], activeDrop = null, nextDrop = null }
                   <div className="w-full h-full" style={{ background: slide.fallback }} />
                 )}
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/30 to-transparent" />
               <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full overflow-hidden flex justify-center mix-blend-overlay">
-                <span className="font-display text-[20vw] font-black text-[#ffffff] opacity-10 leading-none whitespace-nowrap" style={{ transform: `translate(${mouseOffset.x * -0.5}px, ${mouseOffset.y * -0.5}px)` }}>RARE</span>
+                <span className="font-display text-[20vw] font-black text-[#ffffff] opacity-[0.03] leading-none whitespace-nowrap" style={{ transform: `translate(${mouseOffset.x * -0.5}px, ${mouseOffset.y * -0.5}px)` }}>RARE</span>
               </div>
-              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-center md:items-start text-center md:text-left`}>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
-                  className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
-                >
-                  {slide.label || "Exclusive"}
-                </motion.p>
-                <motion.h2
-                  initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}
-                  className="font-display text-[42px] md:text-[80px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter"
-                >
-                  {slide.headline.split('\\n').map((line, i) => (
-                    <React.Fragment key={i}>{line}<br /></React.Fragment>
-                  ))}
-                </motion.h2>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7, duration: 0.8 }}
-                  className="font-sans text-base text-[#FAF7F2]/80 mt-6 max-w-lg leading-relaxed"
-                >
-                  {slide.subheadline}
-                </motion.p>
-                
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9, duration: 0.8 }}
-                  className="mt-10 flex flex-wrap justify-center md:justify-start gap-4"
-                >
-                  <button
-                    onClick={() => navigate(slide.ctaLink)}
-                    className="relative overflow-hidden group bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.28em] font-bold"
+              
+              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-end pb-16 md:pb-24`}>
+                <div className="bg-[#0a0a0a]/50 backdrop-blur-xl border border-white/10 p-6 md:p-10 max-w-2xl text-left rounded-sm shadow-2xl">
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
+                    className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
                   >
-                    <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
-                    <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
-                  </button>
-                </motion.div>
+                    {slide.label || "Exclusive"}
+                  </motion.p>
+                  <motion.h2
+                    initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}
+                    className="font-display text-[32px] md:text-[56px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter"
+                  >
+                    {slide.headline.split('\n').map((line, i) => (
+                      <React.Fragment key={i}>{line}<br /></React.Fragment>
+                    ))}
+                  </motion.h2>
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7, duration: 0.8 }}
+                    className="font-sans text-sm md:text-base text-[#FAF7F2]/80 mt-4 max-w-lg leading-relaxed"
+                  >
+                    {slide.subheadline}
+                  </motion.p>
+                  
+                  {slide.isDrop && slide.endDate && (
+                    <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8, duration: 0.8 }} className="mt-4">
+                      <InlineDropCountdown endDate={slide.endDate} />
+                    </motion.div>
+                  )}
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9, duration: 0.8 }}
+                    className="mt-8 flex flex-wrap gap-4"
+                  >
+                    <button
+                      onClick={() => navigate(slide.ctaLink)}
+                      className="relative overflow-hidden group bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.28em] font-bold"
+                    >
+                      <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
+                      <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+                    </button>
+                    {slide.isDrop && (
+                      <button
+                        onClick={() => navigate('/shopping/drops')}
+                        className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold"
+                      >
+                        VIEW ALL PIECES
+                      </button>
+                    )}
+                  </motion.div>
+                </div>
               </div>
             </motion.div>
           );
         })}
       </AnimatePresence>
 
-      {/* Modern Dots - lines instead of circles */}
+      {/* Modern Dots */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
-        {slides.map((_, index) => (
+        {displaySlides.map((_, index) => (
           <button
             key={index}
             onClick={() => setActiveIndex(index)}
@@ -316,7 +322,7 @@ export const CountdownWidget = ({ targetDate, title, description }) => {
         <p className="font-display text-2xl text-[#e5e2e1] mb-8">{description}</p>
         
         <div className="flex justify-center gap-4 text-[#e5e2e1]">
-          {[['Days', timeLeft.d], ['Hours', timeLeft.h], ['Mins', timeLeft.m], ['Secs', timeLeft.s]].map(([label, value]) => (
+          {[['Days', timeLeft.d], ['Hours', timeLeft.hh], ['Mins', timeLeft.mm], ['Secs', timeLeft.ss]].map(([label, value]) => (
             <div key={label} className="flex flex-col items-center">
                <div className="w-16 h-16 md:w-20 md:h-20 bg-[#131313] border border-[#2a2a2a] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                  <span className="font-mono text-3xl md:text-4xl text-[#f2ca50]">{value.toString().padStart(2, '0')}</span>

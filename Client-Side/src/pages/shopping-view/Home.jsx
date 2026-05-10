@@ -110,7 +110,7 @@ const Home = () => {
           {/* 2. Hero — cinematic */}
           <HeroCarousel
             slides={heroSlides}
-            activeDrop={payload.activeDrop}
+            activeDrops={payload.activeDrops}
             nextDrop={nextDrop}
           />
 
