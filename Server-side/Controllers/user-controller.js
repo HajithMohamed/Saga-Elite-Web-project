@@ -1195,6 +1195,86 @@ const updateMyProfile = catchAsync(async (req, res, next) => {
   });
 });
 
+// ── Saved addresses (self-service) ─────────────────────────────────
+const addressesMatch = (a, b) =>
+  String(a?.street || "").trim().toLowerCase() ===
+    String(b?.street || "").trim().toLowerCase() &&
+  String(a?.postalCode || "").trim().toLowerCase() ===
+    String(b?.postalCode || "").trim().toLowerCase();
+
+const getMyAddresses = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.userInfo._id || req.userInfo.id).select("addresses");
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    data: { addresses: user.addresses || [] },
+  });
+});
+
+const addMyAddress = catchAsync(async (req, res, next) => {
+  const { label, street, city, postalCode, country, isDefault } = req.body || {};
+
+  if (!street || !city || !postalCode) {
+    return next(new AppError("street, city and postalCode are required", 400));
+  }
+
+  const user = await User.findById(req.userInfo._id || req.userInfo.id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  const incoming = {
+    label: label ? String(label).trim() : undefined,
+    street: String(street).trim(),
+    city: String(city).trim(),
+    postalCode: String(postalCode).trim(),
+    country: String(country || "Sri Lanka").trim(),
+    isDefault: Boolean(isDefault) || user.addresses.length === 0,
+  };
+
+  if (user.addresses.some((a) => addressesMatch(a, incoming))) {
+    return res.status(200).json({
+      success: true,
+      message: "Address already saved",
+      data: { addresses: user.addresses },
+    });
+  }
+
+  if (incoming.isDefault) {
+    user.addresses.forEach((a) => {
+      a.isDefault = false;
+    });
+  }
+
+  user.addresses.push(incoming);
+  await user.save({ validateModifiedOnly: true });
+
+  res.status(201).json({
+    success: true,
+    message: "Address saved",
+    data: { addresses: user.addresses },
+  });
+});
+
+const removeMyAddress = catchAsync(async (req, res, next) => {
+  const { addressId } = req.params;
+
+  const user = await User.findById(req.userInfo._id || req.userInfo.id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  const before = user.addresses.length;
+  user.addresses = user.addresses.filter((a) => String(a._id) !== String(addressId));
+  if (user.addresses.length === before) {
+    return next(new AppError("Address not found", 404));
+  }
+  await user.save({ validateModifiedOnly: true });
+
+  res.status(200).json({
+    success: true,
+    message: "Address removed",
+    data: { addresses: user.addresses },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
@@ -1213,4 +1293,7 @@ module.exports = {
   removeFromWishlist,
   getMyProfile,
   updateMyProfile,
+  getMyAddresses,
+  addMyAddress,
+  removeMyAddress,
 };

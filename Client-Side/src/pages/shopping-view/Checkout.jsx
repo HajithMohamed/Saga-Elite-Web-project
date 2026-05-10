@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
@@ -291,6 +292,20 @@ const Checkout = () => {
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
   const [couponExpanded, setCouponExpanded] = useState(false);
 
+  // Saved addresses (Fix #4) — for both guests and registered users
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [useNewAddress, setUseNewAddress] = useState(true);
+
+  // Guest OTP for manual bank transfer (Fix #3)
+  const [otpModal, setOtpModal] = useState({
+    open: false,
+    sending: false,
+    sent: false,
+    code: "",
+    verifying: false,
+  });
+  const [guestVerified, setGuestVerified] = useState(false);
+
   const checkoutSteps = [
     { id: "contact", label: "Contact", num: 1 },
     { id: "address", label: "Delivery", num: 2 },
@@ -360,6 +375,44 @@ const Checkout = () => {
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
+  // Saved addresses fetch (Fix #4)
+  useEffect(() => {
+    if (isAuthenticated) {
+      axiosInstance
+        .get("/user/addresses")
+        .then((res) => {
+          const list = res.data?.data?.addresses || [];
+          setSavedAddresses(list);
+          if (list.length > 0) setUseNewAddress(false);
+        })
+        .catch(() => setSavedAddresses([]));
+    }
+  }, [isAuthenticated]);
+
+  const fetchGuestAddresses = (email) => {
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
+    axiosInstance
+      .get("/guest/addresses", { params: { email } })
+      .then((res) => {
+        const list = res.data?.data?.addresses || [];
+        setSavedAddresses(list);
+        if (list.length > 0) setUseNewAddress(false);
+      })
+      .catch(() => setSavedAddresses([]));
+  };
+
+  const applySavedAddress = (addr) => {
+    if (!addr) return;
+    setFormData((prev) => ({
+      ...prev,
+      addressLine: addr.street || "",
+      city: addr.city || "",
+      postalCode: addr.postalCode || "",
+      country: addr.country || "Sri Lanka",
+      district: prev.district, // district isn't on saved address; user picks
+    }));
+  };
+
   useEffect(() => {
     axios
       .get(`${API_BASE}/site-config/bank_details`)
@@ -416,11 +469,64 @@ const Checkout = () => {
     const val = e.target.value;
     setFormData((prev) => ({ ...prev, email: val }));
     setErrors((prev) => ({ ...prev, email: undefined }));
+    // Email change invalidates any prior OTP verification.
+    setGuestVerified(false);
     // Simple typo suggestion
     if (val.includes("@gmai.com") || val.includes("@gmail.co") || val.includes("@gnail.com")) {
       setErrors((prev) => ({ ...prev, emailHint: "Did you mean @gmail.com?" }));
     } else {
       setErrors((prev) => ({ ...prev, emailHint: undefined }));
+    }
+  };
+
+  // ── OTP modal handlers (Fix #3) ──
+  const sendGuestOtp = async () => {
+    setOtpModal((m) => ({ ...m, sending: true }));
+    try {
+      await axiosInstance.post("/guest/otp/send", {
+        email: formData.email,
+        phone: formData.phone,
+        name: formData.fullName,
+      });
+      setOtpModal((m) => ({ ...m, sending: false, sent: true }));
+      toast({ title: "OTP sent", description: "Check your email and WhatsApp." });
+    } catch (err) {
+      setOtpModal((m) => ({ ...m, sending: false }));
+      toast({
+        title: "Could not send OTP",
+        description: err.response?.data?.message || err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const verifyGuestOtp = async () => {
+    if (!/^\d{4}$/.test(otpModal.code.trim())) {
+      toast({ title: "Enter the 4-digit code", variant: "destructive" });
+      return;
+    }
+    setOtpModal((m) => ({ ...m, verifying: true }));
+    try {
+      await axiosInstance.post("/guest/otp/verify", {
+        email: formData.email,
+        otp: otpModal.code.trim(),
+      });
+      setGuestVerified(true);
+      setOtpModal({ open: false, sending: false, sent: false, code: "", verifying: false });
+      toast({ title: "Verified", description: "Placing your order…", variant: "success" });
+      // Re-trigger submit now that we're verified.
+      setTimeout(() => {
+        document
+          .querySelector("form")
+          ?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      }, 50);
+    } catch (err) {
+      setOtpModal((m) => ({ ...m, verifying: false }));
+      toast({
+        title: "Verification failed",
+        description: err.response?.data?.message || err.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -539,6 +645,28 @@ const Checkout = () => {
       return;
     }
 
+    // Guest + bank transfer requires OTP verification (Fix #3).
+    if (
+      !isAuthenticated &&
+      formData.paymentMethod === "manual_bank_transfer" &&
+      !guestVerified
+    ) {
+      setOtpModal({ open: true, sending: false, sent: false, code: "", verifying: false });
+      return;
+    }
+
+    // Structured address payload for persistence (Fix #4). Pickup mode skips it.
+    const structuredAddress =
+      formData.deliveryMode === "pickup"
+        ? null
+        : {
+            label: formData.district || undefined,
+            street: formData.addressLine,
+            city: formData.city,
+            postalCode: formData.postalCode,
+            country: formData.country || "Sri Lanka",
+          };
+
     setIsSubmitting(true);
     try {
       const response = await dispatch(
@@ -546,6 +674,7 @@ const Checkout = () => {
           items: orderItems,
           checkoutMode: isBuyNow ? "buyNow" : "cart",
           shippingAddress,
+          structuredAddress,
           contactNumber: formData.phone,
           paymentMethod: formData.paymentMethod,
           notes: `Delivery Mode: ${formData.deliveryMode}\n${formData.notes}`,
@@ -733,6 +862,7 @@ const Checkout = () => {
                       type="email"
                       value={formData.email}
                       onChange={handleEmailChange}
+                      onBlur={() => !isAuthenticated && fetchGuestAddresses(formData.email)}
                       error={errors.email}
                       placeholder="you@example.com"
                     />
@@ -798,6 +928,59 @@ const Checkout = () => {
                       )
                     })}
                   </div>
+
+                  {formData.deliveryMode !== "pickup" && savedAddresses.length > 0 && (
+                    <div className="mb-6 rounded-xl border border-[var(--accent)]/30 bg-[#0a0a0a] p-4">
+                      <p className="se-label text-[10px] tracking-[0.28em] text-[var(--accent)] mb-3">
+                        Saved addresses
+                      </p>
+                      <div className="space-y-2">
+                        {savedAddresses.map((addr, idx) => (
+                          <button
+                            key={addr._id || idx}
+                            type="button"
+                            onClick={() => {
+                              applySavedAddress(addr);
+                              setUseNewAddress(false);
+                            }}
+                            className={cn(
+                              "block w-full text-left rounded-lg border px-3 py-2 transition",
+                              !useNewAddress &&
+                                formData.addressLine === addr.street &&
+                                formData.postalCode === addr.postalCode
+                                ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                                : "border-[#4d4635]/40 hover:border-[#99907c]"
+                            )}
+                          >
+                            <p className="se-body text-sm text-white">{addr.street}</p>
+                            <p className="text-xs text-[#99907c] mt-1">
+                              {addr.city}, {addr.postalCode} · {addr.country}
+                            </p>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUseNewAddress(true);
+                            setFormData((prev) => ({
+                              ...prev,
+                              addressLine: "",
+                              city: "",
+                              postalCode: "",
+                            }));
+                          }}
+                          className={cn(
+                            "block w-full text-left rounded-lg border px-3 py-2 transition text-sm",
+                            useNewAddress
+                              ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                              : "border-dashed border-[#4d4635]/40 text-[#99907c] hover:border-[#99907c]"
+                          )}
+                        >
+                          + Use a new address
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {formData.deliveryMode !== "pickup" && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-5 sm:grid-cols-2 mb-6">
@@ -1100,6 +1283,19 @@ const Checkout = () => {
                   <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c] pb-1">Total</span>
                   <span className="se-instrument text-4xl text-[var(--accent)] leading-none">{formatLKR(finalTotal)}</span>
                 </div>
+
+                {/* Guest gift notice (Fix #7) */}
+                {!isAuthenticated && (
+                  <div className="mt-5 flex items-start gap-3 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
+                    <p className="text-xs text-[#d0c5af] leading-relaxed">
+                      <Link to="/auth/register" className="text-[var(--accent)] underline">
+                        Register
+                      </Link>{" "}
+                      to be eligible for surprise gifts with your order.
+                    </p>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -1125,6 +1321,104 @@ const Checkout = () => {
            <p className="text-center text-[10px] text-rose-400 mt-2">Please complete all steps above first.</p>
         )}
       </div>
+
+      {/* OTP modal — guest manual bank transfer (Fix #3) */}
+      <AnimatePresence>
+        {otpModal.open && (
+          <motion.div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setOtpModal((m) => ({ ...m, open: false }))}
+          >
+            <motion.div
+              className="relative w-full max-w-md rounded-2xl border border-[var(--accent)]/30 bg-[#0d0d0d] p-7 shadow-2xl"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="se-label text-[10px] tracking-[0.32em] text-[var(--accent)]">
+                Verify your identity
+              </p>
+              <h3 className="se-serif text-2xl text-white mt-2">
+                Confirm it's really you
+              </h3>
+              <p className="text-sm text-[#99907c] mt-3 leading-relaxed">
+                Bank-transfer orders need OTP verification. We'll send a 4-digit code to{" "}
+                <span className="text-white">{formData.email}</span>
+                {formData.phone ? ` and your WhatsApp.` : "."}
+              </p>
+
+              {!otpModal.sent ? (
+                <button
+                  type="button"
+                  disabled={otpModal.sending}
+                  onClick={sendGuestOtp}
+                  className="mt-6 w-full h-12 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {otpModal.sending ? (
+                    <>
+                      <Loader2 className="animate-spin h-5 w-5" /> Sending…
+                    </>
+                  ) : (
+                    "Send OTP"
+                  )}
+                </button>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{4}"
+                    maxLength={4}
+                    value={otpModal.code}
+                    onChange={(e) =>
+                      setOtpModal((m) => ({
+                        ...m,
+                        code: e.target.value.replace(/\D/g, "").slice(0, 4),
+                      }))
+                    }
+                    placeholder="0000"
+                    className="w-full h-14 text-center text-2xl tracking-[0.5em] bg-[#0a0a0a] border border-[var(--accent)]/40 rounded-lg text-white outline-none focus:border-[var(--accent)]"
+                  />
+                  <button
+                    type="button"
+                    disabled={otpModal.verifying}
+                    onClick={verifyGuestOtp}
+                    className="w-full h-12 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {otpModal.verifying ? (
+                      <>
+                        <Loader2 className="animate-spin h-5 w-5" /> Verifying…
+                      </>
+                    ) : (
+                      "Verify & continue"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendGuestOtp}
+                    disabled={otpModal.sending}
+                    className="w-full text-xs text-[#99907c] hover:text-white transition"
+                  >
+                    Resend code
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setOtpModal((m) => ({ ...m, open: false }))}
+                className="mt-4 w-full text-xs text-[#574500] hover:text-[#99907c] transition"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

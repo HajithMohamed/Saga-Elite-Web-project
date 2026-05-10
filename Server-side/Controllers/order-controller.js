@@ -106,11 +106,20 @@ const buildSalesTrend = (rawTrend) => {
   return trend;
 };
 
+const GUEST_OTP_REVERIFY_MS = 30 * 60 * 1000;
+
+const addressMatchesOrder = (a, b) =>
+  String(a?.street || "").trim().toLowerCase() ===
+    String(b?.street || "").trim().toLowerCase() &&
+  String(a?.postalCode || "").trim().toLowerCase() ===
+    String(b?.postalCode || "").trim().toLowerCase();
+
 const createOrder = catchAsync(async (req, res, next) => {
   const {
     items,
     checkoutMode,
     shippingAddress,
+    structuredAddress,
     contactNumber,
     paymentMethod,
     paymentProofUrl,
@@ -156,9 +165,32 @@ const createOrder = catchAsync(async (req, res, next) => {
     guestEmailNormalized = guestEmail.trim().toLowerCase();
     guest = await Guest.findOneAndUpdate(
       { email: guestEmailNormalized },
-      { lastUsedAt: new Date() },
+      {
+        $set: { lastUsedAt: new Date() },
+        $setOnInsert: { guestToken: req.guestToken },
+      },
       { upsert: true, new: true }
     );
+
+    // Backfill guestToken if doc was created before tracking was enabled.
+    if (!guest.guestToken && req.guestToken) {
+      guest.guestToken = req.guestToken;
+      await guest.save();
+    }
+
+    // Bank-transfer manual payments require a verified guest (Fix #3).
+    if (isBankTransferPayment) {
+      const verifiedRecently =
+        guest.verified &&
+        guest.updatedAt &&
+        Date.now() - new Date(guest.updatedAt).getTime() < GUEST_OTP_REVERIFY_MS;
+
+      if (!verifiedRecently) {
+        return next(
+          new AppError("OTP verification required before placing this order.", 403)
+        );
+      }
+    }
   } else if (!user) {
     return next(new AppError("Authentication required for registered users or guest email for guests", 401));
   }
@@ -281,6 +313,7 @@ const createOrder = catchAsync(async (req, res, next) => {
     const dropId = req.body.dropId || null;
     let selectedGift = null;
 
+<<<<<<< HEAD
     if (dropId) {
       selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
     }
@@ -288,6 +321,18 @@ const createOrder = catchAsync(async (req, res, next) => {
     if (!selectedGift) {
       selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
     }
+=======
+      // Surprise gifts are a registered-user perk only (Fix #7).
+      if (user) {
+        if (dropId) {
+          selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
+        }
+
+        if (!selectedGift) {
+          selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
+        }
+      }
+>>>>>>> 85da37a784b3e22db3ef94974480f60e3f7e7584
 
     const orderPayload = {
       user: user ? user._id : undefined,
@@ -345,8 +390,63 @@ const createOrder = catchAsync(async (req, res, next) => {
       await guest.save({ session });
     }
 
+<<<<<<< HEAD
     return orderDocument;
   });
+=======
+      if (user && normalizedCheckoutMode === "cart") {
+        user.cart = [];
+        await user.save({ session, validateModifiedOnly: true });
+      }
+
+      if (guest) {
+        guest.orderCount += 1;
+
+        // Persist address for guest if structured form provided (Fix #4).
+        if (
+          structuredAddress &&
+          structuredAddress.street &&
+          structuredAddress.city &&
+          structuredAddress.postalCode &&
+          !guest.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
+        ) {
+          guest.addresses.push({
+            label: structuredAddress.label,
+            street: String(structuredAddress.street).trim(),
+            city: String(structuredAddress.city).trim(),
+            postalCode: String(structuredAddress.postalCode).trim(),
+            country: String(structuredAddress.country || "Sri Lanka").trim(),
+            isDefault: guest.addresses.length === 0,
+          });
+        }
+
+        await guest.save({ session });
+      }
+
+      // Persist address for registered user (Fix #4).
+      if (
+        user &&
+        structuredAddress &&
+        structuredAddress.street &&
+        structuredAddress.city &&
+        structuredAddress.postalCode &&
+        !user.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
+      ) {
+        user.addresses.push({
+          label: structuredAddress.label,
+          street: String(structuredAddress.street).trim(),
+          city: String(structuredAddress.city).trim(),
+          postalCode: String(structuredAddress.postalCode).trim(),
+          country: String(structuredAddress.country || "Sri Lanka").trim(),
+          isDefault: user.addresses.length === 0,
+        });
+        await user.save({ session, validateModifiedOnly: true });
+      }
+    });
+  } finally {
+    session.endSession();
+  }
+>>>>>>> 85da37a784b3e22db3ef94974480f60e3f7e7584
 
   const orderNotification = {
     userId: user ? user._id : null,
