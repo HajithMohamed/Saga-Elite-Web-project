@@ -40,6 +40,7 @@ import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
 
 import usePageMeta from "@/hooks/use-page-meta";
+import useRecentlyViewed from "@/hooks/use-recently-viewed";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -95,6 +96,12 @@ const ProductDetails = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [productTab, setProductTab] = useState("description");
   const [cartAddedPulse, setCartAddedPulse] = useState(false);
+
+  const { push: pushRecentlyViewed } = useRecentlyViewed();
+
+  useEffect(() => {
+    if (product?._id && product?.slug) pushRecentlyViewed(product);
+  }, [product?._id, product?.slug, pushRecentlyViewed]);
 
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")

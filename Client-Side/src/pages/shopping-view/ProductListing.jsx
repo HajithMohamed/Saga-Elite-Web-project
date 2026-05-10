@@ -8,7 +8,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
@@ -24,7 +24,6 @@ import {
   SortDropdown,
 } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
-import ProductCard from "@/components/shopping-components/ProductCard";
 import CollectionHero from "@/components/listing/CollectionHero";
 import CollectionIntro from "@/components/listing/CollectionIntro";
 import RefineRow from "@/components/listing/RefineRow";
@@ -32,6 +31,10 @@ import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 import CommunityStylingStrip from "@/components/listing/CommunityStylingStrip";
 import FeaturedHighlightCard from "@/components/listing/FeaturedHighlightCard";
 import CategorySwitcherCards from "@/components/listing/CategorySwitcherCards";
+import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
+import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
+import TrustStrip from "@/components/listing/TrustStrip";
+import RecentlyViewedCarousel from "@/components/listing/RecentlyViewedCarousel";
 import { getCollectionHero } from "@/components/listing/collectionConfig";
 
 const CATEGORY_LABELS = {
@@ -534,15 +537,13 @@ const ProductListing = () => {
       {/* MAIN CONTENT */}
       <main className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-32">
-            <motion.div
-              className="w-8 h-8 border-[3px] border-[#4d4635] border-t-[#f2ca50] rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, ease: "linear", repeat: Infinity }}
-            />
-            <span className="se-label mt-6 text-[#d0c5af] tracking-[0.2em] text-[10px]">
-              LOADING ATELIER
-            </span>
+          <div>
+            <div className="flex justify-center mb-8">
+              <span className="se-label text-[#d0c5af] tracking-[0.32em] text-[10px]">
+                LOADING ATELIER
+              </span>
+            </div>
+            <ProductGridSkeleton count={12} featuredEvery={7} />
           </div>
         )}
 
@@ -606,6 +607,9 @@ const ProductListing = () => {
                   />
                 ) : null}
 
+                {/* Trust strip — bridges the cinematic feature into the body */}
+                <TrustStrip />
+
                 {/* Mystery Gift inline promo */}
                 {filteredProducts.length >= 6 && (
                   <MotionDiv
@@ -656,25 +660,12 @@ const ProductListing = () => {
                   </MotionDiv>
                 )}
 
-                {/* Premium product grid */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${categoryParam}-${filterParam}-${sortParam}-${inStockOnly}-${limitedOnly}-${colorsParam.join(",")}-${sizesParam.join(",")}-${priceMinParam}-${priceMaxParam}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40"
-                  >
-                    {visibleProducts.map((product, idx) => (
-                      <ProductCard
-                        key={product._id}
-                        product={product}
-                        index={idx}
-                      />
-                    ))}
-                  </motion.div>
-                </AnimatePresence>
+                {/* Editorial mixed grid — every Nth tile spans 2x2 for cinematic rhythm */}
+                <EditorialProductGrid
+                  products={visibleProducts}
+                  featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
+                  motionKey={`${categoryParam}-${filterParam}-${sortParam}-${inStockOnly}-${limitedOnly}-${colorsParam.join(",")}-${sizesParam.join(",")}-${priceMinParam}-${priceMaxParam}`}
+                />
 
                 {/* Infinite-scroll sentinel — appends 12 at a time */}
                 <LoadMoreSentinel
@@ -694,6 +685,9 @@ const ProductListing = () => {
           </>
         )}
       </main>
+
+      {/* RECENTLY VIEWED — auto-hides if empty */}
+      <RecentlyViewedCarousel />
 
       {/* COMMUNITY STYLING STRIP */}
       <CommunityStylingStrip />

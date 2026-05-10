@@ -9,7 +9,7 @@ import {
   removeFromWishlistAction,
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
-import { useCountdown } from "@/components/ui/editorial";
+import { useCountdown, ColorSwatch } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 
 const formatLKR = (value = 0) =>
@@ -48,7 +48,7 @@ function DropEndingBadge({ target }) {
   );
 }
 
-const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false }) => {
+const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false, tall = false }) => {
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
 
@@ -78,6 +78,51 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const price = basePrice * (1 - discountPct / 100);
 
   const variants = product?.variants || [];
+
+  // Distinct colors per product (preserve original casing, case-insensitive dedup).
+  const distinctColors = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const v of variants) {
+      const c = String(v?.color || "").trim();
+      if (!c) continue;
+      const key = c.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(c);
+    }
+    return out;
+  }, [variants]);
+
+  // Map color → first matching image url (Image.colorTag).
+  const imageByColor = useMemo(() => {
+    const map = new Map();
+    for (const img of product?.images || []) {
+      const tag = String(img?.colorTag || "").trim().toLowerCase();
+      if (!tag || map.has(tag)) continue;
+      map.set(tag, img.url);
+    }
+    return map;
+  }, [product?.images]);
+
+  const primaryImage = product?.images?.[0]?.url || "/LOGO.png";
+  const secondaryImage = product?.images?.[1]?.url || null;
+  const [activeColor, setActiveColor] = useState(null);
+  const displayImage = activeColor
+    ? imageByColor.get(activeColor.toLowerCase()) || primaryImage
+    : primaryImage;
+
+  // Sizes with aggregated stock (across colors) — for the hover preview strip.
+  const sizesWithStock = useMemo(() => {
+    const map = new Map();
+    for (const v of variants) {
+      const k = v?.size;
+      if (!k) continue;
+      map.set(k, (map.get(k) || 0) + Math.max(0, Number(v?.stock || 0)));
+    }
+    return [...map.entries()].map(([size, stock]) => ({ size, stock }));
+  }, [variants]);
+
   const stock = stockTone(product);
   const isLimited = Boolean(product?.isLimited);
   const totalStock = Number(
@@ -191,19 +236,27 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       )}
     >
       {/* Image Container */}
-      <Link to={productHref} className="relative aspect-[3/4] w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]">
-        {/* Primary image */}
+      <Link
+        to={productHref}
+        className={cn(
+          "relative w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]",
+          tall ? "aspect-square" : "aspect-[3/4]"
+        )}
+      >
+        {/* Primary / color-swap image — keying on src triggers a clean opacity fade */}
         <img
-          src={product?.images?.[0]?.url || "/LOGO.png"}
+          key={displayImage}
+          src={displayImage}
           alt={product?.name || "Piece"}
           loading="lazy"
-          width={220} height={293}
-          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.02]"
+          width={220}
+          height={293}
+          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.02] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
         />
-        {/* Alt image — fades in on hover when a second image exists */}
-        {product?.images?.[1]?.url ? (
+        {/* Alt image — fades in on hover ONLY when no swatch is active */}
+        {secondaryImage && !activeColor ? (
           <img
-            src={product.images[1].url}
+            src={secondaryImage}
             alt=""
             aria-hidden="true"
             loading="lazy"
@@ -282,6 +335,35 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           </div>
         )}
 
+        {/* Hover-revealed size preview strip — purely informational, sits above the action bar */}
+        {!quickAddOpen && sizesWithStock.length > 0 && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-12 z-[5] flex justify-center flex-wrap gap-1 px-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75 pointer-events-none"
+          >
+            {sizesWithStock.map((s) => {
+              const isOOS = s.stock === 0;
+              const isLow = s.stock > 0 && s.stock <= 3;
+              return (
+                <span
+                  key={s.size}
+                  className={cn(
+                    "se-mono text-[10px] tracking-wider px-2 py-1 backdrop-blur-sm border",
+                    isOOS
+                      ? "text-[#574500] line-through bg-[#0a0a0a]/60 border-[#1c1b1b]"
+                      : "text-[#e5e2e1] bg-[#0a0a0a]/85 border-[#4d4635]/40"
+                  )}
+                >
+                  {s.size}
+                  {isLow && (
+                    <span className="ml-1 inline-block w-1 h-1 rounded-full bg-[#f2ca50] align-middle" />
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Slide-up quick actions — appear on hover */}
         <div className="absolute inset-x-0 bottom-0 flex translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
           <span
@@ -354,6 +436,43 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           </div>
         </div>
       </Link>
+
+      {/* Color swatches — only render when 2+ colors exist. Hover swaps the card image. */}
+      {distinctColors.length >= 2 && (
+        <div
+          className="px-2 -mt-1 mb-1 flex items-center gap-1.5"
+          onMouseLeave={() => setActiveColor(null)}
+        >
+          {distinctColors.slice(0, 5).map((color) => {
+            const isActive =
+              activeColor && activeColor.toLowerCase() === color.toLowerCase();
+            return (
+              <span
+                key={color}
+                onMouseEnter={() => setActiveColor(color)}
+                onFocus={() => setActiveColor(color)}
+                className="inline-flex"
+              >
+                <ColorSwatch
+                  color={color}
+                  size={18}
+                  selected={isActive}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveColor(color);
+                  }}
+                />
+              </span>
+            );
+          })}
+          {distinctColors.length > 5 && (
+            <span className="se-mono text-[9px] text-[#99907c] ml-1">
+              +{distinctColors.length - 5}
+            </span>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 };
