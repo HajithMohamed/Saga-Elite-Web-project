@@ -27,7 +27,7 @@ const EditorialProductGrid = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
-        className="grid gap-px bg-[#4d4635]/40 border border-[#4d4635]/40 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [grid-auto-flow:dense] [grid-auto-rows:1fr]"
+        className="grid gap-4 md:gap-8 grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 [grid-auto-flow:dense] [grid-auto-rows:1fr]"
       >
         {products.map((product, idx) => {
           const isFeatured =

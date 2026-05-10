@@ -251,7 +251,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           loading="lazy"
           width={220}
           height={293}
-          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.02] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.05] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
         />
         {/* Alt image — fades in on hover ONLY when no swatch is active */}
         {secondaryImage && !activeColor ? (
@@ -410,21 +410,26 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
       {/* Metadata */}
       <Link to={productHref} className="block transition-colors p-2 rounded-sm mt-1">
-        <div className="flex justify-between items-start">
-          <h3 className="text-[#e5e2e1] se-body max-w-[70%] leading-tight font-medium line-clamp-2">
-            {product?.name || "Untitled piece"}
-          </h3>
-          <div className="flex flex-col items-end shrink-0 pl-2">
-            <p className="text-[#D4AF37] se-instrument text-right tabular-nums font-semibold">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex flex-col flex-1">
+            <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-tight leading-snug line-clamp-2">
+              {product?.name || "Untitled piece"}
+            </h3>
+            <p className="text-[#D4AF37]/80 text-[10px] mt-1 uppercase tracking-widest font-medium">
+              {product?.category?.name || "Collection"}
+            </p>
+          </div>
+          <div className="flex flex-col items-end shrink-0">
+            <p className="text-[#D4AF37] font-mono text-sm tracking-wider font-semibold tabular-nums">
               {formatLKR(price)}
             </p>
             {discountPct > 0 && basePrice > 0 && (
-              <span className="se-instrument text-[10px] text-gray-500 line-through tabular-nums text-right mt-0.5">
+              <span className="font-mono text-[10px] text-gray-500 line-through tabular-nums text-right mt-0.5">
                 {formatLKR(basePrice)}
               </span>
             )}
             {totalStock > 0 && totalStock <= 5 ? (
-              <p className="se-label text-[9px] tracking-[0.28em] text-[#f2ca50] mt-1">
+              <p className="se-label text-[9px] tracking-[0.28em] text-[#ffb4ab] mt-1">
                 Only {totalStock} left
               </p>
             ) : null}

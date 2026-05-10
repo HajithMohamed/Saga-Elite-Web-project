@@ -26,15 +26,15 @@ import {
 import usePageMeta from "@/hooks/use-page-meta";
 import CollectionHero from "@/components/listing/CollectionHero";
 import CollectionIntro from "@/components/listing/CollectionIntro";
-import RefineRow from "@/components/listing/RefineRow";
+import FilterSidebar from "@/components/listing/FilterSidebar";
 import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
-import CommunityStylingStrip from "@/components/listing/CommunityStylingStrip";
-import FeaturedHighlightCard from "@/components/listing/FeaturedHighlightCard";
+
+
 import CategorySwitcherCards from "@/components/listing/CategorySwitcherCards";
 import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
 import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
-import TrustStrip from "@/components/listing/TrustStrip";
-import RecentlyViewedCarousel from "@/components/listing/RecentlyViewedCarousel";
+
+
 import { getCollectionHero } from "@/components/listing/collectionConfig";
 
 const CATEGORY_LABELS = {
@@ -443,297 +443,201 @@ const ProductListing = () => {
       <CategorySwitcherCards activePill={activePill} />
 
       {/* STICKY FILTER RAIL */}
-      <div className="sticky top-16 z-30 bg-[#0a0a0a]/90 backdrop-blur-md border-y border-[#4d4635]/40">
-        <div className="px-5 md:px-12 max-w-7xl mx-auto py-3 md:py-4 flex items-center gap-3 md:gap-6 overflow-x-auto custom-scrollbar">
-          <FilterPills
-            items={PILL_KEYS}
-            value={activePill}
-            onChange={setCategoryFilter}
-            layoutId="atelier-pill"
-            className="shrink-0"
-          />
-
-          <div className="hidden lg:block flex-1" />
-
-          <div className="hidden md:flex items-center gap-2 shrink-0">
-            <Eyebrow tone="muted" size="xs">
-              {hasFilterActive
-                ? `${String(articleCount).padStart(3, "0")} / ${String(totalCount).padStart(3, "0")}`
-                : `${String(totalCount).padStart(3, "0")}`}{" "}
-              articles
-            </Eyebrow>
-          </div>
-
-          <div className="hidden lg:block flex-1" />
-
-          {!isOffersListing && (
-            <button
-              type="button"
-              onClick={() => setRefineOpen((o) => !o)}
-              aria-pressed={refineOpen}
-              className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus flex items-center gap-2 ${
-                refineOpen || refineActive
-                  ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                  : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-              }`}
-            >
-              <SlidersHorizontal size={12} strokeWidth={1.75} />
-              Refine
-              {refineActive ? (
-                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#f2ca50]" />
-              ) : null}
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={toggleInStock}
-            aria-pressed={inStockOnly}
-            className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-              inStockOnly
-                ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-            }`}
-          >
-            In stock
-          </button>
-          <button
-            type="button"
-            onClick={toggleLimited}
-            aria-pressed={limitedOnly}
-            className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-              limitedOnly
-                ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-            }`}
-          >
-            Limited
-          </button>
-          <SortDropdown
-            options={SORT_OPTIONS}
-            value={sortParam}
-            onChange={setSort}
-            label="Sort"
-            className="shrink-0"
-          />
-        </div>
-
-        {!isOffersListing && (
-          <RefineRow
-            open={refineOpen}
-            selectedColors={colorsParam}
-            selectedSizes={sizesParam}
-            priceRange={[priceMinParam, priceMaxParam]}
-            priceMin={PRICE_MIN}
-            priceMax={PRICE_MAX}
-            onToggleColor={toggleColor}
-            onToggleSize={toggleSize}
-            onChangePrice={setPriceRange}
-            onClearAll={clearRefinements}
-          />
-        )}
-      </div>
-
-      {/* MAIN CONTENT */}
-      <main className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
-        {isLoading && (
-          <div>
-            <div className="flex justify-center mb-8">
-              <span className="se-label text-[#d0c5af] tracking-[0.32em] text-[10px]">
-                LOADING ATELIER
-              </span>
+      
+      {/* Editorial layout container: Grid with right filter sidebar */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 lg:py-16">
+        <div className="flex flex-col lg:flex-row gap-12 items-start relative">
+          
+          {/* Main Product Grid (Left Pane) */}
+          <div className="flex-1 w-full min-w-0">
+            {/* Top Bar inside main pane */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+              <FilterPills
+                items={pills}
+                active={activePill}
+                onChange={handlePillChange}
+              />
+              <div className="flex items-center gap-4">
+                <SortDropdown
+                  value={sortParam}
+                  onChange={(v) => {
+                    const p = new URLSearchParams(searchParams);
+                    if (v) p.set("sort", v);
+                    else p.delete("sort");
+                    setSearchParams(p);
+                  }}
+                />
+                {/* Mobile Filter Toggle */}
+                <button
+                  onClick={() => setRefineOpen(!refineOpen)}
+                  className="lg:hidden flex items-center gap-2 se-label tracking-widest text-[10px] uppercase text-[#e5e2e1] bg-[#131313] px-4 py-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-[#4d4635]/40"
+                >
+                  <SlidersHorizontal size={14} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="ml-1 w-2 h-2 rounded-full bg-[#f2ca50]" />
+                  )}
+                </button>
+              </div>
             </div>
-            <ProductGridSkeleton count={12} featuredEvery={7} />
-          </div>
-        )}
 
-        {!isLoading && error && (
-          <div className="border border-[#93000a]/40 bg-[#93000a]/10 px-6 py-10 text-center">
-            <Eyebrow tone="muted" size="md" className="text-[#ffb4ab]">
-              Something went still
-            </Eyebrow>
-            <p className="mt-3 se-body text-sm text-[#ffb4ab]">{error}</p>
-          </div>
-        )}
-
-        {!isLoading && !error && (
-          <>
-            {filteredProducts.length === 0 && (
-              <Reveal>
-                <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 md:py-20 text-center max-w-2xl mx-auto">
-                  <Eyebrow tone="muted" size="xs">Nothing here yet</Eyebrow>
-                  <h3 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-4xl">
-                    {hasFilterActive
-                      ? "No pieces match these filters."
-                      : "The chapter has yet to open."}
-                  </h3>
-                  <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-                    {hasFilterActive
-                      ? "Loosen the filters to see more pieces."
-                      : "Read the journal for word of the next chapter."}
-                  </p>
-                  <div className="mt-8 flex flex-wrap justify-center gap-3">
-                    {hasFilterActive ? (
-                      <button
-                        type="button"
-                        onClick={clearAllFilters}
-                        className="inline-flex"
-                      >
-                        <Btn variant="default" iconRight={ArrowRight}>
-                          Clear filters
-                        </Btn>
-                      </button>
-                    ) : (
-                      <Link to="/about">
-                        <Btn variant="outline" iconRight={ArrowRight}>
-                          Read the journal
-                        </Btn>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </Reveal>
-            )}
-
-            {filteredProducts.length > 0 && (
-              <>
-                {/* Featured highlight (skipped for tiny collections) */}
-                {featuredProduct ? (
-                  <FeaturedHighlightCard
-                    product={featuredProduct}
-                    eyebrow={
-                      isOffersListing ? "Members Offer" : "Drop Exclusive"
-                    }
-                  />
-                ) : null}
-
-                {/* Trust strip — bridges the cinematic feature into the body */}
-                <TrustStrip />
-
-                {/* Mystery Gift inline promo */}
-                {filteredProducts.length >= 6 && (
-                  <MotionDiv
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                    className="my-10 md:my-14 relative overflow-hidden border border-[#4d4635]/60 bg-[#0e0e0e]"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #0e0e0e 0%, #1a1200 50%, #0e0e0e 100%)",
+            {/* Mobile Filter Drawer / Inline content could go here, for now relying on right sidebar on desktop */}
+            <AnimatePresence>
+              {refineOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="lg:hidden mb-8 overflow-hidden rounded-xl border border-[#4d4635]/30 bg-[#0a0a0a]"
+                >
+                  <FilterSidebar
+                    selectedColors={colorsParam}
+                    selectedSizes={sizesParam}
+                    priceRange={[priceMinParam, priceMaxParam]}
+                    onToggleColor={(c) => {
+                      // existing color logic
+                      const p = new URLSearchParams(searchParams);
+                      let arr = [...colorsParam];
+                      if (arr.includes(c)) arr = arr.filter((x) => x !== c);
+                      else arr.push(c);
+                      if (arr.length) p.set("colors", arr.join(","));
+                      else p.delete("colors");
+                      setSearchParams(p);
                     }}
-                  >
-                    <div
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background:
-                          "radial-gradient(ellipse at 30% 50%, rgba(242,202,80,0.08) 0%, transparent 60%)",
-                      }}
-                    />
+                    onToggleSize={(s) => {
+                      const p = new URLSearchParams(searchParams);
+                      let arr = [...sizesParam];
+                      if (arr.includes(s)) arr = arr.filter((x) => x !== s);
+                      else arr.push(s);
+                      if (arr.length) p.set("sizes", arr.join(","));
+                      else p.delete("sizes");
+                      setSearchParams(p);
+                    }}
+                    onChangePrice={(v) => {
+                      const p = new URLSearchParams(searchParams);
+                      if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
+                      if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
+                      setSearchParams(p);
+                    }}
+                    onClearAll={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                    priceMin={PRICE_MIN}
+                    priceMax={PRICE_MAX}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 px-6 md:px-16 py-10 md:py-12">
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5 md:gap-6">
-                        <div className="w-16 h-16 rounded-lg bg-[#1c1b1b] border border-[#f2ca50]/30 flex items-center justify-center shrink-0 [box-shadow:0_0_20px_rgba(242,202,80,0.15)]">
-                          <Gift className="w-7 h-7 text-[#f2ca50]" strokeWidth={1.5} />
-                        </div>
-                        <div>
-                          <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.35em] mb-1">
-                            EVERY ORDER
-                          </p>
-                          <h3 className="se-serif text-[#e5e2e1] text-2xl md:text-3xl leading-[1.1]">
-                            Unlocks a mystery gift.
-                          </h3>
-                          <p className="mt-2 se-body text-[#99907c] text-sm max-w-xl">
-                            Stickers, exclusive tees, discount codes, and rare surprise items can arrive with your order.
-                          </p>
-                        </div>
-                      </div>
-
-                      <Link
-                        to="/shopping/product-list"
-                        className="shrink-0 inline-flex items-center gap-2 bg-[#f2ca50] hover:bg-[#ffe088] hover:[box-shadow:0_0_20px_rgba(242,202,80,0.35)] text-[#1b1c1c] se-label text-[10px] tracking-[0.28em] px-8 py-4 transition-all duration-200"
-                      >
-                        SHOP NOW
-                        <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
-                      </Link>
-                    </div>
-                  </MotionDiv>
-                )}
-
-                {/* Editorial mixed grid — every Nth tile spans 2x2 for cinematic rhythm */}
+            {isLoading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-y-12">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <ProductGridSkeleton key={i} />
+                ))}
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-32 flex flex-col items-center justify-center text-center px-4"
+              >
+                <div className="w-24 h-24 mb-6 border border-[#4d4635] flex items-center justify-center rounded-sm bg-[#131313]/50">
+                  <span className="text-[#4d4635] text-4xl">ø</span>
+                </div>
+                <h3 className="text-[#e5e2e1] se-display text-2xl uppercase tracking-widest mb-2 font-bold">
+                  NO MATCHES FOUND
+                </h3>
+                <p className="text-[#99907c] max-w-md mx-auto se-body text-sm">
+                  Try exploring another collection or reducing your filter criteria.
+                </p>
+                <button
+                  onClick={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                  className="mt-8 px-8 py-3 bg-transparent border border-[#d4af37]/40 text-[#f2ca50] se-label text-[11px] uppercase tracking-widest hover:bg-[#d4af37]/10 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </motion.div>
+            ) : (
+              <div>
                 <EditorialProductGrid
                   products={visibleProducts}
                   featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
-                  motionKey={`${categoryParam}-${filterParam}-${sortParam}-${inStockOnly}-${limitedOnly}-${colorsParam.join(",")}-${sizesParam.join(",")}-${priceMinParam}-${priceMaxParam}`}
+                  motionKey={activePill + filterParam + sortParam}
                 />
+                
+                {/* Simulated "Mystery Gift" Cinematic Banner */}
+                {visibleProducts.length >= 6 && (
+                  <div className="my-16 w-full rounded-2xl overflow-hidden relative group">
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/80 z-10" />
+                    <img 
+                      src="https://images.unsplash.com/photo-1549439602-43ebca2327af?q=80&w=2670&auto=format&fit=crop" 
+                      alt="Cinematic Mystery Gift" 
+                      className="w-full h-80 object-cover brightness-50 group-hover:scale-105 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-6">
+                      <p className="text-[#D4AF37] se-label text-[10px] uppercase tracking-[0.3em] font-semibold mb-3 tracking-widest">
+                        Cinematic Promotional Banner
+                      </p>
+                      <h2 className="text-white text-3xl md:text-5xl font-display font-medium tracking-tight mb-8">
+                        Every Order Unlocks<br/>a Mystery Gift
+                      </h2>
+                      <button className="bg-[#D4AF37] text-black font-semibold uppercase tracking-widest px-8 py-3.5 rounded-full hover:scale-105 transition-transform">
+                        Explore Collection →
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                {/* Infinite-scroll sentinel — appends 12 at a time */}
-                <LoadMoreSentinel
-                  hasMore={hasMore}
-                  onLoadMore={() =>
-                    setVisibleCount((c) =>
-                      Math.min(c + PAGE_SIZE, filteredProducts.length)
-                    )
-                  }
-                  count={Math.min(
-                    PAGE_SIZE,
-                    Math.max(0, filteredProducts.length - visibleCount)
-                  )}
-                />
-              </>
+                {hasMore && (
+                  <div className="mt-16 text-center">
+                    <button
+                      onClick={loadMore}
+                      className="px-12 py-4 bg-transparent border border-[#D4AF37] text-[#D4AF37] font-semibold tracking-[0.2em] text-xs uppercase hover:bg-[#D4AF37] hover:text-black transition-colors"
+                    >
+                      Load More
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-          </>
-        )}
-      </main>
+          </div>
 
-      {/* RECENTLY VIEWED — auto-hides if empty */}
-      <RecentlyViewedCarousel />
-
-      {/* COMMUNITY STYLING STRIP */}
-      <CommunityStylingStrip />
-
-      {/* CLOSING MARQUEE */}
-      <Marquee
-        tone="gold"
-        items={[
-          "Sent to ninety-three countries",
-          "Made in Sri Lanka",
-          "Hand-finished",
-          "No restock",
-          "Members enter first",
-          "Rare fit, forever",
-        ]}
-      />
-
-      {/* Mobile floating cart */}
-      <Link
-        to="/shopping/cart"
-        className="fixed bottom-6 right-5 z-40 md:hidden w-14 h-14 rounded-full bg-[#f2ca50] flex items-center justify-center [box-shadow:0_4px_20px_rgba(242,202,80,0.40)] hover:[box-shadow:0_4px_30px_rgba(242,202,80,0.60)] transition-all duration-200 active:scale-95"
-        aria-label="Go to cart"
-      >
-        <ShoppingBag size={20} strokeWidth={2} className="text-[#1b1c1c]" />
-        {cartCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#0a0a0a] border border-[#f2ca50] flex items-center justify-center se-mono text-[#f2ca50] text-[9px]">
-            {cartCount > 9 ? "9+" : cartCount}
-          </span>
-        )}
-      </Link>
-
-      {/* Mobile sticky filter pill */}
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 180, behavior: "smooth" })}
-        className="fixed bottom-6 left-5 z-40 md:hidden h-12 px-5 rounded-full bg-[#1c1b1b] border border-[#4d4635] flex items-center gap-2 [box-shadow:0_4px_16px_rgba(0,0,0,0.5)] se-label text-[11px] tracking-[0.18em] text-[#d0c5af] hover:border-[#f2ca50]/50 hover:text-[#f2ca50] transition-all duration-200 active:scale-95"
-        aria-label="Jump to filters"
-      >
-        <SlidersHorizontal size={14} strokeWidth={1.5} />
-        FILTER
-        {hasFilterActive && (
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f2ca50] ml-0.5" />
-        )}
-      </button>
+          {/* Right Sidebar (Desktop only) */}
+          <div className="hidden lg:block w-[320px] shrink-0">
+             <FilterSidebar
+                selectedColors={colorsParam}
+                selectedSizes={sizesParam}
+                priceRange={[priceMinParam, priceMaxParam]}
+                onToggleColor={(c) => {
+                  const p = new URLSearchParams(searchParams);
+                  let arr = [...colorsParam];
+                  if (arr.includes(c)) arr = arr.filter((x) => x !== c);
+                  else arr.push(c);
+                  if (arr.length) p.set("colors", arr.join(","));
+                  else p.delete("colors");
+                  setSearchParams(p);
+                }}
+                onToggleSize={(s) => {
+                  const p = new URLSearchParams(searchParams);
+                  let arr = [...sizesParam];
+                  if (arr.includes(s)) arr = arr.filter((x) => x !== s);
+                  else arr.push(s);
+                  if (arr.length) p.set("sizes", arr.join(","));
+                  else p.delete("sizes");
+                  setSearchParams(p);
+                }}
+                onChangePrice={(v) => {
+                  const p = new URLSearchParams(searchParams);
+                  if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
+                  if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
+                  setSearchParams(p);
+                }}
+                onClearAll={() => handleClearFilters(PRICE_MIN, PRICE_MAX)}
+                priceMin={PRICE_MIN}
+                priceMax={PRICE_MAX}
+             />
+          </div>
+        </div>
+      </div>
     </div>
   );
-};
-
+}
 export default ProductListing;
