@@ -25,6 +25,8 @@ import {
   Leaf,
   Globe,
   Crown,
+  History,
+  GalleryHorizontal,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +48,8 @@ const TABS = [
   { id: "stats", label: "Stats", icon: BarChart3 },
   { id: "values", label: "Values", icon: Sparkles },
   { id: "team", label: "Team", icon: Users },
+  { id: "timeline", label: "Timeline", icon: History },
+  { id: "gallery", label: "Studio Gallery", icon: GalleryHorizontal },
   { id: "misc", label: "Materials & Press", icon: Layers },
 ];
 
@@ -90,6 +94,8 @@ const TAB_KEYS = {
   stats: ["about_stats"],
   values: ["about_values"],
   team: ["about_team_heading", "about_team_subtext", "shop_team_members"],
+  timeline: ["about_timeline"],
+  gallery: ["about_studio_gallery"],
   misc: ["shop_materials", "shop_press_quotes"],
 };
 
@@ -126,6 +132,8 @@ const DEFAULT_VALUES = {
   about_team_heading: "",
   about_team_subtext: "",
   shop_team_members: [],
+  about_timeline: [],
+  about_studio_gallery: [],
   shop_materials: [],
   shop_press_quotes: [],
 };
@@ -840,6 +848,80 @@ const AboutSiteConfig = () => {
     </div>
   );
 
+  const TimelineTab = (
+    <div>
+      <p className="mb-3 text-xs text-gray-500">
+        Brand journey milestones rendered as a timeline on the About page. Each
+        row has a year, a milestone, and an optional image.
+      </p>
+      <RowEditor
+        rows={ensureArray(values.about_timeline)}
+        onChange={(rows) => setField("about_timeline", rows)}
+        blank={{ year: "", milestone: "", imageUrl: "" }}
+        addLabel="Add milestone"
+        renderRow={(row, update) => (
+          <div className="grid gap-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <input
+                value={row.year || ""}
+                onChange={(e) => update({ year: e.target.value })}
+                placeholder="2024"
+                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              />
+              <input
+                value={row.milestone || ""}
+                onChange={(e) => update({ milestone: e.target.value })}
+                placeholder="Saga Elite founded"
+                className="md:col-span-2 rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              />
+            </div>
+            <ImagePicker
+              value={row.imageUrl || ""}
+              onChange={(url) => update({ imageUrl: url })}
+              label="Upload image (optional)"
+            />
+          </div>
+        )}
+      />
+    </div>
+  );
+
+  const GalleryTab = (
+    <div>
+      <p className="mb-3 text-xs text-gray-500">
+        Studio / atelier gallery shown on the About page. Add images with
+        captions and alt text for accessibility.
+      </p>
+      <RowEditor
+        rows={ensureArray(values.about_studio_gallery)}
+        onChange={(rows) => setField("about_studio_gallery", rows)}
+        blank={{ imageUrl: "", caption: "", altText: "" }}
+        addLabel="Add image"
+        renderRow={(row, update) => (
+          <div className="grid gap-3">
+            <ImagePicker
+              value={row.imageUrl || ""}
+              onChange={(url) => update({ imageUrl: url })}
+              label="Upload image"
+            />
+            <input
+              value={row.caption || ""}
+              onChange={(e) => update({ caption: e.target.value })}
+              placeholder="Caption (optional)"
+              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+            />
+            <input
+              value={row.altText || ""}
+              onChange={(e) => update({ altText: e.target.value })}
+              placeholder="Alt text for screen readers"
+              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+            />
+          </div>
+        )}
+      />
+    </div>
+  );
+
   const MiscTab = (
     <div className="grid gap-6">
       <div>
@@ -919,6 +1001,8 @@ const AboutSiteConfig = () => {
     stats: StatsTab,
     values: ValuesTab,
     team: TeamTab,
+    timeline: TimelineTab,
+    gallery: GalleryTab,
     misc: MiscTab,
   };
 

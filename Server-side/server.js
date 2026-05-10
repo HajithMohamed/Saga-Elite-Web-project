@@ -64,6 +64,7 @@ const couponRoutes = require("./Routes/coupon-routes");
 const influencerRoutes = require("./Routes/influencer-routes");
 const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
+const ManualPayment = require("./Models/ManualPayment");
 
 app.use(
   helmet({
@@ -211,6 +212,14 @@ const startServer = async () => {
   try {
     await connectToDB();
     await seedAboutSiteDefaults();
+    // Reconcile Mongo's actual indexes with the current schema. Required
+    // because changing index options (e.g. sparse → partialFilterExpression)
+    // does not drop the old index — Mongoose only adds new ones.
+    try {
+      await ManualPayment.syncIndexes();
+    } catch (err) {
+      logger.error("ManualPayment.syncIndexes failed", { error: err?.message });
+    }
     startManualPaymentCleanupJob();
     startBankInboxWatcher();
 
