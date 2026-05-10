@@ -249,7 +249,7 @@ function App() {
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="activity" element={<ActivityTimeline />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
-            <Route path="account" element={<Navigate to="/shopping/account" replace />} />
+            <Route path="account" element={<Account />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
             <Route path="drop-analytics" element={<PermissionGuard permission="viewAnalytics"><DropAnalytics /></PermissionGuard>} />
             <Route path="analytics" element={<PermissionGuard permission="viewAnalytics"><AdminAnalytics /></PermissionGuard>} />

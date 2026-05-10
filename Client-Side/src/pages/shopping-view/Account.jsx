@@ -283,9 +283,11 @@ const Account = () => {
     },
   ];
 
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
-    <div className="min-h-screen bg-background text-on-surface">
-      <div className="container mx-auto max-w-7xl px-4 py-10 md:px-6">
+    <div className={`${isAdminRoute ? "admin-page-shell" : "min-h-screen bg-background text-on-surface"}`}>
+      <div className={`${isAdminRoute ? "" : "container mx-auto max-w-7xl px-4 py-10 md:px-6"}`}>
         <nav className="mb-8 flex gap-2 text-xs uppercase text-muted-foreground">
           <Link to={homeLink}>{isAdmin ? "Dashboard" : "Home"}</Link>
           <ChevronRight className="h-3 w-3" />

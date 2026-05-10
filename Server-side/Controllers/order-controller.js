@@ -26,6 +26,7 @@ const {
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
+const runInTransaction = require("../Utils/safe-transaction");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
 
@@ -164,195 +165,188 @@ const createOrder = catchAsync(async (req, res, next) => {
 
   const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
 
-  const session = await mongoose.startSession();
+  const createdOrder = await runInTransaction(async (session) => {
+    const orderItems = [];
+    let totalAmount = 0;
 
-  let createdOrder;
+    for (const item of items) {
+      const { productId, variantSku, quantity } = item;
 
-  try {
-    await session.withTransaction(async () => {
-      const orderItems = [];
-      let totalAmount = 0;
+      if (!productId || !variantSku || !quantity || quantity <= 0) {
+        throw new AppError("Each order item must include a product, variant, and positive quantity", 400);
+      }
 
-      for (const item of items) {
-        const { productId, variantSku, quantity } = item;
+      const product = await Product.findById(productId).session(session);
 
-        if (!productId || !variantSku || !quantity || quantity <= 0) {
-          throw new AppError("Each order item must include a product, variant, and positive quantity", 400);
-        }
+      if (!product || !product.isActive) {
+        throw new AppError("Product not found or unavailable", 404);
+      }
 
-        const product = await Product.findById(productId).session(session);
+      const variant = product.variants.find((variant) => variant.sku === variantSku);
 
-        if (!product || !product.isActive) {
-          throw new AppError("Product not found or unavailable", 404);
-        }
+      if (!variant) {
+        throw new AppError("Selected product variant not found", 404);
+      }
 
-        const variant = product.variants.find((variant) => variant.sku === variantSku);
+      if (variant.stock < quantity) {
+        throw new AppError(
+          `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
+          400,
+        );
+      }
 
-        if (!variant) {
-          throw new AppError("Selected product variant not found", 404);
-        }
+      if (product.isLimited) {
+        const previousQuantityResult = await Order.aggregate([
+          {
+            $match: user
+              ? { user: user._id }
+              : { guest: guest._id }
+          },
+          { $unwind: "$items" },
+          { $match: { "items.product": product._id } },
+          { $group: { _id: null, totalQuantity: { $sum: "$items.quantity" } } },
+        ]).session(session);
 
-        if (variant.stock < quantity) {
+        const previouslyOrdered = previousQuantityResult?.[0]?.totalQuantity || 0;
+
+        if (previouslyOrdered + quantity > product.maxPerUser) {
           throw new AppError(
-            `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
+            `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
             400,
           );
         }
+      }
 
-        if (product.isLimited) {
-          const previousQuantityResult = await Order.aggregate([
-            {
-              $match: user
-                ? { user: user._id }
-                : { guest: guest._id }
-            },
-            { $unwind: "$items" },
-            { $match: { "items.product": product._id } },
-            { $group: { _id: null, totalQuantity: { $sum: "$items.quantity" } } },
-          ]).session(session);
+      const priceBeforeDiscount =
+        product.basePrice + (variant.priceAdjustment || 0);
+      const unitPrice = Math.round(
+        priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
+      );
+      const itemTotal = unitPrice * quantity;
 
-          const previouslyOrdered = previousQuantityResult?.[0]?.totalQuantity || 0;
+      variant.stock -= quantity;
+      product.soldCount += quantity;
 
-          if (previouslyOrdered + quantity > product.maxPerUser) {
-            throw new AppError(
-              `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
-              400,
-            );
-          }
-        }
+      await product.save({ session, validateModifiedOnly: true });
 
-        const priceBeforeDiscount =
-          product.basePrice + (variant.priceAdjustment || 0);
-        const unitPrice = Math.round(
-          priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
+      orderItems.push({
+        product: product._id,
+        productName: product.name,
+        productArtNo: product.artNo,
+        productSlug: product.slug,
+        variantSku: variant.sku,
+        size: variant.size,
+        color: variant.color,
+        quantity,
+        unitPrice,
+        totalPrice: itemTotal,
+      });
+
+      totalAmount += itemTotal;
+    }
+
+    // Coupon evaluation (optional). Throws AppError on validation failure,
+    // which will roll back the transaction.
+    let appliedCoupon = null;
+    let appliedDiscount = 0;
+    if (couponCode && String(couponCode).trim()) {
+      const productIds = items.map((it) => it.productId);
+      const result = await evaluateCoupon({
+        code: couponCode,
+        subtotal: totalAmount,
+        productIds,
+      });
+      if (result) {
+        appliedCoupon = result.coupon;
+        appliedDiscount = result.discount;
+        totalAmount = Math.max(0, totalAmount - appliedDiscount);
+        // Increment usage atomically; respect maxUses if defined.
+        const updateResult = await Coupon.updateOne(
+          {
+            _id: appliedCoupon._id,
+            $or: [
+              { maxUses: null },
+              { $expr: { $lt: ["$usedCount", "$maxUses"] } },
+            ],
+          },
+          { $inc: { usedCount: 1 } },
+          { session }
         );
-        const itemTotal = unitPrice * quantity;
-
-        variant.stock -= quantity;
-        product.soldCount += quantity;
-
-        await product.save({ session, validateModifiedOnly: true });
-
-        orderItems.push({
-          product: product._id,
-          productName: product.name,
-          productArtNo: product.artNo,
-          productSlug: product.slug,
-          variantSku: variant.sku,
-          size: variant.size,
-          color: variant.color,
-          quantity,
-          unitPrice,
-          totalPrice: itemTotal,
-        });
-
-        totalAmount += itemTotal;
-      }
-
-      // Coupon evaluation (optional). Throws AppError on validation failure,
-      // which will roll back the transaction.
-      let appliedCoupon = null;
-      let appliedDiscount = 0;
-      if (couponCode && String(couponCode).trim()) {
-        const productIds = items.map((it) => it.productId);
-        const result = await evaluateCoupon({
-          code: couponCode,
-          subtotal: totalAmount,
-          productIds,
-        });
-        if (result) {
-          appliedCoupon = result.coupon;
-          appliedDiscount = result.discount;
-          totalAmount = Math.max(0, totalAmount - appliedDiscount);
-          // Increment usage atomically; respect maxUses if defined.
-          const updateResult = await Coupon.updateOne(
-            {
-              _id: appliedCoupon._id,
-              $or: [
-                { maxUses: null },
-                { $expr: { $lt: ["$usedCount", "$maxUses"] } },
-              ],
-            },
-            { $inc: { usedCount: 1 } },
-            { session }
-          );
-          if (updateResult.modifiedCount === 0) {
-            throw new AppError("Coupon usage limit reached", 400);
-          }
+        if (updateResult.modifiedCount === 0) {
+          throw new AppError("Coupon usage limit reached", 400);
         }
       }
+    }
 
-      const dropId = req.body.dropId || null;
-      let selectedGift = null;
+    const dropId = req.body.dropId || null;
+    let selectedGift = null;
 
-      if (dropId) {
-        selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
-      }
+    if (dropId) {
+      selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
+    }
 
-      if (!selectedGift) {
-        selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
-      }
+    if (!selectedGift) {
+      selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
+    }
 
-      const orderPayload = {
-        user: user ? user._id : undefined,
-        guest: guest ? guest._id : undefined,
-        guestEmail: guestEmailNormalized,
-        items: orderItems,
-        totalAmount,
-        shippingAddress: shippingAddress.trim(),
-        contactNumber: contactNumber.trim(),
-        paymentMethod,
-        paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
-        referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
-        notes: notes?.trim(),
-        couponCode: appliedCoupon ? appliedCoupon.code : null,
-        couponDiscount: appliedDiscount || 0,
-        status: isBankTransferPayment
-          ? "pending_payment"
-          : ["manual", "cash"].includes(paymentMethod)
-            ? "verification_pending"
-            : "confirmed",
-        paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
-        expiresAt: isLegacyManualPayment || paymentMethod === "cash"
-          ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
-          : undefined,
+    const orderPayload = {
+      user: user ? user._id : undefined,
+      guest: guest ? guest._id : undefined,
+      guestEmail: guestEmailNormalized,
+      items: orderItems,
+      totalAmount,
+      shippingAddress: shippingAddress.trim(),
+      contactNumber: contactNumber.trim(),
+      paymentMethod,
+      paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
+      referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
+      notes: notes?.trim(),
+      couponCode: appliedCoupon ? appliedCoupon.code : null,
+      couponDiscount: appliedDiscount || 0,
+      status: isBankTransferPayment
+        ? "pending_payment"
+        : ["manual", "cash"].includes(paymentMethod)
+          ? "verification_pending"
+          : "confirmed",
+      paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
+      expiresAt: isLegacyManualPayment || paymentMethod === "cash"
+        ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
+        : undefined,
+    };
+
+    if (selectedGift) {
+      orderPayload.gift = {
+        giftId: selectedGift._id,
+        revealed: false,
       };
+    }
 
-      if (selectedGift) {
-        orderPayload.gift = {
-          giftId: selectedGift._id,
-          revealed: false,
-        };
-      }
+    const [orderDocument] = await Order.create([orderPayload], { session });
+    
+    // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
+    if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
+      const purchaseRows = orderPayload.items.map((item) => ({
+        userId: user ? user._id : null,
+        productId: item.productId,
+        action: "purchase",
+        category: item.category || "",
+        metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
+      }));
+      UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
+    }
 
-      const [orderDocument] = await Order.create([orderPayload], { session });
-      createdOrder = orderDocument;
+    if (user && normalizedCheckoutMode === "cart") {
+      user.cart = [];
+      await user.save({ session, validateModifiedOnly: true });
+    }
 
-      // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
-      if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
-        const purchaseRows = orderPayload.items.map((item) => ({
-          userId: user ? user._id : null,
-          productId: item.productId,
-          action: "purchase",
-          category: item.category || "",
-          metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
-        }));
-        UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
-      }
+    if (guest) {
+      guest.orderCount += 1;
+      await guest.save({ session });
+    }
 
-      if (user && normalizedCheckoutMode === "cart") {
-        user.cart = [];
-        await user.save({ session, validateModifiedOnly: true });
-      }
-
-      if (guest) {
-        guest.orderCount += 1;
-        await guest.save({ session });
-      }
-    });
-  } finally {
-    session.endSession();
-  }
+    return orderDocument;
+  });
 
   const orderNotification = {
     userId: user ? user._id : null,
