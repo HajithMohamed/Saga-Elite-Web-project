@@ -98,6 +98,7 @@ const initialProductForm = {
   discountPercent: "0",
   costPrice: "",
   maxPerUser: "",
+  lowStockThreshold: "",
   isFeatured: false,
   isActive: true,
   isLimited: false,
@@ -351,6 +352,7 @@ const Product = () => {
       discountPercent: product.discountPercent || "0",
       costPrice: product.costPrice ?? "",
       maxPerUser: product.maxPerUser ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
@@ -1414,9 +1416,21 @@ const Product = () => {
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                 transition={{ duration: 0.2 }}
-                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
+                className={`group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border ${
+                  bulk.isSelected(product._id)
+                    ? "border-saga-primary/60 bg-saga-primary/5"
+                    : "border-outline-variant/5 bg-surface-container/30"
+                } p-6 transition-colors hover:bg-surface-bright/80`}
               >
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${product.name}`}
+                  checked={bulk.isSelected(product._id)}
+                  onChange={() => bulk.toggle(product._id)}
+                  className="absolute top-3 right-3 z-10 h-4 w-4 cursor-pointer accent-saga-primary md:top-1/2 md:right-auto md:left-1 md:-translate-y-1/2"
+                  data-testid="admin-bulk-row-select"
+                />
 
                 <div className="col-span-1 md:col-span-5 flex items-center gap-6">
                   <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
@@ -1546,6 +1560,26 @@ const Product = () => {
     </motion.div>
     </AdminPage>
     <AnimatePresence mode="wait">{showForm ? atelierForm : null}</AnimatePresence>
+    <BulkActionBar
+      count={bulk.count}
+      onClear={bulk.clear}
+      pending={bulkPending}
+      label="products selected"
+      actions={[
+        { label: "Activate", onClick: () => runBulkProductAction("activate") },
+        { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
+        {
+          label: "Delete",
+          variant: "destructive",
+          confirm: {
+            title: `Delete ${bulk.count} product${bulk.count === 1 ? "" : "s"}?`,
+            body: "Products will be permanently removed. Order history is preserved but the product pages will return 404.",
+            confirmLabel: "Delete forever",
+          },
+          onClick: () => runBulkProductAction("delete"),
+        },
+      ]}
+    />
     </Fragment>
   );
 };
