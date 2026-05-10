@@ -12,6 +12,7 @@ import reviewReducer from "./reviewSlice";
 import recommendationsReducer from "./recommendationsSlice";
 import smartAlertsReducer from "./smartAlertsSlice";
 import liveProductReducer from "./live-product-slice";
+import adminSearchReducer from "./adminSearchSlice";
 
 const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ const store = configureStore({
     recommendations: recommendationsReducer,
     smartAlerts: smartAlertsReducer,
     liveProduct: liveProductReducer,
+    adminSearch: adminSearchReducer,
   },
 });
 

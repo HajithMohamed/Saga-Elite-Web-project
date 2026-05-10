@@ -12,8 +12,11 @@ const {
   reviewsAnalytics,
 } = require("../Controllers/analytics-controller");
 const { validateObjectIdParam } = require("../Middlewares/request-validation");
+const { globalSearch } = require("../Controllers/admin-search-controller");
 
 const router = express.Router();
+
+router.get("/search", authMiddleware, requireAdmin, globalSearch);
 
 router.get("/users/export", authMiddleware, requireSuperAdmin, exportCustomersCsv);
 router.get(

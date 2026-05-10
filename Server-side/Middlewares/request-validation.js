@@ -480,6 +480,12 @@ const validateProductCreate = createValidationMiddleware((req) => {
     isActive: sanitizeBoolean(req.body.isActive ?? true, "isActive"),
     isLimited: sanitizeBoolean(req.body.isLimited ?? false, "isLimited"),
     maxPerUser: sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true }),
+    lowStockThreshold:
+      req.body.lowStockThreshold === undefined ||
+      req.body.lowStockThreshold === null ||
+      req.body.lowStockThreshold === ""
+        ? undefined
+        : sanitizeNumber(req.body.lowStockThreshold, "lowStockThreshold", { min: 0, integer: true }),
     variants: sanitizeVariants(req.body.variants, { required: true }),
   };
 });
@@ -513,6 +519,12 @@ const validateProductUpdate = createValidationMiddleware((req) => {
   if (req.body.isActive !== undefined) body.isActive = sanitizeBoolean(req.body.isActive, "isActive");
   if (req.body.maxPerUser !== undefined) body.maxPerUser = sanitizeNumber(req.body.maxPerUser, "maxPerUser", { min: 1, integer: true });
   if (req.body.isLimited !== undefined) body.isLimited = sanitizeBoolean(req.body.isLimited, "isLimited");
+  if (req.body.lowStockThreshold !== undefined) {
+    body.lowStockThreshold =
+      req.body.lowStockThreshold === null || req.body.lowStockThreshold === ""
+        ? null
+        : sanitizeNumber(req.body.lowStockThreshold, "lowStockThreshold", { min: 0, integer: true });
+  }
   if (req.body.variants !== undefined) body.variants = sanitizeVariants(req.body.variants, { required: true });
 
   if (!Object.keys(body).length) {

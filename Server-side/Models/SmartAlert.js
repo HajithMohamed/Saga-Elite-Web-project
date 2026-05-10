@@ -8,6 +8,7 @@ const smartAlertSchema = new mongoose.Schema(
         "refund_spike",
         "cancellation_spike",
         "low_stock_critical",
+        "low_stock_warning",
         "conversion_drop",
         "revenue_drop",
         "review_negative_streak",

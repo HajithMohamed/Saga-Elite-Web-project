@@ -259,6 +259,12 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    lowStockThreshold: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
