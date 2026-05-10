@@ -27,6 +27,12 @@ const variantSchema = new mongoose.Schema(
       maxlength: 30,
     },
 
+    colorCode: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+    },
+
     stock: {
       type: Number,
       required: true,
@@ -68,6 +74,42 @@ const productSchema = new mongoose.Schema(
     },
 
     description: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
+    story: {
+      type: String,
+      trim: true,
+      maxlength: 3000,
+    },
+
+    fabric: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+
+    gsm: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    fitType: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    careInstructions: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+
+    sizeGuide: {
       type: String,
       trim: true,
       maxlength: 2000,
