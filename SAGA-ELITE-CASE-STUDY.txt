@@ -1,0 +1,1183 @@
+================================================================================
+                    SAGA ELITE — COMPLETE PROJECT CASE STUDY
+              Luxury Limited-Edition Streetwear Platform · Sri Lanka
+                              Document version: 1.0
+                              Date authored: 2026-05-10
+================================================================================
+
+
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+  1. Executive Summary
+  2. Project Overview
+  3. Tech Stack & Architecture
+  4. Public-Facing Pages — Deep Dive
+       4.1  Home Page
+       4.2  About Page
+       4.3  Contact Page
+       4.4  Privacy Policy
+       4.5  Terms & Conditions
+       4.6  Other Legal / Info Pages
+       4.7  Page-by-Page Importance Ranking
+  5. Admin Management — Current State
+       5.1  Admin Shell & Navigation
+       5.2  Roles & Permissions Matrix
+       5.3  Admin Pages Inventory (28 pages)
+       5.4  Site Configuration the Admin Can Edit
+       5.5  Operational Features
+  6. Real-World Admin Gap Analysis
+       6.1  Inventory
+       6.2  Returns & Refunds
+       6.3  Customer Segmentation
+       6.4  Email Marketing
+       6.5  Marketing & Campaigns
+       6.6  Analytics
+       6.7  Content Management
+       6.8  Theme & Customization
+       6.9  Localization
+       6.10 Permissions UX
+       6.11 System / DevOps
+       6.12 Trust & Safety
+  7. Public-Facing Page Gaps (vs ecommerce standard)
+  8. Prioritized Roadmap (next 3 months)
+  9. Production-Readiness Scorecard
+ 10. Appendix
+       A. Full Route Table
+       B. Permission Flags & Coverage
+       C. Shop Config Keys
+       D. External Integrations
+       E. Glossary
+
+
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+Saga Elite is a bespoke MERN-stack ecommerce platform for a Sri Lankan luxury
+streetwear brand. It sells limited-edition "drops" alongside an always-on
+catalog, with manual bank-transfer payments (PayHere available as a fallback)
+and Sri Lanka-only delivery. The brand identity leans editorial — Cinzel +
+Playfair Display headlines, JetBrains Mono numerics, a black/gold palette
+(#0a0a0a / #f2ca50), and heavy use of Framer Motion for cinematic transitions.
+
+By the numbers:
+  - 28 admin pages across 7 sidebar sections
+  - 10 fine-grained permission flags + 6 roles + 5 sub-roles
+  - 7 production-grade public legal/info pages (Home, About, Contact,
+    Privacy Policy, Terms & Conditions, Refund Policy, Delivery Policy)
+  - 11+ Redux slices, real-time updates via Socket.IO, MongoDB Atlas storage
+  - Cloudinary-backed image management with admin drag-to-reorder UI
+
+Production-readiness verdict by area:
+  - Storefront catalog .................. 9/10  Production-ready
+  - Drops experience .................... 9/10  Production-ready
+  - Cart & checkout ..................... 8/10  Manual-payment friction
+  - Member account / wishlist ........... 8/10  Production-ready
+  - Admin core CRUD ..................... 9/10  Production-ready
+  - Admin marketing tooling ............. 5/10  Push-only, no email
+  - Admin analytics ..................... 7/10  Strong charts, no funnels
+  - Content management .................. 4/10  Hardcoded copy, no FAQ/size
+  - Localization ........................ 2/10  LKR + English + LK only
+  - Compliance posture .................. 6/10  No cookie banner, no a11y
+
+Bottom line: the platform is fit for ~1,000 orders/month at its current scope.
+Scaling to multi-region, multi-currency, multi-thousand-orders/month requires
+the items listed in §6 (admin gaps) and §7 (public-page gaps).
+
+
+
+================================================================================
+2. PROJECT OVERVIEW
+================================================================================
+
+Brand
+-----
+Saga Elite positions itself as Sri Lanka's premier luxury streetwear house.
+Voice is editorial ("Quietly made.", "Sent to ninety-three countries", "Hand
+finished", "No restock"). The product cadence is "drops" — small numbered
+chapters (DROP 01..DROP 0N) that go live for a limited window, sell what they
+sell, then archive forever.
+
+Audience
+--------
+  - Members-first: the brand pushes account creation hard via newsletter,
+    "Join the Elite" CTAs, VIP early-access, and a multi-tier loyalty model
+    (Standard → Elite → Rare → Legend → VIP).
+  - Sri Lanka only: every checkout, shipping zone, currency display and
+    delivery promise is LK-bound. The "Sent to ninety-three countries"
+    marquee is brand storytelling, not literal current scope.
+
+Business model
+--------------
+  - Drops: scheduled limited-edition releases with countdowns, member
+    early-access, and post-launch archive
+  - Always-on catalog: the standard product listing across Ladies / Gents /
+    Unisex categories
+  - Offers & Deals: flash sales, seasonal, clearance, aging-stock, tier
+    discounts (admin can choose)
+  - Mystery Gift hook: every order may include a surprise collectible item
+    (Common / Rare / Epic / Legendary rarity), used as a brand-loyalty lever
+  - Payments: manual bank transfer (Sampath Bank, Hatton, account
+    108052612262, name N.Gayathree) is the primary path, with a 24-hour
+    payment window. PayHere is the digital alternative.
+
+
+
+================================================================================
+3. TECH STACK & ARCHITECTURE
+================================================================================
+
+Client (Client-Side/)
+---------------------
+  Framework ........... React 19.2.0
+  Build tool .......... Vite 7.3.1
+  Routing ............. React Router DOM 7.13.1
+  Styling ............. Tailwind CSS 3.4.19 (custom design tokens, no DaisyUI)
+  State ............... Redux Toolkit 2.11.2
+  Animation ........... Framer Motion 12.38.0, GSAP 3.15.0
+  Carousel ............ Embla Carousel 8.6.0
+  3D / hero ........... React Three Fiber 9.6.1, Spline
+  Smooth scroll ....... Lenis (use-lenis hook)
+  Real-time ........... Socket.IO Client 4.8.3
+  HTTP ................ Axios 1.13.5
+  Iconography ......... Lucide React
+
+Server (Server-side/)
+---------------------
+  Runtime ............. Node.js + Express
+  Database ............ MongoDB (Mongoose ODM)
+  Real-time ........... Socket.IO
+  Image storage ....... Cloudinary
+  Email ............... Mailtrap / Nodemailer
+  Payments ............ PayHere (cards) + manual bank transfer pipeline
+
+Infra
+-----
+  Monorepo ............ npm workspaces
+  Containers .......... docker-compose.yml at repo root
+  Env shared via ...... .env at repo root
+
+Architecture (high level)
+-------------------------
+
+   ┌─────────────┐           ┌──────────────┐           ┌──────────────┐
+   │   Browser   │◀── HTTP ──│  React SPA   │── REST ──▶│  Express API │
+   │             │           │  (Vite dev   │           │              │
+   │             │◀──── Socket.IO  ───────────────────▶ │              │
+   └─────────────┘           │   /  static  │           │              │
+                             └──────────────┘           └──────┬───────┘
+                                                               │
+                                                               ▼
+                            ┌──────────────┐           ┌──────────────┐
+                            │  Cloudinary  │◀──────────│  MongoDB     │
+                            │  (images)    │           │  Atlas       │
+                            └──────────────┘           └──────────────┘
+                                                               │
+                            ┌──────────────┐                   │
+                            │  PayHere     │◀──────────────────┤
+                            │  (cards)     │                   │
+                            └──────────────┘                   │
+                            ┌──────────────┐                   │
+                            │  Mailtrap    │◀──────────────────┘
+                            │  (email)     │
+                            └──────────────┘
+
+Key client patterns
+-------------------
+  - File-based routing in App.jsx; admin routes lazy-loaded via React.lazy
+  - URL-driven filters on listing pages (shareable + bookmarkable)
+  - PermissionGuard wraps every admin route (client guard) AND every server
+    endpoint is double-protected by requireAdmin/requirePermission middleware
+  - Live updates via Socket.IO: live-product-slice, plus admin sidebar badges
+    that subscribe to payment:new_pending / review:refresh / admin:refresh
+
+
+
+================================================================================
+4. PUBLIC-FACING PAGES — DEEP DIVE
+================================================================================
+
+The site exposes ~10 public surfaces, of which 5 are the user-named focus
+(Home, About, Contact, Privacy, T&C). All sit under PublicLayout.jsx, which
+mounts MainHeader at the top and MainFooter at the bottom of every page.
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.1 HOME PAGE
+────────────────────────────────────────────────────────────────────────────────
+
+File:   Client-Side/src/pages/shopping-view/Home.jsx
+Route:  /
+Status: Production-ready
+
+Sections rendered (top → bottom):
+
+   1. Announcement Bar             — drop countdown / live-drop banner
+   2. Hero Carousel                — Cloudinary-hosted slides, Embla-driven
+   3. Brand Manifesto              — editorial body copy
+   4. Editorial Metrics Strip      — "Made in 14 chapters · 93 countries"
+   5. Asymmetric Category Grid     — Ladies / Gents / Unisex tiles
+   6. Live Drop OR Countdown       — conditional: shows the active drop OR
+                                     a countdown to the next scheduled drop
+   7. Drop Story                   — narrative copy framing the current drop
+   8. Rare Pieces Slider           — trending products carousel
+   9. "For You" Personalized Rails — three rails fed by the recommendations
+                                     engine (latest / wished / sold)
+  10. Offers Slider                — active promotional offers
+  11. Mystery Gift Spline          — interactive 3D scene (React Three Fiber)
+  12. Why Saga Elite               — value proposition triad
+  13. Trending Fits Marquee        — auto-scrolling product strip
+  14. Community Feed               — UGC / social grid
+  15. Testimonials                 — curated customer quotes
+  16. VIP Membership CTA           — sign-up for early-access & rewards
+  17. Cinematic Footer             — overrides default footer styling
+
+Image sources
+-------------
+All hero / banner / category-logo images are uploaded via the admin
+"Home Images" page and stored in Cloudinary. The admin can drag-to-reorder
+them; client-side compression is applied at upload time.
+
+Content sources
+---------------
+  - Hero slides + offers + category images + arrivals + trending + social
+    images come from one consolidated API call: getLandingData()
+  - Next-drop countdown comes from fetchUpcomingDrop()
+  - Promise.all parallelizes the fetches; if either fails the page renders
+    with empty arrays + a toast notification (no broken layout)
+
+What the admin can already control
+----------------------------------
+  - Every image (hero, category, banner, logo)
+  - Drop scheduling + active-drop selection
+  - Hero eyebrow + headline copy (via SEO & Branding settings)
+  - Brand stats (chapters, countries, hand-finished hours/piece)
+  - Social URLs surfaced in footer + community block
+
+What the admin cannot yet control (gap)
+---------------------------------------
+  - Manifesto body copy (hardcoded)
+  - Drop-story narrative copy (hardcoded per drop type)
+  - "Why Saga Elite" bullet content (hardcoded)
+  - Testimonials curation (no admin UI to add/promote/order them)
+  - Mystery Gift Spline scene swap (asset is hardcoded)
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.2 ABOUT PAGE
+────────────────────────────────────────────────────────────────────────────────
+
+File:   Client-Side/src/pages/Legal/AboutPage.jsx  (753 lines)
+Route:  /about
+Status: Production-ready
+
+Sections rendered (top → bottom):
+
+   1. Hero "Quietly made."         — editorial cover with animated lockup
+   2. Values Marquee               — scrolling brand mantras
+   3. Atelier Brand Moment         — animated solar logo, "A small house"
+   4. Origin Story                 — founder Hajith de Silva intro + arc
+   5. The Ledger                   — animated stats: 84 pieces / 93 countries /
+                                     14 chapters / 36 hours per piece
+   6. Pull Quote                   — full-bleed image with founder quote
+   7. House Rules                  — three values: Slowly · Honestly · Once
+   8. Materials Ledger             — wool / cotton / linings / buttons / thread
+                                     sourcing notes
+   9. Atelier Address              — location card, contact info, booking CTA
+  10. Connect / Social             — Instagram / Facebook / TikTok
+  11. Next Chapter CTA             — VIP membership signup
+
+Content split (static vs admin-controlled)
+------------------------------------------
+  Static (hardcoded in the JSX):
+    - Brand story, values, materials text (lines 103–131)
+    - Origin / pull quote / house rules
+    - Hero & founder Unsplash imagery (lines 27–34)
+
+  Admin-controlled (via useShopAbout() hook + AboutSiteConfig):
+    - Email, phone, WhatsApp (CONTACT_INFO_FALLBACK at line 13)
+    - Business hours
+    - Social links
+    - Address
+    - Logo images
+
+Importance
+----------
+For a luxury price-point brand, the About page is the second-most-loaded
+trust artefact (after product detail). It is where customers verify "is this
+brand real" before paying ~LKR 10–25k for a piece. Saga Elite handles the
+narrative well — voice, founder presence, materials transparency — but the
+admin cannot edit the narrative without a code deploy.
+
+Gaps
+----
+  - Materials text is static; admin should be able to update sourcing copy
+    when fabric origin changes
+  - Founder bio is hardcoded; only photo URL is in shop-config
+  - No timeline / journal section showing past drops or brand milestones
+  - No press / awards grid (would help legitimacy)
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.3 CONTACT PAGE
+────────────────────────────────────────────────────────────────────────────────
+
+File:   Client-Side/src/pages/Legal/ContactPage.jsx  (910 lines)
+Route:  /contact
+Status: Production-ready
+
+Sections rendered:
+
+   1. Hero "Write to the atelier"
+   2. Marquee — scrolling messaging strip
+   3. Brand Moment — animated logo, "We read every note"
+   4. Quick Channels (3-column cards):
+        - WhatsApp (direct link, marketed as fastest)
+        - Email (mailto, for longer notes / returns / wholesale)
+        - Instagram DM
+   5. Main Contact Form:
+        - Name, email inputs
+        - Subject pills: Order inquiry / Return request / Payment issue /
+          General question / Press·Wholesale / Other
+        - Message textarea (500-char max)
+        - Atelier hours card alongside the form
+        - Client-side validation: email regex + min-10-char message
+        - Success/error toasts
+   6. Atelier Address Ledger (location, phone, booking CTA)
+   7. Social Links (Instagram, Facebook, TikTok)
+
+Form behaviour
+--------------
+  Endpoint:  POST /contact  (relative to API_V1_URL)
+  Payload:   { name, email, subject, message }
+  On success: toast + form reset
+  On error:   toast with fallback copy
+  Persistence: stored server-side, surfaced in admin "Contact Inquiries"
+               page with status workflow (new → in_progress → resolved →
+               closed) and an admin-notes field
+
+Channels presented to the customer
+----------------------------------
+  - WhatsApp     fastest                  link
+  - Email        long notes, B2B          mailto
+  - Instagram    social                   external link
+  - Phone        copyable
+  - Address      with map link
+
+Hours (currently hardcoded — should move to shop config)
+--------------------------------------------------------
+  Mon–Fri:  09:00 – 18:00
+  Saturday: 10:00 – 16:00
+  Sunday:   Closed
+
+Importance
+----------
+The Contact page is the operational SLA expectation-setter. Saga Elite
+publishes WhatsApp as the "fastest" channel — that is a commitment, and the
+admin Contact Inquiries queue is the operational backbone that fulfils it.
+Strong setup; the only weakness is hours being hardcoded.
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.4 PRIVACY POLICY
+────────────────────────────────────────────────────────────────────────────────
+
+File:    Client-Side/src/pages/Legal/PrivacyPolicyPage.jsx  (136 lines)
+Route:   /legal/privacy-policy
+Status:  Production-ready (real legal content, not placeholder)
+Updated: 2026-05-02
+
+Sections (in order):
+
+   1. Introduction
+   2. Data We Collect
+        - Name, email, phone, address, order history, IP
+        - Note: PayHere handles card details — never stored on Saga's servers
+   3. How We Use Your Data
+        - Order processing, WhatsApp/email notifications, support, marketing
+   4. Data Sharing
+        - PayHere (payments), Cloudinary (images), Mailtrap/Nodemailer (email)
+        - Explicit "We do NOT sell data" statement
+   5. Data Storage
+        - MongoDB Atlas
+        - SSL/TLS in transit
+        - 2-year retention after last order
+   6. Your Rights
+        - Access, correction, deletion (request via email)
+   7. Cookies
+        - Session + preference cookies
+        - Browser-level control (no consent banner UI)
+   8. Delivery Scope
+        - Sri Lanka only
+   9. Contact
+        - Email + phone
+
+Importance
+----------
+This is the legal floor. Real content, jurisdictionally appropriate for
+Sri Lanka, names third parties explicitly. Above the bar for most LK
+ecommerce.
+
+Gaps
+----
+  - No cookie consent banner UI (only mentioned in copy)
+  - No children/age statement
+  - No GDPR-style data-portability or explicit opt-out flow (the brand
+    plans Sri Lanka only, so GDPR isn't strictly required, but having a
+    "delete my account" button would be a trust win)
+  - "Last updated" is a static date; admin cannot bump it without a deploy
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.5 TERMS & CONDITIONS
+────────────────────────────────────────────────────────────────────────────────
+
+File:    Client-Side/src/pages/Legal/TermsConditionsPage.jsx  (122 lines)
+Route:   /legal/terms-and-conditions
+Status:  Production-ready (real content)
+Updated: 2026-05-02
+
+Sections:
+
+   1. Acceptance of Terms
+   2. About Saga Elite — Sri Lankan fashion brand, no age restrictions
+   3. Products and Pricing — LKR pricing, representative images,
+                             quantity limits enforceable
+   4. Ordering and Payment — email/WhatsApp confirmation,
+                             24-hour manual payment window,
+                             bank details inline (Sampath Bank, Hatton,
+                             account 108052612262, name N.Gayathree)
+   5. Shipping and Delivery — Sri Lanka only, 15 days estimate,
+                              risk transfer on shipping
+   6. Returns and Refunds — links to /legal/refund-policy
+   7. Governing Law — Sri Lankan jurisdiction
+   8. Contact Us — email + WhatsApp
+
+Importance
+----------
+Standard ecommerce T&C plus the operational specifics that matter for
+Saga Elite (manual payment 24-hour rule, bank details, LK-only). Solid
+baseline; would benefit from legal-counsel review at scale.
+
+Gaps
+----
+  - No IP/copyright clause (who owns brand assets, photos, designs)
+  - No acceptable-use clause (anti-scraping, anti-resale)
+  - No account-termination terms (when can the brand close an account)
+  - No force-majeure clause (covers shipping delays from external causes)
+  - No EULA-style "limitations of liability" cap
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.6 OTHER LEGAL / INFO PAGES
+────────────────────────────────────────────────────────────────────────────────
+
+Refund & Return Policy
+  File:    Client-Side/src/pages/Legal/RefundPolicyPage.jsx  (86 lines)
+  Route:   /legal/refund-policy
+  Status:  Production-ready, strict
+  Updated: 2026-05-02
+  Headline: "All sales final · NON-REFUNDABLE · Exchanges only for defect
+            or damage within 14 days · Photo proof via WhatsApp +94 77
+            070 4274 within 5 days · Customer pays return shipping"
+
+Delivery Policy
+  File:    Client-Side/src/pages/Legal/DeliveryPolicyPage.jsx  (93 lines)
+  Route:   /legal/delivery-policy
+  Status:  Production-ready
+  Updated: 2026-05-02
+  Coverage: All of Sri Lanka, no international
+  Process:  1–2 business days handling, then 15 days delivery
+  Tracking: Tracking number shared via WhatsApp
+  Payment:  Bank transfer + mobile banking only; no eZ cash
+
+Footer
+  File:   Client-Side/src/components/common-components/MainFooter.jsx (406 lines)
+  Status: Production-ready, content-driven
+  Sections:
+    - VIP CTA + newsletter signup
+    - 4-column nav (Brand · Shop · Support · Company · Elite Hub)
+    - Mobile accordion variant
+    - Community & trust bar (social + SSL/Islandwide/Visa/MC/PayHere)
+    - Copyright + live-drop status indicator
+  Editable: tagline, brand name, social links, WhatsApp — all from
+            shop config; falls back to literal defaults if config absent
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.7 PAGE-BY-PAGE IMPORTANCE RANKING
+────────────────────────────────────────────────────────────────────────────────
+
+Ranked by impact on brand perception + conversion:
+
+  1. Home                      First impression, drop hype, primary
+                               conversion path.
+  2. Product Listing & Detail  Catalog discovery + decision surface.
+                               (Documented separately — out of this case
+                                study's named scope.)
+  3. About                     Luxury trust signal, founder presence,
+                               sourcing transparency.
+  4. Contact                   Service-expectation setter, response-channel
+                               matrix.
+  5. Refund + Delivery         Pre-purchase reassurance — must be obvious
+                               because the policy is strict (final-sale).
+  6. Privacy + T&C             Legal floor; rarely read but always required;
+                               links must exist in footer for trust signals
+                               (badges + lawyer-checkbox).
+
+
+
+================================================================================
+5. ADMIN MANAGEMENT — CURRENT STATE
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+5.1 ADMIN SHELL & NAVIGATION
+────────────────────────────────────────────────────────────────────────────────
+
+Layout file:  Client-Side/src/components/admin-components/Layout.jsx
+Sidebar:      Client-Side/src/components/admin-components/SideBar.jsx
+Mobile nav:   AdminBottomNav (bottom tab bar, mobile-only)
+
+The sidebar groups all 28 admin pages into 7 sections:
+
+  1. Dashboard          → Dashboard, Smart Alerts
+  2. Store              → Products, Drops, Mystery Collectibles
+  3. Sales              → Orders, Manual Payments, Customers, Reviews,
+                          Contact Inquiries
+  4. Marketing          → Notifications, Offers & Deals, Coupons, Newsletter
+  5. Analytics          → Analytics (multi-tab), Recommendations
+  6. Settings           → Shipping, About Content, SEO & Branding
+  7. Admin Team         → (super-admin only) Manage sub-admins / staff / logs
+
+Real-time badges
+----------------
+The sidebar listens on Socket.IO for three events and updates count badges:
+  - payment:new_pending   → Manual Payments badge
+  - review:refresh        → Reviews badge
+  - admin:refresh         → Smart Alerts badge
+
+
+────────────────────────────────────────────────────────────────────────────────
+5.2 ROLES & PERMISSIONS MATRIX
+────────────────────────────────────────────────────────────────────────────────
+
+Roles (User.js model)
+---------------------
+  - admin
+  - superadmin     ┐
+  - super_admin    ┘ (legacy alias + canonical name; both match in middleware)
+  - sub_admin
+  - user           ┐
+  - customer       ┘ (storefront roles)
+
+Sub-roles (templates that drive default permissions)
+----------------------------------------------------
+  - order_manager
+  - product_manager
+  - marketing_manager
+  - support_admin
+  - inventory_manager
+
+Permission flags (10 total)
+---------------------------
+  products          Create/edit/delete products, offers, gifts, home images
+  orders            View/update order status, refund
+  users             View/manage customers, send password resets, delete
+  notifications     Send push notifications
+  drops             Create/edit/archive drops
+  verifyPayments    Review and verify manual payment proofs
+  manageReviews     Categorize / reply / feature reviews; sentiment dashboard
+  viewAnalytics     View all analytics dashboards
+  sendCampaigns     Create/manage coupons, send campaigns
+  manageInventory   Manage shipping zones, view aging stock
+
+Enforcement
+-----------
+  Server middleware:  Server-side/Middlewares/admin-middleware.js
+    - requireAdmin              gate for any admin role
+    - requireSuperAdmin         super-admin only
+    - requirePermission(name)   per-flag check; super-admins bypass
+
+  Client guard:  PermissionGuard.jsx wraps every admin route
+    - Super-admin bypass
+    - Sub-admin checked against the route's required flag
+    - Falls through to an Access Denied page with link back to dashboard
+
+
+────────────────────────────────────────────────────────────────────────────────
+5.3 ADMIN PAGES INVENTORY (28 PAGES)
+────────────────────────────────────────────────────────────────────────────────
+
+  Page                       File (under Client-Side/src/pages/admin-view/)
+  ─────────────────────────  ─────────────────────────────────────────────
+  Dashboard                  Dashboard.jsx
+    - KPIs (revenue, orders, pending payments, active users)
+    - Latest orders, drops countdown, recommendations widget
+    - Member tier breakdown, payment-method pie chart
+
+  Smart Alerts               Alerts.jsx
+    - KPI drift detection (high/medium/low severity)
+    - Acknowledge + run-checks-on-demand
+
+  Products                   Product.jsx
+    - Full CRUD + variant management (SKU, size, color, stock, price adj)
+    - Live preview, bulk image upload
+
+  Drops                      Drops.jsx
+    - Schedule, set launch time, manage per-size/color inventory, archive
+
+  Mystery Collectibles       GiftManager.jsx
+    - Create gift items with rarity (Common/Rare/Epic/Legendary)
+    - Assign to drop OR global; min-order-value condition
+
+  Orders                     Orders.jsx
+    - Kanban board: Pending → Processing → Shipped → Delivered
+    - Status updates, refunds, WhatsApp contact button, invoice download
+
+  Manual Payments            PendingPaymentsPage.jsx
+    - Verify bank-transfer proofs; approve/reject; trigger order flow
+
+  Payment Verification       PaymentVerificationPage.jsx
+    - Detail view per payment (proof image, decision, notes)
+
+  Customers                  Users.jsx
+    - Filter by tier (VIP/Legend/Rare/Elite/Standard)
+    - Tag customers (high-spender, churn-risk, etc.)
+    - Send password resets, delete users
+
+  Reviews                    ReviewModerationPage.jsx
+    - Categorize (Fit / Quality / Delivery / Style / Value)
+    - Reply in brand voice, feature/unfeature, view sentiment
+    - Flag inappropriate
+
+  Recommendations            Recommendations.jsx
+    - AI-generated insights per category (Reviews, Products, Drops,
+      Analytics, Improvements, Ideas)
+    - Regenerate on demand with confidence scores
+
+  Coupons                    Coupons.jsx
+    - Auto-suffix coupon codes, % or fixed discount
+    - Min order value, max uses, expiry, applicable categories
+    - Issued-for tracking (manual / campaign / VIP / referral / birthday)
+
+  Offers & Deals             Offers.jsx
+    - Flash sales / seasonal / clearance / aging-stock / new-product /
+      tier discounts
+    - Margin validator (15% min healthy margin warning)
+    - Show on homepage toggle, validity dates
+
+  Notifications              NotificationsManager.jsx
+    - Push notifications with brand-voice templates
+      (Drop Alert / VIP Early Access / Restock Alert / Order Update / …)
+    - Filter by type/status, update/delete sent
+
+  Home Images                HomeImages.jsx
+    - Drag-to-reorder hero/banner/logo/category-logo
+    - Upload (image-compressed), delete
+
+  Newsletter Subscribers     NewsletterSubscribersPage.jsx
+    - List with email + signup date
+    - Monthly signup timeline (read-only)
+
+  Contact Inquiries          ContactInquiriesPage.jsx
+    - View submissions; status workflow + admin notes
+
+  Shipping                   ShippingPage.jsx
+    - Per-province zones (9 LK provinces): fee, free-above threshold,
+      est days, active toggle, display order
+
+  About Site Config          AboutSiteConfig.jsx
+    - Brand / Founder / Contact / Social / Stats / Values / Team /
+      Materials tabs
+
+  SEO & Branding             SeoSettings.jsx
+    - Per-page meta (home, product-list, about, contact, drops)
+    - Maintenance mode toggle + message + ETA
+    - Bank details for manual payments
+
+  Analytics                  Analytics.jsx
+    - 7-tab dashboard (Sales, Products, Drops, Customers, Fashion,
+      Sentiment, AI Insights)
+
+  Drop Analytics             DropAnalytics.jsx
+    - Per-drop sentiment + rating distribution + AI recommendation
+      ("Produce more" / "Minor redesign" / "Reconsider")
+
+  Community Page             CommunityPage.jsx
+    - UGC photos, influencer partnerships (status workflow),
+      testimonials curation
+
+  Super Admin Dashboard      SuperAdminDashboard.jsx
+    - Sub-admin CRUD, permissions editor, deactivate, reset password
+    - Activity audit logs (per-admin + global)
+    - System stats (top earners, inventory, recent transactions)
+
+  Features / Shortcuts       Features.jsx
+    - Quick-launch grid (Orders / Products / Drops / Users / Reviews /
+      Notifications / Homepage Media / Manual Payments)
+
+
+────────────────────────────────────────────────────────────────────────────────
+5.4 SITE CONFIGURATION THE ADMIN CAN EDIT
+────────────────────────────────────────────────────────────────────────────────
+
+All settings live in shop-config keys, editable through AboutSiteConfig.jsx
+and SeoSettings.jsx tabs.
+
+Branding
+  shop_brand_name             Brand display name
+  shop_tagline                Brand tagline
+  shop_logo_url               Logo image URL (Cloudinary)
+  shop_founded_year           Founded year
+  shop_hero_eyebrow           Homepage eyebrow text
+  shop_hero_headline          Homepage headline
+  about_brand_story           Long-form brand story body
+
+Founder
+  shop_founder_name
+  shop_founder_title
+  shop_founder_bio
+  shop_founder_photo_url
+
+Contact
+  shop_contact_email
+  shop_support_email
+  shop_contact_phone
+  shop_whatsapp_number
+  shop_address_line1, line2, city, postal, country
+  shop_hours
+
+Social
+  shop_instagram_url
+  shop_facebook_url
+  shop_tiktok_url
+  shop_youtube_url
+  shop_twitter_url
+
+SEO (per page)
+  seo_home_title              + description + keywords
+  seo_product_list_*          + description + keywords
+  seo_about_*                 + description + keywords
+  seo_contact_*               + description + keywords
+  seo_drops_*                 + description + keywords
+
+Maintenance
+  maintenance_enabled         Boolean toggle (puts site in offline mode)
+  maintenance_message         Offline message
+  maintenance_eta             Estimated return time
+
+Payments
+  bank_name, branch, account_name, account_number
+  bank_whatsapp
+  bank_payment_deadline       Hours before manual payment expires
+
+Shipping zones (per province × 9)
+  fee, free_above, est_days, active, display_order
+
+
+────────────────────────────────────────────────────────────────────────────────
+5.5 OPERATIONAL FEATURES
+────────────────────────────────────────────────────────────────────────────────
+
+Real-time
+  - Socket.IO emits payment:new_pending / review:refresh / admin:refresh
+  - Sidebar + bottom-nav badges subscribe and update without reload
+  - Live product updates patched into Redux on liveProduct events
+
+Audit logs
+  - Middleware: admin-log-middleware (Server-side)
+  - Captures every mutating call (POST/PUT/PATCH/DELETE) with:
+      adminId, action, category, details, ipAddress, resourceId, method, route
+  - Category auto-resolved from URL pattern (product/order/payment/user/drop/
+    notification/review/admin/auth/system)
+  - Surfaced in SuperAdminDashboard (ActivityLogTable)
+
+Exports
+  - CSV: customer export — GET /api/v1/admin/users/export (super-admin only)
+  - PDF: per-order invoices — GET /api/v1/admin/orders/:id/invoice
+
+Bulk actions
+  - Orders: drag-to-update via Kanban
+  - Other resources: per-row actions only (no checkbox-multi-select today)
+
+Communications
+  - Push notifications with brand-voice templates
+  - WhatsApp deep-links from order detail (CleanPhoneForWhatsApp helper)
+  - Newsletter: view-only (no campaign sender UI)
+  - Manual payment link resend: POST /manual-payments/:slug/send-link
+
+
+
+================================================================================
+6. REAL-WORLD ADMIN GAP ANALYSIS
+================================================================================
+
+Severity legend:  CRITICAL  HIGH  MEDIUM  LOW
+Real-world examples are real platforms where the feature is table-stakes.
+
+────────────────────────────────────────────────────────────────────────────────
+6.1 INVENTORY                                                       Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Stock-threshold alerts ("reorder at < 5 units")                 HIGH
+  ✗ Multi-location / warehouse                                       LOW
+  ✗ SKU-level stock-history audit                                   MEDIUM
+  ✗ Batch stock adjustments (manual corrections)                    MEDIUM
+  ✗ Reorder automation (suggest restock)                            MEDIUM
+  ✗ Inventory variance reports                                       LOW
+  Real-world: Shopify Plus inventory rules; Centra reorder points;
+              Brightpearl multi-warehouse.
+
+────────────────────────────────────────────────────────────────────────────────
+6.2 RETURNS & REFUNDS                                               Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ RMA queue (return requests visible to admin)                    HIGH
+  ✗ Return reason tracking (fit / damage / changed mind)            HIGH
+  ✗ Partial refund UI (only full refund visible)                    MEDIUM
+  ✗ Return shipping label generation                                MEDIUM
+  ✗ Restocking workflow (return → inspect → back to stock)          MEDIUM
+  ✗ Return analytics dashboard                                      MEDIUM
+  Real-world: Loop Returns, Returnly, Shopify Returns.
+
+────────────────────────────────────────────────────────────────────────────────
+6.3 CUSTOMER SEGMENTATION                                           Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Advanced segment builder (behavior, LTV, geography)             HIGH
+  ◐ Custom tag creation UI (only hardcoded tags exist today)        MEDIUM
+  ✗ Geographic segmentation (orders by province/city)               MEDIUM
+  ✗ Last-purchase recency targeting                                 MEDIUM
+  Real-world: Klaviyo segments, Shopify customer groups.
+
+────────────────────────────────────────────────────────────────────────────────
+6.4 EMAIL MARKETING                                                 Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Mailchimp / Klaviyo integration                                 CRITICAL
+  ✗ Email template editor (only push notification templates)        HIGH
+  ✗ Abandoned cart recovery campaign                                CRITICAL
+  ✗ Email list segmentation sync                                    HIGH
+  ✗ Drip campaign builder                                           HIGH
+  ✗ Email A/B testing                                               MEDIUM
+  Real-world: Klaviyo (the de-facto Shopify standard), Mailchimp.
+
+────────────────────────────────────────────────────────────────────────────────
+6.5 MARKETING & CAMPAIGNS                                           Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Email campaign builder                                          HIGH
+  ✗ SMS / WhatsApp broadcast (WhatsApp link exists, no broadcast)   MEDIUM
+  ✗ Landing page builder OR banner scheduler                        MEDIUM
+  ✗ Promo code daily/hourly caps (max-uses exists, no rate)         LOW
+  ✗ Campaign performance tracking (clicks, opens, conversions)      HIGH
+  ✗ Affiliate / referral commission UI                              MEDIUM
+  Real-world: Postscript SMS, Recart, Yotpo Loyalty.
+
+────────────────────────────────────────────────────────────────────────────────
+6.6 ANALYTICS                                                       Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Funnel analysis (browse → cart → checkout → payment)            HIGH
+  ✗ Cohort retention charts                                         HIGH
+  ✗ A/B test management UI                                          MEDIUM
+  ✗ UTM parameter tracking / attribution dashboard                  HIGH
+  ✗ GA4 / Meta Pixel event verification                             HIGH
+  ✗ LTV prediction models                                           LOW
+  ✗ Revenue forecast models                                         LOW
+  Real-world: Mixpanel, Amplitude, Triple Whale.
+
+────────────────────────────────────────────────────────────────────────────────
+6.7 CONTENT MANAGEMENT                                              Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Blog / Journal CMS                                              MEDIUM
+  ✗ FAQ / Help Center editor (and the FAQ page itself)              CRITICAL
+  ✗ Size guide editor (and the size guide itself)                   CRITICAL
+  ✗ Care instructions editor                                        HIGH
+  ✗ Product content localization (Sinhala / Tamil)                  LOW
+  ✗ Bulk meta-description / OG-image editor                         MEDIUM
+  Real-world: Shopify online-store editor, Webflow CMS.
+
+────────────────────────────────────────────────────────────────────────────────
+6.8 THEME & CUSTOMIZATION                                           Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Theme editor (color, font, layout)                              LOW
+  ✗ Homepage module builder (drag-to-assemble sections)             MEDIUM
+  ✗ Pop-up / banner scheduler                                       MEDIUM
+  ✗ Widget library (countdown, reviews, exit-intent)                LOW
+  Real-world: Shogun, Replo, Shopify section editor.
+
+────────────────────────────────────────────────────────────────────────────────
+6.9 LOCALIZATION                                                    Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Multi-currency (LKR-only)                                        LOW (today)
+                                                                     HIGH (post-export)
+  ✗ Multi-language UI                                               MEDIUM
+  ✗ Tax rules by region                                             MEDIUM
+  ✗ Regional payment-method toggles                                 LOW
+  Real-world: Shopify Markets, Centra.
+
+────────────────────────────────────────────────────────────────────────────────
+6.10 PERMISSIONS UX                                                 Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Role templates (e.g., "Fulfillment Manager" preset)             MEDIUM
+  ✗ Temporary access (time-limited admin grants)                    LOW
+  ✗ Login-as-user impersonation (for support debugging)             HIGH
+  Real-world: Shopify Plus organization admin, Linear roles.
+
+────────────────────────────────────────────────────────────────────────────────
+6.11 SYSTEM / DEVOPS                                                Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Backup / restore UI                                             LOW
+  ✗ Webhook / integration manager                                   MEDIUM
+  ✗ API key / token management                                      MEDIUM
+  ✗ Rate-limit configuration per IP / endpoint                      LOW
+  ✗ Error log viewer (exceptions / 500s)                            MEDIUM
+  Real-world: Sentry, Datadog, Hookdeck.
+
+────────────────────────────────────────────────────────────────────────────────
+6.12 TRUST & SAFETY                                                 Severity
+────────────────────────────────────────────────────────────────────────────────
+  ✗ Fraud scoring on accounts / orders                              MEDIUM
+  ✗ Review spam auto-detection (manual flag only today)             MEDIUM
+  ✗ Payment fraud ML alerts                                         LOW
+                  (manual payment OCR matching exists; no ML scoring)
+  ✗ Dispute resolution workflow                                     LOW
+  Real-world: Signifyd, NoFraud, Riskified.
+
+
+
+================================================================================
+7. PUBLIC-FACING PAGE GAPS (vs ECOMMERCE STANDARD)
+================================================================================
+
+Status legend:  ✓ exists   ◐ partial   ✗ missing
+
+  ✗ FAQ page                       — Missing entirely; admin has no editor
+  ✗ Size Guide                     — Critical for apparel; missing
+  ✗ Care Instructions              — Luxury fabric care expected; missing
+  ✗ Cookie consent banner UI       — Mentioned in policy, no banner shipped
+  ✗ Accessibility statement        — Missing
+  ✗ XML sitemap                    — Not visible in audit
+  ◐ Sustainability statement       — Materials section on About is partial
+  ◐ Footer "Privacy Policy" link   — Implicit grouping; should be explicit
+
+These are not hypothetical luxuries — every comparable luxury streetwear
+site (Aimé Leon Dore, Fear of God, Represent, Stüssy, Patta) ships a FAQ
+and size guide. They directly affect support volume (FAQ deflects tickets;
+size guide reduces returns). Cookie banner is becoming a legal expectation
+across ASEAN.
+
+
+
+================================================================================
+8. PRIORITIZED ROADMAP (NEXT 3 MONTHS)
+================================================================================
+
+Effort scale:  S (≤3 days)  ·  M (1–2 weeks)  ·  L (3–6 weeks)  ·  XL (>6 weeks)
+
+  Pri  Item                                      Rationale                Effort
+  ───  ────────────────────────────────────────  ───────────────────────  ──────
+  P0   FAQ page + admin editor                   Standard ecommerce        M
+                                                 table-stakes; deflects
+                                                 ~30% of contact volume
+  P0   Size Guide page + per-product link        Apparel-critical;         M
+                                                 typical 10–15% return-
+                                                 rate reduction
+  P0   Cookie consent banner                     Privacy compliance;       S
+                                                 trust signal
+  P1   Returns / RMA admin queue                 Strict final-sale + 14-   L
+                                                 day defect window has no
+                                                 admin workflow today
+  P1   Stock-threshold alerts                    Limited drops sell out    S
+                                                 fast; admin needs alerts
+  P1   Email campaign tooling (Klaviyo)          Push-only is insufficient L
+                                                 for retention; biggest
+                                                 single-lever channel
+  P2   Abandoned-cart recovery                   Standard 5–10% conversion M
+                                                 lift
+  P2   Multi-currency + payment toggle           LK-only is a hard         L
+                                                 ceiling on growth
+  P2   Theme / homepage module builder           Reduces engineering ask   XL
+                                                 for marketing changes
+  P3   A/B test management                       Premium-tier, nice-to-    XL
+                                                 have post-fundamentals
+  P3   Blog / Journal CMS                        Brand storytelling        M
+                                                 beyond About page
+
+P0 / P1 batch (estimated: 8–10 weeks of effort) gets the platform from
+"founder-shop-fits-1k-orders/month" to "scaling-team-fits-5k-orders/month".
+
+
+
+================================================================================
+9. PRODUCTION-READINESS SCORECARD
+================================================================================
+
+  Area                          Score    Notes
+  ────────────────────────────  ─────    ─────────────────────────────────────
+  Storefront catalog              9/10   URL-driven filters, infinite scroll,
+                                         live product updates, mobile-first
+  Drops experience                9/10   Countdowns, archives, dedicated page
+  Cart & checkout                 8/10   Manual-payment 24-hr window adds
+                                         operational friction; PayHere is OK
+  Member account / wishlist       8/10   VIP tiering, Socket.IO live wishlist
+  Admin core CRUD                 9/10   28 pages, sensible IA, lazy-loaded
+  Admin marketing tooling         5/10   Push-only — no email, no SMS, no
+                                         abandoned-cart, no segmentation
+  Admin analytics                 7/10   Strong charts (sentiment, drops,
+                                         tiers); missing funnels and cohorts
+  Content management              4/10   Legal pages and About body are
+                                         hardcoded; no FAQ / size guide
+  Localization                    2/10   LKR-only, English-only, LK-only
+  Compliance posture              6/10   Real legal pages, but no cookie
+                                         banner, no a11y statement, no
+                                         account-deletion flow
+
+
+
+================================================================================
+10. APPENDIX
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+A. FULL ROUTE TABLE
+────────────────────────────────────────────────────────────────────────────────
+
+Public (PublicLayout)
+  /                                Home
+  /about                           About
+  /contact                         Contact
+  /legal/privacy-policy            Privacy Policy
+  /legal/terms-and-conditions      Terms & Conditions
+  /legal/refund-policy             Refund Policy
+  /legal/delivery-policy           Delivery Policy
+  /shopping/product-list           Catalog (with category / sort / filter
+                                   query params)
+  /shopping/product/:slug          Product detail
+  /shopping/drops                  Drops landing
+  /shopping/cart                   Cart
+  /shopping/wishlist               Wishlist
+  /offers                          Offers (auth-required)
+  /product/:productId/reviews      Public reviews
+  /account/my-reviews              My reviews (auth-required)
+
+Admin (AdminLayout, role-gated)
+  /admin/dashboard                 Dashboard
+  /admin/home-images               Homepage media manager
+  /admin/feature                   Feature shortcuts
+  /admin/offers                    Offers & deals
+  /admin/coupons                   Coupons
+  /admin/seo                       SEO & branding (super-admin)
+  /admin/community                 Community / UGC / influencers / testimonials
+  /admin/shipping                  Shipping zones
+  /admin/order                     Orders Kanban
+  /admin/gifts                     Mystery collectibles
+  /admin/product                   Products
+  /admin/users                     Customers
+  /admin/super-admin               Super-admin dashboard
+  /admin/notifications             Push notifications
+  /admin/payments/pending          Manual payment queue
+  /admin/manual-payments/:id       Per-payment verification
+  /admin/reviews                   Review moderation
+  /admin/recommendations           AI recommendations
+  /admin/alerts                    Smart alerts
+  /admin/about-content             About page content (super-admin)
+  /admin/contact-inquiries         Contact form submissions
+  /admin/newsletter                Newsletter subscribers
+  /admin/drop                      Drops CRUD
+  /admin/drop-analytics            Drop sentiment analytics
+  /admin/analytics                 Multi-tab analytics
+
+
+────────────────────────────────────────────────────────────────────────────────
+B. PERMISSION FLAGS & COVERAGE
+────────────────────────────────────────────────────────────────────────────────
+
+  Flag             Unlocks (admin pages / endpoints)
+  ───────────────  ────────────────────────────────────────────────────────────
+  products         Products, Offers, Gifts, Home Images
+  orders           Orders, refunds
+  users            Customers list / detail / status / password reset / delete,
+                   CSV export (super-admin only)
+  notifications    Push notification broadcasts
+  drops            Drops CRUD, archive
+  verifyPayments   Manual payment queue + per-payment verification
+  manageReviews    Review moderation, categorize, reply, feature, sentiment
+  viewAnalytics    All analytics dashboards (sales, products, drops, customers,
+                   fashion, sentiment, AI insights, drop analytics)
+  sendCampaigns    Coupons CRUD, campaign tracking
+  manageInventory  Shipping zones, aging-stock view
+
+
+────────────────────────────────────────────────────────────────────────────────
+C. SHOP CONFIG KEYS THE ADMIN CAN EDIT (TODAY)
+────────────────────────────────────────────────────────────────────────────────
+
+  Branding:        shop_brand_name, shop_tagline, shop_logo_url,
+                   shop_founded_year, shop_hero_eyebrow, shop_hero_headline,
+                   about_brand_story
+  Founder:         shop_founder_name, _title, _bio, _photo_url
+  Contact:         shop_contact_email, _support_email, _phone,
+                   shop_whatsapp_number, shop_address_line1/2/city/postal/
+                   country, shop_hours
+  Social:          shop_instagram_url, _facebook_url, _tiktok_url,
+                   _youtube_url, _twitter_url
+  SEO (per page):  seo_home_*, seo_product_list_*, seo_about_*, seo_contact_*,
+                   seo_drops_* (each: title, description, keywords)
+  Maintenance:     maintenance_enabled, maintenance_message, maintenance_eta
+  Payments:        bank_name, branch, account_name, account_number,
+                   bank_whatsapp, bank_payment_deadline
+  Shipping zones:  per province × { fee, free_above, est_days, active,
+                   display_order } — 9 LK provinces
+
+
+────────────────────────────────────────────────────────────────────────────────
+D. EXTERNAL INTEGRATIONS (ACTIVE)
+────────────────────────────────────────────────────────────────────────────────
+
+  PayHere          Card payments (rails: Visa, MasterCard, LankaPay)
+  Cloudinary       Image hosting + transformations
+  Mailtrap         SMTP for transactional email (dev/staging)
+  Nodemailer       Email send abstraction
+  Socket.IO        Real-time updates (live products, payment alerts, reviews)
+  WhatsApp         Manual deep-links (no Business API integration)
+  MongoDB Atlas    Database hosting
+  Spline           3D Mystery-Gift hero scene
+
+
+────────────────────────────────────────────────────────────────────────────────
+E. GLOSSARY
+────────────────────────────────────────────────────────────────────────────────
+
+  Drop                A scheduled limited-edition release (DROP 01..0N).
+                      Goes live for a window, sells what it sells, then
+                      archives. Admin schedules + manages inventory per drop.
+
+  Mystery Gift        Surprise collectible item that may ship with an order.
+                      Rarity: Common, Rare, Epic, Legendary. Configured by
+                      admin in GiftManager, attached to drops or made global.
+
+  VIP / Legend /      Customer membership tiers, ordered by lifetime value
+  Rare / Elite /      and engagement. Drives early-access privileges, gift
+  Standard            eligibility, and customer-tag filtering in admin.
+
+  RMA                 Return Merchandise Authorization — the workflow
+                      between a return request and a refund / restock.
+                      Saga Elite does NOT have this; only manual WhatsApp
+                      handling for defect/damage exchanges.
+
+  AOV                 Average Order Value.
+  LTV                 Customer Lifetime Value.
+
+  Manual Payment      Saga Elite's primary payment path: customer transfers
+                      to Sampath Bank account 108052612262 within 24 hours
+                      and uploads proof; admin verifies in PendingPayments
+                      queue, then order moves into Processing.
+
+  PayHere             Sri Lanka's local payment gateway. Card alternative
+                      to manual bank transfer.
+
+  Atelier             Brand vocabulary for the workshop / studio. Used in
+                      About + Contact ("write to the atelier").
+
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================
