@@ -313,7 +313,7 @@ exports.deleteAdmin = catchAsync(async (req, res, next) => {
     return next(new AppError("Cannot delete another super admin account.", 403));
   }
 
-  if (!ADMIN_ROLES.has(target.role)) {
+  if (!ADMIN_ROLES.includes(target.role)) {
     return next(new AppError("Target is not an admin account.", 400));
   }
 
@@ -363,7 +363,7 @@ exports.resetAdminPassword = catchAsync(async (req, res, next) => {
     return next(new AppError("Cannot reset another super admin's password.", 403));
   }
 
-  if (!ADMIN_ROLES.has(target.role)) {
+  if (!ADMIN_ROLES.includes(target.role)) {
     return next(new AppError("Target is not an admin account.", 400));
   }
 

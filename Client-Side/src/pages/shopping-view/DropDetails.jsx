@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 import usePageMeta from "@/hooks/use-page-meta";
 import ProductCard from "@/components/shopping-components/ProductCard";
@@ -25,29 +26,40 @@ const DropDetails = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchDrop = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const res = await axios.get(
-          `${API_BASE}/drops/get-single-drop/${slug}`
-        );
-        if (res.data?.success && res.data?.drop) {
-          setDrop(res.data.drop);
-          setProducts(res.data.products || []);
-        } else {
-          setError("Drop not found");
-        }
-      } catch (err) {
-        console.error("Failed to fetch drop details:", err);
-        setError("Failed to load drop details or the drop does not exist.");
-      } finally {
-        setIsLoading(false);
+  const fetchDrop = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`${API_BASE}/drops/get-single-drop/${slug}`);
+      if (res.data?.success && res.data?.drop) {
+        setDrop(res.data.drop);
+        setProducts(res.data.products || []);
+      } else {
+        setError("Drop not found");
       }
-    };
-    if (slug) fetchDrop();
+    } catch (err) {
+      console.error("Failed to fetch drop details:", err);
+      setError("Failed to load drop details or the drop does not exist.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [slug]);
+
+  useEffect(() => {
+    if (slug) fetchDrop();
+  }, [slug, fetchDrop]);
+
+  // Real-time refetch when admin edits this drop (Fix #4).
+  useSocketEvent(
+    "drop:updated",
+    (payload = {}) => {
+      const matches =
+        String(payload.dropId || "") === String(drop?._id || "") ||
+        String(payload.drop?.slug || "") === String(slug);
+      if (matches) fetchDrop();
+    },
+    [drop?._id, slug, fetchDrop]
+  );
 
   usePageMeta({ title: drop ? `${drop.name} Drop` : "Drop" });
 

@@ -6,7 +6,10 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateProducts,
 } from "@/store/admin/product-slice";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/admin-components/ImageUpload";
@@ -33,6 +36,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import { SearchFilterBar } from "@/components/admin-components/_shared/SearchFilterBar";
 import {
   pageVariants,
   containerVariants,
@@ -95,6 +99,7 @@ const initialProductForm = {
   discountPercent: "0",
   costPrice: "",
   maxPerUser: "",
+  lowStockThreshold: "",
   isFeatured: false,
   isActive: true,
   isLimited: false,
@@ -217,6 +222,41 @@ const Product = () => {
     fetchProducts();
   }, [dispatch, fetchProducts]);
 
+  // Bulk operations on the product list. Selection wipes when productList
+  // identity changes (filter/page change), so stale IDs can't leak through.
+  const bulk = useBulkSelection(productList);
+  const [bulkPending, setBulkPending] = useState(false);
+  const runBulkProductAction = useCallback(
+    async (action) => {
+      const ids = bulk.selectedIds;
+      if (ids.length === 0) return;
+      setBulkPending(true);
+      try {
+        const result = await dispatch(bulkUpdateProducts({ ids, action })).unwrap();
+        const ok = result.succeeded?.length || 0;
+        const fail = result.failed?.length || 0;
+        toast({
+          title:
+            fail === 0
+              ? `Bulk ${action}: ${ok} product${ok === 1 ? "" : "s"}`
+              : `Bulk ${action}: ${ok} updated, ${fail} skipped`,
+          variant: fail === 0 ? "success" : "destructive",
+        });
+        bulk.clear();
+        fetchProducts();
+      } catch (err) {
+        toast({
+          title: `Bulk ${action} failed`,
+          description: typeof err === "string" ? err : "Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [bulk, dispatch, fetchProducts, toast]
+  );
+
   const resetForm = () => {
     setFormData(initialProductForm);
     setSelectedProductSlug(null);
@@ -313,6 +353,7 @@ const Product = () => {
       discountPercent: product.discountPercent || "0",
       costPrice: product.costPrice ?? "",
       maxPerUser: product.maxPerUser ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
@@ -911,6 +952,22 @@ const Product = () => {
                 }
               />
             </FormField>
+
+            <FormField
+              label="Low Stock Threshold"
+              optional
+              helper="Alert when total stock drops to this level or below. Leave blank to use the global default."
+            >
+              <LuxuryInput
+                type="number"
+                min="0"
+                placeholder="Use global default"
+                value={formData.lowStockThreshold}
+                onChange={(e) =>
+                  setFormData({ ...formData, lowStockThreshold: e.target.value })
+                }
+              />
+            </FormField>
           </div>
 
           <FormField
@@ -1258,50 +1315,24 @@ const Product = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
+      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-white/10"
     >
       <div className="border-b border-white/10 px-6 py-3">
         <ToastFlash show={showProductSaved} message="Product saved" />
       </div>
-      {/* List Header */}
-      <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
-        <div className="flex items-center gap-8 w-full md:w-auto">
-          <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37] placeholder:text-gray-500"
-              placeholder="Search the collection…"
-              type="search"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 self-end md:self-auto">
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-saga-primary rounded-full"></span>
-          </button>
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant">
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
 
-      <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+      <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
         {isLoading ? (
           <SkeletonGrid count={6} />
         ) : (
         <>
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-          <div className="max-w-2xl">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold" style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}>Inventory Registry</span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif tracking-tighter text-white leading-none mb-4">Product Ledger</h2>
-            <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed font-sans">
-              Manage the digital heartbeat of your luxury portfolio. Curate availability, adjust valuation, and monitor stock levels.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4">
+        <SearchFilterBar 
+          searchValue={searchQuery} 
+          onSearchChange={setSearchQuery} 
+          searchPlaceholder="Search the collection…"
+          className="mb-8 justify-between"
+        >
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex bg-surface-container-low p-1 border border-outline-variant/10">
               <button
                 onClick={() => setStatusFilter("true")}
@@ -1336,16 +1367,29 @@ const Product = () => {
               New Product
             </button>
           </div>
-        </div>
+        </SearchFilterBar>
 
         {/* Bento Grid List Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
-          <div className="col-span-5">Product Details</div>
-          <div className="col-span-2">Category</div>
-          <div className="col-span-2">Valuation</div>
-          <div className="col-span-1">Stock</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1 text-right">Actions</div>
+        <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
+          <input
+            type="checkbox"
+            aria-label="Select all products on this page"
+            checked={bulk.isAllSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = bulk.isSomeSelected;
+            }}
+            onChange={bulk.toggleAll}
+            className="h-4 w-4 cursor-pointer accent-saga-primary"
+            data-testid="admin-bulk-select-all"
+          />
+          <div className="grid grid-cols-12 gap-4 flex-1">
+            <div className="col-span-5">Product Details</div>
+            <div className="col-span-2">Category</div>
+            <div className="col-span-2">Valuation</div>
+            <div className="col-span-1">Stock</div>
+            <div className="col-span-1">Status</div>
+            <div className="col-span-1 text-right">Actions</div>
+          </div>
         </div>
 
         {/* Product Rows */}
@@ -1363,9 +1407,21 @@ const Product = () => {
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                 transition={{ duration: 0.2 }}
-                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
+                className={`group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border ${
+                  bulk.isSelected(product._id)
+                    ? "border-saga-primary/60 bg-saga-primary/5"
+                    : "border-outline-variant/5 bg-surface-container/30"
+                } p-6 transition-colors hover:bg-surface-bright/80`}
               >
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${product.name}`}
+                  checked={bulk.isSelected(product._id)}
+                  onChange={() => bulk.toggle(product._id)}
+                  className="absolute top-3 right-3 z-10 h-4 w-4 cursor-pointer accent-saga-primary md:top-1/2 md:right-auto md:left-1 md:-translate-y-1/2"
+                  data-testid="admin-bulk-row-select"
+                />
 
                 <div className="col-span-1 md:col-span-5 flex items-center gap-6">
                   <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
@@ -1483,7 +1539,7 @@ const Product = () => {
         )}
         </>
         )}
-      </main>
+      </div>>
       {isGalleryOpen ? (
         <ImageGalleryModal
           title={galleryTitle}
@@ -1495,6 +1551,26 @@ const Product = () => {
     </motion.div>
     </AdminPage>
     <AnimatePresence mode="wait">{showForm ? atelierForm : null}</AnimatePresence>
+    <BulkActionBar
+      count={bulk.count}
+      onClear={bulk.clear}
+      pending={bulkPending}
+      label="products selected"
+      actions={[
+        { label: "Activate", onClick: () => runBulkProductAction("activate") },
+        { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
+        {
+          label: "Delete",
+          variant: "destructive",
+          confirm: {
+            title: `Delete ${bulk.count} product${bulk.count === 1 ? "" : "s"}?`,
+            body: "Products will be permanently removed. Order history is preserved but the product pages will return 404.",
+            confirmLabel: "Delete forever",
+          },
+          onClick: () => runBulkProductAction("delete"),
+        },
+      ]}
+    />
     </Fragment>
   );
 };

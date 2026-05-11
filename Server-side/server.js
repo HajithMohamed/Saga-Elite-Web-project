@@ -63,7 +63,11 @@ const offerRoutes = require("./Routes/offer-routes");
 const couponRoutes = require("./Routes/coupon-routes");
 const influencerRoutes = require("./Routes/influencer-routes");
 const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
+const guestRoutes = require("./Routes/guestRoutes");
+const guestTrackingMiddleware = require("./Middlewares/guest-tracking-middleware");
+const { initGuestPromoJob } = require("./Utils/guest-promo-job");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
+const ManualPayment = require("./Models/ManualPayment");
 
 app.use(
   helmet({
@@ -73,6 +77,7 @@ app.use(
 
 app.use(cookieParser());
 app.use(configureCors());
+app.use(guestTrackingMiddleware);
 app.use(compression());
 app.use(
   express.json({
@@ -121,6 +126,7 @@ app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
 app.use("/api/v1/gifts", giftRoutes);
 app.use("/api/v1", manualPaymentRoutes);
+app.use("/api/v1/guest", guestRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/contact", contactRoutes);
@@ -211,6 +217,14 @@ const startServer = async () => {
   try {
     await connectToDB();
     await seedAboutSiteDefaults();
+    // Reconcile Mongo's actual indexes with the current schema. Required
+    // because changing index options (e.g. sparse → partialFilterExpression)
+    // does not drop the old index — Mongoose only adds new ones.
+    try {
+      await ManualPayment.syncIndexes();
+    } catch (err) {
+      logger.error("ManualPayment.syncIndexes failed", { error: err?.message });
+    }
     startManualPaymentCleanupJob();
     startBankInboxWatcher();
 
@@ -219,6 +233,7 @@ const startServer = async () => {
       initRecommendationsJobs();
       initSmartAlertsJob();
       initRecommendationsDigest();
+      initGuestPromoJob();
       logger.info("Server is listening", { port: PORT });
     });
   } catch (error) {

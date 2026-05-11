@@ -29,12 +29,17 @@ import {
   fetchAdminUsers,
   triggerAdminPasswordReset,
   updateAdminUserStatus,
+  bulkTagUsers,
 } from "@/store/admin/user-slice";
 import { toast } from "@/hooks/use-toast";
 import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
+
+const BULK_USER_TAGS = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
 
 const MEMBERSHIP_FILTER_TABS = [
   { value: "all", label: "All" },
@@ -274,6 +279,35 @@ const UsersPage = () => {
           return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       }
     });
+
+  const bulk = useBulkSelection(filteredUsers);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkTagDraft, setBulkTagDraft] = useState("vip");
+  const runBulkUserTag = async (mode) => {
+    const ids = bulk.selectedIds;
+    if (ids.length === 0) return;
+    setBulkPending(true);
+    try {
+      const result = await dispatch(
+        bulkTagUsers({ ids, tag: bulkTagDraft, mode })
+      ).unwrap();
+      const ok = result.succeeded?.length || 0;
+      toast({
+        title: `Bulk ${mode} tag "${bulkTagDraft}": ${ok} user${ok === 1 ? "" : "s"}`,
+        variant: "success",
+      });
+      bulk.clear();
+      dispatch(fetchAdminUsers());
+    } catch (err) {
+      toast({
+        title: "Bulk tag failed",
+        description: typeof err === "string" ? err : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkPending(false);
+    }
+  };
 
   const handleRefresh = async () => {
     try {
@@ -611,16 +645,56 @@ const UsersPage = () => {
                   initial="hidden"
                   animate="visible"
                 >
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-5 py-3">
+                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible customers"
+                      checked={bulk.isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = bulk.isSomeSelected;
+                      }}
+                      onChange={bulk.toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-select-all"
+                    />
+                    Select all
+                  </label>
+                  <span className="text-[10px] uppercase tracking-widest text-white/40">Tag:</span>
+                  <select
+                    value={bulkTagDraft}
+                    onChange={(e) => setBulkTagDraft(e.target.value)}
+                    className="rounded-md border border-white/10 bg-black px-2 py-1 text-xs text-white"
+                  >
+                    {BULK_USER_TAGS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
                 {filteredUsers.map((user) => (
+                  <div key={user._id} className="relative">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${user.email}`}
+                      checked={bulk.isSelected(user._id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        bulk.toggle(user._id);
+                      }}
+                      className="absolute top-4 left-4 z-10 h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-row-select"
+                    />
                   <motion.button
-                    key={user._id}
                     type="button"
                     variants={itemVariants}
                     whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                     transition={{ duration: 0.2 }}
                     onClick={() => setSelectedUserId(user._id)}
-                    className={`w-full rounded-[1.5rem] border p-5 text-left transition ${
-                      selectedUserId === user._id
+                    className={`w-full rounded-[1.5rem] border p-5 pl-12 text-left transition ${
+                      bulk.isSelected(user._id)
+                        ? "border-[#D4AF37]/60 bg-[#15120a]"
+                        : selectedUserId === user._id
                         ? "border-[#D4AF37] bg-[#15120a]"
                         : "border-white/10 bg-[#101010] hover:border-[#D4AF37]/40 hover:bg-[#131313]"
                     }`}
@@ -673,6 +747,7 @@ const UsersPage = () => {
                       </div>
                     </div>
                   </motion.button>
+                  </div>
                 ))}
                 </motion.div>
               )}
@@ -1266,6 +1341,16 @@ const UsersPage = () => {
           </div>
         </section>
       </div>
+      <BulkActionBar
+        count={bulk.count}
+        onClear={bulk.clear}
+        pending={bulkPending}
+        label="customers selected"
+        actions={[
+          { label: `Add "${bulkTagDraft}"`, onClick: () => runBulkUserTag("add") },
+          { label: `Remove "${bulkTagDraft}"`, onClick: () => runBulkUserTag("remove") },
+        ]}
+      />
     </AdminPage>
     </motion.div>
   );

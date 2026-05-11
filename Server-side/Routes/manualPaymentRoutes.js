@@ -18,6 +18,7 @@ const {
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,
+  getMethodSummary,
   getPaymentById,
   verifyPayment,
   requestExtension,
@@ -67,6 +68,8 @@ router.get(
   getMyPaymentStatus
 );
 router.get("/admin/manual-payments", authMiddleware, requireAdmin, requirePermission("verifyPayments"), getPendingPayments);
+// Mount /summary BEFORE /:id so the literal path wins over the ObjectId param.
+router.get("/admin/manual-payments/summary", authMiddleware, requireAdmin, requirePermission("verifyPayments"), getMethodSummary);
 router.get("/admin/manual-payments/:id", authMiddleware, requireAdmin, requirePermission("verifyPayments"), validateObjectIdParam("id", "payment id"), getPaymentById);
 router.put(
   "/admin/manual-payments/:id/verify",

@@ -3,6 +3,7 @@ const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const User = require("../Models/User");
 const Order = require("../Models/Order");
+const ManualPayment = require("../Models/ManualPayment");
 const Notification = require("../Models/Notification");
 const LoginActivity = require("../Models/LoginActivity");
 const UserActivityLog = require("../Models/UserActivityLog");
@@ -13,6 +14,17 @@ const {
   isValidSriLankanMobile,
   normalizeSriLankanMobile,
 } = require("../Utils/phone-validator");
+
+// Single source of truth for customer tags; mirrored by User.tags enum and
+// referenced by both the per-user status endpoint and the bulk-tag endpoint.
+const USER_TAG_ENUM = Object.freeze([
+  "vip",
+  "high_spender",
+  "drop_collector",
+  "frequent_buyer",
+  "refund_risk",
+  "early_supporter",
+]);
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -411,8 +423,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
   // Tag mutation — accepts the full target set; the model's enum guard
   // filters anything unknown so the client doesn't need to validate.
   if (Array.isArray(tags)) {
-    const allowed = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
-    const cleaned = [...new Set(tags.filter((t) => allowed.includes(t)))];
+    const cleaned = [...new Set(tags.filter((t) => USER_TAG_ENUM.includes(t)))];
     user.tags = cleaned;
     changes.push(`tags: ${cleaned.length ? cleaned.join(", ") : "cleared"}`);
   }
@@ -439,6 +450,57 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
       orderStatsMap.get(user._id.toString()),
       notificationStatsMap.get(user._id.toString())
     ),
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Bulk add/remove a single tag across many customers. Body is pre-validated
+| by validateBulkUserTag — `tag` is one of USER_TAG_ENUM and `mode` is
+| 'add' | 'remove'. Excludes admin accounts defensively even though the
+| client should never send admin IDs here.
+|--------------------------------------------------------------------------
+*/
+const bulkTagUsers = catchAsync(async (req, res) => {
+  const { ids, tag, mode } = req.body;
+
+  const filter = {
+    _id: { $in: ids },
+    role: { $in: ["user", "customer"] },
+  };
+  const update =
+    mode === "add"
+      ? { $addToSet: { tags: tag } }
+      : { $pull: { tags: tag } };
+
+  const result = await User.updateMany(filter, update);
+  const matched = result.matchedCount ?? 0;
+  const modified = result.modifiedCount ?? 0;
+
+  // Failure here is an ID that was not a customer (or didn't exist). The
+  // tag set is idempotent so "matched but not modified" is a no-op success
+  // (e.g., tag already present on add, or already absent on remove).
+  const failed = ids
+    .filter((_id, i) => i >= matched)
+    .map((id) => ({ id, reason: "not a customer or not found" }));
+
+  req.adminAction = `Bulk tag ${mode} → ${tag} (${matched}/${ids.length})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount: matched,
+    failedCount: failed.length,
+    modifiedCount: modified,
+    tag,
+    mode,
+    ids,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded: ids.slice(0, matched),
+    failed,
+    modified,
   });
 });
 
@@ -1134,10 +1196,138 @@ const updateMyProfile = catchAsync(async (req, res, next) => {
   });
 });
 
+// ── Saved addresses (self-service) ─────────────────────────────────
+const addressesMatch = (a, b) =>
+  String(a?.street || "").trim().toLowerCase() ===
+    String(b?.street || "").trim().toLowerCase() &&
+  String(a?.postalCode || "").trim().toLowerCase() ===
+    String(b?.postalCode || "").trim().toLowerCase();
+
+const getMyAddresses = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.userInfo._id || req.userInfo.id).select("addresses");
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    data: { addresses: user.addresses || [] },
+  });
+});
+
+const addMyAddress = catchAsync(async (req, res, next) => {
+  const { label, street, city, postalCode, country, isDefault } = req.body || {};
+
+  if (!street || !city || !postalCode) {
+    return next(new AppError("street, city and postalCode are required", 400));
+  }
+
+  const user = await User.findById(req.userInfo._id || req.userInfo.id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  const incoming = {
+    label: label ? String(label).trim() : undefined,
+    street: String(street).trim(),
+    city: String(city).trim(),
+    postalCode: String(postalCode).trim(),
+    country: String(country || "Sri Lanka").trim(),
+    isDefault: Boolean(isDefault) || user.addresses.length === 0,
+  };
+
+  if (user.addresses.some((a) => addressesMatch(a, incoming))) {
+    return res.status(200).json({
+      success: true,
+      message: "Address already saved",
+      data: { addresses: user.addresses },
+    });
+  }
+
+  if (incoming.isDefault) {
+    user.addresses.forEach((a) => {
+      a.isDefault = false;
+    });
+  }
+
+  user.addresses.push(incoming);
+  await user.save({ validateModifiedOnly: true });
+
+  res.status(201).json({
+    success: true,
+    message: "Address saved",
+    data: { addresses: user.addresses },
+  });
+});
+
+const removeMyAddress = catchAsync(async (req, res, next) => {
+  const { addressId } = req.params;
+
+  const user = await User.findById(req.userInfo._id || req.userInfo.id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  const before = user.addresses.length;
+  user.addresses = user.addresses.filter((a) => String(a._id) !== String(addressId));
+  if (user.addresses.length === before) {
+    return next(new AppError("Address not found", 404));
+  }
+  await user.save({ validateModifiedOnly: true });
+
+  res.status(200).json({
+    success: true,
+    message: "Address removed",
+    data: { addresses: user.addresses },
+  });
+});
+
+// ── My pending manual payments (Fix #1) ───────────────────────────
+const PENDING_MANUAL_PAYMENT_STATUSES = [
+  "pending_payment",
+  "proof_submitted",
+  "pending_bank_confirmation",
+];
+
+const getMyManualPayments = catchAsync(async (req, res) => {
+  const userId = req.userInfo._id || req.userInfo.id;
+
+  const payments = await ManualPayment.find({
+    userId,
+    status: { $in: PENDING_MANUAL_PAYMENT_STATUSES },
+  })
+    .populate({
+      path: "orderId",
+      select: "_id totalAmount items createdAt status",
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      payments: payments.map((p) => ({
+        _id: p._id,
+        slug: p.slug,
+        referenceNumber: p.referenceNumber,
+        amount: p.amount,
+        status: p.status,
+        expiresAt: p.expiresAt,
+        createdAt: p.createdAt,
+        order: p.orderId
+          ? {
+              _id: p.orderId._id,
+              totalAmount: p.orderId.totalAmount,
+              itemCount: Array.isArray(p.orderId.items) ? p.orderId.items.length : 0,
+              createdAt: p.orderId.createdAt,
+              status: p.orderId.status,
+            }
+          : null,
+      })),
+    },
+  });
+});
+
 module.exports = {
   getAdminUsers,
   getAdminUserDetail,
   updateAdminUserStatus,
+  bulkTagUsers,
   triggerAdminPasswordReset,
   deleteAdminUser,
   getAllUsers,
@@ -1151,4 +1341,8 @@ module.exports = {
   removeFromWishlist,
   getMyProfile,
   updateMyProfile,
+  getMyAddresses,
+  addMyAddress,
+  removeMyAddress,
+  getMyManualPayments,
 };

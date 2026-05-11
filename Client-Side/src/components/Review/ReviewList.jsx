@@ -14,6 +14,7 @@ import {
 } from "@/store/reviewSlice";
 import { fetchUserOrders } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 
 const sortOptions = [
   { label: "Most Recent", value: "recent" },
@@ -94,6 +95,26 @@ const ReviewList = ({ productId, initialStats }) => {
   }, [dispatch, isAuthenticated]);
 
   const currentUserId = user?._id;
+
+  // Real-time: when anyone posts/updates a review for THIS product, refetch
+  // the current filter and toast (Fix #5). Skip the toast for the submitter
+  // themselves — their own UI already updates via the submit handler.
+  useSocketEvent(
+    "review:refresh",
+    (payload = {}) => {
+      if (String(payload.productId || "") !== String(productId)) return;
+      dispatch(fetchProductReviews({ ...filterPayload, page: 1 }));
+      setPage(1);
+      const isSelf = currentUserId && String(payload.userId || "") === String(currentUserId);
+      if (!isSelf && payload.userName) {
+        toast({
+          title: "New review",
+          description: `${payload.userName} just shared their experience.`,
+        });
+      }
+    },
+    [dispatch, productId, filterPayload, currentUserId]
+  );
 
   const userHasReview = useMemo(() => {
     return userReviews.some(

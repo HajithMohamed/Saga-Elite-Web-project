@@ -8,8 +8,21 @@ try {
 const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const Review = require("../Models/Review");
+const SiteConfig = require("../Models/SiteConfig");
 const SmartAlert = require("../Models/SmartAlert");
 const { broadcastNotification } = require("./notification-service");
+
+const LOW_STOCK_GLOBAL_FALLBACK = 5;
+
+const getLowStockGlobalThreshold = async () => {
+  try {
+    const doc = await SiteConfig.findOne({ key: "low_stock_global_threshold" }).lean();
+    const raw = Number(doc?.value);
+    return Number.isFinite(raw) && raw >= 0 ? raw : LOW_STOCK_GLOBAL_FALLBACK;
+  } catch {
+    return LOW_STOCK_GLOBAL_FALLBACK;
+  }
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -107,6 +120,45 @@ const checkLowStockCritical = async () => {
   });
 };
 
+const checkLowStockWarning = async () => {
+  // Products running low (above zero, at/under threshold) with any cart-add demand.
+  // Fires before stockout so admins can react. Per-product threshold falls back to global default.
+  const globalThreshold = await getLowStockGlobalThreshold();
+
+  const candidates = await Product.find({
+    isActive: true,
+    cartAddCount: { $gt: 0 },
+    totalStock: { $gt: 0 },
+  })
+    .select("name totalStock lowStockThreshold cartAddCount")
+    .lean();
+
+  const lowStock = candidates.filter((p) => {
+    const threshold = Number.isFinite(Number(p.lowStockThreshold))
+      ? Number(p.lowStockThreshold)
+      : globalThreshold;
+    return Number(p.totalStock) <= threshold;
+  });
+
+  if (lowStock.length === 0) return;
+
+  await upsertAlert({
+    kind: "low_stock_warning",
+    severity: lowStock.length >= 10 ? "high" : "medium",
+    title: `${lowStock.length} product${lowStock.length === 1 ? "" : "s"} running low on stock`,
+    message: `Stock at or below threshold with active demand: ${lowStock.slice(0, 5).map((p) => `${p.name} (${p.totalStock})`).join(", ")}${lowStock.length > 5 ? "…" : ""}.`,
+    dataSnapshot: {
+      count: lowStock.length,
+      globalThreshold,
+      items: lowStock.slice(0, 20).map((p) => ({
+        name: p.name,
+        totalStock: p.totalStock,
+        threshold: p.lowStockThreshold ?? globalThreshold,
+      })),
+    },
+  });
+};
+
 const checkRevenueDrop = async () => {
   const now = Date.now();
   const recent = await Order.aggregate([
@@ -201,6 +253,7 @@ const runAllChecks = async () => {
     await Promise.all([
       checkRefundAndCancellationSpikes(),
       checkLowStockCritical(),
+      checkLowStockWarning(),
       checkRevenueDrop(),
       checkConversionDrop(),
       checkNegativeReviewStreaks(),

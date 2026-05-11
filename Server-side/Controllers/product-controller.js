@@ -8,7 +8,8 @@ const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
-
+const { emitToAll } = require("../Utils/socket-service");
+const runInTransaction = require("../Utils/safe-transaction");
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 
@@ -164,6 +165,14 @@ const addProduct = catchAsync(async (req, res, next) => {
             filter: { isActive: true },
         });
     }
+
+    // Real-time emit (Fix #3) so listing pages refetch.
+    emitToAll("product:created", {
+        productId: newlyCreatedProduct._id,
+        slug: newlyCreatedProduct.slug,
+        name: newlyCreatedProduct.name,
+        drop: newlyCreatedProduct.drop,
+    });
 
     res.status(201).json({
         success: true,
@@ -481,19 +490,14 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     });
 
     // Use transaction for atomicity
-    const session = await mongoose.startSession();
-    try {
-        await session.withTransaction(async () => {
-            await Image.deleteMany({
-                refId: product._id,
-                refModel: "Product"
-            }).session(session);
+    await runInTransaction(async (session) => {
+        await Image.deleteMany({
+            refId: product._id,
+            refModel: "Product"
+        }).session(session);
 
-            await Product.deleteOne({ _id: product._id }).session(session);
-        });
-    } finally {
-        session.endSession();
-    }
+        await Product.deleteOne({ _id: product._id }).session(session);
+    });
 
     // Cloudinary cleanup (best-effort, after DB commit)
     if (productImages.length > 0) {
@@ -502,6 +506,12 @@ const deleteProduct = catchAsync(async (req, res, next) => {
         );
         await Promise.allSettled(cloudinaryDeletes);
     }
+
+    // Real-time emit (Fix #3) so listing/detail pages can react.
+    emitToAll("product:deleted", {
+        productId: product._id,
+        slug: productSlug,
+    });
 
     res.status(200).json({
         success: true,
@@ -813,6 +823,50 @@ const recordDwell = catchAsync(async (req, res, next) => {
   res.status(204).end();
 });
 
+// Bulk activate/deactivate/delete. Body is pre-validated by validateBulkProductAction.
+// All-or-nothing semantics — Mongo updateMany / deleteMany either succeeds for the
+// matched set or fails outright, so `failed` is always [] here.
+const bulkUpdateProducts = catchAsync(async (req, res) => {
+  const { ids, action } = req.body;
+  let result;
+  let verb;
+
+  if (action === "activate" || action === "deactivate") {
+    const isActive = action === "activate";
+    result = await Product.updateMany(
+      { _id: { $in: ids } },
+      { $set: { isActive } }
+    );
+    verb = isActive ? "activated" : "deactivated";
+  } else {
+    result = await Product.deleteMany({ _id: { $in: ids } });
+    verb = "deleted";
+  }
+
+  const matched = result.matchedCount ?? result.deletedCount ?? 0;
+  const succeededCount =
+    action === "delete" ? result.deletedCount || 0 : result.modifiedCount || 0;
+
+  req.adminAction = `Bulk ${verb} (${succeededCount} product${succeededCount === 1 ? "" : "s"})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount,
+    failedCount: ids.length - succeededCount,
+    ids,
+    matched,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded: ids.slice(0, succeededCount),
+    failed: ids.slice(succeededCount).map((id) => ({
+      id,
+      reason: "not found or already in target state",
+    })),
+  });
+});
+
 module.exports = {
     getAllProducts,
     getLandingProducts,
@@ -826,4 +880,5 @@ module.exports = {
     getRecommendations,
     searchProducts,
     recordDwell,
+    bulkUpdateProducts,
 };

@@ -117,9 +117,15 @@ export const lookupManualPayment = async ({ email, identifier }) => {
   return response.data;
 };
 
-export const fetchPendingManualPayments = async ({ status = "proof_submitted", page = 1, limit = 20 } = {}) => {
+export const fetchPendingManualPayments = async ({
+  status = "proof_submitted",
+  guestOnly = false,
+  page = 1,
+  limit = 20,
+} = {}) => {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
+  if (guestOnly) query.set("guestOnly", "true");
   query.set("page", String(page));
   query.set("limit", String(limit));
 
@@ -127,6 +133,24 @@ export const fetchPendingManualPayments = async ({ status = "proof_submitted", p
     withCredentials: true,
   });
 
+  return response.data;
+};
+
+export const fetchManualPaymentMethodSummary = async ({ guestOnly = false } = {}) => {
+  const query = new URLSearchParams();
+  if (guestOnly) query.set("guestOnly", "true");
+  const url = `${API_BASE}/admin/manual-payments/summary${query.toString() ? `?${query.toString()}` : ""}`;
+  const response = await axios.get(url, { withCredentials: true });
+  return response.data;
+};
+
+export const fetchMyPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/user/manual-payments`, withAuth);
+  return response.data;
+};
+
+export const fetchGuestPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/guest/manual-payments`, withAuth);
   return response.data;
 };
 

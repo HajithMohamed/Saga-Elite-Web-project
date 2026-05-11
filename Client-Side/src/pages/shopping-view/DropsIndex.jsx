@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -6,6 +6,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
   Btn,
   Countdown,
@@ -27,36 +28,46 @@ const DropsIndex = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const res = await axios.get(`${API_BASE}/drops/get-all-drops`);
-        if (cancelled) return;
-        setDrops(Array.isArray(res.data?.drops) ? res.data.drops : []);
-      } catch (err) {
-        if (cancelled) return;
-        const msg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Could not load drops";
-        setError(msg);
+  const loadDrops = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get(`${API_BASE}/drops/get-all-drops`);
+      setDrops(Array.isArray(res.data?.drops) ? res.data.drops : []);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Could not load drops";
+      setError(msg);
+      if (!silent) {
         toast({
           title: "Could not load drops",
           description: msg,
           variant: "destructive",
         });
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadDrops();
+  }, [loadDrops]);
+
+  // Real-time refetch on drop CRUD (Fix #4) — debounced to coalesce bursts.
+  const refetchTimer = useRef(null);
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => loadDrops({ silent: true }), 250);
+  }, [loadDrops]);
+  useEffect(() => () => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+  }, []);
+
+  useSocketEvent("drop:created", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("drop:updated", debouncedRefetch, [debouncedRefetch]);
 
   return (
     <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">

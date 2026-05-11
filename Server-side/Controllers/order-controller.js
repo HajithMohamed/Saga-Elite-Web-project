@@ -18,6 +18,7 @@ const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { emitToUser, emitToAdmins, emitToAll } = require("../Utils/socket-service");
 const {
   sendWhatsAppMessage,
   parsePhoneList,
@@ -26,6 +27,7 @@ const {
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
+const runInTransaction = require("../Utils/safe-transaction");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
 
@@ -105,254 +107,331 @@ const buildSalesTrend = (rawTrend) => {
   return trend;
 };
 
+const GUEST_OTP_REVERIFY_MS = 30 * 60 * 1000;
+
+const addressMatchesOrder = (a, b) =>
+  String(a?.street || "").trim().toLowerCase() ===
+    String(b?.street || "").trim().toLowerCase() &&
+  String(a?.postalCode || "").trim().toLowerCase() ===
+    String(b?.postalCode || "").trim().toLowerCase();
+
 const createOrder = catchAsync(async (req, res, next) => {
   const {
     items,
-    checkoutMode,
+    user,
+    guest,
+    guestEmailNormalized,
     shippingAddress,
     contactNumber,
     paymentMethod,
     paymentProofUrl,
     notes,
-    guestEmail,
     couponCode,
+    isBankTransferPayment,
+    isLegacyManualPayment,
+    structuredAddress,
+    normalizedCheckoutMode,
   } = req.body;
 
-  logger.debug("Order creation request received", {
-    paymentMethod: req.body?.paymentMethod,
-    itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
-  });
+  const createdOrder = await runInTransaction(async (session) => {
+  const orderItems = [];
+  let totalAmount = 0;
 
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return next(new AppError("Order items are required", 400));
-  }
+  for (const item of items) {
+    const { productId, variantSku, quantity } = item;
 
-  if (!shippingAddress || !shippingAddress.trim()) {
-    return next(new AppError("Shipping address is required", 400));
-  }
+    if (!productId || !variantSku || !quantity || quantity <= 0) {
+      throw new AppError(
+        "Each order item must include a product, variant, and positive quantity",
+        400
+      );
+    }
 
-  if (!contactNumber || !contactNumber.trim()) {
-    return next(new AppError("Contact number is required", 400));
-  }
+    const product = await Product.findById(productId).session(session);
 
-  if (!paymentMethod || !["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(paymentMethod)) {
-    return next(new AppError("Invalid payment method", 400));
-  }
+    if (!product || !product.isActive) {
+      throw new AppError("Product not found or unavailable", 404);
+    }
 
-  const isLegacyManualPayment = paymentMethod === "manual";
-  const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
-
-  if (isLegacyManualPayment && !paymentProofUrl?.trim()) {
-    return next(new AppError("Receipt information is required for manual payment", 400));
-  }
-
-  // Determine if guest or user
-  let user = req.userInfo;
-  let guest = null;
-  let guestEmailNormalized = null;
-
-  if (!user && guestEmail) {
-    guestEmailNormalized = guestEmail.trim().toLowerCase();
-    guest = await Guest.findOneAndUpdate(
-      { email: guestEmailNormalized },
-      { lastUsedAt: new Date() },
-      { upsert: true, new: true }
+    const variant = product.variants.find(
+      (variant) => variant.sku === variantSku
     );
-  } else if (!user) {
-    return next(new AppError("Authentication required for registered users or guest email for guests", 401));
-  }
 
-  const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
+    if (!variant) {
+      throw new AppError("Selected product variant not found", 404);
+    }
 
-  const session = await mongoose.startSession();
+    if (variant.stock < quantity) {
+      throw new AppError(
+        `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
+        400
+      );
+    }
 
-  let createdOrder;
+    if (product.isLimited) {
+      const previousQuantityResult = await Order.aggregate([
+        {
+          $match: user
+            ? { user: user._id }
+            : { guest: guest._id },
+        },
+        { $unwind: "$items" },
+        { $match: { "items.product": product._id } },
+        {
+          $group: {
+            _id: null,
+            totalQuantity: { $sum: "$items.quantity" },
+          },
+        },
+      ]).session(session);
 
-  try {
-    await session.withTransaction(async () => {
-      const orderItems = [];
-      let totalAmount = 0;
+      const previouslyOrdered =
+        previousQuantityResult?.[0]?.totalQuantity || 0;
 
-      for (const item of items) {
-        const { productId, variantSku, quantity } = item;
-
-        if (!productId || !variantSku || !quantity || quantity <= 0) {
-          throw new AppError("Each order item must include a product, variant, and positive quantity", 400);
-        }
-
-        const product = await Product.findById(productId).session(session);
-
-        if (!product || !product.isActive) {
-          throw new AppError("Product not found or unavailable", 404);
-        }
-
-        const variant = product.variants.find((variant) => variant.sku === variantSku);
-
-        if (!variant) {
-          throw new AppError("Selected product variant not found", 404);
-        }
-
-        if (variant.stock < quantity) {
-          throw new AppError(
-            `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
-            400,
-          );
-        }
-
-        if (product.isLimited) {
-          const previousQuantityResult = await Order.aggregate([
-            {
-              $match: user
-                ? { user: user._id }
-                : { guest: guest._id }
-            },
-            { $unwind: "$items" },
-            { $match: { "items.product": product._id } },
-            { $group: { _id: null, totalQuantity: { $sum: "$items.quantity" } } },
-          ]).session(session);
-
-          const previouslyOrdered = previousQuantityResult?.[0]?.totalQuantity || 0;
-
-          if (previouslyOrdered + quantity > product.maxPerUser) {
-            throw new AppError(
-              `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
-              400,
-            );
-          }
-        }
-
-        const priceBeforeDiscount =
-          product.basePrice + (variant.priceAdjustment || 0);
-        const unitPrice = Math.round(
-          priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
+      if (previouslyOrdered + quantity > product.maxPerUser) {
+        throw new AppError(
+          `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
+          400
         );
-        const itemTotal = unitPrice * quantity;
-
-        variant.stock -= quantity;
-        product.soldCount += quantity;
-
-        await product.save({ session, validateModifiedOnly: true });
-
-        orderItems.push({
-          product: product._id,
-          productName: product.name,
-          productArtNo: product.artNo,
-          productSlug: product.slug,
-          variantSku: variant.sku,
-          size: variant.size,
-          color: variant.color,
-          quantity,
-          unitPrice,
-          totalPrice: itemTotal,
-        });
-
-        totalAmount += itemTotal;
       }
+    }
 
-      // Coupon evaluation (optional). Throws AppError on validation failure,
-      // which will roll back the transaction.
-      let appliedCoupon = null;
-      let appliedDiscount = 0;
-      if (couponCode && String(couponCode).trim()) {
-        const productIds = items.map((it) => it.productId);
-        const result = await evaluateCoupon({
-          code: couponCode,
-          subtotal: totalAmount,
-          productIds,
-        });
-        if (result) {
-          appliedCoupon = result.coupon;
-          appliedDiscount = result.discount;
-          totalAmount = Math.max(0, totalAmount - appliedDiscount);
-          // Increment usage atomically; respect maxUses if defined.
-          const updateResult = await Coupon.updateOne(
-            {
-              _id: appliedCoupon._id,
-              $or: [
-                { maxUses: null },
-                { $expr: { $lt: ["$usedCount", "$maxUses"] } },
-              ],
-            },
-            { $inc: { usedCount: 1 } },
-            { session }
-          );
-          if (updateResult.modifiedCount === 0) {
-            throw new AppError("Coupon usage limit reached", 400);
-          }
-        }
-      }
+    const priceBeforeDiscount =
+      product.basePrice + (variant.priceAdjustment || 0);
 
-      const dropId = req.body.dropId || null;
-      let selectedGift = null;
+    const unitPrice = Math.round(
+      priceBeforeDiscount *
+        (1 - (product.discountPercent || 0) / 100)
+    );
 
-      if (dropId) {
-        selectedGift = await Gift.findOne({ isActive: true, drop: dropId }).session(session);
-      }
+    const itemTotal = unitPrice * quantity;
 
-      if (!selectedGift) {
-        selectedGift = await Gift.findOne({ isActive: true, drop: null }).session(session);
-      }
+    variant.stock -= quantity;
+    product.soldCount += quantity;
 
-      const orderPayload = {
-        user: user ? user._id : undefined,
-        guest: guest ? guest._id : undefined,
-        guestEmail: guestEmailNormalized,
-        items: orderItems,
-        totalAmount,
-        shippingAddress: shippingAddress.trim(),
-        contactNumber: contactNumber.trim(),
-        paymentMethod,
-        paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
-        referenceNumber: isLegacyManualPayment ? generateReferenceNumber() : undefined,
-        notes: notes?.trim(),
-        couponCode: appliedCoupon ? appliedCoupon.code : null,
-        couponDiscount: appliedDiscount || 0,
-        status: isBankTransferPayment
-          ? "pending_payment"
-          : ["manual", "cash"].includes(paymentMethod)
-            ? "verification_pending"
-            : "confirmed",
-        paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
-        expiresAt: isLegacyManualPayment || paymentMethod === "cash"
-          ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
-          : undefined,
-      };
-
-      if (selectedGift) {
-        orderPayload.gift = {
-          giftId: selectedGift._id,
-          revealed: false,
-        };
-      }
-
-      const [orderDocument] = await Order.create([orderPayload], { session });
-      createdOrder = orderDocument;
-
-      // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
-      if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
-        const purchaseRows = orderPayload.items.map((item) => ({
-          userId: user ? user._id : null,
-          productId: item.productId,
-          action: "purchase",
-          category: item.category || "",
-          metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
-        }));
-        UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => {});
-      }
-
-      if (user && normalizedCheckoutMode === "cart") {
-        user.cart = [];
-        await user.save({ session, validateModifiedOnly: true });
-      }
-
-      if (guest) {
-        guest.orderCount += 1;
-        await guest.save({ session });
-      }
+    await product.save({
+      session,
+      validateModifiedOnly: true,
     });
-  } finally {
-    session.endSession();
+
+    orderItems.push({
+      product: product._id,
+      productName: product.name,
+      productArtNo: product.artNo,
+      productSlug: product.slug,
+      variantSku: variant.sku,
+      size: variant.size,
+      color: variant.color,
+      quantity,
+      unitPrice,
+      totalPrice: itemTotal,
+    });
+
+    totalAmount += itemTotal;
   }
+
+  let appliedCoupon = null;
+  let appliedDiscount = 0;
+
+  if (couponCode && String(couponCode).trim()) {
+    const productIds = items.map((it) => it.productId);
+
+    const result = await evaluateCoupon({
+      code: couponCode,
+      subtotal: totalAmount,
+      productIds,
+    });
+
+    if (result) {
+      appliedCoupon = result.coupon;
+      appliedDiscount = result.discount;
+
+      totalAmount = Math.max(
+        0,
+        totalAmount - appliedDiscount
+      );
+
+      const updateResult = await Coupon.updateOne(
+        {
+          _id: appliedCoupon._id,
+          $or: [
+            { maxUses: null },
+            {
+              $expr: {
+                $lt: ["$usedCount", "$maxUses"],
+              },
+            },
+          ],
+        },
+        {
+          $inc: { usedCount: 1 },
+        },
+        { session }
+      );
+
+      if (updateResult.modifiedCount === 0) {
+        throw new AppError(
+          "Coupon usage limit reached",
+          400
+        );
+      }
+    }
+  }
+
+  const dropId = req.body.dropId || null;
+  let selectedGift = null;
+
+  if (user) {
+    if (dropId) {
+      selectedGift = await Gift.findOne({
+        isActive: true,
+        drop: dropId,
+      }).session(session);
+    }
+
+    if (!selectedGift) {
+      selectedGift = await Gift.findOne({
+        isActive: true,
+        drop: null,
+      }).session(session);
+    }
+  }
+
+  const orderPayload = {
+    user: user ? user._id : undefined,
+    guest: guest ? guest._id : undefined,
+    guestEmail: guestEmailNormalized,
+    items: orderItems,
+    totalAmount,
+    shippingAddress: shippingAddress.trim(),
+    contactNumber: contactNumber.trim(),
+    paymentMethod,
+    paymentProofUrl: paymentProofUrl
+      ? paymentProofUrl.trim()
+      : undefined,
+    referenceNumber: isLegacyManualPayment
+      ? generateReferenceNumber()
+      : undefined,
+    notes: notes?.trim(),
+    couponCode: appliedCoupon
+      ? appliedCoupon.code
+      : null,
+    couponDiscount: appliedDiscount || 0,
+    status: isBankTransferPayment
+      ? "pending_payment"
+      : ["manual", "cash"].includes(paymentMethod)
+      ? "verification_pending"
+      : "confirmed",
+    paymentStatus:
+      isBankTransferPayment ||
+      ["manual", "cash"].includes(paymentMethod)
+        ? "pending"
+        : "paid",
+    expiresAt:
+      isLegacyManualPayment || paymentMethod === "cash"
+        ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
+        : undefined,
+  };
+
+  if (selectedGift) {
+    orderPayload.gift = {
+      giftId: selectedGift._id,
+      revealed: false,
+    };
+  }
+
+  const [orderDocument] = await Order.create(
+    [orderPayload],
+    { session }
+  );
+
+  if (
+    Array.isArray(orderPayload.items) &&
+    orderPayload.items.length
+  ) {
+    const purchaseRows = orderPayload.items.map((item) => ({
+      userId: user ? user._id : null,
+      productId: item.product,
+      action: "purchase",
+      category: item.category || "",
+      metadata: {
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        orderId: orderDocument._id,
+      },
+    }));
+
+    UserActivityLog.insertMany(purchaseRows, {
+      ordered: false,
+    }).catch(() => {});
+  }
+
+  if (user && normalizedCheckoutMode === "cart") {
+    user.cart = [];
+
+    await user.save({
+      session,
+      validateModifiedOnly: true,
+    });
+  }
+
+  if (guest) {
+    guest.orderCount += 1;
+
+    if (
+      structuredAddress &&
+      structuredAddress.street &&
+      structuredAddress.city &&
+      structuredAddress.postalCode &&
+      !guest.addresses.some((a) =>
+        addressMatchesOrder(a, structuredAddress)
+      )
+    ) {
+      guest.addresses.push({
+        label: structuredAddress.label,
+        street: String(structuredAddress.street).trim(),
+        city: String(structuredAddress.city).trim(),
+        postalCode: String(structuredAddress.postalCode).trim(),
+        country: String(
+          structuredAddress.country || "Sri Lanka"
+        ).trim(),
+        isDefault: guest.addresses.length === 0,
+      });
+    }
+
+    await guest.save({ session });
+  }
+
+  if (
+    user &&
+    structuredAddress &&
+    structuredAddress.street &&
+    structuredAddress.city &&
+    structuredAddress.postalCode &&
+    !user.addresses.some((a) =>
+      addressMatchesOrder(a, structuredAddress)
+    )
+  ) {
+    user.addresses.push({
+      label: structuredAddress.label,
+      street: String(structuredAddress.street).trim(),
+      city: String(structuredAddress.city).trim(),
+      postalCode: String(structuredAddress.postalCode).trim(),
+      country: String(
+        structuredAddress.country || "Sri Lanka"
+      ).trim(),
+      isDefault: user.addresses.length === 0,
+    });
+
+    await user.save({
+      session,
+      validateModifiedOnly: true,
+    });
+  }
+
+  return orderDocument;
+});
+
 
   const orderNotification = {
     userId: user ? user._id : null,
@@ -457,7 +536,7 @@ const createOrder = catchAsync(async (req, res, next) => {
       }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
     }
 
-    if (customerPhone) {
+        if (customerPhone) {
       sendWhatsAppMessage({
         to: customerPhone,
         message:
@@ -465,12 +544,13 @@ const createOrder = catchAsync(async (req, res, next) => {
           `Reference: *${manualPayment.referenceNumber}*\n` +
           `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
           `Upload your receipt: ${paymentLink}\n` +
-          `You have 24 hours to complete payment.`
-      }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
+          `You have 24 hours to complete payment.`,
+      }).catch((err) =>
+        logger.error("WhatsApp customer notify failed", { error: err.message })
+      );
     }
   }
-
-  res.status(201).json({
+ res.status(201).json({
     success: true,
     message: "Order placed successfully",
     orderId: createdOrder._id,
@@ -478,7 +558,8 @@ const createOrder = catchAsync(async (req, res, next) => {
     manualPayment: createdManualPayment
       ? {
           slug: createdManualPayment.slug,
-          referenceNumber: createdManualPayment.referenceNumber,
+          referenceNumber:
+            createdManualPayment.referenceNumber,
           amount: createdManualPayment.amount,
         }
       : null,
@@ -921,6 +1002,24 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 
   const fresh = await Order.findById(order._id);
 
+  // Real-time emit (Fix #2). SocketBridge `order:refresh` handler matches
+  // payload.userId against the current user — required for the toast/refetch.
+  if (order.user) {
+    emitToUser(order.user, "order:refresh", {
+      orderId: order._id,
+      userId: order.user,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
+      orderId: order._id,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  }
+  emitToAdmins("admin:refresh", { orderId: order._id, status: order.status });
+
   res.status(200).json({
     success: true,
     message: "Order status updated successfully",
@@ -1028,15 +1127,27 @@ const refundOrder = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Socket emit
-  const io = req.app.get("io");
-  if (io) {
-    io.emit("order:refresh", {
+  // Real-time emit (Fix #2 — consistent helpers).
+  if (order.user?._id || order.user) {
+    const userId = order.user?._id || order.user;
+    emitToUser(userId, "order:refresh", {
+      orderId: order._id,
+      userId,
+      status: order.status,
+      refundAmount: numericAmount,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
       orderId: order._id,
       status: order.status,
       refundAmount: numericAmount,
     });
   }
+  emitToAdmins("admin:refresh", {
+    orderId: order._id,
+    status: order.status,
+    refundAmount: numericAmount,
+  });
 
   res.status(200).json({
     success: true,
@@ -1049,6 +1160,19 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   const now = new Date();
   const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
   const revenueMatch = { status: { $ne: "cancelled" } };
+
+  // Helper: wraps a Mongoose query so CastErrors from corrupt ref fields
+  // (e.g. a product whose `drop` is "SS26" instead of a valid ObjectId)
+  // don't crash the entire dashboard — they just return the fallback value.
+  const safe = (promise, fallback = null) =>
+    promise.catch((err) => {
+      logger.error("Dashboard query failed (non-fatal)", {
+        error: err?.message,
+        path: err?.path,
+        value: err?.value,
+      });
+      return fallback;
+    });
 
   const [
     revenueSummary,
@@ -1095,7 +1219,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       status: { $in: ["pending", "pending_payment", "verification_pending", "confirmed", "shipped"] },
     }),
     Product.countDocuments(),
-    User.countDocuments({ role: "user" }),
+    User.countDocuments({ role: { $in: ["user", "customer"] } }),
     Drop.countDocuments(),
     Drop.countDocuments({ isPublished: true, isArchived: false }),
     Drop.countDocuments({ isArchived: true }),
@@ -1132,34 +1256,49 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
         },
       },
     ]),
-    Product.findOne({ soldCount: { $gt: 0 } })
-      .sort({ soldCount: -1, wishCount: -1, createdAt: 1 })
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.findOne({ wishCount: { $gt: 0 } })
-      .sort({ wishCount: -1, soldCount: -1, createdAt: 1 })
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.find({ soldCount: { $gt: 0 } })
-      .sort({ soldCount: -1, wishCount: -1, totalStock: 1 })
-      .limit(5)
-      .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
-      .populate("drop", "name slug releaseDate isPublished isArchived")
-      .lean(),
-    Product.find({ isActive: true, totalStock: { $lte: 5 } })
-      .sort({ totalStock: 1, soldCount: -1, wishCount: -1 })
-      .limit(6)
-      .select("name slug artNo totalStock soldCount wishCount drop")
-      .populate("drop", "name slug")
-      .lean(),
-    Order.find()
-      .sort({ createdAt: -1 })
-      .limit(6)
-      .select("_id totalAmount status paymentMethod paymentStatus createdAt items user")
-      .populate("user", "email")
-      .lean(),
+    // Wrap populate() calls in safe() — corrupt ref fields (non-ObjectId
+    // strings stored in `drop` or `user`) cause CastErrors on populate.
+    safe(
+      Product.findOne({ soldCount: { $gt: 0 } })
+        .sort({ soldCount: -1, wishCount: -1, createdAt: 1 })
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
+    safe(
+      Product.findOne({ wishCount: { $gt: 0 } })
+        .sort({ wishCount: -1, soldCount: -1, createdAt: 1 })
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
+    safe(
+      Product.find({ soldCount: { $gt: 0 } })
+        .sort({ soldCount: -1, wishCount: -1, totalStock: 1 })
+        .limit(5)
+        .select("name slug artNo soldCount wishCount totalStock discountPercent basePrice drop")
+        .populate("drop", "name slug releaseDate isPublished isArchived")
+        .lean(),
+      []
+    ),
+    safe(
+      Product.find({ isActive: true, totalStock: { $lte: 5 } })
+        .sort({ totalStock: 1, soldCount: -1, wishCount: -1 })
+        .limit(6)
+        .select("name slug artNo totalStock soldCount wishCount drop")
+        .populate("drop", "name slug")
+        .lean(),
+      []
+    ),
+    safe(
+      Order.find()
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select("_id totalAmount status paymentMethod paymentStatus createdAt items user")
+        .populate("user", "email")
+        .lean(),
+      []
+    ),
     Product.aggregate([
       {
         $group: {
@@ -1221,13 +1360,15 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
-    Drop.findOne({
-      releaseDate: { $gt: now },
-      isArchived: false,
-    })
-      .sort({ releaseDate: 1 })
-      .select("name slug releaseDate isPublished isArchived")
-      .lean(),
+    safe(
+      Drop.findOne({
+        releaseDate: { $gt: now },
+        isArchived: false,
+      })
+        .sort({ releaseDate: 1 })
+        .select("name slug releaseDate isPublished isArchived")
+        .lean()
+    ),
     Review.countDocuments({ status: "approved", category: "uncategorized" }),
     ManualPayment.countDocuments({ status: "proof_submitted" }),
     Product.find({
@@ -1290,7 +1431,7 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     };
   }
 
-  const recentOrders = recentOrdersDocs.map((order) => ({
+  const recentOrders = (recentOrdersDocs || []).map((order) => ({
     _id: order._id,
     customerEmail: order.user?.email || "Unknown customer",
     status: order.status,
@@ -1301,13 +1442,13 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
     createdAt: order.createdAt,
   }));
 
-  const topProducts = topProductsDocs.map((product) => ({
+  const topProducts = (topProductsDocs || []).map((product) => ({
     ...product,
     dropName: product.drop?.name || "Independent Release",
     dropSlug: product.drop?.slug || null,
   }));
 
-  const inventoryAlerts = inventoryAlertsDocs.map((product) => ({
+  const inventoryAlerts = (inventoryAlertsDocs || []).map((product) => ({
     ...product,
     dropName: product.drop?.name || "Independent Release",
     dropSlug: product.drop?.slug || null,
@@ -1400,6 +1541,126 @@ const getOrderInvoice = catchAsync(async (req, res, next) => {
   streamInvoicePdf({ order, bankConfig, stream: res });
 });
 
+// Bulk status transition. Validates each row through ORDER_STATUS_FLOW, sets
+// the new status, and restores stock on cancellation. Intentionally SKIPS the
+// per-order customer email + WhatsApp side effects from updateOrderStatus —
+// bulk operations should not blast 50 individual emails. A single admin
+// broadcast summarizes the change. If a row can't transition, it lands in
+// `failed[]` with the state-machine reason; the rest still succeed.
+const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
+  const { ids, status, cancellationReason } = req.body;
+  const succeeded = [];
+  const succeededDetails = [];
+  const failed = [];
+
+  for (const id of ids) {
+    try {
+      const order = await Order.findById(id);
+      if (!order) {
+        failed.push({ id, reason: "order not found" });
+        continue;
+      }
+
+      const allowedNext = ORDER_STATUS_FLOW[order.status] || [];
+      if (!allowedNext.includes(status)) {
+        failed.push({
+          id,
+          reason: `cannot transition from "${order.status}" to "${status}"`,
+        });
+        continue;
+      }
+
+      if (status === "cancelled") {
+        const reason = String(cancellationReason || "").trim();
+        if (!reason) {
+          failed.push({ id, reason: "cancellation reason is required" });
+          continue;
+        }
+        order.cancellationReason = reason;
+        order.cancelledAt = new Date();
+        order.cancelledBy = req.userInfo._id;
+
+        for (const item of order.items) {
+          try {
+            const product = await Product.findById(item.product);
+            if (product) {
+              const variant = product.variants.find((v) => v.sku === item.variantSku);
+              if (variant) variant.stock += item.quantity;
+              product.soldCount = Math.max(0, (product.soldCount || 0) - item.quantity);
+              await product.save({ validateModifiedOnly: true });
+            }
+          } catch (stockErr) {
+            logger.error("Failed to restore stock during bulk cancel", {
+              orderId: order._id,
+              productId: item.product,
+              error: stockErr.message,
+            });
+          }
+        }
+      }
+
+      order.status = status;
+      if (
+        status === "confirmed" &&
+        ["manual", "manual_bank_transfer", "cash", "receipt"].includes(order.paymentMethod)
+      ) {
+        order.paymentStatus = "paid";
+      }
+
+      await order.save({ validateModifiedOnly: true });
+      succeeded.push(id);
+      succeededDetails.push({ id: order._id, userId: order.user || null, oldStatus: order.status });
+    } catch (err) {
+      failed.push({ id, reason: err.message || "unexpected error" });
+    }
+  }
+
+  if (succeeded.length > 0) {
+    await broadcastNotification({
+      type: "admin",
+      title: `Bulk order update: ${succeeded.length} → ${status}`,
+      message: `${succeeded.length} order${succeeded.length === 1 ? "" : "s"} bulk-updated to "${status}".`,
+      filter: { role: { $in: ADMIN_ROLES } },
+    }).catch((err) => logger.error("[bulk-status] broadcast failed", { error: err.message }));
+
+    // Real-time emit per affected order (Fix #2).
+    for (const detail of succeededDetails) {
+      if (detail.userId) {
+        emitToUser(detail.userId, "order:refresh", {
+          orderId: detail.id,
+          userId: detail.userId,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      } else {
+        emitToAll("order:refresh:public", {
+          orderId: detail.id,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      }
+    }
+    emitToAdmins("admin:refresh", { bulkOrderIds: succeeded, status });
+  }
+
+  req.adminAction = `Bulk status → ${status} (${succeeded.length}/${ids.length})`;
+  req.adminDetails = {
+    total: ids.length,
+    succeededCount: succeeded.length,
+    failedCount: failed.length,
+    status,
+    succeeded,
+    failed,
+  };
+
+  res.status(200).json({
+    success: true,
+    total: ids.length,
+    succeeded,
+    failed,
+  });
+});
+
 module.exports = {
   createOrder,
   getUserOrders,
@@ -1409,4 +1670,5 @@ module.exports = {
   refundOrder,
   getOrderInvoice,
   getDashboardStats,
+  bulkUpdateOrderStatus,
 };

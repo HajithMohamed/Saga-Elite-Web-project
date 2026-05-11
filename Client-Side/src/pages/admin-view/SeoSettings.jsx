@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   CreditCard,
   Save,
+  Package,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ const TABS = [
   { key: "seo", label: "SEO", icon: Search },
   { key: "maintenance", label: "Maintenance", icon: AlertTriangle },
   { key: "payment", label: "Payment Settings", icon: CreditCard },
+  { key: "inventory", label: "Inventory", icon: Package },
 ];
 
 const SEO_PAGES = [
@@ -49,6 +51,12 @@ const DEFAULT_BANK_DETAILS = {
   accountNumber: "108052612262",
   whatsapp: "+94 77 070 4274",
   deadline: "Pay within 24 hours to confirm your order.",
+};
+
+// Numeric default applied by the smart-alerts cron when a product has no
+// per-product `lowStockThreshold` set.
+const DEFAULT_INVENTORY = {
+  globalLowStockThreshold: 5,
 };
 
 const putConfig = (key, payload) =>
@@ -342,6 +350,45 @@ const PaymentTab = ({ value, onChange, onSave, saving }) => (
   </div>
 );
 
+const InventoryTab = ({ value, onChange, onSave, saving }) => (
+  <div className="space-y-6">
+    <p className="text-xs text-[#99907c]">
+      Default low-stock threshold applied to every product that does not have
+      its own override. The smart-alerts cron fires a <span className="text-[#f2ca50]">low_stock_warning</span>
+      whenever an active product's total stock drops to this level or below
+      AND has had at least one cart-add (so archived/seasonal stock doesn't
+      flood the alert feed).
+    </p>
+
+    <TextField
+      label="Global low-stock threshold (units)"
+      type="number"
+      value={value.globalLowStockThreshold}
+      onChange={(v) => onChange({ ...value, globalLowStockThreshold: v })}
+      placeholder="5"
+    />
+
+    <p className="text-[10px] uppercase tracking-[0.22em] text-[#665c4d]">
+      To override per-product, edit the product and set its own
+      &ldquo;Low Stock Threshold&rdquo; value on the Pricing tab.
+    </p>
+
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={saving}
+      className="inline-flex items-center gap-2 bg-[#f2ca50] px-6 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {saving ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Save className="h-4 w-4" />
+      )}
+      Save inventory settings
+    </button>
+  </div>
+);
+
 /* --------------------------------------------------------------------- */
 /* Main                                                                   */
 /* --------------------------------------------------------------------- */
@@ -355,6 +402,7 @@ const SeoSettings = () => {
   const [seoPages, setSeoPages] = useState({});
   const [maintenance, setMaintenance] = useState(DEFAULT_MAINTENANCE);
   const [bankDetails, setBankDetails] = useState(DEFAULT_BANK_DETAILS);
+  const [inventory, setInventory] = useState(DEFAULT_INVENTORY);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -371,17 +419,21 @@ const SeoSettings = () => {
       }
     };
 
-    const [b, s, m, bd] = await Promise.all([
+    const [b, s, m, bd, lsg] = await Promise.all([
       safeGet("branding", DEFAULT_BRANDING),
       safeGet("seo_pages", {}),
       safeGet("maintenance", DEFAULT_MAINTENANCE),
       safeGet("bank_details", DEFAULT_BANK_DETAILS),
+      // Stored flat as a number so the smart-alerts cron can read it
+      // directly via Number(doc.value).
+      safeGet("low_stock_global_threshold", DEFAULT_INVENTORY.globalLowStockThreshold),
     ]);
 
     setBranding(b);
     setSeoPages(s && typeof s === "object" ? s : {});
     setMaintenance(m);
     setBankDetails(bd);
+    setInventory({ globalLowStockThreshold: Number(lsg) || DEFAULT_INVENTORY.globalLowStockThreshold });
     setLoading(false);
   }, []);
 
@@ -461,7 +513,7 @@ const SeoSettings = () => {
               saveKey("maintenance", "Maintenance Mode", maintenance)
             }
           />
-        ) : (
+        ) : activeTab === "payment" ? (
           <PaymentTab
             value={bankDetails}
             onChange={setBankDetails}
@@ -469,6 +521,17 @@ const SeoSettings = () => {
             onSave={() =>
               saveKey("bank_details", "Bank Details", bankDetails)
             }
+          />
+        ) : (
+          <InventoryTab
+            value={inventory}
+            onChange={setInventory}
+            saving={saving}
+            onSave={() => {
+              const n = Number(inventory.globalLowStockThreshold);
+              const safe = Number.isFinite(n) && n >= 0 ? Math.floor(n) : DEFAULT_INVENTORY.globalLowStockThreshold;
+              return saveKey("low_stock_global_threshold", "Global low-stock threshold", safe);
+            }}
           />
         )}
       </div>

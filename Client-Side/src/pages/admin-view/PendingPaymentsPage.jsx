@@ -19,6 +19,7 @@ import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
 import {
   fetchPendingManualPayments,
+  fetchManualPaymentMethodSummary,
   verifyManualPayment,
 } from "@/store/manualPaymentSlice";
 import { useSocketEvent } from "@/hooks/use-socket-events";
@@ -27,10 +28,12 @@ const MotionLink = motion.create(Link);
 
 const statusOptions = [
   { label: "All", value: "all" },
+  { label: "Awaiting receipt", value: "pending_payment" },
   { label: "Pending review", value: "proof_submitted" },
   { label: "Awaiting bank", value: "pending_bank_confirmation" },
   { label: "Verified", value: "verified" },
   { label: "Rejected", value: "rejected" },
+  { label: "Expired", value: "expired" },
 ];
 
 const statusMeta = {
@@ -54,6 +57,20 @@ const statusMeta = {
     label: "Rejected",
     className: "border-rose-500/20 bg-rose-500/10 text-rose-300",
   },
+  expired: {
+    label: "Expired",
+    className: "border-zinc-500/20 bg-zinc-500/10 text-zinc-300",
+  },
+};
+
+const PAYMENT_METHOD_LABELS = {
+  manual_bank_transfer: "Bank Transfer",
+  manual: "Manual (legacy)",
+  cash: "Cash",
+  payhere: "PayHere",
+  gpay: "Google Pay",
+  card: "Card",
+  lankapay: "LankaPay",
 };
 
 const formatDateTime = (value) => {
@@ -100,7 +117,7 @@ const resolvePaymentMethod = (payment) => {
 
 const PendingPaymentsPage = () => {
   const dispatch = useDispatch();
-  const { pendingPayments, pagination, isAdminLoading, isVerifying } =
+  const { pendingPayments, pagination, isAdminLoading, isVerifying, methodSummary } =
     useSelector((state) => state.manualPayment);
 
   const location = useLocation();
@@ -113,6 +130,7 @@ const PendingPaymentsPage = () => {
   );
 
   const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
+  const [guestOnly, setGuestOnly] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -132,18 +150,20 @@ const PendingPaymentsPage = () => {
     () => ({
       page,
       limit,
-      ...(statusFilter === "all" ? {} : { status: statusFilter }),
+      status: statusFilter,
+      guestOnly,
     }),
-    [limit, page, statusFilter]
+    [limit, page, statusFilter, guestOnly]
   );
 
   const loadQueue = useCallback(async () => {
     await dispatch(fetchPendingManualPayments(requestParams));
-  }, [dispatch, requestParams]);
+    await dispatch(fetchManualPaymentMethodSummary({ guestOnly }));
+  }, [dispatch, requestParams, guestOnly]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter]);
+  }, [statusFilter, guestOnly]);
 
   useEffect(() => {
     setStatusFilter(defaultStatusFilter);
@@ -341,23 +361,64 @@ const PendingPaymentsPage = () => {
           </div>
         </section>
 
-        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
-          <label className="space-y-2 text-sm text-gray-300">
-            Status filter
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="w-full appearance-none rounded-2xl border border-white/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+        {/* Method summary tiles (Fix #2) */}
+        {methodSummary?.byMethod?.length > 0 && (
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#0b0b0b] p-5">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">Total</p>
+              <p className="mt-2 text-3xl font-bold text-white">
+                {methodSummary.totals?.count || 0}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                LKR {formatCurrency(methodSummary.totals?.totalAmount || 0)}
+              </p>
             </div>
-          </label>
+            {methodSummary.byMethod.map((row) => (
+              <div
+                key={row.method}
+                className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-5"
+              >
+                <p className="text-[10px] uppercase tracking-[0.28em] text-gray-400">
+                  {PAYMENT_METHOD_LABELS[row.method] || row.method}
+                </p>
+                <p className="mt-2 text-3xl font-bold text-white">{row.count}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  LKR {formatCurrency(row.totalAmount || 0)}
+                </p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
+          <div className="space-y-3">
+            <label className="space-y-2 text-sm text-gray-300 block">
+              Status filter
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-white/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={guestOnly}
+                onChange={(e) => setGuestOnly(e.target.checked)}
+                className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+              />
+              Guest payments only
+            </label>
+          </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-400">
             <div className="flex items-center gap-2 text-[#D4AF37]">
