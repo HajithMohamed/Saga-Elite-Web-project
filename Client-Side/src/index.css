@@ -156,6 +156,52 @@
   .admin-stat-hint {
     @apply mt-2 text-xs text-[#d0c5af];
   }
+
+  /* ── Tiptap rich-text editor (admin) ───────────── */
+  .tiptap-editor h2 {
+    @apply mt-4 mb-2 text-xl font-semibold tracking-tight text-white;
+  }
+  .tiptap-editor h3 {
+    @apply mt-3 mb-1.5 text-lg font-semibold tracking-tight text-white;
+  }
+  .tiptap-editor p {
+    @apply mb-2 leading-7 text-[#e5e2e1];
+  }
+  .tiptap-editor ul {
+    @apply mb-3 list-disc pl-6 text-[#e5e2e1];
+  }
+  .tiptap-editor ol {
+    @apply mb-3 list-decimal pl-6 text-[#e5e2e1];
+  }
+  .tiptap-editor li {
+    @apply mb-1;
+  }
+  .tiptap-editor blockquote {
+    @apply my-3 border-l-2 border-[#D4AF37]/60 pl-4 italic text-[#d0c5af];
+  }
+  .tiptap-editor strong {
+    @apply font-semibold text-white;
+  }
+  .tiptap-editor a {
+    @apply text-[#D4AF37] underline underline-offset-4;
+  }
+  .tiptap-editor table {
+    @apply my-3 w-full border-collapse;
+  }
+  .tiptap-editor th,
+  .tiptap-editor td {
+    @apply border border-white/10 px-3 py-2 align-top text-sm;
+  }
+  .tiptap-editor th {
+    @apply bg-white/5 text-left font-semibold;
+  }
+  .tiptap-editor p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: #4d4635;
+    pointer-events: none;
+    height: 0;
+    float: left;
+  }
 }
 
 @layer base {

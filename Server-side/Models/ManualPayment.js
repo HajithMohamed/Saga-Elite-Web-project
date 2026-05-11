@@ -159,9 +159,18 @@ const manualPaymentSchema = new mongoose.Schema(
 
 // Idempotency for the IMAP watcher — the same email message must never upgrade
 // a payment twice (banks resend, IMAP redelivers on disconnect, etc.).
+// Partial unique index: enforce uniqueness only when emailMessageId is an actual
+// string. `sparse: true` does NOT exclude documents where the field is present
+// with value `null` — and the schema's `default: null` makes that the case for
+// every new payment, which would otherwise collide on the unique constraint.
 manualPaymentSchema.index(
   { "bankVerification.emailMessageId": 1 },
-  { unique: true, sparse: true }
+  {
+    unique: true,
+    partialFilterExpression: {
+      "bankVerification.emailMessageId": { $type: "string" },
+    },
+  }
 );
 
 manualPaymentSchema.pre("save", function setExpiry() {
