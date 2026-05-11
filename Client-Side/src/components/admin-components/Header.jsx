@@ -24,7 +24,7 @@ const Header = ({ onMenuToggle }) => {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-800 bg-black/80 px-8 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-[#4d4635] bg-black/80 px-8 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-6">
         <button
           type="button"
@@ -40,7 +40,7 @@ const Header = ({ onMenuToggle }) => {
       <div className="flex items-center gap-6">
         <NotificationsDropdown />
 
-        <div className="flex items-center gap-4 border-l border-gray-800 pl-6 ml-2">
+        <div className="flex items-center gap-4 border-l border-[#4d4635] pl-6 ml-2">
           <Link to="/admin/account" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             <div className="flex flex-col items-end">
               <span className="text-sm font-bold tracking-wide text-white font-sans uppercase">Admin Profile</span>

@@ -153,7 +153,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
         exit="hidden"
       >
       <motion.div
-        className="max-w-7xl w-full overflow-hidden rounded-3xl bg-surface text-on-surface shadow-2xl"
+        className="max-w-7xl w-full overflow-hidden rounded-2xl bg-surface text-on-surface shadow-2xl"
         variants={modalCardVariants}
         initial="hidden"
         animate="visible"
@@ -183,7 +183,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {localImages.map((image, index) => (
-              <div key={image._id ?? `${index}-${image.url}`} className="overflow-hidden rounded-3xl border border-outline-variant/20 bg-[#111]">
+              <div key={image._id ?? `${index}-${image.url}`} className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-[#111]">
                 <div className="relative">
                   <img
                     src={image.url}
