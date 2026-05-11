@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
   AnnouncementBar,
   HeroCarousel,
@@ -43,28 +44,46 @@ const Home = () => {
     socialImages: [],
   });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const [data, upcomingDrop] = await Promise.all([
-          getLandingData(),
-          fetchUpcomingDrop().catch(() => null),
-        ]);
-        setPayload(data);
-        setNextDrop(upcomingDrop);
-      } catch (error) {
-        console.error(error);
+  const load = useCallback(async ({ silent = false } = {}) => {
+    try {
+      if (!silent) setLoading(true);
+      const [data, upcomingDrop] = await Promise.all([
+        getLandingData(),
+        fetchUpcomingDrop().catch(() => null),
+      ]);
+      setPayload(data);
+      setNextDrop(upcomingDrop);
+    } catch (error) {
+      console.error(error);
+      if (!silent) {
         toast({
           title: "Failed to load",
           description: "Could not fetch the latest drops.",
         });
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Real-time refetch on product/drop CRUD (Fix #3 + #4) — debounced.
+  const refetchTimer = useRef(null);
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => load({ silent: true }), 300);
+  }, [load]);
+  useEffect(() => () => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+  }, []);
+
+  useSocketEvent("product:created", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("drop:created", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("drop:updated", debouncedRefetch, [debouncedRefetch]);
 
   usePageMeta({ title: "Saga Elite — Own The Drop.", fullTitle: true });
 

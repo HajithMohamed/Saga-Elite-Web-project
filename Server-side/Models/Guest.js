@@ -66,11 +66,10 @@ const guestSchema = new mongoose.Schema(
 guestSchema.index({ email: 1 });
 
 // Cap activity log to last 200 entries to prevent unbounded growth.
-guestSchema.pre("save", function (next) {
+guestSchema.pre("save", function () {
   if (Array.isArray(this.activityLog) && this.activityLog.length > 200) {
     this.activityLog = this.activityLog.slice(-200);
   }
-  next();
 });
 
 module.exports = mongoose.model("Guest", guestSchema);

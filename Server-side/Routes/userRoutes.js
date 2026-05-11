@@ -29,6 +29,7 @@ const {
   getMyAddresses,
   addMyAddress,
   removeMyAddress,
+  getMyManualPayments,
 } = require("../Controllers/user-controller");
 
 const router = express.Router();
@@ -60,5 +61,7 @@ router.delete("/wishlist/:productId", validateObjectIdParam("productId", "produc
 router.get("/addresses", getMyAddresses);
 router.post("/addresses", addMyAddress);
 router.delete("/addresses/:addressId", validateObjectIdParam("addressId", "address id"), removeMyAddress);
+
+router.get("/manual-payments", getMyManualPayments);
 
 module.exports = router;

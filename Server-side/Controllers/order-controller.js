@@ -18,6 +18,7 @@ const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { createNotification, broadcastNotification } = require("../Utils/notification-service");
+const { emitToUser, emitToAdmins, emitToAll } = require("../Utils/socket-service");
 const {
   sendWhatsAppMessage,
   parsePhoneList,
@@ -117,202 +118,170 @@ const addressMatchesOrder = (a, b) =>
 const createOrder = catchAsync(async (req, res, next) => {
   const {
     items,
-    checkoutMode,
+    user,
+    guest,
+    guestEmailNormalized,
     shippingAddress,
-    structuredAddress,
     contactNumber,
     paymentMethod,
     paymentProofUrl,
     notes,
-    guestEmail,
     couponCode,
+    isBankTransferPayment,
+    isLegacyManualPayment,
+    structuredAddress,
+    normalizedCheckoutMode,
   } = req.body;
 
-  logger.debug("Order creation request received", {
-    paymentMethod: req.body?.paymentMethod,
-    itemCount: Array.isArray(req.body?.items) ? req.body.items.length : 0,
-  });
+  const createdOrder = await runInTransaction(async (session) => {
+  const orderItems = [];
+  let totalAmount = 0;
 
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return next(new AppError("Order items are required", 400));
-  }
+  for (const item of items) {
+    const { productId, variantSku, quantity } = item;
 
-  if (!shippingAddress || !shippingAddress.trim()) {
-    return next(new AppError("Shipping address is required", 400));
-  }
+    if (!productId || !variantSku || !quantity || quantity <= 0) {
+      throw new AppError(
+        "Each order item must include a product, variant, and positive quantity",
+        400
+      );
+    }
 
-  if (!contactNumber || !contactNumber.trim()) {
-    return next(new AppError("Contact number is required", 400));
-  }
+    const product = await Product.findById(productId).session(session);
 
-  if (!paymentMethod || !["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(paymentMethod)) {
-    return next(new AppError("Invalid payment method", 400));
-  }
+    if (!product || !product.isActive) {
+      throw new AppError("Product not found or unavailable", 404);
+    }
 
-  const isLegacyManualPayment = paymentMethod === "manual";
-  const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
-
-  if (isLegacyManualPayment && !paymentProofUrl?.trim()) {
-    return next(new AppError("Receipt information is required for manual payment", 400));
-  }
-
-  // Determine if guest or user
-  let user = req.userInfo;
-  let guest = null;
-  let guestEmailNormalized = null;
-
-  if (!user && guestEmail) {
-    guestEmailNormalized = guestEmail.trim().toLowerCase();
-    guest = await Guest.findOneAndUpdate(
-      { email: guestEmailNormalized },
-      {
-        $set: { lastUsedAt: new Date() },
-        $setOnInsert: { guestToken: req.guestToken },
-      },
-      { upsert: true, new: true }
+    const variant = product.variants.find(
+      (variant) => variant.sku === variantSku
     );
 
-    // Backfill guestToken if doc was created before tracking was enabled.
-    if (!guest.guestToken && req.guestToken) {
-      guest.guestToken = req.guestToken;
-      await guest.save();
+    if (!variant) {
+      throw new AppError("Selected product variant not found", 404);
     }
 
-    // Bank-transfer manual payments require a verified guest (Fix #3).
-    if (isBankTransferPayment) {
-      const verifiedRecently =
-        guest.verified &&
-        guest.updatedAt &&
-        Date.now() - new Date(guest.updatedAt).getTime() < GUEST_OTP_REVERIFY_MS;
+    if (variant.stock < quantity) {
+      throw new AppError(
+        `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
+        400
+      );
+    }
 
-      if (!verifiedRecently) {
-        return next(
-          new AppError("OTP verification required before placing this order.", 403)
+    if (product.isLimited) {
+      const previousQuantityResult = await Order.aggregate([
+        {
+          $match: user
+            ? { user: user._id }
+            : { guest: guest._id },
+        },
+        { $unwind: "$items" },
+        { $match: { "items.product": product._id } },
+        {
+          $group: {
+            _id: null,
+            totalQuantity: { $sum: "$items.quantity" },
+          },
+        },
+      ]).session(session);
+
+      const previouslyOrdered =
+        previousQuantityResult?.[0]?.totalQuantity || 0;
+
+      if (previouslyOrdered + quantity > product.maxPerUser) {
+        throw new AppError(
+          `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
+          400
         );
       }
     }
-  } else if (!user) {
-    return next(new AppError("Authentication required for registered users or guest email for guests", 401));
+
+    const priceBeforeDiscount =
+      product.basePrice + (variant.priceAdjustment || 0);
+
+    const unitPrice = Math.round(
+      priceBeforeDiscount *
+        (1 - (product.discountPercent || 0) / 100)
+    );
+
+    const itemTotal = unitPrice * quantity;
+
+    variant.stock -= quantity;
+    product.soldCount += quantity;
+
+    await product.save({
+      session,
+      validateModifiedOnly: true,
+    });
+
+    orderItems.push({
+      product: product._id,
+      productName: product.name,
+      productArtNo: product.artNo,
+      productSlug: product.slug,
+      variantSku: variant.sku,
+      size: variant.size,
+      color: variant.color,
+      quantity,
+      unitPrice,
+      totalPrice: itemTotal,
+    });
+
+    totalAmount += itemTotal;
   }
 
-  const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
+  let appliedCoupon = null;
+  let appliedDiscount = 0;
 
-  const createdOrder = await runInTransaction(async (session) => {
-    const orderItems = [];
-    let totalAmount = 0;
+  if (couponCode && String(couponCode).trim()) {
+    const productIds = items.map((it) => it.productId);
 
-    for (const item of items) {
-      const { productId, variantSku, quantity } = item;
+    const result = await evaluateCoupon({
+      code: couponCode,
+      subtotal: totalAmount,
+      productIds,
+    });
 
-      if (!productId || !variantSku || !quantity || quantity <= 0) {
-        throw new AppError("Each order item must include a product, variant, and positive quantity", 400);
-      }
+    if (result) {
+      appliedCoupon = result.coupon;
+      appliedDiscount = result.discount;
 
-      const product = await Product.findById(productId).session(session);
-
-      if (!product || !product.isActive) {
-        throw new AppError("Product not found or unavailable", 404);
-      }
-
-      const variant = product.variants.find((variant) => variant.sku === variantSku);
-
-      if (!variant) {
-        throw new AppError("Selected product variant not found", 404);
-      }
-
-      if (variant.stock < quantity) {
-        throw new AppError(
-          `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
-          400,
-        );
-      }
-
-      if (product.isLimited) {
-        const previousQuantityResult = await Order.aggregate([
-          {
-            $match: user
-              ? { user: user._id }
-              : { guest: guest._id }
-          },
-          { $unwind: "$items" },
-          { $match: { "items.product": product._id } },
-          { $group: { _id: null, totalQuantity: { $sum: "$items.quantity" } } },
-        ]).session(session);
-
-        const previouslyOrdered = previousQuantityResult?.[0]?.totalQuantity || 0;
-
-        if (previouslyOrdered + quantity > product.maxPerUser) {
-          throw new AppError(
-            `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
-            400,
-          );
-        }
-      }
-
-      const priceBeforeDiscount =
-        product.basePrice + (variant.priceAdjustment || 0);
-      const unitPrice = Math.round(
-        priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
+      totalAmount = Math.max(
+        0,
+        totalAmount - appliedDiscount
       );
-      const itemTotal = unitPrice * quantity;
 
-      variant.stock -= quantity;
-      product.soldCount += quantity;
+      const updateResult = await Coupon.updateOne(
+        {
+          _id: appliedCoupon._id,
+          $or: [
+            { maxUses: null },
+            {
+              $expr: {
+                $lt: ["$usedCount", "$maxUses"],
+              },
+            },
+          ],
+        },
+        {
+          $inc: { usedCount: 1 },
+        },
+        { session }
+      );
 
-      await product.save({ session, validateModifiedOnly: true });
-
-      orderItems.push({
-        product: product._id,
-        productName: product.name,
-        productArtNo: product.artNo,
-        productSlug: product.slug,
-        variantSku: variant.sku,
-        size: variant.size,
-        color: variant.color,
-        quantity,
-        unitPrice,
-        totalPrice: itemTotal,
-      });
-
-      totalAmount += itemTotal;
-    }
-
-    // Coupon evaluation (optional). Throws AppError on validation failure,
-    // which will roll back the transaction.
-    let appliedCoupon = null;
-    let appliedDiscount = 0;
-    if (couponCode && String(couponCode).trim()) {
-      const productIds = items.map((it) => it.productId);
-      const result = await evaluateCoupon({
-        code: couponCode,
-        subtotal: totalAmount,
-        productIds,
-      });
-      if (result) {
-        appliedCoupon = result.coupon;
-        appliedDiscount = result.discount;
-        totalAmount = Math.max(0, totalAmount - appliedDiscount);
-        // Increment usage atomically; respect maxUses if defined.
-        const updateResult = await Coupon.updateOne(
-          {
-            _id: appliedCoupon._id,
-            $or: [
-              { maxUses: null },
-              { $expr: { $lt: ["$usedCount", "$maxUses"] } },
-            ],
-          },
-          { $inc: { usedCount: 1 } },
-          { session }
+      if (updateResult.modifiedCount === 0) {
+        throw new AppError(
+          "Coupon usage limit reached",
+          400
         );
-        if (updateResult.modifiedCount === 0) {
-          throw new AppError("Coupon usage limit reached", 400);
-        }
       }
     }
+  }
 
-    const dropId = req.body.dropId || null;
-    let selectedGift = null;
+  const dropId = req.body.dropId || null;
+  let selectedGift = null;
 
+<<<<<<< HEAD
     // Surprise gifts are a registered-user perk only (Fix #7).
     if (user) {
       if (dropId) {
@@ -345,9 +314,66 @@ const createOrder = catchAsync(async (req, res, next) => {
           : "confirmed",
       paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
       expiresAt: isLegacyManualPayment || paymentMethod === "cash"
+=======
+  if (user) {
+    if (dropId) {
+      selectedGift = await Gift.findOne({
+        isActive: true,
+        drop: dropId,
+      }).session(session);
+    }
+
+    if (!selectedGift) {
+      selectedGift = await Gift.findOne({
+        isActive: true,
+        drop: null,
+      }).session(session);
+    }
+  }
+
+  const orderPayload = {
+    user: user ? user._id : undefined,
+    guest: guest ? guest._id : undefined,
+    guestEmail: guestEmailNormalized,
+    items: orderItems,
+    totalAmount,
+    shippingAddress: shippingAddress.trim(),
+    contactNumber: contactNumber.trim(),
+    paymentMethod,
+    paymentProofUrl: paymentProofUrl
+      ? paymentProofUrl.trim()
+      : undefined,
+    referenceNumber: isLegacyManualPayment
+      ? generateReferenceNumber()
+      : undefined,
+    notes: notes?.trim(),
+    couponCode: appliedCoupon
+      ? appliedCoupon.code
+      : null,
+    couponDiscount: appliedDiscount || 0,
+    status: isBankTransferPayment
+      ? "pending_payment"
+      : ["manual", "cash"].includes(paymentMethod)
+      ? "verification_pending"
+      : "confirmed",
+    paymentStatus:
+      isBankTransferPayment ||
+      ["manual", "cash"].includes(paymentMethod)
+        ? "pending"
+        : "paid",
+    expiresAt:
+      isLegacyManualPayment || paymentMethod === "cash"
+>>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
         ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
         : undefined,
+  };
+
+  if (selectedGift) {
+    orderPayload.gift = {
+      giftId: selectedGift._id,
+      revealed: false,
     };
+<<<<<<< HEAD
 
     if (selectedGift) {
       orderPayload.gift = {
@@ -395,6 +421,102 @@ const createOrder = catchAsync(async (req, res, next) => {
           isDefault: guest.addresses.length === 0,
         });
       }
+=======
+  }
+
+  const [orderDocument] = await Order.create(
+    [orderPayload],
+    { session }
+  );
+
+  if (
+    Array.isArray(orderPayload.items) &&
+    orderPayload.items.length
+  ) {
+    const purchaseRows = orderPayload.items.map((item) => ({
+      userId: user ? user._id : null,
+      productId: item.product,
+      action: "purchase",
+      category: item.category || "",
+      metadata: {
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        orderId: orderDocument._id,
+      },
+    }));
+
+    UserActivityLog.insertMany(purchaseRows, {
+      ordered: false,
+    }).catch(() => {});
+  }
+
+  if (user && normalizedCheckoutMode === "cart") {
+    user.cart = [];
+
+    await user.save({
+      session,
+      validateModifiedOnly: true,
+    });
+  }
+
+  if (guest) {
+    guest.orderCount += 1;
+
+    if (
+      structuredAddress &&
+      structuredAddress.street &&
+      structuredAddress.city &&
+      structuredAddress.postalCode &&
+      !guest.addresses.some((a) =>
+        addressMatchesOrder(a, structuredAddress)
+      )
+    ) {
+      guest.addresses.push({
+        label: structuredAddress.label,
+        street: String(structuredAddress.street).trim(),
+        city: String(structuredAddress.city).trim(),
+        postalCode: String(structuredAddress.postalCode).trim(),
+        country: String(
+          structuredAddress.country || "Sri Lanka"
+        ).trim(),
+        isDefault: guest.addresses.length === 0,
+      });
+    }
+
+    await guest.save({ session });
+  }
+
+  if (
+    user &&
+    structuredAddress &&
+    structuredAddress.street &&
+    structuredAddress.city &&
+    structuredAddress.postalCode &&
+    !user.addresses.some((a) =>
+      addressMatchesOrder(a, structuredAddress)
+    )
+  ) {
+    user.addresses.push({
+      label: structuredAddress.label,
+      street: String(structuredAddress.street).trim(),
+      city: String(structuredAddress.city).trim(),
+      postalCode: String(structuredAddress.postalCode).trim(),
+      country: String(
+        structuredAddress.country || "Sri Lanka"
+      ).trim(),
+      isDefault: user.addresses.length === 0,
+    });
+
+    await user.save({
+      session,
+      validateModifiedOnly: true,
+    });
+  }
+
+  return orderDocument;
+});
+
+>>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
 
       await guest.save({ session });
     }
@@ -518,6 +640,7 @@ if (isBankTransferPayment) {
          <p><strong>IMPORTANT:</strong> Write ${manualPayment.referenceNumber} in the transfer remarks or on your ATM deposit slip.</p>
          <p><strong>You have 24 hours.</strong> After that your order expires.</p>
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
+<<<<<<< HEAD
     );
     sendEmail({
       email: customerEmail,
@@ -553,6 +676,45 @@ res.status(201).json({
     : null,
   guestEmail: guestEmailNormalized || null,
 });
+=======
+      );
+      sendEmail({
+        email: customerEmail,
+        subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
+        html: emailHtml,
+      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
+    }
+
+        if (customerPhone) {
+      sendWhatsAppMessage({
+        to: customerPhone,
+        message:
+          `*Saga Elite Order*\n` +
+          `Reference: *${manualPayment.referenceNumber}*\n` +
+          `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
+          `Upload your receipt: ${paymentLink}\n` +
+          `You have 24 hours to complete payment.`,
+      }).catch((err) =>
+        logger.error("WhatsApp customer notify failed", { error: err.message })
+      );
+    }
+  }
+ res.status(201).json({
+    success: true,
+    message: "Order placed successfully",
+    orderId: createdOrder._id,
+    data: createdOrder,
+    manualPayment: createdManualPayment
+      ? {
+          slug: createdManualPayment.slug,
+          referenceNumber:
+            createdManualPayment.referenceNumber,
+          amount: createdManualPayment.amount,
+        }
+      : null,
+    guestEmail: guestEmailNormalized || null,
+  });
+>>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
 });
 
 const getUserOrders = catchAsync(async (req, res, next) => {
@@ -989,6 +1151,24 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 
   const fresh = await Order.findById(order._id);
 
+  // Real-time emit (Fix #2). SocketBridge `order:refresh` handler matches
+  // payload.userId against the current user — required for the toast/refetch.
+  if (order.user) {
+    emitToUser(order.user, "order:refresh", {
+      orderId: order._id,
+      userId: order.user,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
+      orderId: order._id,
+      status: order.status,
+      oldStatus: currentStatus,
+    });
+  }
+  emitToAdmins("admin:refresh", { orderId: order._id, status: order.status });
+
   res.status(200).json({
     success: true,
     message: "Order status updated successfully",
@@ -1096,15 +1276,27 @@ const refundOrder = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Socket emit
-  const io = req.app.get("io");
-  if (io) {
-    io.emit("order:refresh", {
+  // Real-time emit (Fix #2 — consistent helpers).
+  if (order.user?._id || order.user) {
+    const userId = order.user?._id || order.user;
+    emitToUser(userId, "order:refresh", {
+      orderId: order._id,
+      userId,
+      status: order.status,
+      refundAmount: numericAmount,
+    });
+  } else {
+    emitToAll("order:refresh:public", {
       orderId: order._id,
       status: order.status,
       refundAmount: numericAmount,
     });
   }
+  emitToAdmins("admin:refresh", {
+    orderId: order._id,
+    status: order.status,
+    refundAmount: numericAmount,
+  });
 
   res.status(200).json({
     success: true,
@@ -1507,6 +1699,7 @@ const getOrderInvoice = catchAsync(async (req, res, next) => {
 const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
   const { ids, status, cancellationReason } = req.body;
   const succeeded = [];
+  const succeededDetails = [];
   const failed = [];
 
   for (const id of ids) {
@@ -1565,6 +1758,7 @@ const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
 
       await order.save({ validateModifiedOnly: true });
       succeeded.push(id);
+      succeededDetails.push({ id: order._id, userId: order.user || null, oldStatus: order.status });
     } catch (err) {
       failed.push({ id, reason: err.message || "unexpected error" });
     }
@@ -1577,6 +1771,25 @@ const bulkUpdateOrderStatus = catchAsync(async (req, res) => {
       message: `${succeeded.length} order${succeeded.length === 1 ? "" : "s"} bulk-updated to "${status}".`,
       filter: { role: { $in: ADMIN_ROLES } },
     }).catch((err) => logger.error("[bulk-status] broadcast failed", { error: err.message }));
+
+    // Real-time emit per affected order (Fix #2).
+    for (const detail of succeededDetails) {
+      if (detail.userId) {
+        emitToUser(detail.userId, "order:refresh", {
+          orderId: detail.id,
+          userId: detail.userId,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      } else {
+        emitToAll("order:refresh:public", {
+          orderId: detail.id,
+          status,
+          oldStatus: detail.oldStatus,
+        });
+      }
+    }
+    emitToAdmins("admin:refresh", { bulkOrderIds: succeeded, status });
   }
 
   req.adminAction = `Bulk status → ${status} (${succeeded.length}/${ids.length})`;

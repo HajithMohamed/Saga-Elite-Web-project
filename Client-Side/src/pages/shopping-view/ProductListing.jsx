@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { fetchCartAction } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
@@ -319,71 +320,79 @@ const ProductListing = () => {
     dispatch(fetchCartAction());
   }, [dispatch]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchListingData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchListingData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
 
-      try {
-        if (isOffersListing) {
-          const response = await axios.get(`${API_BASE}/offers`);
-          if (cancelled) return;
-          const offers = response.data?.data?.offers || [];
-          const seen = new Set();
-          const offerProducts = [];
-          for (const offer of offers) {
-            for (const product of offer.products || []) {
-              const key = String(product?._id || product?.id || "");
-              if (!key || seen.has(key)) continue;
-              seen.add(key);
-              offerProducts.push({
-                ...product,
-                discountPercent:
-                  offer.discountPercent ?? product.discountPercent,
-                offerEndsAt: offer.endsAt,
-                offerBadge: offer.badgeText,
-              });
-            }
+    try {
+      if (isOffersListing) {
+        const response = await axios.get(`${API_BASE}/offers`);
+        const offers = response.data?.data?.offers || [];
+        const seen = new Set();
+        const offerProducts = [];
+        for (const offer of offers) {
+          for (const product of offer.products || []) {
+            const key = String(product?._id || product?.id || "");
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            offerProducts.push({
+              ...product,
+              discountPercent: offer.discountPercent ?? product.discountPercent,
+              offerEndsAt: offer.endsAt,
+              offerBadge: offer.badgeText,
+            });
           }
-          setProducts(offerProducts);
-          return;
         }
+        setProducts(offerProducts);
+        return;
+      }
 
-        const query = new URLSearchParams({ limit: String(FETCH_LIMIT) });
-        if (categoryParam === "archive" || filterParam === "archive") {
-          query.set("status", "archive");
-        } else if (CATEGORY_LABELS[categoryParam]) {
-          query.set("category", CATEGORY_LABELS[categoryParam]);
-        }
+      const query = new URLSearchParams({ limit: String(FETCH_LIMIT) });
+      if (categoryParam === "archive" || filterParam === "archive") {
+        query.set("status", "archive");
+      } else if (CATEGORY_LABELS[categoryParam]) {
+        query.set("category", CATEGORY_LABELS[categoryParam]);
+      }
 
-        const response = await axios.get(
-          `${API_BASE}/products/get-all-products?${query.toString()}`
-        );
-        if (cancelled) return;
-        setProducts(response.data?.data || []);
-      } catch (err) {
-        if (cancelled) return;
-        const msg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Something went wrong";
-        setError(msg);
+      const response = await axios.get(
+        `${API_BASE}/products/get-all-products?${query.toString()}`
+      );
+      setProducts(response.data?.data || []);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Something went wrong";
+      setError(msg);
+      if (!silent) {
         toast({
           title: "Could not load pieces",
           description: msg,
           variant: "destructive",
         });
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
-    };
-
-    fetchListingData();
-    return () => {
-      cancelled = true;
-    };
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
   }, [categoryParam, filterParam, isOffersListing]);
+
+  useEffect(() => {
+    fetchListingData();
+  }, [fetchListingData]);
+
+  // Real-time refetch on product create/delete (Fix #3). Updates are still
+  // patched in-place by useLiveProductUpdates above.
+  const refetchTimer = useRef(null);
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => fetchListingData({ silent: true }), 250);
+  }, [fetchListingData]);
+  useEffect(() => () => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+  }, []);
+
+  useSocketEvent("product:created", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
 
   useEffect(() => {
     if (!products.length) return;

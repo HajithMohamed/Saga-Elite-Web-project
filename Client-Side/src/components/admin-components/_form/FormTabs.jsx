@@ -15,7 +15,7 @@ import React from "react";
 export function FormTabs({ tabs, active, onChange, className = "" }) {
   return (
     <nav
-      className={`sticky top-[88px] z-20 -mx-6 mb-6 border-b border-white/[0.06] bg-[#0A0A0A]/95 px-6 backdrop-blur-xl lg:-mx-10 lg:px-10 ${className}`.trim()}
+      className={`sticky top-20 z-20 -mx-6 mb-6 border-b border-white/[0.06] bg-[#0A0A0A]/95 px-6 backdrop-blur-xl lg:-mx-10 lg:px-10 ${className}`.trim()}
     >
       <div className="flex gap-1 overflow-x-auto py-1 scrollbar-hide">
         {tabs.map((tab) => {

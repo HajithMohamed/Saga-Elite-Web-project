@@ -823,7 +823,22 @@ const ManualPaymentPage = () => {
     );
   }
 
+  // Guard: if fetching but no reference, show email gate instead of stuck loader
   if ((isGenerating || isFetching) && !currentPayment && !activeReferenceNumber) {
+    if (!isAuthenticated && !resolvedEmail) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0a] text-white bg-grain">
+          <PageHeader />
+          <div className="mx-auto max-w-[1280px] px-4 pb-32 pt-16 md:px-8">
+            <EmailGate
+              defaultEmail={resolvedEmail}
+              onSubmit={handleEmailSubmit}
+              isSubmitting={isFetching}
+            />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white bg-grain">
         <PageHeader />

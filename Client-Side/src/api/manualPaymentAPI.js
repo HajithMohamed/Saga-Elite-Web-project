@@ -144,6 +144,16 @@ export const fetchManualPaymentMethodSummary = async ({ guestOnly = false } = {}
   return response.data;
 };
 
+export const fetchMyPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/user/manual-payments`, withAuth);
+  return response.data;
+};
+
+export const fetchGuestPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/guest/manual-payments`, withAuth);
+  return response.data;
+};
+
 export const fetchManualPaymentById = async (paymentId) => {
   const response = await axios.get(`${API_BASE}/admin/manual-payments/${paymentId}`, {
     withCredentials: true,

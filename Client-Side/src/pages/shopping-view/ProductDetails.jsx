@@ -16,6 +16,7 @@ import {
   removeFromWishlistAction,
 } from "@/store/cart-slice";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -105,6 +106,23 @@ const ProductDetails = () => {
 
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
+  );
+
+  // If THIS product is deleted by an admin, redirect to the listing (Fix #3).
+  useSocketEvent(
+    "product:deleted",
+    (payload = {}) => {
+      const matches =
+        String(payload.slug || "") === String(slug) ||
+        String(payload.productId || "") === String(product?._id || "");
+      if (!matches) return;
+      toast({
+        title: "Product no longer available",
+        description: "This piece has been removed from the catalogue.",
+      });
+      navigate("/shopping/product-list");
+    },
+    [slug, product?._id, navigate]
   );
 
   usePageMeta({ title: product?.name || "Product" });
@@ -245,26 +263,36 @@ const ProductDetails = () => {
     );
   }, [product, selectedVariantSku]);
 
-  useEffect(() => {
-    const fetchReviewPreview = async () => {
-      if (!product?._id) return;
-      try {
-        setReviewLoading(true);
-        const response = await axios.get(
-          `${API_BASE}/reviews/product/${product._id}?sort=recent&page=1&limit=3`
-        );
-        setReviewPreview(response.data?.reviews || []);
-        setReviewStats(response.data?.stats || null);
-      } catch (err) {
-        setReviewPreview([]);
-        setReviewStats(null);
-      } finally {
-        setReviewLoading(false);
-      }
-    };
-
-    fetchReviewPreview();
+  const fetchReviewPreview = React.useCallback(async () => {
+    if (!product?._id) return;
+    try {
+      setReviewLoading(true);
+      const response = await axios.get(
+        `${API_BASE}/reviews/product/${product._id}?sort=recent&page=1&limit=3`
+      );
+      setReviewPreview(response.data?.reviews || []);
+      setReviewStats(response.data?.stats || null);
+    } catch (err) {
+      setReviewPreview([]);
+      setReviewStats(null);
+    } finally {
+      setReviewLoading(false);
+    }
   }, [product?._id]);
+
+  useEffect(() => {
+    fetchReviewPreview();
+  }, [fetchReviewPreview]);
+
+  // Real-time review aggregate refresh (Fix #5).
+  useSocketEvent(
+    "review:refresh",
+    (payload = {}) => {
+      if (String(payload.productId || "") !== String(product?._id || "")) return;
+      fetchReviewPreview();
+    },
+    [fetchReviewPreview, product?._id]
+  );
 
   // Dwell-time beacon: send seconds-on-page when leaving or hiding the tab.
   // Skip dwells <3s (just bouncing). Uses sendBeacon so it fires on tab close.

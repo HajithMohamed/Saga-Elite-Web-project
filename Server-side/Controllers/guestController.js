@@ -1,5 +1,6 @@
 const validator = require("validator");
 const Guest = require("../Models/Guest");
+const ManualPayment = require("../Models/ManualPayment");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const generateOtp = require("../Utils/generate-otp");
@@ -255,6 +256,61 @@ h1{color:#0f172a;}p{color:#475569;}</style></head>
 <p>You can still place orders and receive order-related notifications.</p></body></html>`);
 });
 
+// ── Pending manual payments for cookie-tracked guest (Fix #1) ────────
+const PENDING_PAYMENT_STATUSES = [
+  "pending_payment",
+  "proof_submitted",
+  "pending_bank_confirmation",
+];
+
+const getGuestManualPayments = catchAsync(async (req, res) => {
+  const token = req.guestToken;
+  if (!token) {
+    return res.status(200).json({ success: true, data: { payments: [] } });
+  }
+
+  const guest = await Guest.findOne({ guestToken: token }).select("_id email");
+  if (!guest) {
+    return res.status(200).json({ success: true, data: { payments: [] } });
+  }
+
+  const payments = await ManualPayment.find({
+    guestId: guest._id,
+    status: { $in: PENDING_PAYMENT_STATUSES },
+  })
+    .populate({
+      path: "orderId",
+      select: "_id totalAmount items createdAt status",
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      payments: payments.map((p) => ({
+        _id: p._id,
+        slug: p.slug,
+        referenceNumber: p.referenceNumber,
+        amount: p.amount,
+        status: p.status,
+        expiresAt: p.expiresAt,
+        createdAt: p.createdAt,
+        order: p.orderId
+          ? {
+              _id: p.orderId._id,
+              totalAmount: p.orderId.totalAmount,
+              itemCount: Array.isArray(p.orderId.items) ? p.orderId.items.length : 0,
+              createdAt: p.orderId.createdAt,
+              status: p.orderId.status,
+            }
+          : null,
+      })),
+    },
+  });
+});
+
 module.exports = {
   identifyGuest,
   getGuestMe,
@@ -264,4 +320,5 @@ module.exports = {
   sendOtp,
   verifyOtp,
   unsubscribe,
+  getGuestManualPayments,
 };
