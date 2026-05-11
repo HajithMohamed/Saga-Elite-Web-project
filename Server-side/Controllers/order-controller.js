@@ -134,154 +134,153 @@ const createOrder = catchAsync(async (req, res, next) => {
   } = req.body;
 
   const createdOrder = await runInTransaction(async (session) => {
-  const orderItems = [];
-  let totalAmount = 0;
+    const orderItems = [];
+    let totalAmount = 0;
 
-  for (const item of items) {
-    const { productId, variantSku, quantity } = item;
+    for (const item of items) {
+      const { productId, variantSku, quantity } = item;
 
-    if (!productId || !variantSku || !quantity || quantity <= 0) {
-      throw new AppError(
-        "Each order item must include a product, variant, and positive quantity",
-        400
+      if (!productId || !variantSku || !quantity || quantity <= 0) {
+        throw new AppError(
+          "Each order item must include a product, variant, and positive quantity",
+          400
+        );
+      }
+
+      const product = await Product.findById(productId).session(session);
+
+      if (!product || !product.isActive) {
+        throw new AppError("Product not found or unavailable", 404);
+      }
+
+      const variant = product.variants.find(
+        (variant) => variant.sku === variantSku
       );
-    }
 
-    const product = await Product.findById(productId).session(session);
+      if (!variant) {
+        throw new AppError("Selected product variant not found", 404);
+      }
 
-    if (!product || !product.isActive) {
-      throw new AppError("Product not found or unavailable", 404);
-    }
+      if (variant.stock < quantity) {
+        throw new AppError(
+          `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
+          400
+        );
+      }
 
-    const variant = product.variants.find(
-      (variant) => variant.sku === variantSku
-    );
-
-    if (!variant) {
-      throw new AppError("Selected product variant not found", 404);
-    }
-
-    if (variant.stock < quantity) {
-      throw new AppError(
-        `Not enough stock for ${product.name} (${variant.size} / ${variant.color}).`,
-        400
-      );
-    }
-
-    if (product.isLimited) {
-      const previousQuantityResult = await Order.aggregate([
-        {
-          $match: user
-            ? { user: user._id }
-            : { guest: guest._id },
-        },
-        { $unwind: "$items" },
-        { $match: { "items.product": product._id } },
-        {
-          $group: {
-            _id: null,
-            totalQuantity: { $sum: "$items.quantity" },
+      if (product.isLimited) {
+        const previousQuantityResult = await Order.aggregate([
+          {
+            $match: user
+              ? { user: user._id }
+              : { guest: guest._id },
           },
-        },
-      ]).session(session);
-
-      const previouslyOrdered =
-        previousQuantityResult?.[0]?.totalQuantity || 0;
-
-      if (previouslyOrdered + quantity > product.maxPerUser) {
-        throw new AppError(
-          `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
-          400
-        );
-      }
-    }
-
-    const priceBeforeDiscount =
-      product.basePrice + (variant.priceAdjustment || 0);
-
-    const unitPrice = Math.round(
-      priceBeforeDiscount *
-        (1 - (product.discountPercent || 0) / 100)
-    );
-
-    const itemTotal = unitPrice * quantity;
-
-    variant.stock -= quantity;
-    product.soldCount += quantity;
-
-    await product.save({
-      session,
-      validateModifiedOnly: true,
-    });
-
-    orderItems.push({
-      product: product._id,
-      productName: product.name,
-      productArtNo: product.artNo,
-      productSlug: product.slug,
-      variantSku: variant.sku,
-      size: variant.size,
-      color: variant.color,
-      quantity,
-      unitPrice,
-      totalPrice: itemTotal,
-    });
-
-    totalAmount += itemTotal;
-  }
-
-  let appliedCoupon = null;
-  let appliedDiscount = 0;
-
-  if (couponCode && String(couponCode).trim()) {
-    const productIds = items.map((it) => it.productId);
-
-    const result = await evaluateCoupon({
-      code: couponCode,
-      subtotal: totalAmount,
-      productIds,
-    });
-
-    if (result) {
-      appliedCoupon = result.coupon;
-      appliedDiscount = result.discount;
-
-      totalAmount = Math.max(
-        0,
-        totalAmount - appliedDiscount
-      );
-
-      const updateResult = await Coupon.updateOne(
-        {
-          _id: appliedCoupon._id,
-          $or: [
-            { maxUses: null },
-            {
-              $expr: {
-                $lt: ["$usedCount", "$maxUses"],
-              },
+          { $unwind: "$items" },
+          { $match: { "items.product": product._id } },
+          {
+            $group: {
+              _id: null,
+              totalQuantity: { $sum: "$items.quantity" },
             },
-          ],
-        },
-        {
-          $inc: { usedCount: 1 },
-        },
-        { session }
+          },
+        ]).session(session);
+
+        const previouslyOrdered =
+          previousQuantityResult?.[0]?.totalQuantity || 0;
+
+        if (previouslyOrdered + quantity > product.maxPerUser) {
+          throw new AppError(
+            `Limit exceeded for ${product.name}. You may order up to ${product.maxPerUser} units total.`,
+            400
+          );
+        }
+      }
+
+      const priceBeforeDiscount =
+        product.basePrice + (variant.priceAdjustment || 0);
+
+      const unitPrice = Math.round(
+        priceBeforeDiscount *
+        (1 - (product.discountPercent || 0) / 100)
       );
 
-      if (updateResult.modifiedCount === 0) {
-        throw new AppError(
-          "Coupon usage limit reached",
-          400
+      const itemTotal = unitPrice * quantity;
+
+      variant.stock -= quantity;
+      product.soldCount += quantity;
+
+      await product.save({
+        session,
+        validateModifiedOnly: true,
+      });
+
+      orderItems.push({
+        product: product._id,
+        productName: product.name,
+        productArtNo: product.artNo,
+        productSlug: product.slug,
+        variantSku: variant.sku,
+        size: variant.size,
+        color: variant.color,
+        quantity,
+        unitPrice,
+        totalPrice: itemTotal,
+      });
+
+      totalAmount += itemTotal;
+    }
+
+    let appliedCoupon = null;
+    let appliedDiscount = 0;
+
+    if (couponCode && String(couponCode).trim()) {
+      const productIds = items.map((it) => it.productId);
+
+      const result = await evaluateCoupon({
+        code: couponCode,
+        subtotal: totalAmount,
+        productIds,
+      });
+
+      if (result) {
+        appliedCoupon = result.coupon;
+        appliedDiscount = result.discount;
+
+        totalAmount = Math.max(
+          0,
+          totalAmount - appliedDiscount
         );
+
+        const updateResult = await Coupon.updateOne(
+          {
+            _id: appliedCoupon._id,
+            $or: [
+              { maxUses: null },
+              {
+                $expr: {
+                  $lt: ["$usedCount", "$maxUses"],
+                },
+              },
+            ],
+          },
+          {
+            $inc: { usedCount: 1 },
+          },
+          { session }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+          throw new AppError(
+            "Coupon usage limit reached",
+            400
+          );
+        }
       }
     }
-  }
 
-  const dropId = req.body.dropId || null;
-  let selectedGift = null;
+    const dropId = req.body.dropId || null;
+    let selectedGift = null;
 
-<<<<<<< HEAD
     // Surprise gifts are a registered-user perk only (Fix #7).
     if (user) {
       if (dropId) {
@@ -314,189 +313,113 @@ const createOrder = catchAsync(async (req, res, next) => {
           : "confirmed",
       paymentStatus: isBankTransferPayment || ["manual", "cash"].includes(paymentMethod) ? "pending" : "paid",
       expiresAt: isLegacyManualPayment || paymentMethod === "cash"
-=======
-  if (user) {
-    if (dropId) {
-      selectedGift = await Gift.findOne({
-        isActive: true,
-        drop: dropId,
-      }).session(session);
-    }
+  if(user) {
+        if (dropId) {
+          selectedGift = await Gift.findOne({
+            isActive: true,
+            drop: dropId,
+          }).session(session);
+        }
 
-    if (!selectedGift) {
-      selectedGift = await Gift.findOne({
-        isActive: true,
-        drop: null,
-      }).session(session);
-    }
-  }
+        if (!selectedGift) {
+          selectedGift = await Gift.findOne({
+            isActive: true,
+            drop: null,
+          }).session(session);
+        }
+      }
 
   const orderPayload = {
-    user: user ? user._id : undefined,
-    guest: guest ? guest._id : undefined,
-    guestEmail: guestEmailNormalized,
-    items: orderItems,
-    totalAmount,
-    shippingAddress: shippingAddress.trim(),
-    contactNumber: contactNumber.trim(),
-    paymentMethod,
-    paymentProofUrl: paymentProofUrl
-      ? paymentProofUrl.trim()
-      : undefined,
-    referenceNumber: isLegacyManualPayment
-      ? generateReferenceNumber()
-      : undefined,
-    notes: notes?.trim(),
-    couponCode: appliedCoupon
-      ? appliedCoupon.code
-      : null,
-    couponDiscount: appliedDiscount || 0,
-    status: isBankTransferPayment
-      ? "pending_payment"
-      : ["manual", "cash"].includes(paymentMethod)
-      ? "verification_pending"
-      : "confirmed",
-    paymentStatus:
-      isBankTransferPayment ||
-      ["manual", "cash"].includes(paymentMethod)
-        ? "pending"
-        : "paid",
-    expiresAt:
-      isLegacyManualPayment || paymentMethod === "cash"
->>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
-        ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
-        : undefined,
-  };
-
-  if (selectedGift) {
-    orderPayload.gift = {
-      giftId: selectedGift._id,
-      revealed: false,
-    };
-<<<<<<< HEAD
-
-    if (selectedGift) {
-      orderPayload.gift = {
-        giftId: selectedGift._id,
-        revealed: false,
+        user: user ? user._id : undefined,
+        guest: guest ? guest._id : undefined,
+        guestEmail: guestEmailNormalized,
+        items: orderItems,
+        totalAmount,
+        shippingAddress: shippingAddress.trim(),
+        contactNumber: contactNumber.trim(),
+        paymentMethod,
+        paymentProofUrl: paymentProofUrl
+          ? paymentProofUrl.trim()
+          : undefined,
+        referenceNumber: isLegacyManualPayment
+          ? generateReferenceNumber()
+          : undefined,
+        notes: notes?.trim(),
+        couponCode: appliedCoupon
+          ? appliedCoupon.code
+          : null,
+        couponDiscount: appliedDiscount || 0,
+        status: isBankTransferPayment
+          ? "pending_payment"
+          : ["manual", "cash"].includes(paymentMethod)
+            ? "verification_pending"
+            : "confirmed",
+        paymentStatus:
+          isBankTransferPayment ||
+            ["manual", "cash"].includes(paymentMethod)
+            ? "pending"
+            : "paid",
+        expiresAt:
+          isLegacyManualPayment || paymentMethod === "cash"
+            ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
+            : undefined,
       };
-    }
 
-    const [orderDocument] = await Order.create([orderPayload], { session });
-
-    // Per-user activity log: one purchase row per item (fire-and-forget, outside session)
-    if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
-      const purchaseRows = orderPayload.items.map((item) => ({
-        userId: user ? user._id : null,
-        productId: item.productId,
-        action: "purchase",
-        category: item.category || "",
-        metadata: { quantity: item.quantity, unitPrice: item.unitPrice, orderId: orderDocument._id },
-      }));
-      UserActivityLog.insertMany(purchaseRows, { ordered: false }).catch(() => { });
-    }
-
-    if (user && normalizedCheckoutMode === "cart") {
-      user.cart = [];
-      await user.save({ session, validateModifiedOnly: true });
-    }
-
-    if (guest) {
-      guest.orderCount += 1;
-
-      // Persist address for guest if structured form provided (Fix #4).
-      if (
-        structuredAddress &&
-        structuredAddress.street &&
-        structuredAddress.city &&
-        structuredAddress.postalCode &&
-        !guest.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
-      ) {
-        guest.addresses.push({
-          label: structuredAddress.label,
-          street: String(structuredAddress.street).trim(),
-          city: String(structuredAddress.city).trim(),
-          postalCode: String(structuredAddress.postalCode).trim(),
-          country: String(structuredAddress.country || "Sri Lanka").trim(),
-          isDefault: guest.addresses.length === 0,
-        });
+      if(selectedGift) {
+        orderPayload.gift = {
+          giftId: selectedGift._id,
+          revealed: false,
+        };
       }
-=======
-  }
 
   const [orderDocument] = await Order.create(
-    [orderPayload],
-    { session }
-  );
+        [orderPayload],
+        { session }
+      );
 
-  if (
-    Array.isArray(orderPayload.items) &&
-    orderPayload.items.length
+      if(
+        Array.isArray(orderPayload.items) &&
+          orderPayload.items.length
   ) {
-    const purchaseRows = orderPayload.items.map((item) => ({
-      userId: user ? user._id : null,
-      productId: item.product,
-      action: "purchase",
-      category: item.category || "",
-      metadata: {
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        orderId: orderDocument._id,
-      },
-    }));
+      const purchaseRows = orderPayload.items.map((item) => ({
+        userId: user ? user._id : null,
+        productId: item.product,
+        action: "purchase",
+        category: item.category || "",
+        metadata: {
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          orderId: orderDocument._id,
+        },
+      }));
 
-    UserActivityLog.insertMany(purchaseRows, {
-      ordered: false,
-    }).catch(() => {});
-  }
+  UserActivityLog.insertMany(purchaseRows, {
+    ordered: false,
+  }).catch(() => { });
+}
 
   if (user && normalizedCheckoutMode === "cart") {
-    user.cart = [];
+  user.cart = [];
 
-    await user.save({
-      session,
-      validateModifiedOnly: true,
-    });
-  }
+  await user.save({
+    session,
+    validateModifiedOnly: true,
+  });
+}
 
-  if (guest) {
-    guest.orderCount += 1;
-
-    if (
-      structuredAddress &&
-      structuredAddress.street &&
-      structuredAddress.city &&
-      structuredAddress.postalCode &&
-      !guest.addresses.some((a) =>
-        addressMatchesOrder(a, structuredAddress)
-      )
-    ) {
-      guest.addresses.push({
-        label: structuredAddress.label,
-        street: String(structuredAddress.street).trim(),
-        city: String(structuredAddress.city).trim(),
-        postalCode: String(structuredAddress.postalCode).trim(),
-        country: String(
-          structuredAddress.country || "Sri Lanka"
-        ).trim(),
-        isDefault: guest.addresses.length === 0,
-      });
-    }
-
-    await guest.save({ session });
-  }
+if (guest) {
+  guest.orderCount += 1;
 
   if (
-    user &&
     structuredAddress &&
     structuredAddress.street &&
     structuredAddress.city &&
     structuredAddress.postalCode &&
-    !user.addresses.some((a) =>
+    !guest.addresses.some((a) =>
       addressMatchesOrder(a, structuredAddress)
     )
   ) {
-    user.addresses.push({
+    guest.addresses.push({
       label: structuredAddress.label,
       street: String(structuredAddress.street).trim(),
       city: String(structuredAddress.city).trim(),
@@ -504,45 +427,42 @@ const createOrder = catchAsync(async (req, res, next) => {
       country: String(
         structuredAddress.country || "Sri Lanka"
       ).trim(),
-      isDefault: user.addresses.length === 0,
-    });
-
-    await user.save({
-      session,
-      validateModifiedOnly: true,
+      isDefault: guest.addresses.length === 0,
     });
   }
 
-  return orderDocument;
-});
+  await guest.save({ session });
+}
 
->>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
-
-      await guest.save({ session });
-    }
-
-    // Persist address for registered user (Fix #4).
-    if (
-      user &&
-      structuredAddress &&
-      structuredAddress.street &&
-      structuredAddress.city &&
-      structuredAddress.postalCode &&
-      !user.addresses.some((a) => addressMatchesOrder(a, structuredAddress))
-    ) {
-      user.addresses.push({
-        label: structuredAddress.label,
-        street: String(structuredAddress.street).trim(),
-        city: String(structuredAddress.city).trim(),
-        postalCode: String(structuredAddress.postalCode).trim(),
-        country: String(structuredAddress.country || "Sri Lanka").trim(),
-        isDefault: user.addresses.length === 0,
-      });
-      await user.save({ session, validateModifiedOnly: true });
-    }
-
-    return orderDocument;
+if (
+  user &&
+  structuredAddress &&
+  structuredAddress.street &&
+  structuredAddress.city &&
+  structuredAddress.postalCode &&
+  !user.addresses.some((a) =>
+    addressMatchesOrder(a, structuredAddress)
+  )
+) {
+  user.addresses.push({
+    label: structuredAddress.label,
+    street: String(structuredAddress.street).trim(),
+    city: String(structuredAddress.city).trim(),
+    postalCode: String(structuredAddress.postalCode).trim(),
+    country: String(
+      structuredAddress.country || "Sri Lanka"
+    ).trim(),
+    isDefault: user.addresses.length === 0,
   });
+
+  await user.save({
+    session,
+    validateModifiedOnly: true,
+  });
+}
+
+return orderDocument;
+});
 
 
 const orderNotification = {
@@ -640,7 +560,6 @@ if (isBankTransferPayment) {
          <p><strong>IMPORTANT:</strong> Write ${manualPayment.referenceNumber} in the transfer remarks or on your ATM deposit slip.</p>
          <p><strong>You have 24 hours.</strong> After that your order expires.</p>
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
-<<<<<<< HEAD
     );
     sendEmail({
       email: customerEmail,
@@ -657,11 +576,12 @@ if (isBankTransferPayment) {
         `Reference: *${manualPayment.referenceNumber}*\n` +
         `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
         `Upload your receipt: ${paymentLink}\n` +
-        `You have 24 hours to complete payment.`
-    }).catch((err) => logger.error("WhatsApp customer notify failed", { error: err.message }));
+        `You have 24 hours to complete payment.`,
+    }).catch((err) =>
+      logger.error("WhatsApp customer notify failed", { error: err.message })
+    );
   }
 }
-
 res.status(201).json({
   success: true,
   message: "Order placed successfully",
@@ -670,51 +590,13 @@ res.status(201).json({
   manualPayment: createdManualPayment
     ? {
       slug: createdManualPayment.slug,
-      referenceNumber: createdManualPayment.referenceNumber,
+      referenceNumber:
+        createdManualPayment.referenceNumber,
       amount: createdManualPayment.amount,
     }
     : null,
   guestEmail: guestEmailNormalized || null,
 });
-=======
-      );
-      sendEmail({
-        email: customerEmail,
-        subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
-        html: emailHtml,
-      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
-    }
-
-        if (customerPhone) {
-      sendWhatsAppMessage({
-        to: customerPhone,
-        message:
-          `*Saga Elite Order*\n` +
-          `Reference: *${manualPayment.referenceNumber}*\n` +
-          `Amount: *LKR ${createdOrder.totalAmount.toLocaleString()}*\n` +
-          `Upload your receipt: ${paymentLink}\n` +
-          `You have 24 hours to complete payment.`,
-      }).catch((err) =>
-        logger.error("WhatsApp customer notify failed", { error: err.message })
-      );
-    }
-  }
- res.status(201).json({
-    success: true,
-    message: "Order placed successfully",
-    orderId: createdOrder._id,
-    data: createdOrder,
-    manualPayment: createdManualPayment
-      ? {
-          slug: createdManualPayment.slug,
-          referenceNumber:
-            createdManualPayment.referenceNumber,
-          amount: createdManualPayment.amount,
-        }
-      : null,
-    guestEmail: guestEmailNormalized || null,
-  });
->>>>>>> 84ea62ac5ad0bf4dc4367facf7ba08447c1cd7dc
 });
 
 const getUserOrders = catchAsync(async (req, res, next) => {
