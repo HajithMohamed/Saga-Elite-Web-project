@@ -19,6 +19,7 @@ import {
 import { logoutUserAction, changePasswordAction, checkAuthAction } from "@/store/auth-slice";
 import { fetchWishlistAction } from "@/store/cart-slice";
 import { fetchUserOrders } from "@/store/order-slice";
+import { fetchMyPendingManualPayments } from "@/store/manualPaymentSlice";
 import axiosInstance from "@/api/axiosInstance";
 
 const SL_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
@@ -42,6 +43,9 @@ const Account = () => {
   const { user } = useSelector((state) => state.auth);
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const { userOrders } = useSelector((state) => state.order);
+  const pendingPayments = useSelector(
+    (state) => state.manualPayment?.pendingForCurrentVisitor ?? []
+  );
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -86,6 +90,7 @@ const Account = () => {
   useEffect(() => {
     dispatch(fetchWishlistAction());
     dispatch(fetchUserOrders());
+    dispatch(fetchMyPendingManualPayments());
   }, [dispatch]);
 
   // Pull the current phone from the dedicated /user/me endpoint on first
@@ -283,9 +288,11 @@ const Account = () => {
     },
   ];
 
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
-    <div className="min-h-screen bg-background text-on-surface">
-      <div className="container mx-auto max-w-7xl px-4 py-10 md:px-6">
+    <div className={`${isAdminRoute ? "admin-page-shell" : "min-h-screen bg-background text-on-surface"}`}>
+      <div className={`${isAdminRoute ? "" : "container mx-auto max-w-7xl px-4 py-10 md:px-6"}`}>
         <nav className="mb-8 flex gap-2 text-xs uppercase text-muted-foreground">
           <Link to={homeLink}>{isAdmin ? "Dashboard" : "Home"}</Link>
           <ChevronRight className="h-3 w-3" />
@@ -516,6 +523,55 @@ const Account = () => {
                 View Wishlist <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
+
+            {pendingPayments.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-6"
+              >
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-xs uppercase tracking-wider text-amber-400">
+                      Action required — unfinished payments
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Upload your bank-transfer receipt to confirm your order.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {pendingPayments.map((payment) => (
+                    <div
+                      key={payment._id}
+                      className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-black/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs uppercase tracking-widest text-amber-300">
+                          Ref {payment.referenceNumber}
+                        </p>
+                        <p className="mt-1 text-sm text-white">
+                          LKR{" "}
+                          {Number(payment.amount || 0).toLocaleString("en-LK", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </p>
+                        <div className="mt-2">
+                          <StatusBadge status={payment.status} />
+                        </div>
+                      </div>
+                      <Link
+                        to={`/shopping/manual-payment/${payment.slug}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-500 px-5 py-2 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-amber-400"
+                      >
+                        Upload receipt
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             <div className="rounded-2xl border border-[#D4AF37]/10 bg-surface-container-low p-6 dark:bg-[#090909]">
               <div className="mb-5 flex items-start justify-between gap-4">

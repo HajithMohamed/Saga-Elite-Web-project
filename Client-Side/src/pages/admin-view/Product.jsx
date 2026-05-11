@@ -36,6 +36,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import { SearchFilterBar } from "@/components/admin-components/_shared/SearchFilterBar";
 import {
   pageVariants,
   containerVariants,
@@ -1314,50 +1315,24 @@ const Product = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
+      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-white/10"
     >
       <div className="border-b border-white/10 px-6 py-3">
         <ToastFlash show={showProductSaved} message="Product saved" />
       </div>
-      {/* List Header */}
-      <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
-        <div className="flex items-center gap-8 w-full md:w-auto">
-          <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37] placeholder:text-gray-500"
-              placeholder="Search the collection…"
-              type="search"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 self-end md:self-auto">
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-saga-primary rounded-full"></span>
-          </button>
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant">
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
 
-      <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+      <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
         {isLoading ? (
           <SkeletonGrid count={6} />
         ) : (
         <>
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-          <div className="max-w-2xl">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold" style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}>Inventory Registry</span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif tracking-tighter text-white leading-none mb-4">Product Ledger</h2>
-            <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed font-sans">
-              Manage the digital heartbeat of your luxury portfolio. Curate availability, adjust valuation, and monitor stock levels.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4">
+        <SearchFilterBar 
+          searchValue={searchQuery} 
+          onSearchChange={setSearchQuery} 
+          searchPlaceholder="Search the collection…"
+          className="mb-8 justify-between"
+        >
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex bg-surface-container-low p-1 border border-outline-variant/10">
               <button
                 onClick={() => setStatusFilter("true")}
@@ -1392,7 +1367,7 @@ const Product = () => {
               New Product
             </button>
           </div>
-        </div>
+        </SearchFilterBar>
 
         {/* Bento Grid List Header */}
         <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
@@ -1564,7 +1539,7 @@ const Product = () => {
         )}
         </>
         )}
-      </main>
+      </div>>
       {isGalleryOpen ? (
         <ImageGalleryModal
           title={galleryTitle}

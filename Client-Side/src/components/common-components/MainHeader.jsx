@@ -236,6 +236,7 @@ const MainHeader = () => {
                           <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
                           <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
                           <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
                           <div className="h-[1px] bg-[#2a2a2a] my-1" />
                           <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
                         </>
@@ -243,6 +244,7 @@ const MainHeader = () => {
                         <>
                           <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/auth/login">Access Vault</Link>
                           <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors text-[#f2ca50]" to="/auth/register">Request Access</Link>
+                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment">Find Payment</Link>
                         </>
                       )}
                     </div>

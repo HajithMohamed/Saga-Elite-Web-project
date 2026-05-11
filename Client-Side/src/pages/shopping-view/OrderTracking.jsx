@@ -58,6 +58,18 @@ const OrderTracking = () => {
     [dispatch, orderId]
   );
 
+  // Sibling event for guest orders (no user id to room-target).
+  useSocketEvent(
+    "order:refresh:public",
+    (payload) => {
+      if (!orderId) return;
+      if (String(payload?.orderId || "") === String(orderId)) {
+        dispatch(fetchOrderById(orderId));
+      }
+    },
+    [dispatch, orderId]
+  );
+
   if (!orderId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black px-6 text-white">

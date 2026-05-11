@@ -9,6 +9,7 @@ import { fetchPendingManualPayments } from "@/store/manualPaymentSlice";
 import { fetchAdminReviews } from "@/store/reviewSlice";
 import { updateProductInStore } from "@/store/admin/product-slice";
 import { updateDropInStore } from "@/store/admin/drop-slice";
+import { toast } from "@/hooks/use-toast";
 
 const adminPaymentParams = {
   status: "proof_submitted",
@@ -89,6 +90,18 @@ const SocketBridge = () => {
       if (isAuthenticated && matchesCurrentUser) {
         dispatch(fetchUserOrders());
         dispatch(fetchNotifications());
+
+        // Toast for the customer when they're not already on the tracking
+        // page (the page itself updates live from this same event).
+        const path = typeof window !== "undefined" ? window.location.pathname : "";
+        const onTrackingPage = path.includes("/order-tracking") || path.includes("/orders/track");
+        if (!onTrackingPage && payload.status) {
+          const statusLabel = String(payload.status).replace(/_/g, " ");
+          toast({
+            title: "Order updated",
+            description: `Your order is now ${statusLabel}.`,
+          });
+        }
       }
     },
     [dispatch, isAdmin, isAuthenticated, user?._id],

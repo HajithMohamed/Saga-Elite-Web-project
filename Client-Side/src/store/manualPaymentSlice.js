@@ -4,6 +4,8 @@ import {
   fetchManualPaymentMethodSummary as fetchManualPaymentMethodSummaryApi,
   fetchMyManualPaymentStatus as fetchMyManualPaymentStatusApi,
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
+  fetchMyPendingManualPayments as fetchMyPendingManualPaymentsApi,
+  fetchGuestPendingManualPayments as fetchGuestPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
   lookupManualPayment as lookupManualPaymentApi,
   sendManualPaymentLink as sendManualPaymentLinkApi,
@@ -80,6 +82,8 @@ const initialState = {
   isVerifying: false,
   methodSummary: { byMethod: [], totals: { count: 0, totalAmount: 0 } },
   isSummaryLoading: false,
+  pendingForCurrentVisitor: [],
+  isLoadingPending: false,
   error: null,
 };
 
@@ -183,6 +187,28 @@ export const fetchManualPaymentMethodSummary = createAsyncThunk(
       return await fetchManualPaymentMethodSummaryApi(params);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load payment summary"));
+    }
+  },
+);
+
+export const fetchMyPendingManualPayments = createAsyncThunk(
+  "manualPayment/fetchMyPending",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchMyPendingManualPaymentsApi();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load pending payments"));
+    }
+  },
+);
+
+export const fetchGuestPendingManualPayments = createAsyncThunk(
+  "manualPayment/fetchGuestPending",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchGuestPendingManualPaymentsApi();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load pending payments"));
     }
   },
 );
@@ -429,6 +455,28 @@ const manualPaymentSlice = createSlice({
       })
       .addCase(fetchManualPaymentMethodSummary.rejected, (state, action) => {
         state.isSummaryLoading = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchMyPendingManualPayments.pending, (state) => {
+        state.isLoadingPending = true;
+      })
+      .addCase(fetchMyPendingManualPayments.fulfilled, (state, action) => {
+        state.isLoadingPending = false;
+        state.pendingForCurrentVisitor = action.payload?.data?.payments || [];
+      })
+      .addCase(fetchMyPendingManualPayments.rejected, (state, action) => {
+        state.isLoadingPending = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchGuestPendingManualPayments.pending, (state) => {
+        state.isLoadingPending = true;
+      })
+      .addCase(fetchGuestPendingManualPayments.fulfilled, (state, action) => {
+        state.isLoadingPending = false;
+        state.pendingForCurrentVisitor = action.payload?.data?.payments || [];
+      })
+      .addCase(fetchGuestPendingManualPayments.rejected, (state, action) => {
+        state.isLoadingPending = false;
         state.error = action.payload || action.error.message;
       });
   },

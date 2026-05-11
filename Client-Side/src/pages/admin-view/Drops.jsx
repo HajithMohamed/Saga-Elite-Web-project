@@ -694,45 +694,15 @@ const Drops = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
+      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-white/10"
     >
       <div className="border-b border-white/10 px-6 py-3">
         <ToastFlash show={showDropSaved} message="Drop saved" />
       </div>
-      {/* List Header */}
-      <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
-        <div className="flex items-center gap-8 w-full md:w-auto">
-          {/* intentionally left empty to mirror Product page spacing */}
-        </div>
-        <div className="flex items-center gap-6 self-end md:self-auto">
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-saga-primary rounded-full" />
-          </button>
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant">
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
 
-      <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
+      <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
         {/* Title + Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-          <div className="max-w-2xl">
-            <span
-              className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold"
-              style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}
-            >
-              Release Registry
-            </span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif tracking-tighter text-white leading-none mb-4">
-              Drop Ledger
-            </h2>
-            <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed font-sans">
-              Orchestrate your limited releases. Schedule launches, manage
-              availability, and archive past collections.
-            </p>
-          </div>
+        <div className="flex flex-col md:flex-row justify-end items-end mb-8 gap-8">
           <div className="flex flex-wrap gap-4">
             <button
               onClick={() => {
@@ -962,7 +932,7 @@ const Drops = () => {
             </div>
           )}
         </MotionDiv>
-      </main>
+      </div>
 
       {/* Gallery Modal */}
       {isDropGalleryOpen ? (

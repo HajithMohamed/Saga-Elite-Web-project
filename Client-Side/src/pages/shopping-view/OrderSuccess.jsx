@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderById } from "@/store/order-slice";
-import { Check, Package, ShieldCheck, Truck, Copy, Clock, MessageCircle, ArrowRight, Star } from "lucide-react";
+import { Check, Package, ShieldCheck, Truck, Copy, Clock, MessageCircle, ArrowRight, Star, Upload } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { resolveColor } from "@/components/ui/editorial";
@@ -40,6 +40,12 @@ const OrderSuccess = () => {
   const primaryItem = order.items?.[0];
   const primaryProduct = primaryItem?.product;
   const primaryVariant = primaryItem?.variant || primaryItem; // Depending on API response structure
+
+  // Manual bank transfer recovery CTA (Fix #1).
+  const manualPaymentSlug = location.state?.slug || currentOrder?.manualPayment?.slug;
+  const isManualBankTransfer =
+    (currentOrder?.paymentMethod || location.state?.paymentMethod) === "manual_bank_transfer";
+  const showUploadReceiptCta = Boolean(isManualBankTransfer && manualPaymentSlug);
   
   const colorName = primaryVariant?.color || primaryItem?.color;
   const themeColor = colorName ? resolveColor(colorName) : "#f2ca50";
@@ -285,19 +291,30 @@ const OrderSuccess = () => {
               </div>
             </div>
 
+            {showUploadReceiptCta && (
+              <Link
+                to={`/shopping/manual-payment/${manualPaymentSlug}`}
+                className="flex items-center justify-center gap-3 rounded-xl bg-amber-500 px-6 py-4 text-sm font-bold uppercase tracking-widest text-black transition hover:bg-amber-400"
+              >
+                <Upload className="h-4 w-4" />
+                Upload your receipt
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+
             {/* Customer Support & Sharing */}
             <div className="grid grid-cols-2 gap-4">
-              <a 
-                href="https://wa.me/94770704274" 
-                target="_blank" 
+              <a
+                href="https://wa.me/94770704274"
+                target="_blank"
                 rel="noreferrer"
                 className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
               >
                 <MessageCircle className="w-6 h-6 text-[#99907c] group-hover:text-green-500 transition-colors" />
                 <span className="text-xs text-[#e5e2e1] font-medium">WhatsApp Help</span>
               </a>
-              <Link 
-                to="/shopping/home" 
+              <Link
+                to="/shopping/home"
                 className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
               >
                 <ArrowRight className="w-6 h-6 text-[#99907c] group-hover:text-[var(--accent)] transition-colors" />
