@@ -9,6 +9,8 @@ const filterObj = require("../Utils/filter-object");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { broadcastNotification } = require("../Utils/notification-service");
 const { emitToAll } = require("../Utils/socket-service");
+const runInTransaction = require("../Utils/safe-transaction");
+
 
 
 /*
@@ -256,19 +258,14 @@ const deleteDrop = catchAsync(async (req, res, next) => {
         refModel: "Drop",
     });
 
-    const session = await mongoose.startSession();
-    try {
-        await session.withTransaction(async () => {
-            await Image.deleteMany({
-                refId: drop._id,
-                refModel: "Drop",
-            }).session(session);
+    await runInTransaction(async (session) => {
+        await Image.deleteMany({
+            refId: drop._id,
+            refModel: "Drop",
+        }).session(session);
 
-            await Drop.deleteOne({ _id: drop._id }).session(session);
-        });
-    } finally {
-        session.endSession();
-    }
+        await Drop.deleteOne({ _id: drop._id }).session(session);
+    });
 
     // Cloudinary cleanup (best-effort)
     if (dropImages.length > 0) {

@@ -9,7 +9,7 @@ const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
 const { emitToAll } = require("../Utils/socket-service");
-
+const runInTransaction = require("../Utils/safe-transaction");
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 
@@ -490,19 +490,14 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     });
 
     // Use transaction for atomicity
-    const session = await mongoose.startSession();
-    try {
-        await session.withTransaction(async () => {
-            await Image.deleteMany({
-                refId: product._id,
-                refModel: "Product"
-            }).session(session);
+    await runInTransaction(async (session) => {
+        await Image.deleteMany({
+            refId: product._id,
+            refModel: "Product"
+        }).session(session);
 
-            await Product.deleteOne({ _id: product._id }).session(session);
-        });
-    } finally {
-        session.endSession();
-    }
+        await Product.deleteOne({ _id: product._id }).session(session);
+    });
 
     // Cloudinary cleanup (best-effort, after DB commit)
     if (productImages.length > 0) {
