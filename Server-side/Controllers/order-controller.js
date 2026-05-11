@@ -115,7 +115,25 @@ const addressMatchesOrder = (a, b) =>
   String(a?.postalCode || "").trim().toLowerCase() ===
     String(b?.postalCode || "").trim().toLowerCase();
 
-const createdOrder = await runInTransaction(async (session) => {
+const createOrder = catchAsync(async (req, res, next) => {
+  const {
+    items,
+    user,
+    guest,
+    guestEmailNormalized,
+    shippingAddress,
+    contactNumber,
+    paymentMethod,
+    paymentProofUrl,
+    notes,
+    couponCode,
+    isBankTransferPayment,
+    isLegacyManualPayment,
+    structuredAddress,
+    normalizedCheckoutMode,
+  } = req.body;
+
+  const createdOrder = await runInTransaction(async (session) => {
   const orderItems = [];
   let totalAmount = 0;
 
@@ -511,21 +529,14 @@ const createdOrder = await runInTransaction(async (session) => {
          <p><strong>You have 24 hours.</strong> After that your order expires.</p>
          <p><a href="${paymentLink}">Upload your receipt here →</a></p>`
       );
-
       sendEmail({
         email: customerEmail,
         subject: `Your Saga Elite reference: ${manualPayment.referenceNumber}`,
         html: emailHtml,
-      }).catch((err) =>
-        logger.error(
-          "Email customer notify failed",
-          {
-            error: err.message,
-          }
-        )
-      );
+      }).catch((err) => logger.error("Email customer notify failed", { error: err.message }));
     }
-      if (customerPhone) {
+
+        if (customerPhone) {
       sendWhatsAppMessage({
         to: customerPhone,
         message:
@@ -535,14 +546,10 @@ const createdOrder = await runInTransaction(async (session) => {
           `Upload your receipt: ${paymentLink}\n` +
           `You have 24 hours to complete payment.`,
       }).catch((err) =>
-        logger.error(
-          "WhatsApp customer notify failed",
-          {
-            error: err.message,
-          }
-        )
+        logger.error("WhatsApp customer notify failed", { error: err.message })
       );
     }
+  }
  res.status(201).json({
     success: true,
     message: "Order placed successfully",
