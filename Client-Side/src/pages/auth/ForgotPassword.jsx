@@ -123,7 +123,7 @@ const ForgotPassword = () => {
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
         <Link
-          to="/auth/login"
+          to="/"
           className="mt-12 inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
         >
           <ArrowLeft size={12} strokeWidth={1.5} />

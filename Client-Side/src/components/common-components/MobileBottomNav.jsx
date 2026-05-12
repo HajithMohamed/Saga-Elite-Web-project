@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Search, LayoutGrid, Heart, User } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
 
 const AnimatedBadge = ({ count }) => {
   if (!count || count <= 0) return null;
@@ -26,13 +27,14 @@ const MobileBottomNav = () => {
   const { user } = useSelector((state) => state.auth);
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
   const wishlistCount = wishlistItems?.length || 0;
+  const { open: openAuthDrawer } = useAuthDrawer();
 
   const tabs = [
     { id: 'home', to: '/shopping/home', icon: Home, label: 'Home' },
     { id: 'search', to: '/shopping/search', icon: Search, label: 'Search' },
     { id: 'categories', to: '/shopping/product-list', icon: LayoutGrid, label: 'Categories' },
     { id: 'wishlist', to: '/shopping/wishlist', icon: Heart, label: 'Wishlist', badge: wishlistCount },
-    { id: 'account', to: user ? '/shopping/account' : '/auth/login', icon: User, label: 'Account' },
+    { id: 'account', to: user ? '/shopping/account' : null, icon: User, label: 'Account' },
   ];
 
   return (
@@ -41,6 +43,21 @@ const MobileBottomNav = () => {
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.to || (tab.id === 'categories' && location.pathname.includes('/product-list'));
           const Icon = tab.icon;
+
+          // Account tab — open drawer if guest
+          if (tab.id === 'account' && !user) {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => openAuthDrawer('login')}
+                className="relative flex flex-col items-center justify-center w-full h-full transition-colors text-[#d0c5af] hover:text-[#e5e2e1]"
+              >
+                <div className="relative"><Icon size={20} strokeWidth={1.5} /></div>
+                <span className="se-label mt-1 text-[9px] tracking-[0.15em]">{tab.label}</span>
+              </button>
+            );
+          }
+
           return (
             <Link
               key={tab.id}
@@ -63,3 +80,4 @@ const MobileBottomNav = () => {
 };
 
 export default MobileBottomNav;
+

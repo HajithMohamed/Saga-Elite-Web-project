@@ -20,7 +20,7 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
     location.pathname.includes('set-new-password');
 
   if (!isAuthenticated && !isPublicRoute && (!isShoppingRoute || isProtectedShoppingRoute)) {
-    return <Navigate to="/auth/login" />;
+    return <Navigate to="/" />;
   }
   if (
     isAuthenticated &&

@@ -19,10 +19,8 @@ import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
 import AboutPage from "./pages/Legal/AboutPage";
 import OffersPage from "./pages/user/OffersPage";
-// auth page imports
+// auth page imports — login/register are now in the sliding AuthDrawer
 import AuthLayout from "./components/auth-components/Layout";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
@@ -208,7 +206,7 @@ function App() {
             />
           </Route>
 
-          {/* AUTH */}
+          {/* AUTH — login/register removed (now AuthDrawer); keep OTP/reset routes */}
           <Route
             path="/auth"
             element={
@@ -217,9 +215,10 @@ function App() {
               </CheckAuth>
             }
           >
-            <Route index element={<Login />} />
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
+            {/* Redirect old direct links to home */}
+            <Route index element={<Navigate to="/" replace />} />
+            <Route path="login" element={<Navigate to="/" replace />} />
+            <Route path="register" element={<Navigate to="/" replace />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password-otp" element={<VerifyResetOtp />} />
             <Route path="set-new-password" element={<SetNewPassword />} />

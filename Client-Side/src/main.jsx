@@ -7,15 +7,18 @@ import { Provider } from "react-redux";
 import store from "./store/store";
 import { Toaster } from "@/components/ui/toaster";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AuthDrawerProvider } from "@/components/auth-components/AuthDrawer";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 const app = (
   <BrowserRouter>
     <Provider store={store}>
-      <App />
-      {/* toast popup container */}
-      <Toaster />
+      <AuthDrawerProvider>
+        <App />
+        {/* toast popup container */}
+        <Toaster />
+      </AuthDrawerProvider>
     </Provider>
   </BrowserRouter>
 );

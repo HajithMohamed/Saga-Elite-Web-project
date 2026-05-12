@@ -120,7 +120,7 @@ const VerifyOtp = () => {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
             <Link
-              to="/auth/login"
+              to="/"
               className="inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors mb-6"
             >
               <ArrowLeft size={12} strokeWidth={1.5} /> Back

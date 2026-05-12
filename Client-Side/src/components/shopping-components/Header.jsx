@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { logoutUserAction } from '@/store/auth-slice';
 import { toast } from '@/hooks/use-toast';
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
+import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,8 +15,9 @@ const Header = () => {
   const userMenuRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const { currentPayment } = useSelector((state) => state.manualPayment || {});
-  const { user } = useSelector((state) => state.auth);
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
   const cartCount = totalQuantity || 0;
@@ -157,11 +159,12 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* User dropdown */}
+          {/* User icon — opens drawer if guest, dropdown if authenticated */}
           <div className="relative" ref={userMenuRef}>
             <button
-              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              onClick={() => isAuthenticated ? setUserMenuOpen(!userMenuOpen) : openAuthDrawer('login')}
               className="text-white hover:text-[#D4AF37] transition-colors focus:outline-none"
+              aria-label={isAuthenticated ? 'Account menu' : 'Sign in'}
             >
               {user?.profilePicture ? (
                 <div className="relative">
