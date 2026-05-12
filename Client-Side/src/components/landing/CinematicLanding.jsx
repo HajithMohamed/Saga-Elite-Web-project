@@ -7,7 +7,7 @@ import { formatLkr } from "@/utils/currency";
 // BRAND MANIFESTO SECTION
 export const BrandManifesto = () => {
   return (
-    <section className="relative bg-[#050505] border-y border-[#1a1a1a] py-24 md:py-32 overflow-hidden">
+    <section className="relative bg-[#050505] border-y border-[#1a1a1a] py-16 md:py-20 overflow-hidden">
       {/* Ambient animated grain & glow */}
       <div className="absolute inset-0 bg-grain opacity-60 z-0"></div>
       <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#f2ca50]/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
@@ -115,9 +115,9 @@ export const DropStory = () => {
 // ASYMMETRIC CATEGORY GRID
 export const AsymmetricCategoryGrid = ({ categoryImages }) => {
   return (
-    <section className="bg-[#050505] py-24 md:py-32 overflow-hidden border-y border-[#1a1a1a]">
+    <section className="bg-[#050505] py-14 md:py-20 overflow-hidden border-y border-[#1a1a1a]">
       <div className="max-w-[1440px] mx-auto px-6">
-        <div className="text-center mb-16 md:mb-24 relative">
+        <div className="text-center mb-10 relative">
           {/* Floating Typography overlay */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full pointer-events-none overflow-hidden select-none">
             <span className="font-display text-[150px] md:text-[250px] font-black text-[#131313] opacity-50 whitespace-nowrap leading-none tracking-tighter mix-blend-screen">
@@ -193,7 +193,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
 // CLOSING CREDITS FOOTER
 export const CinematicFooter = () => {
   return (
-    <footer className="relative bg-[#050505] pt-32 pb-16 overflow-hidden border-t border-[#1a1a1a]">
+    <footer className="relative bg-[#050505] pt-20 pb-16 overflow-hidden border-t border-[#1a1a1a]">
       {/* Huge Background Typography */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
         <h1 className="font-display text-[20vw] font-black text-white whitespace-nowrap tracking-tighter leading-none mix-blend-screen">
