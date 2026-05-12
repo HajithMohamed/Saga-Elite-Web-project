@@ -108,8 +108,8 @@ const PAYMENT_METHODS = [
     id: "card",
     label: "Card Payment",
     sublabel: "Visa · Mastercard",
-    description: "Instant secure checkout via PayHere gateway.",
-    badge: "Activates with hosting",
+    description: "Secure checkout on our demo gateway (PayHere wires in post-hosting).",
+    badge: "Demo mode",
     icon: CreditCard,
   },
   {
@@ -691,17 +691,17 @@ const Checkout = () => {
       persistBuyNowItem(null);
       clearPersisted();
 
-      if (formData.paymentMethod === "card") {
-        toast({
-          title: "Card payments launching soon",
-          description: "We've recorded your order — finalising via bank transfer for now.",
-          variant: "success",
-        });
-      }
+      const isCardPayment = formData.paymentMethod === "card";
 
-      const target = manualPaymentSlug
-        ? `/shopping/manual-payment/${encodeURIComponent(manualPaymentSlug)}`
-        : "/shopping/manual-payment";
+      // Card sample flow goes to the dedicated demo gateway page keyed on
+      // orderId (no manualPayment slug yet — that record is created when the
+      // customer submits the card form). Bank transfers keep their existing
+      // slug-based manual-payment route.
+      const target = isCardPayment
+        ? `/shopping/card-payment/${encodeURIComponent(newOrderId)}`
+        : manualPaymentSlug
+          ? `/shopping/manual-payment/${encodeURIComponent(manualPaymentSlug)}`
+          : "/shopping/manual-payment";
 
       navigate(
         guestEmailReturned
@@ -1111,11 +1111,11 @@ const Checkout = () => {
                   )}
 
                   {formData.paymentMethod === "card" && (
-                    <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                    <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-5">
+                      <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent)]" />
                       <div>
-                        <p className="se-body text-sm text-amber-100">Card gateway activates after hosting setup.</p>
-                        <p className="se-body mt-1 text-xs text-amber-200/70">For now, your order will be processed via the same secure bank-transfer reference flow.</p>
+                        <p className="se-body text-sm text-[#f0e8c8]">You'll be taken to our demo card gateway after placing the order.</p>
+                        <p className="se-body mt-1 text-xs text-[#99907c]">No real charge is made — our team will manually verify the sample transaction. The PayHere gateway activates once hosting is configured.</p>
                       </div>
                     </div>
                   )}

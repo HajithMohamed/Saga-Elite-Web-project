@@ -13,6 +13,7 @@ import {
   submitManualPaymentReceipt as submitManualPaymentReceiptApi,
   verifyManualPayment as verifyManualPaymentApi,
 } from "@/api/manualPaymentAPI";
+import { submitSampleCardPayment as submitSampleCardPaymentApi } from "@/api/cardPaymentAPI";
 
 const MANUAL_PAYMENT_STORAGE_KEY = "saga_manual_payment_context";
 /** Plain reference fallback (master spec) when reading outside Redux */
@@ -108,6 +109,25 @@ export const submitManualPaymentProof = createAsyncThunk(
       return await submitManualPaymentProofApi({ referenceNumber, proofUrl, email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit proof"));
+    }
+  },
+);
+
+export const submitSampleCardPayment = createAsyncThunk(
+  "manualPayment/submitSampleCard",
+  async ({ orderId, cardholderName, cardNumber, expiryMonth, expiryYear, cvv, email }, thunkAPI) => {
+    try {
+      return await submitSampleCardPaymentApi({
+        orderId,
+        cardholderName,
+        cardNumber,
+        expiryMonth,
+        expiryYear,
+        cvv,
+        email,
+      });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit card payment"));
     }
   },
 );
@@ -343,6 +363,35 @@ const manualPaymentSlice = createSlice({
         persistManualPayment(state);
       })
       .addCase(submitManualPaymentReceipt.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(submitSampleCardPayment.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(submitSampleCardPayment.fulfilled, (state, action) => {
+        state.isSubmitting = false;
+        state.currentPayment = action.payload?.data || state.currentPayment;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+          paymentType: "card",
+        };
+        persistManualPayment(state);
+      })
+      .addCase(submitSampleCardPayment.rejected, (state, action) => {
         state.isSubmitting = false;
         state.error = action.payload || action.error.message;
       })

@@ -132,7 +132,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
   // STATE: Upcoming drop (only if no active slides/drops)
   if (displaySlides.length === 0 && dropIsUpcoming) {
     return (
-      <section className="relative h-[50vh] md:h-[70vh] max-h-[600px] overflow-hidden bg-[#0a0a0a]">
+      <section className="relative h-[58vh] md:h-[62vh] lg:h-[68vh] max-h-[700px] overflow-hidden bg-[#0a0a0a]">
         <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-px opacity-40">
           {(nextDrop.products || []).slice(0, 4).map((p, i) => (
             <div key={i} className="relative overflow-hidden">
@@ -187,7 +187,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
       ref={sectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative h-[60vh] md:h-[80vh] max-h-[700px] w-full overflow-hidden bg-[#050505]"
+      className="relative h-[58vh] md:h-[62vh] lg:h-[68vh] max-h-[700px] w-full overflow-hidden bg-[#050505]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -214,11 +214,13 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
                 }}
               >
                 {slide.imageUrl ? (
-                  <img src={slide.imageUrl} alt={slide.headline} 
-                       className="w-full h-full object-cover"
-                       loading="eager"
-                       srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
-                       sizes="100vw" />
+                  <div className="w-full h-full bg-black">
+                    <img src={slide.imageUrl} alt={slide.headline} 
+                         className="w-full h-full object-contain md:object-cover"
+                         loading="eager"
+                         srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
+                         sizes="100vw" />
+                  </div>
                 ) : (
                   <div className="w-full h-full" style={{ background: slide.fallback }} />
                 )}
@@ -941,7 +943,7 @@ export const AnnouncementBar = ({ activeDrop = null }) => {
 const ParticleField = () => {
   const ref = useRef(null);
   const positions = useMemo(() => {
-    const arr = new Float32Array(900); // 300 particles × 3 coords
+    const arr = new Float32Array(300); // 100 particles × 3 coords
     for (let i = 0; i < arr.length; i += 3) {
       arr[i] = (seededRandom(i + 1) - 0.5) * 6;
       arr[i + 1] = (seededRandom(i + 2) - 0.5) * 4;
@@ -952,8 +954,8 @@ const ParticleField = () => {
 
   useFrame((state, delta) => {
     if (!ref.current) return;
-    ref.current.rotation.x += delta * 0.02;
-    ref.current.rotation.y += delta * 0.03;
+    ref.current.rotation.x += delta * 0.005;
+    ref.current.rotation.y += delta * 0.01;
   });
 
   return (
@@ -961,7 +963,8 @@ const ParticleField = () => {
       <PointMaterial
         transparent
         color="#f2ca50"
-        size={0.012}
+        size={0.01}
+        opacity={0.5}
         sizeAttenuation
         depthWrite={false}
       />
@@ -970,7 +973,7 @@ const ParticleField = () => {
 };
 
 export const HeroBackdropFX = () => (
-  <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
+  <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
     <Canvas
       camera={{ position: [0, 0, 1.5], fov: 75 }}
       gl={{ antialias: false, powerPreference: "low-power" }}

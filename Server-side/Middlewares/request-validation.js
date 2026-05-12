@@ -961,6 +961,49 @@ const validateManualPaymentDecision = createValidationMiddleware((req) => {
   };
 });
 
+// Luhn / mod-10 checksum — same algorithm every card network uses for the PAN.
+const passesLuhn = (digits) => {
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let n = digits.charCodeAt(i) - 48;
+    if (n < 0 || n > 9) return false;
+    if (alt) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum > 0 && sum % 10 === 0;
+};
+
+const validateSampleCardPayment = createValidationMiddleware((req) => {
+  const rawCard = String(req.body.cardNumber || "").replace(/\D/g, "");
+  if (rawCard.length < 13 || rawCard.length > 19 || !passesLuhn(rawCard)) {
+    fail("Please enter a valid card number");
+  }
+
+  const cvv = String(req.body.cvv || "");
+  if (!/^\d{3,4}$/.test(cvv)) fail("CVV must be 3 or 4 digits");
+
+  const expMonth = sanitizeNumber(req.body.expiryMonth, "expiryMonth", { required: true, min: 1, max: 12, integer: true });
+  const expYear = sanitizeNumber(req.body.expiryYear, "expiryYear", { required: true, min: 2024, max: 2099, integer: true });
+  const now = new Date();
+  const expiryEnd = new Date(expYear, expMonth, 0, 23, 59, 59);
+  if (expiryEnd < now) fail("Card has expired");
+
+  req.body = {
+    orderId: sanitizeObjectId(req.body.orderId, "orderId"),
+    cardholderName: sanitizeString(req.body.cardholderName, "cardholderName", { required: true, minLength: 2, maxLength: 100 }),
+    cardNumber: rawCard,
+    expiryMonth: expMonth,
+    expiryYear: expYear,
+    cvv,
+    email: req.body.email ? sanitizeEmail(req.body.email, "email", { required: false }) : undefined,
+  };
+});
+
 const validateReviewCreate = createValidationMiddleware((req) => {
   req.body = {
     productId: sanitizeObjectId(req.body.productId, "productId"),
@@ -1238,6 +1281,7 @@ module.exports = {
   validateManualPaymentReference,
   validateManualPaymentProof,
   validateManualPaymentDecision,
+  validateSampleCardPayment,
   validateReviewCreate,
   validateReviewUpdate,
   validateReviewFlag,

@@ -2,6 +2,7 @@ import React, { Fragment, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import ImageUpload from "@/components/admin-components/ImageUpload";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import {
@@ -704,16 +705,15 @@ const Drops = () => {
         {/* Title + Actions */}
         <div className="flex flex-col md:flex-row justify-end items-end mb-8 gap-8">
           <div className="flex flex-wrap gap-4">
-            <button
+            <PrimaryButton
               onClick={() => {
                 resetForm();
                 setShowForm(true);
               }}
-              className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
             >
               <Plus className="w-3 h-3" />
               New Drop
-            </button>
+            </PrimaryButton>
           </div>
         </div>
 
@@ -745,7 +745,7 @@ const Drops = () => {
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                 transition={{ duration: 0.2 }}
-                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
+                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center admin-panel border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
               >
                 {/* Left accent bar */}
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />

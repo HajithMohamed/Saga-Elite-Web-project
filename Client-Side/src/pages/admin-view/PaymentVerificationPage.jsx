@@ -11,6 +11,7 @@ import {
   Beaker,
   CheckCircle2,
   Contrast,
+  CreditCard,
   Landmark,
   Loader2,
   Maximize2,
@@ -18,6 +19,7 @@ import {
   RotateCcw,
   ScanLine,
   ShieldAlert,
+  Sparkles,
   Sun,
   XCircle,
 } from "lucide-react";
@@ -217,6 +219,8 @@ const PaymentVerificationPage = () => {
 
   const order = currentPayment.orderId || {};
   const customerEmail = order.user?.email || currentPayment.userId?.email || "Unknown";
+  const isCardPayment = currentPayment.paymentType === "card";
+  const card = currentPayment.cardDetails || {};
   const statusTone = {
     pending_payment: "text-amber-300 border-amber-500/20 bg-amber-500/10",
     proof_submitted: "text-sky-300 border-sky-500/20 bg-sky-500/10",
@@ -257,7 +261,78 @@ const PaymentVerificationPage = () => {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          {/* LEFT — Image-focused proof viewer with enhancement controls */}
+          {/* LEFT — Card details panel (for card payments) OR proof viewer (manual) */}
+          {isCardPayment ? (
+            <section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+              <div className="rounded-[1.75rem] border border-[#D4AF37]/30 bg-[#0b0b0b] p-6">
+                <div className="flex items-center justify-between gap-3 pb-4">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-[#D4AF37]" />
+                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+                      Card payment details
+                    </p>
+                  </div>
+                  {card.simulated ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+                      <Sparkles className="h-3 w-3" /> Sample
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(135deg,#1a1410_0%,#0b0b0b_60%)] p-6">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gray-500">
+                    {(card.brand || "card").toUpperCase()}
+                  </p>
+                  <p className="mt-6 font-mono text-2xl tracking-[0.32em] text-white">
+                    •••• •••• •••• {card.last4 || "----"}
+                  </p>
+                  <div className="mt-6 flex items-end justify-between">
+                    <div>
+                      <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-gray-500">
+                        Cardholder
+                      </p>
+                      <p className="mt-1 text-sm text-white">{card.cardholderName || "—"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-gray-500">
+                        Expiry
+                      </p>
+                      <p className="mt-1 font-mono text-sm text-white">
+                        {card.expiryMonth ? String(card.expiryMonth).padStart(2, "0") : "--"}/
+                        {card.expiryYear ? String(card.expiryYear).slice(-2) : "--"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <p className={eyebrow}>Gateway reference</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-gray-300">
+                      {card.gatewayReference || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <p className={eyebrow}>Brand</p>
+                    <p className="mt-1 text-sm text-white">
+                      {card.brand ? card.brand.toUpperCase() : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {card.simulated ? (
+                  <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs leading-5 text-amber-200">
+                    <strong className="block uppercase tracking-[0.22em] text-amber-300">
+                      Demo gateway record
+                    </strong>
+                    This payment came through the sample card flow — no real charge was made.
+                    Verify only if you've confirmed the order with the customer through another channel.
+                    Once PayHere is live, real card payments will land here without the SAMPLE tag.
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : (
           <section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
             <div className="rounded-[1.75rem] border border-[#D4AF37]/15 bg-[#0b0b0b] p-4">
               <div className="flex items-center justify-between gap-3 px-2 pb-3 pt-1">
@@ -421,6 +496,7 @@ const PaymentVerificationPage = () => {
               </div>
             ) : null}
           </section>
+          )}
 
           {/* RIGHT — Identity, order details, OCR, bank, decision */}
           <aside className="space-y-6">

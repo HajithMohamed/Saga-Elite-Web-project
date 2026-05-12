@@ -9,6 +9,7 @@ import {
   bulkUpdateProducts,
 } from "@/store/admin/product-slice";
 import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import useBulkSelection from "@/hooks/use-bulk-selection";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
@@ -1010,7 +1011,7 @@ const Product = () => {
             </button>
           }
         >
-          <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+          <div className="overflow-x-auto admin-panel border border-white/[0.06]">
             <table className="w-full text-left min-w-[640px]">
               <thead className="bg-white/[0.02]">
                 <tr className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/50">
@@ -1359,13 +1360,10 @@ const Product = () => {
                 Low Stock (≤5)
               </button>
             </div>
-            <button
-              onClick={openNewProductForm}
-              className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
-            >
+            <PrimaryButton onClick={openNewProductForm}>
               <Plus className="w-3 h-3" />
               New Product
-            </button>
+            </PrimaryButton>
           </div>
         </SearchFilterBar>
 
@@ -1407,7 +1405,7 @@ const Product = () => {
                 variants={itemVariants}
                 whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                 transition={{ duration: 0.2 }}
-                className={`group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border ${
+                className={`group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center admin-panel border ${
                   bulk.isSelected(product._id)
                     ? "border-saga-primary/60 bg-saga-primary/5"
                     : "border-outline-variant/5 bg-surface-container/30"

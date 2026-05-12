@@ -43,7 +43,7 @@ import { API_V1_URL } from "@/lib/api";
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
   Store: ["Products", "Drops", "Mystery Collectibles"],
-  Sales: ["Orders", "Manual Payments", "Customers", "Reviews", "Contact Inquiries", "Activity"],
+  Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries", "Activity"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Content: [
     "Content Hub",
@@ -293,7 +293,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "orders",
     },
     {
-      label: "Manual Payments",
+      label: "Payments",
       path: "/admin/manual-payments",
       icon: <CreditCard className="h-5 w-5" />,
       badge: pendingPaymentCount,

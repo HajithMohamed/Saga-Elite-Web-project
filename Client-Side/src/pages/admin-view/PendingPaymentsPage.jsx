@@ -130,6 +130,7 @@ const PendingPaymentsPage = () => {
   );
 
   const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState("all");
   const [guestOnly, setGuestOnly] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -152,8 +153,9 @@ const PendingPaymentsPage = () => {
       limit,
       status: statusFilter,
       guestOnly,
+      paymentType: paymentTypeFilter,
     }),
-    [limit, page, statusFilter, guestOnly]
+    [limit, page, statusFilter, guestOnly, paymentTypeFilter]
   );
 
   const loadQueue = useCallback(async () => {
@@ -163,7 +165,7 @@ const PendingPaymentsPage = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, guestOnly]);
+  }, [statusFilter, guestOnly, paymentTypeFilter]);
 
   useEffect(() => {
     setStatusFilter(defaultStatusFilter);
@@ -341,12 +343,12 @@ const PendingPaymentsPage = () => {
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Pending payments</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Payments</p>
               <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">
-                Review manual payments and resolve the queue.
+                Review bank transfers and card payments in one queue.
               </h1>
               <p className="mt-4 text-sm leading-7 text-gray-400">
-                Verify or reject customer transfers directly from the admin panel.
+                Switch tabs to filter by method. Card payments are running on the demo gateway until PayHere is live.
               </p>
             </div>
 
@@ -359,6 +361,31 @@ const PendingPaymentsPage = () => {
               Refresh queue
             </button>
           </div>
+        </section>
+
+        {/* Payment-type tabs — All / Manual / Card */}
+        <section className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-[#0b0b0b] p-1.5">
+          {[
+            { value: "all", label: "All" },
+            { value: "manual_bank_transfer", label: "Manual" },
+            { value: "card", label: "Card" },
+          ].map((tab) => {
+            const active = paymentTypeFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => setPaymentTypeFilter(tab.value)}
+                className={`rounded-full px-5 py-2 text-xs font-bold uppercase tracking-[0.22em] transition ${
+                  active
+                    ? "bg-[#D4AF37] text-black"
+                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </section>
 
         {/* Method summary tiles (Fix #2) */}
@@ -549,7 +576,21 @@ const PendingPaymentsPage = () => {
                         <td className="px-6 py-5 text-white">{resolveCustomerName(payment)}</td>
                         <td className="px-6 py-5 break-all text-gray-300">{resolveOrderId(payment)}</td>
                         <td className="px-6 py-5 text-gray-300">LKR {formatCurrency(payment.amount)}</td>
-                        <td className="px-6 py-5 text-gray-300">{resolvePaymentMethod(payment)}</td>
+                        <td className="px-6 py-5 text-gray-300">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>
+                              {payment.paymentType === "card"
+                                ? "Card"
+                                : PAYMENT_METHOD_LABELS[resolvePaymentMethod(payment)] ||
+                                  resolvePaymentMethod(payment)}
+                            </span>
+                            {payment.paymentType === "card" && payment.cardDetails?.simulated ? (
+                              <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+                                Sample
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="px-6 py-5 text-gray-300">{formatDateTime(payment.proofSubmittedAt || payment.createdAt)}</td>
                         <td className="px-6 py-5">
                           <span

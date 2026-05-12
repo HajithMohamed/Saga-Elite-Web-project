@@ -17,6 +17,118 @@ _Unisex | Youth-Driven | Statement Style_
 
 ---
 
+## 🔑 Prerequisites & Service Setup
+
+Before running `npm run dev`, you need accounts and API credentials for several third-party services. The app is feature-flagged: **required** services must be configured or the server won't boot; **optional** services can be left blank and the corresponding feature is simply disabled.
+
+> Copy `.env.example` to `.env` first (`cp .env.example .env`), then fill in the values as you obtain them below.
+
+### ✅ Required services
+
+#### 1. MongoDB — database
+
+- **Purpose:** primary data store (users, products, orders, reviews, drops, etc.).
+- **Get it:** sign up at <https://www.mongodb.com/cloud/atlas/register> (free M0 tier), or run MongoDB locally.
+- **Steps:**
+  - Atlas: create a free cluster → Database Access (create user) → Network Access (whitelist your IP / `0.0.0.0/0` for dev) → Connect → "Drivers" → copy the connection string.
+  - Local: install MongoDB Community Server; the URI is `mongodb://127.0.0.1:27017/sagaelite`.
+- **Env vars:** `MONGO_DB_URI`, `MONGO_URI`, `MONGODB_URI` (all three should hold the same value — they're aliases used across the codebase).
+
+#### 2. JWT secret — auth token signing
+
+- **Purpose:** signs JWT access tokens.
+- **Get it:** generate locally — no signup.
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ```
+- **Env vars:** `JWT_SECRET` (must be ≥32 chars).
+
+#### 3. Cloudinary — image hosting
+
+- **Purpose:** stores and serves all product images, banners, payment receipts.
+- **Get it:** sign up at <https://cloudinary.com/users/register/free>.
+- **Steps:** Dashboard → "Product Environment Credentials" → copy Cloud Name, API Key, API Secret.
+- **Env vars:** `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (plus aliases `CLOUDINARY_NAME` and `CLOUDINARY_SECRET` — set them to the same values).
+
+#### 4. SMTP / Mailtrap — transactional email
+
+- **Purpose:** signup OTPs, order confirmations, payment receipts, admin alerts.
+- **Get it (dev):** sign up at <https://mailtrap.io/register/signup> → Email Testing → Inbox → SMTP credentials.
+- **Get it (prod):** any SMTP provider (SendGrid, Resend, Brevo, your own).
+- **Env vars:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL`, `PASS` (legacy aliases of `SMTP_USER`/`SMTP_PASS`), `FROM_EMAIL`, `FROM_NAME`, `ADMIN_EMAIL`.
+
+#### 5. Google OAuth — Google Sign-In
+
+- **Purpose:** "Sign in with Google" button on the login page.
+- **Get it:** <https://console.cloud.google.com/apis/credentials>.
+- **Steps:** create project → Credentials → "Create Credentials" → "OAuth client ID" → Web application → **Authorized JavaScript origins:** add `http://localhost:5173` (otherwise Google Sign-In fails silently in dev) → copy the Client ID.
+- **Env vars:** `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` (same value — backend & frontend both need it).
+
+---
+
+### 🟡 Optional services (leave blank to disable the feature)
+
+#### 6. PayHere — Sri Lankan online payments
+
+- **Purpose:** card / online payments at checkout.
+- **Get it:** <https://www.payhere.lk/> → Merchant Portal → Settings → Domains & Credentials.
+- **Env vars:** `PAYHERE_MERCHANT_ID`, `PAYHERE_MERCHANT_SECRET`, `PAYHERE_SANDBOX=true` (use sandbox in dev).
+
+#### 7. Facebook Login
+
+- **Purpose:** "Sign in with Facebook" button. Hidden when blank.
+- **Get it:** <https://developers.facebook.com/apps/> → Create App → **Consumer** type → add "Facebook Login (Web)" product → Basic Settings.
+- **Env vars:** `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `VITE_FACEBOOK_APP_ID`.
+
+#### 8. WhatsApp Cloud API — order notifications
+
+- **Purpose:** sends new-order alerts to admin numbers via Meta Graph API.
+- **Get it:** <https://developers.facebook.com/> → WhatsApp product → grab Phone Number ID and a long-lived System User access token; pick any string as the verify token for the webhook.
+- **Env vars:** `WHATSAPP_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_ORDER_NOTIFY_NUMBERS` (comma-separated, digits only with country code, no `+`).
+
+#### 9. OpenAI — review classification & recommendations
+
+- **Purpose:** AI moderates reviews and generates product recommendations.
+- **Get it:** <https://platform.openai.com/api-keys> → Create new secret key.
+- **Env vars:** `OPENAI_API_KEY`, `OPENAI_MODEL` (optional, defaults to `gpt-4o-mini`).
+
+#### 10. IMAP bank inbox — auto-confirm manual payments
+
+- **Purpose:** polls a mailbox for bank credit-alert emails and auto-confirms matching manual payments. Without this, manual payments sit in `pending_bank_confirmation` until an admin approves them.
+- **Get it:** a dedicated inbox (Gmail works — create an [App Password](https://myaccount.google.com/apppasswords)) that receives forwarded credit alerts from your merchant bank account.
+- **Env vars:** `BANK_INBOX_ENABLED=true`, `BANK_INBOX_HOST`, `BANK_INBOX_PORT`, `BANK_INBOX_TLS`, `BANK_INBOX_USER`, `BANK_INBOX_PASSWORD`, `BANK_INBOX_FOLDER`, `BANK_INBOX_POLL_INTERVAL_MS`, `BANK_NOTIFICATION_FROM_ADDRESSES`.
+
+#### 11. Bank SMS webhook — alternative to IMAP
+
+- **Purpose:** for banks that only send SMS (no email alerts). A dedicated Android phone running an SMS-forwarder app POSTs incoming SMS to `/api/webhooks/bank-sms`.
+- **Get it:** install an app like SMS Forwarder or SMSSync; configure header `X-Webhook-Secret` with any shared secret.
+- **Env vars:** `BANK_SMS_WEBHOOK_SECRET` (leave empty to disable; the endpoint returns 503 when unset).
+
+---
+
+### 🛠 Local-only values (no third-party account needed — just edit `.env`)
+
+| Group | Vars |
+|-------|------|
+| Manual bank-transfer display (shown on checkout) | `MANUAL_PAYMENT_BANK_NAME`, `MANUAL_PAYMENT_ACCOUNT_NAME`, `MANUAL_PAYMENT_ACCOUNT_NUMBER`, `MANUAL_PAYMENT_BANK_BRANCH`, `MANUAL_PAYMENT_SWIFT_CODE`, `MANUAL_PAYMENT_CURRENCY`, `MANUAL_PAYMENT_TRANSFER_NOTE`, `MANUAL_PAYMENT_SUPPORT_EMAIL`, `MANUAL_PAYMENT_SUPPORT_WHATSAPP`, `MANUAL_PAYMENT_ADMIN_EMAILS`, `MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBER`, `MANUAL_PAYMENT_ADMIN_WHATSAPP_NUMBERS`, `MANUAL_PAYMENT_QR_IMAGE_URL` |
+| Ports | `BACKEND_PORT`, `PORT`, `HOST_BACKEND_PORT`, `HOST_FRONTEND_PORT` |
+| URLs / CORS | `FRONTEND_URL`, `FRONTEND_URLS`, `CLIENT_URL`, `BACKEND_URL`, `VITE_API_URL` |
+| Tunables | `JWT_EXPIRES_IN`, `JWT_COOKIE_EXPIRES_IN`, `OTP_EXPIRES_IN`, `LOG_LEVEL`, `NODE_ENV`, `RATE_LIMIT_*_MAX`, `RATE_LIMIT_*_WINDOW_MS`, `RATE_LIMIT_DEV_MULTIPLIER` |
+
+---
+
+### Quick checklist before `npm run dev`
+
+- [ ] Cloned the repo and ran `cp .env.example .env`
+- [ ] MongoDB URI works (test with MongoDB Compass)
+- [ ] `JWT_SECRET` generated (32+ chars)
+- [ ] Cloudinary keys filled in
+- [ ] SMTP credentials filled in
+- [ ] Google OAuth Client ID set and `http://localhost:5173` added as Authorized JavaScript Origin
+- [ ] Optional services left blank or filled with real values — none with placeholder strings like `your_xxx`
+
+---
+
 ### 1. Clone the Repository
 
 ```bash
