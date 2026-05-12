@@ -75,7 +75,7 @@ export const EditorialMetrics = () => {
 // DROP STORY SECTION
 export const DropStory = () => {
   return (
-    <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
+    <section className="relative h-[500px] w-full overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img 
           src="https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?q=80&w=2070" 
@@ -132,11 +132,11 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 auto-rows-[300px]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 auto-rows-[250px]">
           {/* Gents - Tall Image */}
-          <Link to="/shopping/product-list?category=gents" className="md:col-span-5 md:row-span-2 relative overflow-hidden group cursor-open">
+          <Link to="/shopping/product-list?category=gents" className="md:col-span-5 md:row-span-2 relative overflow-hidden group cursor-open rounded-3xl">
             <img 
-              src={categoryImages?.gents?.Shirts || "https://images.unsplash.com/photo-1516826957135-700ede19c6ce?w=800"} 
+              src={categoryImages?.gents?.main || categoryImages?.gents?.Shirts || "https://images.unsplash.com/photo-1516826957135-700ede19c6ce?w=800"} 
               alt="Gents" 
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
             />
@@ -149,9 +149,9 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
           </Link>
 
           {/* Ladies - Landscape Image */}
-          <Link to="/shopping/product-list?category=ladies" className="md:col-span-7 md:row-span-1 relative overflow-hidden group cursor-open">
+          <Link to="/shopping/product-list?category=ladies" className="md:col-span-7 md:row-span-1 relative overflow-hidden group cursor-open rounded-3xl">
             <img 
-              src={categoryImages?.ladies?.Dresses || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"} 
+              src={categoryImages?.ladies?.main || categoryImages?.ladies?.Dresses || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"} 
               alt="Ladies" 
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
             />
@@ -163,9 +163,9 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
           </Link>
 
           {/* Unisex - Portrait Image */}
-          <Link to="/shopping/product-list?category=unisex" className="md:col-span-4 md:row-span-1 relative overflow-hidden group cursor-open">
+          <Link to="/shopping/product-list?category=unisex" className="md:col-span-4 md:row-span-1 relative overflow-hidden group cursor-open rounded-3xl">
             <img 
-              src={categoryImages?.unisex?.Unisex || "https://images.unsplash.com/photo-1520975954732-57dd22299614?w=800"} 
+              src={categoryImages?.unisex?.main || categoryImages?.unisex?.Unisex || "https://images.unsplash.com/photo-1520975954732-57dd22299614?w=800"} 
               alt="Unisex" 
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
             />
@@ -177,7 +177,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
           </Link>
           
           {/* Decorative Box */}
-          <div className="md:col-span-3 md:row-span-1 border border-[#4d4635] flex items-center justify-center p-6 bg-[#0a0a0a]">
+          <div className="md:col-span-3 md:row-span-1 border border-[#4d4635] flex items-center justify-center p-6 bg-[#0a0a0a] rounded-3xl">
              <div className="text-center">
                 <span className="block font-mono text-[10px] tracking-[0.3em] text-[#99907c] uppercase mb-2">Signature</span>
                 <span className="block font-display text-xl text-[#FAF7F2] italic">The Archive</span>
@@ -194,13 +194,6 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
 export const CinematicFooter = () => {
   return (
     <footer className="relative bg-[#050505] pt-32 pb-16 overflow-hidden border-t border-[#1a1a1a]">
-      {/* Huge Background Typography */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
-        <h1 className="font-display text-[20vw] font-black text-white whitespace-nowrap tracking-tighter leading-none mix-blend-screen">
-          RARE FIT
-        </h1>
-      </div>
-
       <div className="max-w-[1440px] mx-auto px-6 relative z-10 flex flex-col items-center text-center">
         <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-6">
           The End of the Scroll
@@ -223,10 +216,7 @@ export const CinematicFooter = () => {
           </button>
         </form>
 
-        <div className="w-full flex flex-col md:flex-row justify-between items-center gap-6 border-t border-[#1a1a1a] pt-8">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-[#4d4635] uppercase">
-            © {new Date().getFullYear()} Saga Elite. All rights reserved.
-          </span>
+        <div className="w-full flex flex-col md:flex-row justify-end items-center gap-6 border-t border-[#1a1a1a] pt-8">
           <div className="flex gap-6 font-mono text-[10px] tracking-[0.2em] text-[#99907c] uppercase">
             <Link to="#" className="hover:text-[#f2ca50] transition-colors">Instagram</Link>
             <Link to="#" className="hover:text-[#f2ca50] transition-colors">Tiktok</Link>

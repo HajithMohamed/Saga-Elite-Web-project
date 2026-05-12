@@ -213,6 +213,7 @@ export const getLandingData = async () => {
         : [],
     categoryImages: {
       ladies: {
+        main: findImageForCategory(categoryLogoImages, "Ladies", "Women"),
         Dresses: findImageForCategory(categoryLogoImages, "Dresses"),
         Tops: findImageForCategory(categoryLogoImages, "Tops"),
         Bottoms: findImageForCategory(categoryLogoImages, "Bottoms"),
@@ -221,6 +222,7 @@ export const getLandingData = async () => {
         Accessories: findImageForCategory(categoryLogoImages, "Ladies Accessories", "Women Accessories"),
       },
       gents: {
+        main: findImageForCategory(categoryLogoImages, "Gents", "Men", "Mens"),
         Shirts: findImageForCategory(categoryLogoImages, "Shirts"),
         Trousers: findImageForCategory(categoryLogoImages, "Trousers"),
         Casual: findImageForCategory(categoryLogoImages, "Casual"),
@@ -228,6 +230,7 @@ export const getLandingData = async () => {
         Accessories: findImageForCategory(categoryLogoImages, "Gents Accessories", "Men Accessories"),
       },
       unisex: {
+        main: findImageForCategory(categoryLogoImages, "Unisex"),
         Unisex: findImageForCategory(categoryLogoImages, "Unisex"),
       },
     },
