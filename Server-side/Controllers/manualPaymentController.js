@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Order = require("../Models/Order");
@@ -203,7 +204,13 @@ const buildDecisionEmail = (title, order, payment, reason) =>
   );
 
 const syncOrderWithPayment = async (order, payment, { status, paymentStatus, clearExpiry = false }) => {
-  order.paymentMethod = "manual_bank_transfer";
+  // Preserve the order's existing paymentMethod when the payment is a card
+  // record — only manual bank transfer flows should rewrite it. Without this
+  // guard, admin-verifying a card payment would flip the order's method to
+  // "manual_bank_transfer" and break later reporting / refund logic.
+  if (payment.paymentType !== "card") {
+    order.paymentMethod = "manual_bank_transfer";
+  }
   order.referenceNumber = payment.referenceNumber;
   order.paymentProofUrl = payment.proofUrl || order.paymentProofUrl || null;
   order.status = status;
@@ -224,6 +231,8 @@ const buildManualPaymentSummary = (payment) => ({
   userId: payment.userId,
   amount: payment.amount,
   currency: payment.currency,
+  paymentType: payment.paymentType || "manual_bank_transfer",
+  cardDetails: payment.cardDetails || null,
   proofUrl: payment.proofUrl,
   proofSubmittedAt: payment.proofSubmittedAt,
   status: payment.status,
@@ -523,6 +532,218 @@ const submitProof = catchAsync(async (req, res, next) => {
     data: {
       ...buildManualPaymentSummary(payment),
       bankDetails: getBankDetails(),
+    },
+  });
+});
+
+// Map PAN prefix to a card brand. Covers the major networks we'd see in Sri
+// Lanka; unknown prefixes return "unknown" rather than throwing so a typo
+// doesn't kill the demo flow.
+const detectCardBrand = (pan) => {
+  const digits = String(pan || "");
+  if (/^4/.test(digits)) return "visa";
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return "mastercard";
+  if (/^3[47]/.test(digits)) return "amex";
+  if (/^(6011|65|64[4-9])/.test(digits)) return "discover";
+  return "unknown";
+};
+
+// Sample card-payment submission. This is the placeholder for the PayHere
+// gateway: customer enters card details on the demo gateway page, we record
+// last4 + brand + cardholder + a generated gateway reference (NEVER the full
+// PAN or CVV) and queue the record for admin verification — same admin
+// queue used for manual bank transfers, just under the "Card" tab.
+//
+// When PayHere is wired up post-hosting, replace the body of this handler
+// with a PayHere notify-URL handler that flips `simulated` to false and
+// auto-verifies on `status_code === "2"`.
+const submitSampleCardPayment = catchAsync(async (req, res, next) => {
+  const { orderId, cardholderName, cardNumber, expiryMonth, expiryYear } = req.body;
+
+  const order = await Order.findById(orderId).populate("user", "email role profilePicture");
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (order.paymentMethod !== "card") {
+    return next(new AppError("This order was not placed with a card payment method", 400));
+  }
+
+  if (["confirmed", "shipped", "delivered", "cancelled", "refunded"].includes(order.status)) {
+    return next(new AppError("This order can no longer accept card payments", 400));
+  }
+
+  // Reuse an in-flight payment record if the customer reloaded the demo
+  // gateway screen and resubmitted — otherwise create a new one.
+  let payment = await ManualPayment.findOne({
+    orderId: order._id,
+    paymentType: "card",
+    status: { $in: ACTIVE_STATUSES },
+  });
+
+  // Authorize before we mutate anything. For guests we accept the email used
+  // at checkout (passed in body or header); for logged-in users the
+  // userInfo check happens implicitly via order ownership.
+  if (req.userInfo?._id) {
+    const orderUserId = order.user?._id || order.user;
+    if (orderUserId && String(orderUserId) !== String(req.userInfo._id)) {
+      return next(new AppError("You are not authorized to pay for this order", 403));
+    }
+  } else {
+    const providedEmail = normalizeEmail(req.body.email || req.headers["x-payment-email"] || "");
+    const expectedEmail = normalizeEmail(order.guestEmail || order.user?.email || "");
+    if (!providedEmail || !expectedEmail || providedEmail !== expectedEmail) {
+      return next(new AppError("Email does not match the order — please use the email you provided at checkout", 403));
+    }
+  }
+
+  const now = new Date();
+  const last4 = cardNumber.slice(-4);
+  const brand = detectCardBrand(cardNumber);
+  const gatewayReference = `SAMPLE-CARD-${crypto.randomUUID()}`;
+
+  if (!payment) {
+    const referenceNumber = await generateUniqueReference(order._id, ManualPayment);
+    payment = await ManualPayment.create({
+      referenceNumber,
+      orderId: order._id,
+      userId: order.user?._id || order.user || undefined,
+      amount: Number(order.totalAmount),
+      currency: "LKR",
+      paymentType: "card",
+      status: "proof_submitted",
+      proofSubmittedAt: now,
+      cardDetails: {
+        cardholderName,
+        last4,
+        expiryMonth,
+        expiryYear,
+        brand,
+        gatewayReference,
+        simulated: true,
+      },
+    });
+  } else {
+    payment.status = "proof_submitted";
+    payment.proofSubmittedAt = now;
+    payment.rejectionReason = null;
+    payment.adminNotes = null;
+    payment.cardDetails = {
+      cardholderName,
+      last4,
+      expiryMonth,
+      expiryYear,
+      brand,
+      gatewayReference,
+      simulated: true,
+    };
+    await payment.save({ validateModifiedOnly: true });
+  }
+
+  // Hold the order at verification_pending so admin can approve/reject.
+  // Skip the generic syncOrderWithPayment helper because it forces
+  // paymentMethod back to "manual_bank_transfer" — we need to keep "card".
+  order.referenceNumber = payment.referenceNumber;
+  order.status = "verification_pending";
+  order.paymentStatus = "pending";
+  order.expiresAt = undefined;
+  await order.save({ validateModifiedOnly: true });
+
+  // Repopulate for the response + notifications.
+  await payment.populate({
+    path: "orderId",
+    populate: { path: "user", select: "email role profilePicture" },
+  });
+  await payment.populate("userId", "email role profilePicture");
+
+  const customerUserId = order.user?._id || order.user || payment.userId?._id || payment.userId;
+  const customerEmail = order.user?.email || payment.userId?.email || order.guestEmail || null;
+  const customerPhone = cleanPhoneNumber(order.contactNumber);
+
+  await broadcastNotification({
+    type: "admin",
+    title: "Sample card payment submitted",
+    message: `Order ${order._id} — card ending ${last4} (${brand}). Awaiting admin verification.`,
+    entityRef: order._id,
+    entityType: "ManualPayment",
+    meta: {
+      orderId: order._id,
+      referenceNumber: payment.referenceNumber,
+      paymentId: payment._id,
+      status: payment.status,
+      paymentType: "card",
+    },
+    filter: { role: { $in: ADMIN_ROLES } },
+  });
+
+  if (customerUserId) {
+    await createNotification({
+      userId: customerUserId,
+      type: "order",
+      title: "Card payment received — verification in progress",
+      message: `We received your card payment for order ${order._id}. Our team will confirm shortly.`,
+      entityRef: order._id,
+      entityType: "ManualPayment",
+      meta: {
+        orderId: order._id,
+        referenceNumber: payment.referenceNumber,
+        paymentId: payment._id,
+        status: payment.status,
+        paymentType: "card",
+      },
+    });
+  }
+
+  if (customerEmail) {
+    try {
+      await sendEmail({
+        email: customerEmail,
+        subject: "Saga Elite — card payment received (verification in progress)",
+        html: buildEmailTemplate(
+          "Card payment received",
+          `<p>Thanks! We've received your card payment for order <strong>${order._id}</strong>.</p>
+           <p><strong>Card:</strong> ${brand.toUpperCase()} ending ${last4}</p>
+           <p><strong>Amount:</strong> ${payment.currency} ${formatCurrency(payment.amount)}</p>
+           <p>Our team will verify the transaction and confirm your order shortly.</p>`
+        ),
+      });
+    } catch (emailError) {
+      logger.error("Failed to send card-payment receipt email", { error: emailError?.message });
+    }
+  }
+
+  if (customerPhone) {
+    try {
+      await sendWhatsAppMessage({
+        to: customerPhone,
+        message: `Saga Elite: card payment received for order ${order._id} (${brand.toUpperCase()} ending ${last4}). We'll confirm verification shortly.`,
+      });
+    } catch (whatsAppError) {
+      logger.error("Failed to send card-payment WhatsApp", { error: whatsAppError?.message });
+    }
+  }
+
+  emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId: order._id,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "card-submitted",
+  });
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "card-submitted",
+    paymentId: payment._id,
+    orderId: order._id,
+    userId: customerUserId,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Card payment submitted — admin verification in progress",
+    data: {
+      ...buildManualPaymentSummary(payment),
+      orderId: order._id,
     },
   });
 });
@@ -867,6 +1088,7 @@ const getPendingPayments = catchAsync(async (req, res, next) => {
   const statusRaw = String(req.query.status || "proof_submitted").trim();
   const guestOnly = String(req.query.guestOnly || "").toLowerCase() === "true";
   const countOnly = String(req.query.countOnly || "").toLowerCase() === "true";
+  const paymentTypeRaw = String(req.query.paymentType || "").trim().toLowerCase();
   const page = Math.max(1, Number.parseInt(req.query.page || "1", 10) || 1);
   const limit = Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20);
   const skip = (page - 1) * limit;
@@ -888,6 +1110,18 @@ const getPendingPayments = catchAsync(async (req, res, next) => {
 
   if (guestOnly) {
     filter.guestId = { $exists: true, $ne: null };
+  }
+
+  // Admin tabs: "manual_bank_transfer" | "card" | omitted = all. Legacy
+  // records created before the field existed default to manual_bank_transfer
+  // via the schema default, so they show up under "Manual" automatically.
+  if (paymentTypeRaw === "manual_bank_transfer") {
+    filter.$or = [
+      { paymentType: "manual_bank_transfer" },
+      { paymentType: { $exists: false } },
+    ];
+  } else if (paymentTypeRaw === "card") {
+    filter.paymentType = "card";
   }
 
   if (countOnly) {
@@ -1418,7 +1652,12 @@ const getMethodSummary = catchAsync(async (req, res) => {
     {
       $group: {
         _id: {
-          method: { $ifNull: ["$order.paymentMethod", "manual_bank_transfer"] },
+          // Prefer the ManualPayment.paymentType field when set — it's the
+          // source of truth post-card-integration. Fall back to the Order's
+          // paymentMethod for legacy records that pre-date the field.
+          method: {
+            $ifNull: ["$paymentType", { $ifNull: ["$order.paymentMethod", "manual_bank_transfer"] }],
+          },
           status: "$status",
         },
         count: { $sum: 1 },
@@ -1472,6 +1711,7 @@ module.exports = {
   generateReference,
   submitProof,
   submitWithReceipt,
+  submitSampleCardPayment,
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,

@@ -122,10 +122,12 @@ export const fetchPendingManualPayments = async ({
   guestOnly = false,
   page = 1,
   limit = 20,
+  paymentType,
 } = {}) => {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
   if (guestOnly) query.set("guestOnly", "true");
+  if (paymentType && paymentType !== "all") query.set("paymentType", paymentType);
   query.set("page", String(page));
   query.set("limit", String(limit));
 

@@ -45,6 +45,32 @@ const manualPaymentSchema = new mongoose.Schema(
       default: "LKR",
       trim: true,
     },
+    // Distinguishes manual bank-transfer records from sample (and eventually
+    // PayHere) card records. They share this collection because the admin
+    // verification flow, status enum, and notifications are identical — only
+    // the proof artefact differs (receipt image vs gateway reference).
+    paymentType: {
+      type: String,
+      enum: ["manual_bank_transfer", "card"],
+      default: "manual_bank_transfer",
+      index: true,
+    },
+    // Card-only fields. Populated when paymentType === "card". The full PAN
+    // and CVV are NEVER stored — only the last 4, brand (from BIN), and
+    // expiry, plus our generated gateway reference (placeholder until
+    // PayHere is integrated).
+    cardDetails: {
+      cardholderName: { type: String, default: null, trim: true, maxlength: 100 },
+      last4: { type: String, default: null, trim: true, maxlength: 4 },
+      expiryMonth: { type: Number, default: null, min: 1, max: 12 },
+      expiryYear: { type: Number, default: null },
+      brand: { type: String, default: null, trim: true, maxlength: 20 },
+      gatewayReference: { type: String, default: null, trim: true, maxlength: 100 },
+      // `simulated: true` marks records created by the pre-PayHere sample
+      // flow so we can filter them out (or migrate) once the real gateway
+      // is live.
+      simulated: { type: Boolean, default: true },
+    },
     proofUrl: {
       type: String,
       default: null,
@@ -190,5 +216,6 @@ manualPaymentSchema.pre("save", function setExpiry() {
 manualPaymentSchema.index({ status: 1, createdAt: -1 });
 manualPaymentSchema.index({ expiresAt: 1 });
 manualPaymentSchema.index({ orderId: 1, status: 1 });
+manualPaymentSchema.index({ paymentType: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("ManualPayment", manualPaymentSchema);

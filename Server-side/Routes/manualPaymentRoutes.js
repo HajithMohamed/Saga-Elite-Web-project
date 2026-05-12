@@ -10,11 +10,13 @@ const {
   validateManualPaymentReference,
   validateManualPaymentProof,
   validateManualPaymentDecision,
+  validateSampleCardPayment,
 } = require("../Middlewares/request-validation");
 const {
   generateReference,
   submitProof,
   submitWithReceipt,
+  submitSampleCardPayment,
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,
@@ -61,6 +63,14 @@ router.post(
   optionalAuthMiddleware,
   receiptUpload.single("receipt"),
   submitWithReceipt
+);
+// Sample/demo card payment — placeholder for the real PayHere integration.
+// Records last4 + brand only; full PAN and CVV are never persisted.
+router.post(
+  "/card-payment/submit-sample",
+  optionalAuthMiddleware,
+  validateSampleCardPayment,
+  submitSampleCardPayment
 );
 router.get(
   "/manual-payment/status/:paymentIdentifier",

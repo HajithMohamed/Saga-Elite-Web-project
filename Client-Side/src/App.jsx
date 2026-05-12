@@ -88,6 +88,7 @@ import Wishlist from "./pages/shopping-view/Wishlist";
 import ForYou from "./pages/shopping-view/ForYou";
 import OrderTracking from "./pages/shopping-view/OrderTracking";
 import ManualPaymentPage from "./pages/ManualPaymentPage";
+import CardPaymentPage from "./pages/CardPaymentPage";
 import FindPaymentPage from "./pages/FindPaymentPage";
 
 // unauthorized page
@@ -292,6 +293,7 @@ function App() {
             <Route path="checkout-success" element={<OrderSuccess />} />
             <Route path="manual-payment" element={<ManualPaymentPage />} />
             <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+            <Route path="card-payment/:orderId" element={<CardPaymentPage />} />
             <Route path="find-payment" element={<FindPaymentPage />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="for-you" element={<ForYou />} />
