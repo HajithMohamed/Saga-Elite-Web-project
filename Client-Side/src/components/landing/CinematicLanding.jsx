@@ -15,14 +15,15 @@ export const BrandManifesto = () => {
       <div className="max-w-[1440px] mx-auto px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
         {/* Massive Serif Statement */}
         <div className="lg:w-1/2">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="font-display text-[50px] md:text-[80px] leading-[0.95] text-[#FAF7F2] uppercase tracking-tighter"
           >
-            Built for the <br /> <span className="text-[#f2ca50] italic pr-4">rare few.</span>
+            Built for the <br />{" "}
+            <span className="text-[#f2ca50] italic pr-4">rare few.</span>
           </motion.h2>
         </div>
 
@@ -32,15 +33,23 @@ export const BrandManifesto = () => {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{
+              duration: 0.8,
+              delay: 0.2,
+              ease: [0.22, 1, 0.36, 1],
+            }}
             className="border-l border-[#f2ca50]/30 pl-8"
           >
             <p className="font-sans text-lg md:text-xl text-[#d0c5af] leading-relaxed mb-6 max-w-lg">
-              Every drop is intentionally limited. No mass production. No restocks. No trend chasing. We craft narrative-driven pieces that blur the line between fashion and identity.
+              Every drop is intentionally limited. No mass production. No
+              restocks. No trend chasing. We craft narrative-driven pieces that
+              blur the line between fashion and identity.
             </p>
             <div className="flex items-center gap-3">
               <span className="w-12 h-[1px] bg-[#f2ca50]"></span>
-              <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">This is not fast fashion</span>
+              <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">
+                This is not fast fashion
+              </span>
             </div>
           </motion.div>
         </div>
@@ -62,9 +71,16 @@ export const EditorialMetrics = () => {
     <section className="bg-[#0e0e0e] border-y border-[#1f1f1f] py-8 md:py-12">
       <div className="max-w-[1440px] mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 divide-x-0 md:divide-x divide-[#2a2a2a]">
         {metrics.map((m, i) => (
-          <div key={i} className="flex flex-col items-center justify-center text-center">
-            <span className="font-display text-4xl md:text-5xl text-[#FAF7F2] mb-2">{m.value}</span>
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#99907c]">{m.label}</span>
+          <div
+            key={i}
+            className="flex flex-col items-center justify-center text-center"
+          >
+            <span className="font-display text-4xl md:text-5xl text-[#FAF7F2] mb-2">
+              {m.value}
+            </span>
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#99907c]">
+              {m.label}
+            </span>
           </div>
         ))}
       </div>
@@ -75,11 +91,11 @@ export const EditorialMetrics = () => {
 // DROP STORY SECTION
 export const DropStory = () => {
   return (
-    <section className="relative h-screen min-h-[600px] w-full overflow-hidden">
+    <section className="relative h-[500px] w-full overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <img 
-          src="https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?q=80&w=2070" 
-          alt="Drop Inspiration" 
+        <img
+          src="https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?q=80&w=2070"
+          alt="Drop Inspiration"
           className="w-full h-full object-cover opacity-50"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
@@ -97,14 +113,23 @@ export const DropStory = () => {
           <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] block mb-4">
             Chapter 01 — The Arrival
           </span>
+
           <h2 className="font-display text-3xl md:text-5xl text-[#FAF7F2] uppercase mb-6 leading-tight">
             Inspired by underground Colombo nights & unfinished architecture.
           </h2>
+
           <p className="font-sans text-[#d0c5af] leading-relaxed mb-8">
-            The collection embraces raw edges, heavyweight fabrics, and brutalist silhouettes. Designed to withstand the elements while making a statement in the shadows.
+            The collection embraces raw edges, heavyweight fabrics, and
+            brutalist silhouettes. Designed to withstand the elements while
+            making a statement in the shadows.
           </p>
-          <Link to="/shopping/product-list" className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.3em] uppercase text-[#f2ca50] group cursor-open">
-            Explore the inspiration <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+
+          <Link
+            to="/shopping/product-list"
+            className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.3em] uppercase text-[#f2ca50] group cursor-open"
+          >
+            Explore the inspiration{" "}
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
           </Link>
         </motion.div>
       </div>
@@ -124,65 +149,121 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               IDENTITIES
             </span>
           </div>
+
           <p className="relative z-10 font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
             Choose Your Path
           </p>
+
           <h2 className="relative z-10 font-display text-[36px] md:text-[56px] leading-none text-[#FAF7F2] uppercase">
             Curated Lines
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 auto-rows-[300px]">
-          {/* Gents - Tall Image */}
-          <Link to="/shopping/product-list?category=gents" className="md:col-span-5 md:row-span-2 relative overflow-hidden group cursor-open">
-            <img 
-              src={categoryImages?.gents?.Shirts || "https://images.unsplash.com/photo-1516826957135-700ede19c6ce?w=800"} 
-              alt="Gents" 
-              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 auto-rows-[250px]">
+          {/* Gents */}
+          <Link
+            to="/shopping/product-list?category=gents"
+            className="md:col-span-5 md:row-span-2 relative overflow-hidden group cursor-open rounded-3xl"
+          >
+            <img
+              src={
+                categoryImages?.gents?.main ||
+                categoryImages?.gents?.Shirts ||
+                "https://images.unsplash.com/photo-1516826957135-700ede19c6ce?w=800"
+              }
+              alt="Gents"
+              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
             />
+
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
+
             <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none"></div>
+
             <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
-              <span className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">GENTS</span>
-              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">Explore Collection</span>
+              <span className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">
+                GENTS
+              </span>
+
+              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">
+                Explore Collection
+              </span>
             </div>
           </Link>
 
-          {/* Ladies - Landscape Image */}
-          <Link to="/shopping/product-list?category=ladies" className="md:col-span-7 md:row-span-1 relative overflow-hidden group cursor-open">
-            <img 
-              src={categoryImages?.ladies?.Dresses || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"} 
-              alt="Ladies" 
-              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
+          {/* Ladies */}
+          <Link
+            to="/shopping/product-list?category=ladies"
+            className="md:col-span-7 md:row-span-1 relative overflow-hidden group cursor-open rounded-3xl"
+          >
+            <img
+              src={
+                categoryImages?.ladies?.main ||
+                categoryImages?.ladies?.Dresses ||
+                "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"
+              }
+              alt="Ladies"
+              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
             />
+
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
+
             <div className="absolute inset-0 flex flex-col justify-end p-8">
-              <span className="font-display text-3xl md:text-4xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">LADIES</span>
-              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">View Lookbook</span>
+              <span className="font-display text-3xl md:text-4xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">
+                LADIES
+              </span>
+
+              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">
+                View Lookbook
+              </span>
             </div>
           </Link>
 
-          {/* Unisex - Portrait Image */}
-          <Link to="/shopping/product-list?category=unisex" className="md:col-span-4 md:row-span-1 relative overflow-hidden group cursor-open">
-            <img 
-              src={categoryImages?.unisex?.Unisex || "https://images.unsplash.com/photo-1520975954732-57dd22299614?w=800"} 
-              alt="Unisex" 
-              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]" 
+          {/* Unisex */}
+          <Link
+            to="/shopping/product-list?category=unisex"
+            className="md:col-span-4 md:row-span-1 relative overflow-hidden group cursor-open rounded-3xl"
+          >
+            <img
+              src={
+                categoryImages?.unisex?.main ||
+                categoryImages?.unisex?.Unisex ||
+                "https://images.unsplash.com/photo-1520975954732-57dd22299614?w=800"
+              }
+              alt="Unisex"
+              className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
             />
+
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
+
             <div className="absolute inset-0 flex flex-col justify-end p-8">
-              <span className="font-display text-3xl md:text-4xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">UNISEX</span>
-              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">Browse Staples</span>
+              <span className="font-display text-3xl md:text-4xl text-[#FAF7F2] uppercase tracking-wide group-hover:-translate-y-2 transition-transform duration-500">
+                UNISEX
+              </span>
+
+              <span className="font-mono text-[10px] text-[#f2ca50] tracking-[0.3em] uppercase mt-2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500 delay-100">
+                Browse Staples
+              </span>
             </div>
           </Link>
-          
+
           {/* Decorative Box */}
-          <div className="md:col-span-3 md:row-span-1 border border-[#4d4635] flex items-center justify-center p-6 bg-[#0a0a0a]">
-             <div className="text-center">
-                <span className="block font-mono text-[10px] tracking-[0.3em] text-[#99907c] uppercase mb-2">Signature</span>
-                <span className="block font-display text-xl text-[#FAF7F2] italic">The Archive</span>
-                <Link to="/shopping/product-list" className="mt-4 inline-block font-mono text-[9px] tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50]">VIEW ALL</Link>
-             </div>
+          <div className="md:col-span-3 md:row-span-1 border border-[#4d4635] flex items-center justify-center p-6 bg-[#0a0a0a] rounded-3xl">
+            <div className="text-center">
+              <span className="block font-mono text-[10px] tracking-[0.3em] text-[#99907c] uppercase mb-2">
+                Signature
+              </span>
+
+              <span className="block font-display text-xl text-[#FAF7F2] italic">
+                The Archive
+              </span>
+
+              <Link
+                to="/shopping/product-list"
+                className="mt-4 inline-block font-mono text-[9px] tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50]"
+              >
+                VIEW ALL
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -193,7 +274,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
 // CLOSING CREDITS FOOTER
 export const CinematicFooter = () => {
   return (
-    <footer className="relative bg-[#050505] pt-20 pb-16 overflow-hidden border-t border-[#1a1a1a]">
+    <footer className="relative bg-[#050505] pt-32 pb-16 overflow-hidden border-t border-[#1a1a1a]">
       {/* Huge Background Typography */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
         <h1 className="font-display text-[20vw] font-black text-white whitespace-nowrap tracking-tighter leading-none mix-blend-screen">
@@ -205,32 +286,53 @@ export const CinematicFooter = () => {
         <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-6">
           The End of the Scroll
         </span>
+
         <h2 className="font-display text-[40px] md:text-[70px] text-[#FAF7F2] uppercase leading-none mb-8">
           Enter the Archive.
         </h2>
+
         <p className="font-sans text-[#99907c] max-w-md mx-auto mb-12">
-          Join the inner circle. Members get 48H early access to new chapters, private events, and archived pieces.
+          Join the inner circle. Members get 48H early access to new chapters,
+          private events, and archived pieces.
         </p>
 
         <form className="w-full max-w-md flex relative border-b border-[#4d4635] focus-within:border-[#f2ca50] transition-colors mb-24">
-          <input 
-            type="email" 
-            placeholder="YOUR EMAIL ADDRESS" 
+          <input
+            type="email"
+            placeholder="YOUR EMAIL ADDRESS"
             className="w-full bg-transparent border-none outline-none font-mono text-xs tracking-widest text-[#FAF7F2] placeholder-[#4d4635] py-4 px-2"
           />
-          <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-[#f2ca50] font-mono text-[10px] tracking-[0.2em] uppercase hover:opacity-70 transition-opacity">
+
+          <button
+            type="submit"
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-[#f2ca50] font-mono text-[10px] tracking-[0.2em] uppercase hover:opacity-70 transition-opacity"
+          >
             Submit
           </button>
         </form>
 
-        <div className="w-full flex flex-col md:flex-row justify-between items-center gap-6 border-t border-[#1a1a1a] pt-8">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-[#4d4635] uppercase">
-            © {new Date().getFullYear()} Saga Elite. All rights reserved.
-          </span>
+        <div className="w-full flex flex-col md:flex-row justify-end items-center gap-6 border-t border-[#1a1a1a] pt-8">
           <div className="flex gap-6 font-mono text-[10px] tracking-[0.2em] text-[#99907c] uppercase">
-            <Link to="#" className="hover:text-[#f2ca50] transition-colors">Instagram</Link>
-            <Link to="#" className="hover:text-[#f2ca50] transition-colors">Tiktok</Link>
-            <Link to="#" className="hover:text-[#f2ca50] transition-colors">Terms</Link>
+            <Link
+              to="#"
+              className="hover:text-[#f2ca50] transition-colors"
+            >
+              Instagram
+            </Link>
+
+            <Link
+              to="#"
+              className="hover:text-[#f2ca50] transition-colors"
+            >
+              Tiktok
+            </Link>
+
+            <Link
+              to="#"
+              className="hover:text-[#f2ca50] transition-colors"
+            >
+              Terms
+            </Link>
           </div>
         </div>
       </div>
