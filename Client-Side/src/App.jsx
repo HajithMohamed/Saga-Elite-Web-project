@@ -65,6 +65,7 @@ const PoliciesManager = lazy(() => import("./pages/admin-view/PoliciesManager"))
 const FooterManager = lazy(() => import("./pages/admin-view/FooterManager"));
 const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"));
 const ContactPageManager = lazy(() => import("./pages/admin-view/ContactPageManager"));
+const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
@@ -264,7 +265,7 @@ function App() {
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
             <Route path="activity" element={<ActivityTimeline />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
-            <Route path="account" element={<Account />} />
+            <Route path="account" element={<AdminAccount />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
             <Route path="drop-analytics" element={<PermissionGuard permission="viewAnalytics"><DropAnalytics /></PermissionGuard>} />
             <Route path="analytics" element={<PermissionGuard permission="viewAnalytics"><AdminAnalytics /></PermissionGuard>} />

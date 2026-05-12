@@ -48,6 +48,7 @@ export function AdminFormShell({ header, rightRail, children, onClose }) {
       animate="visible"
       exit="hidden"
       data-admin-form-scroll
+      data-lenis-prevent="true"
       className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#0A0A0A] text-white"
     >
       {/* Sticky header (StickyActionBar already sets `sticky top-0`). */}
@@ -55,7 +56,7 @@ export function AdminFormShell({ header, rightRail, children, onClose }) {
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 px-6 pt-10 pb-32 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10 lg:px-10 lg:pt-12 lg:pb-40">
         <main className="min-w-0 space-y-8">{children}</main>
         {rightRail ? (
-          <aside className="lg:sticky lg:top-[96px] lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+          <aside className="lg:sticky lg:top-[96px] lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1" data-lenis-prevent="true">
             <div className="space-y-5">{rightRail}</div>
           </aside>
         ) : null}

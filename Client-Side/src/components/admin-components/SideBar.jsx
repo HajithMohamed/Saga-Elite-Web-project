@@ -594,7 +594,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar" data-lenis-prevent="true">
           {renderGroups.map((group, groupIdx) => (
             <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
               {group.section ? (
