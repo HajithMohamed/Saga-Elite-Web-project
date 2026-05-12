@@ -21,8 +21,6 @@ import {
 } from "@/components/landing/LandingSections";
 import {
   BrandManifesto,
-  EditorialMetrics,
-  DropStory,
   AsymmetricCategoryGrid,
   CinematicFooter
 } from "@/components/landing/CinematicLanding";
@@ -104,6 +102,13 @@ const Home = () => {
     [payload.gentsArrivals, payload.ladiesArrivals, payload.trending]
   );
 
+  const fallbackImage = "/placeholder.jpg";
+  const normalizedCategories = {
+    ladies: { Dresses: payload.categoryImages?.ladies?.Dresses || fallbackImage },
+    gents: { Shirts: payload.categoryImages?.gents?.Shirts || fallbackImage },
+    unisex: { Unisex: payload.categoryImages?.unisex?.Unisex || fallbackImage },
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center text-center">
@@ -133,28 +138,10 @@ const Home = () => {
             nextDrop={nextDrop}
           />
 
-          {/* NEW: Brand Manifesto */}
-          <BrandManifesto />
+          {/* 3. Collection selector — Asymmetric */}
+          <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
 
-          {/* 3. Editorial Metrics Strip */}
-          <EditorialMetrics />
-
-          {/* 4. Collection selector — Asymmetric */}
-          <AsymmetricCategoryGrid categoryImages={payload.categoryImages} />
-
-          {/* 5. Next drop countdown */}
-          {!payload.activeDrop && nextDrop?.releaseDate ? (
-            <LiveDropCountdownXL
-              targetDate={nextDrop.releaseDate}
-              title={nextDrop.name}
-              description="The next chapter opens soon. Members enter first."
-            />
-          ) : null}
-
-          {/* NEW: Drop Story */}
-          <DropStory />
-
-          {/* 6. Featured / Rare Pieces */}
+          {/* 4. Featured / Rare Pieces */}
           {payload.trending && payload.trending.length > 0 && (
             <ProductSlider
               title="Rare Pieces"
@@ -163,39 +150,51 @@ const Home = () => {
             />
           )}
 
-          {/* 3b. Personalized rails */}
+          {/* 5. Personalized rails */}
           <ForYouRail variant="for-you" />
           <ForYouRail variant="recently-viewed" />
           <ForYouRail variant="trending-style" />
 
-          {/* 7. Active offers slider */}
+          {/* 6. Active offers slider */}
           {payload.offers && payload.offers.length > 0 && (
             <OffersSlider offers={payload.offers} />
           )}
 
-          {/* 8. Mystery gift */}
+          {/* 7. Next drop countdown */}
+          {!payload.activeDrop && nextDrop?.releaseDate ? (
+            <LiveDropCountdownXL
+              targetDate={nextDrop.releaseDate}
+              title={nextDrop.name}
+              description="The next chapter opens soon. Members enter first."
+            />
+          ) : null}
+
+          {/* 8. Brand Manifesto */}
+          <BrandManifesto />
+
+          {/* 9. Mystery gift */}
           <MysteryGiftSpline />
 
-          {/* 9. Why Saga Elite */}
+          {/* 10. Why Saga Elite */}
           <WhyChooseSaga />
 
-          {/* 10. Trending fits */}
+          {/* 11. Trending fits */}
           {trendingFeed.length > 0 && (
             <TrendingFitsMarquee products={trendingFeed} />
           )}
 
-          {/* 11. Community / social proof */}
+          {/* 12. Community / social proof */}
           {payload.socialImages.length > 0 && (
             <CommunityFeed images={payload.socialImages} />
           )}
 
-          {/* 12. Testimonials */}
+          {/* 13. Testimonials */}
           <Testimonials />
 
-          {/* 13. VIP / membership CTA */}
+          {/* 14. VIP / membership CTA */}
           <VipMembership />
 
-          {/* NEW: Cinematic Footer */}
+          {/* 15. Cinematic Footer */}
           <CinematicFooter />
         </div>
       </div>
