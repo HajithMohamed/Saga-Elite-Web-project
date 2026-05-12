@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
@@ -7,6 +7,7 @@ import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
 import { getRemainingTime } from "@/utils/time";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
+import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 
 const AnnouncementBar = ({ items, nextDrop, countdown }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,6 +70,7 @@ const MainHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { open: openAuthDrawer } = useAuthDrawer();
   const homePath = "/shopping/home";
   
   const isAdminView = location.pathname.startsWith("/admin");
@@ -78,6 +80,7 @@ const MainHeader = () => {
   const [scrolled, setScrolled] = useState(false);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState(EMPTY_COUNTDOWN);
+  const userMenuRef = useRef(null);
 
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
@@ -89,6 +92,17 @@ const MainHeader = () => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -116,7 +130,7 @@ const MainHeader = () => {
   const handleLogout = async () => {
     try {
       await dispatch(logoutUserAction()).unwrap();
-      navigate("/auth/login");
+      navigate("/");
     } catch (err) {
       console.error("Logout failed", err);
     }
@@ -213,12 +227,20 @@ const MainHeader = () => {
               <ShoppingBag className="w-[18px] h-[18px]" />
               <AnimatedBadge count={cartCount} />
             </Link>
-            <div className="relative">
-              <button aria-label="Account" onClick={() => setUserMenuOpen((v) => !v)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
-                <User className="w-[18px] h-[18px]" />
+            <div className="relative" ref={userMenuRef}>
+              <button
+                aria-label={user ? 'Account menu' : 'Sign in'}
+                onClick={() => user ? setUserMenuOpen((v) => !v) : openAuthDrawer('login')}
+                className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300"
+              >
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt="avatar" className="w-6 h-6 rounded-full object-cover border border-[#D4AF37]/40" />
+                ) : (
+                  <User className="w-[18px] h-[18px]" />
+                )}
               </button>
               <AnimatePresence>
-                {userMenuOpen && (
+                {userMenuOpen && user && (
                   <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -226,27 +248,17 @@ const MainHeader = () => {
                     className="absolute right-0 top-[140%] min-w-[200px] border border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md shadow-2xl p-2 z-50 overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/[0.02] before:to-transparent before:pointer-events-none"
                   >
                     <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
-                      {user ? (
-                        <>
-                          <div className="px-4 py-3 border-b border-[#2a2a2a] mb-1">
-                            <p className="text-[9px] text-[#d0c5af]/60 tracking-[0.2em]">Signed in as</p>
-                            <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
-                          </div>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
-                          <div className="h-[1px] bg-[#2a2a2a] my-1" />
-                          <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
-                        </>
-                      ) : (
-                        <>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/auth/login">Access Vault</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors text-[#f2ca50]" to="/auth/register">Request Access</Link>
-                          <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment">Find Payment</Link>
-                        </>
-                      )}
+                      <div className="px-4 py-3 border-b border-[#2a2a2a] mb-1">
+                        <p className="text-[9px] text-[#d0c5af]/60 tracking-[0.2em]">Signed in as</p>
+                        <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
+                      </div>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
+                      <div className="h-[1px] bg-[#2a2a2a] my-1" />
+                      <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
                     </div>
                   </motion.div>
                 )}
