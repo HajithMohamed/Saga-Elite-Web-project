@@ -104,9 +104,18 @@ const Home = () => {
 
   const fallbackImage = "/placeholder.jpg";
   const normalizedCategories = {
-    ladies: { Dresses: payload.categoryImages?.ladies?.Dresses || fallbackImage },
-    gents: { Shirts: payload.categoryImages?.gents?.Shirts || fallbackImage },
-    unisex: { Unisex: payload.categoryImages?.unisex?.Unisex || fallbackImage },
+    ladies: {
+      main: payload.categoryImages?.ladies?.main || payload.categoryImages?.ladies?.Dresses || fallbackImage,
+      Dresses: payload.categoryImages?.ladies?.Dresses || fallbackImage,
+    },
+    gents: {
+      main: payload.categoryImages?.gents?.main || payload.categoryImages?.gents?.Shirts || fallbackImage,
+      Shirts: payload.categoryImages?.gents?.Shirts || fallbackImage,
+    },
+    unisex: {
+      main: payload.categoryImages?.unisex?.main || payload.categoryImages?.unisex?.Unisex || fallbackImage,
+      Unisex: payload.categoryImages?.unisex?.Unisex || fallbackImage,
+    },
   };
 
   if (loading) {

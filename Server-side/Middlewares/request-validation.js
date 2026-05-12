@@ -326,10 +326,10 @@ const validateAuthRegister = createValidationMiddleware((req) => {
   const email = sanitizeEmail(req.body.email);
   const password = sanitizePassword(req.body.password);
   const confirmPassword = sanitizePassword(req.body.confirmPassword, "confirmPassword");
-  const phoneNumber = sanitizeString(req.body.phoneNumber, "phoneNumber", { required: true, maxLength: 20 });
+  const phoneNumber = sanitizeString(req.body.phoneNumber, "phoneNumber", { maxLength: 20 });
   const username = sanitizeOptionalPlainText(req.body.username, "username", { maxLength: 120 });
 
-  req.body = { email, password, confirmPassword, phoneNumber, username };
+  req.body = { email, password, confirmPassword, phoneNumber: phoneNumber || undefined, username };
 });
 
 const validateAuthLogin = createValidationMiddleware((req) => {

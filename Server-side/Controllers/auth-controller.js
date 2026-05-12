@@ -8,7 +8,11 @@ const Guest = require("../Models/Guest");
 const filterObj = require("../Utils/filter-object");
 const createSendToken = require("../Utils/create-send-token");
 const buildEmailTemplate = require("../Utils/email-template");
-const { cleanPhoneNumber, sendWhatsAppMessage } = require("../Utils/whatsapp-service");
+const {
+  cleanPhoneNumber,
+  sendWhatsAppMessage,
+  sendWhatsAppTemplateMessage,
+} = require("../Utils/whatsapp-service");
 const {
   isValidSriLankanMobile,
   normalizeSriLankanMobile,
@@ -20,14 +24,71 @@ const { recordLoginAttempt } = require("../Utils/login-activity-service");
 // continue even if WhatsApp is misconfigured or the user has no phone.
 const trySendAuthWhatsApp = async (user, message, label) => {
   const phone = cleanPhoneNumber(user?.phoneNumber);
-  if (!phone) return;
+  if (!phone) return { sent: false, skipped: true };
   try {
-    await sendWhatsAppMessage({ to: phone, message });
+    const result = await sendWhatsAppMessage({ to: phone, message });
+    if (result?.skipped) {
+      logger.warn(`Auth WhatsApp dispatch skipped (${label})`, {
+        reason: result.reason,
+        userId: user?._id,
+      });
+      return { sent: false, skipped: true, reason: result.reason };
+    }
+    return { sent: true, skipped: false };
   } catch (err) {
     logger.error(`Auth WhatsApp dispatch failed (${label})`, {
       error: err?.message || String(err),
       userId: user?._id,
     });
+    return { sent: false, skipped: false, error: err };
+  }
+};
+
+const trySendAuthWhatsAppOtp = async (user, otp, label) => {
+  const phone = cleanPhoneNumber(user?.phoneNumber);
+  if (!phone) return { sent: false, skipped: true };
+
+  const templateName =
+    process.env.WHATSAPP_AUTH_OTP_TEMPLATE_NAME ||
+    process.env.WHATSAPP_OTP_TEMPLATE_NAME;
+  const languageCode = process.env.WHATSAPP_AUTH_OTP_LANGUAGE || "en_US";
+  const buttonSubType = process.env.WHATSAPP_AUTH_OTP_BUTTON_SUB_TYPE || "url";
+  const includeButton =
+    process.env.WHATSAPP_AUTH_OTP_INCLUDE_BUTTON !== "false";
+
+  try {
+    const result = templateName
+      ? await sendWhatsAppTemplateMessage({
+          to: phone,
+          templateName,
+          languageCode,
+          bodyParameters: [otp],
+          buttonParameters: includeButton ? [otp] : [],
+          buttonSubType,
+        })
+      : await sendWhatsAppMessage({
+          to: phone,
+          message: `Saga Elite verification code: ${otp}\nValid for ${otpExpiryMinutes()} minutes. Don't share this code.`,
+        });
+
+    if (result?.skipped) {
+      logger.warn(`Auth WhatsApp OTP dispatch skipped (${label})`, {
+        reason: result.reason,
+        userId: user?._id,
+        hasTemplate: Boolean(templateName),
+      });
+      return { sent: false, skipped: true, reason: result.reason };
+    }
+
+    return { sent: true, skipped: false };
+  } catch (err) {
+    logger.error(`Auth WhatsApp OTP dispatch failed (${label})`, {
+      error: err?.message || String(err),
+      userId: user?._id,
+      hasTemplate: Boolean(templateName),
+      templateName: templateName || undefined,
+    });
+    return { sent: false, skipped: false, error: err };
   }
 };
 
@@ -50,15 +111,15 @@ const registerUser = catchAsync(async (req, res, next) => {
     );
     const { email, password, confirmPassword, phoneNumber, username } = userData;
 
-    if (!email || !password || !confirmPassword || !phoneNumber) {
-        return next(new AppError("Email, password and phone number are required", 400));
+    if (!email || !password || !confirmPassword) {
+        return next(new AppError("Email, password and confirm password are required", 400));
     }
 
     if (password !== confirmPassword) {
         return next(new AppError("Passwords do not match", 400));
     }
 
-    if (!isValidSriLankanMobile(phoneNumber)) {
+    if (phoneNumber && !isValidSriLankanMobile(phoneNumber)) {
         return next(
             new AppError(
                 "Phone number must be a valid Sri Lankan mobile (e.g. 077 123 4567 or +94 77 123 4567).",
@@ -67,7 +128,7 @@ const registerUser = catchAsync(async (req, res, next) => {
         );
     }
 
-    const normalizedPhone = normalizeSriLankanMobile(phoneNumber);
+    const normalizedPhone = phoneNumber ? normalizeSriLankanMobile(phoneNumber) : undefined;
 
     const existingUser = await User.findOne({ email });
 
@@ -83,14 +144,16 @@ const registerUser = catchAsync(async (req, res, next) => {
     // Same phone shouldn't be reused across local accounts — otherwise the
     // WhatsApp OTP fan-out becomes ambiguous when two users get the same
     // code via the same channel.
-    const phoneOwner = await User.findOne({ phoneNumber: normalizedPhone });
-    if (phoneOwner) {
-        return next(
-            new AppError(
-                "This phone number is already linked to another account.",
-                400
-            )
-        );
+    if (normalizedPhone) {
+        const phoneOwner = await User.findOne({ phoneNumber: normalizedPhone });
+        if (phoneOwner) {
+            return next(
+                new AppError(
+                    "This phone number is already linked to another account.",
+                    400
+                )
+            );
+        }
     }
 
     const otp = generateOtp();
@@ -101,7 +164,7 @@ const registerUser = catchAsync(async (req, res, next) => {
         password,
         otp,
         otpExpires,
-        phoneNumber: normalizedPhone,
+        phoneNumber: normalizedPhone || undefined,
         username: username || undefined,
         isVerified: false,
         provider: "local",
@@ -141,17 +204,16 @@ const registerUser = catchAsync(async (req, res, next) => {
         mailError = err;
     }
 
-    // WhatsApp OTP fan-out for users who supplied a phone at signup. Older
-    // signups won't have phoneNumber set so this just no-ops.
-    await trySendAuthWhatsApp(
-        newUser,
-        `Saga Elite verification code: ${otp}\nValid for ${otpExpiryMinutes()} minutes. Don't share this code.`,
-        "register"
-    );
+    // WhatsApp OTP fan-out for users who supplied a phone at signup.
+    const whatsAppResult = await trySendAuthWhatsAppOtp(newUser, otp, "register");
 
     const responseMessage = mailError
         ? "User registered successfully but verification email could not be sent. Please contact support."
-        : "User registered successfully. Please verify your email with the OTP sent.";
+        : whatsAppResult.sent
+            ? "User registered successfully. Please verify your email with the OTP sent to your email and WhatsApp."
+            : normalizedPhone
+                ? "User registered successfully. Please verify your email with the OTP sent. WhatsApp delivery could not be confirmed."
+                : "User registered successfully. Please verify your email with the OTP sent.";
 
     // always return 201 so client doesn’t see a 500 on mail failures
     res.status(201).json({
@@ -163,6 +225,9 @@ const registerUser = catchAsync(async (req, res, next) => {
             isVerified: newUser.isVerified,
         },
         mailError: mailError ? mailError.message : undefined,
+        whatsAppError: whatsAppResult.error
+            ? whatsAppResult.error.message
+            : whatsAppResult.reason,
     });
 });
 
@@ -262,11 +327,7 @@ const resendOTP = catchAsync(async (req, res, next) => {
             html: buildEmailTemplate("Email Verification - New Code", resendBody),
         });
 
-        await trySendAuthWhatsApp(
-            user,
-            `Saga Elite verification code: ${newOTP}\nValid for ${otpExpiryMinutes()} minutes. Don't share this code.`,
-            "resend-signup-otp"
-        );
+        await trySendAuthWhatsAppOtp(user, newOTP, "resend-signup-otp");
 
         res.status(200).json({
             status: "success",
@@ -483,11 +544,7 @@ const forgotPassword = catchAsync(async(req, res, next)=>{
             html: buildEmailTemplate("Password Reset Request", resetBody),
         });
 
-        await trySendAuthWhatsApp(
-            user,
-            `Saga Elite password reset code: ${otp}\nValid for ${otpExpiryMinutes()} minutes. If you didn't request this, ignore this message.`,
-            "forgot-password"
-        );
+        await trySendAuthWhatsAppOtp(user, otp, "forgot-password");
 
         res.status(200).json({
             status: "success",
@@ -544,11 +601,7 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
         return next(new AppError("Failed to send email. Try again later.", 500));
     }
 
-    await trySendAuthWhatsApp(
-        user,
-        `Saga Elite password reset code: ${otp}\nValid for ${otpExpiryMinutes()} minutes. If you didn't request this, ignore this message.`,
-        "resend-reset-otp"
-    );
+    await trySendAuthWhatsAppOtp(user, otp, "resend-reset-otp");
 
     res.status(200).json({
         status: "success",
