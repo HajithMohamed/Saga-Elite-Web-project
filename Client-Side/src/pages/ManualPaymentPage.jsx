@@ -591,9 +591,9 @@ const ManualPaymentPage = () => {
   };
 
   const handleCopyReference = async () => {
-    if (!currentPayment?.referenceNumber) return;
+    if (!activeReferenceNumber) return;
     try {
-      await navigator.clipboard.writeText(currentPayment.referenceNumber);
+      await navigator.clipboard.writeText(activeReferenceNumber);
       toast({
         title: "Copied",
         description: "Reference number copied to clipboard.",
@@ -609,13 +609,13 @@ const ManualPaymentPage = () => {
   };
 
   const handleSubmitProof = async (file) => {
-    if (!currentPayment?.referenceNumber) {
+    if (!activeReferenceNumber) {
       throw new Error("Payment reference is not ready yet.");
     }
 
     const result = await dispatch(
       submitManualPaymentReceipt({
-        referenceNumber: currentPayment.referenceNumber,
+        referenceNumber: activeReferenceNumber,
         file,
         email: resolvedEmail || undefined,
       })
