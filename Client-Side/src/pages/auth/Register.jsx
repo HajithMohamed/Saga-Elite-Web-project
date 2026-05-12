@@ -65,6 +65,19 @@ const validateStep = (data, touched) => {
     const pErr = firstPasswordError(data.password);
     if (pErr) errs.password = pErr;
   }
+
+  if (touched.confirmPassword && !data.confirmPassword) {
+    errs.confirmPassword = "Confirm your password.";
+  } else if (data.confirmPassword && data.password !== data.confirmPassword) {
+    errs.confirmPassword = "Passwords do not match.";
+  }
+
+  if (touched.phoneNumber && !data.phoneNumber) {
+    errs.phoneNumber = "Phone number is required.";
+  } else if (data.phoneNumber && !PHONE_REGEX.test(data.phoneNumber.replace(/\s/g, ""))) {
+    errs.phoneNumber = "Enter a valid Sri Lankan mobile (e.g. 0771234567).";
+  }
+
   return errs;
 };
 
@@ -82,9 +95,10 @@ const Register = () => {
     username: "",
     email: "",
     password: "",
+    confirmPassword: "",
+    phoneNumber: "",
   });
   const [extraData, setExtraData] = useState({
-    phoneNumber: "",
     street: "",
     city: "",
     postalCode: "",
@@ -114,7 +128,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const allTouched = { username: true, email: true, password: true };
+    const allTouched = { username: true, email: true, password: true, confirmPassword: true, phoneNumber: true };
     setTouched(allTouched);
 
     const fresh = validateStep(formData, allTouched);
@@ -152,15 +166,9 @@ const Register = () => {
   };
 
   const handleSaveExtras = async () => {
-    const phone = extraData.phoneNumber.trim();
     const street = extraData.street.trim();
     const city = extraData.city.trim();
     const postalCode = extraData.postalCode.trim();
-
-    if (phone && !PHONE_REGEX.test(phone.replace(/\s/g, ""))) {
-      setErrors((p) => ({ ...p, phoneNumber: "Enter a valid Sri Lankan mobile (e.g. 0771234567)" }));
-      return;
-    }
 
     const hasAddress = street || city || postalCode;
     if (hasAddress && (!street || !city || !postalCode)) {
@@ -173,9 +181,6 @@ const Register = () => {
 
     setIsSavingExtras(true);
     try {
-      if (phone) {
-        await axiosInstance.patch("/user/me", { phoneNumber: phone });
-      }
       if (hasAddress) {
         await axiosInstance.post("/user/addresses", {
           street,
@@ -303,7 +308,40 @@ const Register = () => {
           {formData.password && <div className="mt-1"><PasswordStrengthMeter password={formData.password} /></div>}
         </motion.div>
 
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+          <LuxuryInput
+            id="confirmPassword"
+            type="password"
+            label="Confirm Password"
+            autoComplete="new-password"
+            value={formData.confirmPassword}
+            error={touched.confirmPassword ? errors.confirmPassword : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, confirmPassword: e.target.value }));
+              setTouched((p) => ({ ...p, confirmPassword: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, confirmPassword: true }))}
+          />
+        </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+          <LuxuryInput
+            id="phoneNumber"
+            type="tel"
+            label="Mobile (Sri Lanka)"
+            placeholder="0771234567"
+            autoComplete="tel"
+            value={formData.phoneNumber}
+            error={touched.phoneNumber ? errors.phoneNumber : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, phoneNumber: e.target.value }));
+              setTouched((p) => ({ ...p, phoneNumber: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, phoneNumber: true }))}
+          />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
           <Btn
             variant="default"
             className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
@@ -330,23 +368,9 @@ const Register = () => {
               Step 2 of 2 · Optional
             </p>
             <p className="mt-2 text-sm text-[#d0c5af]">
-              Add your phone and a saved address now for one-tap checkout — or skip and add later.
+              Add a saved address now for one-tap checkout — or skip and add later.
             </p>
           </div>
-
-          <LuxuryInput
-            id="phoneNumber"
-            type="tel"
-            label="Mobile (Sri Lanka)"
-            placeholder="0771234567"
-            autoComplete="tel"
-            value={extraData.phoneNumber}
-            error={errors.phoneNumber}
-            onChange={(e) => {
-              setExtraData((p) => ({ ...p, phoneNumber: e.target.value }));
-              setErrors((p) => ({ ...p, phoneNumber: undefined }));
-            }}
-          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <LuxuryInput
