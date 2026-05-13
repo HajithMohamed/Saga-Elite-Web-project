@@ -94,7 +94,8 @@ const initialProductForm = {
   sizeGuide: "",
   categoryPath: "",
   brand: "Sovereign Elite",
-  category: "Unisex",
+  category: "",
+  subCategory: "",
   drop: "",
   basePrice: "",
   discountPercent: "0",
@@ -196,6 +197,8 @@ const Product = () => {
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
   const [showProductSaved, setShowProductSaved] = useState(false);
   const [activeFormTab, setActiveFormTab] = useState("basic");
+  const [categoryTree, setCategoryTree] = useState([]);
+  const [activeSubcategories, setActiveSubcategories] = useState([]);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -221,6 +224,19 @@ const Product = () => {
   useEffect(() => {
     dispatch(getAllDrops());
     fetchProducts();
+    
+    // Fetch dynamic category tree
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/categories/menu`);
+        if (response.data?.success) {
+          setCategoryTree(response.data.data);
+        }
+      } catch (err) {
+        console.error("Failed to load categories for admin form", err);
+      }
+    };
+    fetchCategories();
   }, [dispatch, fetchProducts]);
 
   // Bulk operations on the product list. Selection wipes when productList
@@ -763,15 +779,36 @@ const Product = () => {
             <FormField label="Category" required>
               <LuxurySelect
                 value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const parent = categoryTree.find(c => c.slug === val);
+                  setFormData({ ...formData, category: val, subCategory: "" });
+                  setActiveSubcategories(parent?.children || []);
+                }}
               >
-                <option value="Ladies">Ladies</option>
-                <option value="Gents">Gents</option>
-                <option value="Unisex">Unisex</option>
+                <option value="">Select Category</option>
+                {categoryTree.map((cat) => (
+                  <option key={cat._id} value={cat.slug}>{cat.name}</option>
+                ))}
               </LuxurySelect>
             </FormField>
+
+            {/* Conditionally show Sub-category if parent has children OR if one is selected */}
+            {(activeSubcategories.length > 0 || formData.subCategory) && (
+              <FormField label="Sub-Category" optional>
+                <LuxurySelect
+                  value={formData.subCategory}
+                  onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                >
+                  <option value="">None (Top-Level)</option>
+                  {activeSubcategories.map((subcat) => (
+                    <option key={subcat._id} value={subcat.slug}>
+                      {subcat.name}
+                    </option>
+                  ))}
+                </LuxurySelect>
+              </FormField>
+            )}
 
             <FormField
               label="Collection Drop"

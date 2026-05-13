@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ColorSwatch, SizeChip, Eyebrow } from "@/components/ui/editorial";
 import PriceRangeSlider from "./PriceRangeSlider";
+import axios from 'axios';
+import { API_V1_URL as API_BASE } from '@/lib/api';
 
 const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const COMMON_COLORS = [
   "Black", "Ivory", "Gold", "Olive", "Crimson", "Navy", "Charcoal", "Sand"
 ];
-const DROPS = ["DROP 01", "DROP 02", "DROP 03", "LIMITED", "ARCHIVE"];
 
 const FilterSidebar = ({
   selectedColors = [],
@@ -19,6 +20,22 @@ const FilterSidebar = ({
   priceMin = 0,
   priceMax = 50000,
 }) => {
+  const [drops, setDrops] = useState([]);
+
+  useEffect(() => {
+    const fetchDrops = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/drops/get-all-drops`);
+        if (response.data?.success) {
+          setDrops(response.data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to load drops", err);
+      }
+    };
+    fetchDrops();
+  }, []);
+
   return (
     <div className="w-full h-full bg-[#0a0a0a]/60 backdrop-blur-xl border border-[#D4AF37]/15 rounded-lg p-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
       <div className="flex items-center justify-between mx-auto mb-8 border-b border-[#D4AF37]/15 pb-4">
@@ -46,12 +63,12 @@ const FilterSidebar = ({
             Collections
           </Eyebrow>
           <div className="space-y-2">
-            {DROPS.map((d) => (
-              <label key={d} className="flex items-center gap-3 group cursor-pointer">
+            {Array.isArray(drops) && drops.map((d) => (
+              <label key={d._id} className="flex items-center gap-3 group cursor-pointer">
                 <div className="w-4 h-4 border border-[#4d4635] rounded-sm group-hover:border-[#D4AF37] flex items-center justify-center transition-colors">
                    {/* Checkbox visual placeholder */}
                 </div>
-                <span className="text-xs text-[#e5e2e1] uppercase tracking-wider">{d}</span>
+                <span className="text-xs text-[#e5e2e1] uppercase tracking-wider">{d.name}</span>
               </label>
             ))}
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard, Search } from 'lucide-react';
+import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard, Search, ChevronRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logoutUserAction } from '@/store/auth-slice';
@@ -129,14 +129,46 @@ const Header = () => {
           </Link>
           {menuCategories.length > 0 ? (
             menuCategories.map((cat) => (
-              <Link
+              <div
                 key={cat._id}
-                to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
-                className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200"
+                className="relative group py-4"
               >
-                {cat.name}
-                <span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
-              </Link>
+                {/* Category Label */}
+                <Link
+                  to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
+                  className="text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200 cursor-pointer flex items-center gap-1"
+                >
+                  {cat.name}
+                  {cat.children && cat.children.length > 0 && (
+                    <ChevronRight className="w-4 h-4 ml-1 rotate-90 group-hover:rotate-90 transition-transform duration-200 md:rotate-0" />
+                  )}
+                  <span className="absolute bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
+                </Link>
+
+                {/* Dropdown - appears on hover */}
+                {cat.children && cat.children.length > 0 && (
+                  <div className="absolute left-0 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-2">
+                    <div className="bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] min-w-[220px] py-2 border border-gray-100 relative overflow-hidden">
+                      {/* Decorative top border */}
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40"></div>
+                      
+                      {cat.children.map((subcat, idx) => (
+                        <Link
+                          key={subcat._id}
+                          to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}&subCategory=${encodeURIComponent(subcat.slug)}`}
+                          className={`block px-5 py-3 text-black text-xs uppercase tracking-[0.15em] font-medium hover:bg-[#f8f5f0] hover:text-[#D4AF37] transition-all duration-200 flex items-center justify-between group/sub ${idx !== cat.children.length - 1 ? 'border-b border-gray-50' : ''}`}
+                        >
+                          <span className="relative overflow-hidden">
+                            <span className="relative z-10">{subcat.name}</span>
+                            <span className="absolute bottom-0 left-0 w-0 h-px bg-[#D4AF37] transition-all duration-300 group-hover/sub:w-full"></span>
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0 transition-all duration-300 text-[#D4AF37]" />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))
           ) : (
             <>

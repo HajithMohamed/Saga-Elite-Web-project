@@ -39,16 +39,6 @@ const SORT_OPTIONS = [
   { value: "price_high", label: "Price · descending" },
 ];
 
-const PILL_KEYS = [
-  { value: "all", label: "All" },
-  { value: "ladies", label: "Ladies" },
-  { value: "gents", label: "Gents" },
-  { value: "unisex", label: "Unisex" },
-  { value: "drops", label: "Drops" },
-  { value: "offers", label: "Offers" },
-  { value: "archive", label: "Archive" },
-];
-
 
 
 const PAGE_SIZE = 12;
@@ -428,13 +418,7 @@ const ProductListing = () => {
           {/* Main Product Grid (Left Pane) */}
           <div className="flex-1 w-full min-w-0">
             {/* Top Bar inside main pane */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-              <FilterPills
-                items={PILL_KEYS}
-                value={activePill}
-                onChange={setCategoryFilter}
-                layoutId="atelier-pill"
-              />
+            <div className="flex flex-col md:flex-row justify-end items-start md:items-end mb-8 gap-4">
               <div className="flex items-center gap-4">
                 <SortDropdown
                   value={sortParam}
