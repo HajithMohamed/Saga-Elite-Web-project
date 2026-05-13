@@ -28,6 +28,7 @@ const {
 const { startManualPaymentCleanupJob } = require("./Utils/manual-payment-cleanup");
 const { startBankInboxWatcher } = require("./Utils/bank-email-watcher");
 const connectToDB = require("./DataBase/db");
+const seedCategoryTaxonomy = require("./scripts/seed-category-taxonomy");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
 const { initRecommendationsJobs } = require('./Utils/recommendations-job');
@@ -218,6 +219,7 @@ io.on("connection", (socket) => {
 const startServer = async () => {
   try {
     await connectToDB();
+    await seedCategoryTaxonomy();
     await seedAboutSiteDefaults();
     // Reconcile Mongo's actual indexes with the current schema. Required
     // because changing index options (e.g. sparse → partialFilterExpression)

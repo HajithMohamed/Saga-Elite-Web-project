@@ -15,6 +15,110 @@ const runInTransaction = require("../Utils/safe-transaction");
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 
+const normalizeCategorySlug = (value) =>
+  slugify(String(value || "").trim(), { lower: true, strict: true });
+
+const normalizeCategoryPath = (value) => {
+  if (!value) return null;
+
+  const segments = String(value)
+    .split(/\/|>|\|/)
+    .map((segment) => normalizeCategorySlug(segment))
+    .filter(Boolean);
+
+  return segments.length ? segments.join("/") : null;
+};
+
+const escapeRegex = (value = "") => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const findCategoryByValue = async (value, parentId = null) => {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return null;
+
+  const normalized = normalizeCategorySlug(rawValue);
+  const candidateSlugs = new Set([normalized]);
+
+  if (parentId && mongoose.isValidObjectId(parentId)) {
+    const parent = await Category.findById(parentId).select("slug").lean();
+    if (parent?.slug) {
+      candidateSlugs.add(`${parent.slug}-${normalized}`);
+    }
+  }
+
+  const parentFilter =
+    parentId && mongoose.isValidObjectId(parentId)
+      ? { parentCategory: parentId }
+      : { parentCategory: null };
+
+  return Category.findOne({
+    ...parentFilter,
+    $or: [
+      ...Array.from(candidateSlugs).map((slug) => ({ slug })),
+      { name: new RegExp(`^${escapeRegex(rawValue)}$`, "i") },
+    ],
+  })
+    .select("_id slug name parentCategory")
+    .lean();
+};
+
+const buildCategoryPathFromCategoryId = async (categoryId) => {
+  if (!categoryId || !mongoose.isValidObjectId(categoryId)) return null;
+
+  const segments = [];
+  let current = await Category.findById(categoryId)
+    .select("_id slug name parentCategory")
+    .lean();
+
+  while (current) {
+    segments.unshift(current.slug || normalizeCategorySlug(current.name));
+    if (!current.parentCategory) break;
+    // eslint-disable-next-line no-await-in-loop
+    current = await Category.findById(current.parentCategory)
+      .select("_id slug name parentCategory")
+      .lean();
+  }
+
+  return segments.length ? segments.join("/") : null;
+};
+
+const deriveCategoryPathFromInput = async ({ categoryPath, categoryId, category, subCategory } = {}) => {
+  const normalizedPath = normalizeCategoryPath(categoryPath);
+  if (normalizedPath) return normalizedPath;
+
+  let baseSegments = [];
+  let rootCategory = null;
+  if (categoryId && mongoose.isValidObjectId(categoryId)) {
+    const pathFromId = await buildCategoryPathFromCategoryId(categoryId);
+    if (pathFromId) {
+      baseSegments = pathFromId.split("/").filter(Boolean);
+    }
+
+    rootCategory = await Category.findById(categoryId)
+      .select("_id slug name parentCategory")
+      .lean();
+  }
+
+  if (!rootCategory && category) {
+    rootCategory = await findCategoryByValue(category);
+  }
+
+  if (!rootCategory) return null;
+
+  const segments = baseSegments.length ? baseSegments : [rootCategory.slug || normalizeCategorySlug(rootCategory.name)];
+
+  if (subCategory) {
+    const childCategory = await findCategoryByValue(subCategory, rootCategory._id);
+    if (childCategory) {
+      segments.push(childCategory.slug || normalizeCategorySlug(childCategory.name));
+    } else {
+      const normalizedChild = normalizeCategorySlug(subCategory);
+      if (normalizedChild) segments.push(normalizedChild);
+    }
+  }
+
+  return segments.filter(Boolean).join("/");
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -157,6 +261,14 @@ const addProduct = catchAsync(async (req, res, next) => {
           }
         }
 
+    productData.categoryPath =
+      (await deriveCategoryPathFromInput({
+        categoryPath: productData.categoryPath,
+        categoryId: productData.categoryId,
+        category: productData.category,
+        subCategory: productData.subCategory,
+      })) || productData.categoryPath || null;
+
     // Drop is optional. Products without a drop fall back to "Independent Release".
     if (productData.drop) {
         if (!mongoose.isValidObjectId(productData.drop)) {
@@ -279,6 +391,14 @@ const updateProduct = catchAsync(async (req, res, next) => {
         productData.category = matched.name;
       }
     }
+
+    productData.categoryPath =
+      (await deriveCategoryPathFromInput({
+        categoryPath: productData.categoryPath,
+        categoryId: productData.categoryId,
+        category: productData.category,
+        subCategory: productData.subCategory,
+      })) || productData.categoryPath || null;
 
     // Validate Drop only if being attached. Allow detaching to standalone via "" / null.
     if (Object.prototype.hasOwnProperty.call(productData, "drop")) {
@@ -483,11 +603,39 @@ const getProductAnalytics = catchAsync(async (req, res, next) => {
 });
 
 const getLandingProducts = catchAsync(async (req, res) => {
-  const { category, categoryId, tag, isDeal, hasDeal, limit = 8 } = req.query;
+  const { category, categoryId, categoryPath, subCategory, tag, isDeal, hasDeal, limit = 8 } = req.query;
   const filter = { isActive: true };
 
-  // Support category filtering by legacy string, slug, or categoryId
-  if (categoryId) {
+  const resolvedCategoryPath = await deriveCategoryPathFromInput({
+    categoryPath,
+    categoryId,
+    category,
+    subCategory,
+  });
+
+  if (resolvedCategoryPath && (categoryPath || subCategory)) {
+    const pathRegex = new RegExp(`^${escapeRegex(resolvedCategoryPath)}(?:/|$)`, "i");
+    const pathSegments = resolvedCategoryPath.split("/").filter(Boolean);
+
+    if (pathSegments.length > 2) {
+      filter.categoryPath = pathRegex;
+    } else {
+      const rootCategory = await findCategoryByValue(category || pathSegments[0]);
+      if (rootCategory && subCategory) {
+        filter.$or = [
+          { categoryPath: pathRegex },
+          {
+            categoryId: rootCategory._id,
+            subCategory: new RegExp(`^${escapeRegex(String(subCategory))}$`, "i"),
+          },
+        ];
+      } else if (rootCategory) {
+        filter.$or = [{ categoryPath: pathRegex }, { categoryId: rootCategory._id }];
+      } else {
+        filter.categoryPath = pathRegex;
+      }
+    }
+  } else if (categoryId) {
     if (mongoose.isValidObjectId(categoryId)) {
       filter.categoryId = categoryId;
     }
@@ -503,31 +651,32 @@ const getLandingProducts = catchAsync(async (req, res) => {
         filter.categoryId = found._id;
       } else {
         // fallback to legacy string matching
-        filter.category = new RegExp(`^${String(category)}$`, "i");
+        filter.category = new RegExp(`^${escapeRegex(String(category))}$`, "i");
       }
     }
   }
-    if (tag) {
-        filter.tags = { $in: [String(tag)] };
-    }
-    if (typeof isDeal !== "undefined") {
-        filter.isDeal = String(isDeal) === "true";
-    }
-    if (typeof hasDeal !== "undefined") {
-        filter.isDeal = String(hasDeal) === "true";
-    }
 
-    const products = await Product.find(filter)
-        .sort({ arrivedAt: -1, createdAt: -1 })
-        .limit(Math.max(1, Number(limit) || 8))
-        .populate("images")
-        .populate("relatedProductIds", "name slug category basePrice salePrice");
+  if (tag) {
+    filter.tags = { $in: [String(tag)] };
+  }
+  if (typeof isDeal !== "undefined") {
+    filter.isDeal = String(isDeal) === "true";
+  }
+  if (typeof hasDeal !== "undefined") {
+    filter.isDeal = String(hasDeal) === "true";
+  }
 
-    res.status(200).json({
-        success: true,
-        results: products.length,
-        data: products,
-    });
+  const products = await Product.find(filter)
+    .sort({ arrivedAt: -1, createdAt: -1 })
+    .limit(Math.max(1, Number(limit) || 8))
+    .populate("images")
+    .populate("relatedProductIds", "name slug category basePrice salePrice");
+
+  res.status(200).json({
+    success: true,
+    results: products.length,
+    data: products,
+  });
 });
 
 

@@ -19,7 +19,6 @@ import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Btn,
   Eyebrow,
-  FilterPills,
   Marquee,
   Reveal,
   SortDropdown,
@@ -121,32 +120,9 @@ const ProductListing = () => {
     }
   }, [categoryParam, filterParam, navigate]);
 
-  const activePill = isOffersListing
-    ? "offers"
-    : categoryParam === "archive" || filterParam === "archive"
-      ? "archive"
-      : categoryParam
-        ? categoryParam
-        : "all";
-
   const updateParams = (mutator) => {
     const next = new URLSearchParams(searchParams);
     mutator(next);
-    const qs = next.toString();
-    navigate(qs ? `${location.pathname}?${qs}` : location.pathname);
-  };
-
-  const setCategoryFilter = (key) => {
-    if (key === "drops") {
-      navigate("/shopping/drops");
-      return;
-    }
-    const next = new URLSearchParams();
-    if (key === "archive" || key === "offers") next.set("filter", key);
-    else if (key !== "all") next.set("category", key);
-    if (sortParam !== "new") next.set("sort", sortParam);
-    if (inStockOnly) next.set("stock", "in");
-    if (limitedOnly) next.set("limited", "1");
     const qs = next.toString();
     navigate(qs ? `${location.pathname}?${qs}` : location.pathname);
   };
@@ -578,7 +554,7 @@ const ProductListing = () => {
                 <EditorialProductGrid
                   products={visibleProducts}
                   featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
-                  motionKey={activePill + filterParam + sortParam}
+                  motionKey={[categoryParam, subCategoryParam, categoryPathParam, filterParam, sortParam].join("|")}
                 />
                 
 

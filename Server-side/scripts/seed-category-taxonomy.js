@@ -182,7 +182,7 @@ const createNode = async (node, parentCategory = null, parentSlug = null) => {
     },
   };
 
-  const document = existing ? await Category.findByIdAndUpdate(existing._id, payload, { new: true }) : await Category.create(payload);
+  const document = existing ? existing : await Category.create(payload);
 
   if (!Array.isArray(node.children) || node.children.length === 0) {
     return document;
@@ -199,21 +199,37 @@ const createNode = async (node, parentCategory = null, parentSlug = null) => {
 };
 
 const seedCategoryTaxonomy = async () => {
-  await connectDB();
+  const hadConnectionAlready = mongoose.connection.readyState === 1;
 
-  for (const root of taxonomy) {
-    // eslint-disable-next-line no-await-in-loop
-    await createNode(root, null, null);
+  try {
+    if (!hadConnectionAlready) {
+      await connectDB();
+    }
+
+    for (const root of taxonomy) {
+      // eslint-disable-next-line no-await-in-loop
+      await createNode(root, null, null);
+    }
+
+    if (!hadConnectionAlready) {
+      await mongoose.connection.close();
+    }
+
+    console.log("Category taxonomy seeded successfully");
+  } catch (error) {
+    if (!hadConnectionAlready) {
+      await mongoose.connection.close().catch(() => {});
+    }
+    throw error;
   }
-
-  await mongoose.connection.close();
-  console.log("Category taxonomy seeded successfully");
 };
 
 if (require.main === module) {
   seedCategoryTaxonomy().catch(async (error) => {
     console.error("Failed to seed category taxonomy", error);
-    await mongoose.connection.close().catch(() => {});
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close().catch(() => {});
+    }
     process.exitCode = 1;
   });
 }

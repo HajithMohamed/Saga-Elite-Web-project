@@ -11,12 +11,6 @@ import NotificationsDropdown from "@/components/common-components/NotificationsD
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
-const DEFAULT_CATEGORY_ROOTS = [
-  { key: "gents", label: "Gents", slug: "gents", children: [] },
-  { key: "ladies", label: "Ladies", slug: "ladies", children: [] },
-  { key: "unisex", label: "Unisex", slug: "unisex", children: [] },
-];
-
 const buildCategoryUrl = (path = []) => {
   const params = new URLSearchParams();
   if (path[0]?.slug) params.set("category", path[0].slug);
@@ -245,7 +239,7 @@ const MainHeader = () => {
     { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
   ];
 
-  const activeMenuCategories = menuCategories.length > 0 ? menuCategories : DEFAULT_CATEGORY_ROOTS;
+  const activeMenuCategories = menuCategories;
 
   if (isAdminView) {
     return (
