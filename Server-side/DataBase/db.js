@@ -63,7 +63,48 @@ const connectToDB = async () => {
       isConnected = false;
     });
   } catch (error) {
-    logger.error("MongoDB connection failed", { error: error.message });
+    logger.error("MongoDB connection failed", { error: error.message, attemptedUri: mongoUri });
+
+    if (process.env.NODE_ENV !== "production" && mongoUri !== "mongodb://127.0.0.1:27017/sagaelite") {
+      const localFallback = "mongodb://127.0.0.1:27017/sagaelite";
+      logger.warn(
+        "Attempting local MongoDB fallback after connection failure",
+        { fallback: localFallback }
+      );
+
+      try {
+        await mongoose.connect(localFallback, {
+          serverSelectionTimeoutMS: 5000,
+          maxPoolSize: 10,
+        });
+
+        isConnected = mongoose.connection.readyState === 1;
+
+        if (isConnected) {
+          logger.info("MongoDB connected successfully", {
+            database: mongoose.connection.db.databaseName,
+            host: mongoose.connection.host,
+          });
+        }
+
+        mongoose.connection.on("error", (err) => {
+          logger.error("MongoDB connection error", { error: err });
+          isConnected = false;
+        });
+
+        mongoose.connection.on("disconnected", () => {
+          logger.warn("MongoDB disconnected; will attempt to reconnect on next use");
+          isConnected = false;
+        });
+
+        return;
+      } catch (fallbackError) {
+        logger.error("Local MongoDB fallback also failed", {
+          error: fallbackError.message,
+        });
+      }
+    }
+
     process.exit(1);
   }
 };
