@@ -4,7 +4,9 @@ const Product = require("../Models/Product");
 const Image = require("../Models/Image");
 const Drop = require("../Models/Drop");
 const UserActivityLog = require("../Models/UserActivityLog");
+const Category = require("../Models/Category");
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
@@ -133,6 +135,26 @@ const addProduct = catchAsync(async (req, res, next) => {
         return next(new AppError("All fields are required", 400));
     }
 
+        // Resolve categoryId if provided or try to map incoming category value to Category
+        if (req.body.categoryId) {
+          if (!mongoose.isValidObjectId(req.body.categoryId)) {
+            return next(new AppError("Invalid category id", 400));
+          }
+          const cat = await Category.findById(req.body.categoryId).select("name");
+          if (!cat) return next(new AppError("Category not found", 404));
+          productData.categoryId = cat._id;
+          productData.category = productData.category || cat.name;
+        } else if (productData.category) {
+          // Attempt to resolve by slug (allows frontends to send slug or name)
+          const incoming = String(productData.category || "").trim();
+          const incomingSlug = slugify(incoming, { lower: true, strict: true });
+          const matched = await Category.findOne({ slug: incomingSlug }).select("_id name");
+          if (matched) {
+            productData.categoryId = matched._id;
+            productData.category = matched.name; // normalize legacy string
+          }
+        }
+
     // Drop is optional. Products without a drop fall back to "Independent Release".
     if (productData.drop) {
         if (!mongoose.isValidObjectId(productData.drop)) {
@@ -229,6 +251,29 @@ const updateProduct = catchAsync(async (req, res, next) => {
 
     if (Object.keys(productData).length === 0) {
         return next(new AppError("At least one field is required to update", 400));
+    }
+
+    // Resolve categoryId if provided in update or try to map a provided category string to Category
+    if (Object.prototype.hasOwnProperty.call(req.body, "categoryId")) {
+      if (req.body.categoryId) {
+        if (!mongoose.isValidObjectId(req.body.categoryId)) {
+          return next(new AppError("Invalid category id", 400));
+        }
+        const cat = await Category.findById(req.body.categoryId).select("name");
+        if (!cat) return next(new AppError("Category not found", 404));
+        productData.categoryId = cat._id;
+        productData.category = productData.category || cat.name;
+      } else {
+        // allow explicit unset
+        productData.categoryId = null;
+      }
+    } else if (productData.category) {
+      const incomingSlug = slugify(String(productData.category || ""), { lower: true, strict: true });
+      const matched = await Category.findOne({ slug: incomingSlug }).select("_id name");
+      if (matched) {
+        productData.categoryId = matched._id;
+        productData.category = matched.name;
+      }
     }
 
     // Validate Drop only if being attached. Allow detaching to standalone via "" / null.
@@ -434,12 +479,30 @@ const getProductAnalytics = catchAsync(async (req, res, next) => {
 });
 
 const getLandingProducts = catchAsync(async (req, res) => {
-    const { category, tag, isDeal, hasDeal, limit = 8 } = req.query;
-    const filter = { isActive: true };
+  const { category, categoryId, tag, isDeal, hasDeal, limit = 8 } = req.query;
+  const filter = { isActive: true };
 
-    if (category) {
-        filter.category = new RegExp(`^${String(category)}$`, "i");
+  // Support category filtering by legacy string, slug, or categoryId
+  if (categoryId) {
+    if (mongoose.isValidObjectId(categoryId)) {
+      filter.categoryId = categoryId;
     }
+  } else if (category) {
+    // If the caller sent an object id as 'category'
+    if (mongoose.isValidObjectId(category)) {
+      filter.categoryId = category;
+    } else {
+      // Try to resolve by slug first
+      const catSlug = slugify(String(category || ""), { lower: true, strict: true });
+      const found = await Category.findOne({ slug: catSlug }).select("_id").lean();
+      if (found) {
+        filter.categoryId = found._id;
+      } else {
+        // fallback to legacy string matching
+        filter.category = new RegExp(`^${String(category)}$`, "i");
+      }
+    }
+  }
     if (tag) {
         filter.tags = { $in: [String(tag)] };
     }

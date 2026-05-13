@@ -124,14 +124,24 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Ladies", "Gents", "Unisex"],
       required: true,
+      trim: true,
     },
 
     categoryPath: {
       type: String,
       trim: true,
       description: "E.g., Ladies > Dresses > Midi",
+    },
+
+    // Optional reference to the dynamic Category collection. This is added
+    // for a phased migration: existing `category` (string) remains in place
+    // until backfill/cutover is completed.
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
     },
 
     tags: [{

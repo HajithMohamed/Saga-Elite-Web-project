@@ -44,6 +44,7 @@ const whatsappWebhookRoutes = require("./Routes/whatsapp-webhook-routes");
 const googleAuthRoute = require("./Routes/google-routes");
 const facebookAuthRoute = require("./Routes/facebook-routes");
 const productRoutes = require("./Routes/product-routes");
+const categoryRoutes = require("./Routes/category-routes");
 const imageRoutes = require("./Routes/image-routes");
 const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
@@ -117,6 +118,7 @@ if (String(process.env.NODE_ENV || "").toLowerCase() !== "production") {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/banners", bannerRoutes);
 app.use("/api/v1/deals", dealRoutes);
 app.use("/api/v1/google", googleAuthRoute);

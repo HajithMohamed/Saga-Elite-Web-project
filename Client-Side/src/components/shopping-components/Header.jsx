@@ -7,6 +7,8 @@ import { logoutUserAction } from '@/store/auth-slice';
 import { toast } from '@/hooks/use-toast';
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown';
 import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
+import axios from 'axios';
+import { API_V1_URL as API_BASE } from '@/lib/api';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -22,6 +24,7 @@ const Header = () => {
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
   const cartCount = totalQuantity || 0;
   const wishlistCount = wishlistItems?.length || 0;
+  const [menuCategories, setMenuCategories] = useState([]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -38,6 +41,22 @@ const Header = () => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Fetch dynamic categories for the header menu
+  useEffect(() => {
+    let mounted = true;
+    const fetchMenu = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/categories/menu`);
+        if (!mounted) return;
+        setMenuCategories(res.data?.data || []);
+      } catch (err) {
+        // silent fallback to empty menu; keep hardcoded items as fallback
+      }
+    };
+    fetchMenu();
+    return () => { mounted = false; };
   }, []);
 
   const hasPendingPayment =
@@ -108,15 +127,30 @@ const Header = () => {
           <Link to="/shopping/home" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
             <>Home<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
           </Link>
-          <Link to="/shopping/product-list?category=Ladies" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-    Ladies<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
-  </Link>
-  <Link to="/shopping/product-list?category=Gents" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-    Gents<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
-  </Link>
-  <Link to="/shopping/product-list?category=unisex" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-    Unisex<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
-  </Link>
+          {menuCategories.length > 0 ? (
+            menuCategories.map((cat) => (
+              <Link
+                key={cat._id}
+                to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
+                className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200"
+              >
+                {cat.name}
+                <span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
+              </Link>
+            ))
+          ) : (
+            <>
+              <Link to="/shopping/product-list?category=Ladies" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
+                Ladies<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
+              </Link>
+              <Link to="/shopping/product-list?category=Gents" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
+                Gents<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
+              </Link>
+              <Link to="/shopping/product-list?category=unisex" className="relative group text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
+                Unisex<span className="absolute -bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
+              </Link>
+            </>
+          )}
           <Link to="/shopping/product-list?category=archive" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
             <>Archive<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
           </Link>
@@ -283,29 +317,48 @@ const Header = () => {
 
             {/* Nav links */}
             <nav className="flex-1 flex flex-col justify-center px-8 gap-2">
-              {[
-                { label: 'Home',        to: '/shopping/home' },
-                { label: 'Gents',       to: '/shopping/product-list?category=Gents' },
-                { label: 'Ladies',      to: '/shopping/product-list?category=Ladies' },
-                { label: 'Unisex',      to: '/shopping/product-list?category=Unisex' },
-                { label: 'Drops',       to: '/shopping/drops' },
-                { label: 'About',       to: '/about' },
-              ].map((item, i) => (
-                <motion.div
-                  key={item.to}
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
-                >
-                  <Link
-                    to={item.to}
-                    onClick={() => setMenuOpen(false)}
-                    className="block se-serif text-[#e5e2e1] text-4xl leading-[1.1] hover:text-[#f2ca50] transition-colors py-2 border-b border-[#4d4635]/30"
+              {menuCategories.length > 0 ? (
+                menuCategories.map((cat, i) => (
+                  <motion.div
+                    key={cat._id}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
                   >
-                    {item.label}
-                  </Link>
-                </motion.div>
-              ))}
+                    <Link
+                      to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
+                      onClick={() => setMenuOpen(false)}
+                      className="block se-serif text-[#e5e2e1] text-4xl leading-[1.1] hover:text-[#f2ca50] transition-colors py-2 border-b border-[#4d4635]/30"
+                    >
+                      {cat.name}
+                    </Link>
+                  </motion.div>
+                ))
+              ) : (
+                [
+                  { label: 'Home',        to: '/shopping/home' },
+                  { label: 'Gents',       to: '/shopping/product-list?category=Gents' },
+                  { label: 'Ladies',      to: '/shopping/product-list?category=Ladies' },
+                  { label: 'Unisex',      to: '/shopping/product-list?category=Unisex' },
+                  { label: 'Drops',       to: '/shopping/drops' },
+                  { label: 'About',       to: '/about' },
+                ].map((item, i) => (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
+                  >
+                    <Link
+                      to={item.to}
+                      onClick={() => setMenuOpen(false)}
+                      className="block se-serif text-[#e5e2e1] text-4xl leading-[1.1] hover:text-[#f2ca50] transition-colors py-2 border-b border-[#4d4635]/30"
+                    >
+                      {item.label}
+                    </Link>
+                  </motion.div>
+                ))
+              )}
             </nav>
 
             {/* Bottom bar */}

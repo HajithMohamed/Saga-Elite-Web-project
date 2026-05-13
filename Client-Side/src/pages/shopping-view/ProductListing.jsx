@@ -31,11 +31,7 @@ import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
 import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
 
-const CATEGORY_LABELS = {
-  ladies: "Ladies",
-  gents: "Gents",
-  unisex: "Unisex",
-};
+// category slugs are passed via `?category=<slug>`; backend resolves slug or legacy string
 
 const SORT_OPTIONS = [
   { value: "new", label: "Newest" },
@@ -120,7 +116,7 @@ const ProductListing = () => {
     ? "offers"
     : categoryParam === "archive" || filterParam === "archive"
       ? "archive"
-      : CATEGORY_LABELS[categoryParam]
+      : categoryParam
         ? categoryParam
         : "all";
 
@@ -350,8 +346,9 @@ const ProductListing = () => {
       const query = new URLSearchParams({ limit: String(FETCH_LIMIT) });
       if (categoryParam === "archive" || filterParam === "archive") {
         query.set("status", "archive");
-      } else if (CATEGORY_LABELS[categoryParam]) {
-        query.set("category", CATEGORY_LABELS[categoryParam]);
+      } else if (categoryParam) {
+        // pass through the slug or legacy string; backend will resolve
+        query.set("category", categoryParam);
       }
 
       const response = await axios.get(

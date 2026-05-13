@@ -14,6 +14,11 @@ const {
 const { validateObjectIdParam } = require("../Middlewares/request-validation");
 const { globalSearch } = require("../Controllers/admin-search-controller");
 const { listMyVisibleLogs } = require("../Controllers/admin-log-controller");
+const {
+    createCategory,
+    updateCategory,
+    deleteCategory,
+} = require("../Controllers/category-controller");
 
 const router = express.Router();
 
@@ -78,6 +83,33 @@ router.get(
     requireAdmin,
     requirePermission("viewAnalytics"),
     reviewsAnalytics
+);
+
+// Admin category management
+router.post(
+    "/categories",
+    authMiddleware,
+    requireAdmin,
+    requirePermission("categories"),
+    createCategory
+);
+
+router.put(
+    "/categories/:id",
+    authMiddleware,
+    requireAdmin,
+    requirePermission("categories"),
+    validateObjectIdParam("id", "category id"),
+    updateCategory
+);
+
+router.delete(
+    "/categories/:id",
+    authMiddleware,
+    requireAdmin,
+    requirePermission("categories"),
+    validateObjectIdParam("id", "category id"),
+    deleteCategory
 );
 
 module.exports = router;
