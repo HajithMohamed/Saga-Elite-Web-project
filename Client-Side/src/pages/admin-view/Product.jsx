@@ -283,6 +283,317 @@ const findCategoryNode = (categories = [], value) => {
 
 const findPresetByValue = (value, presets) => presets.find((preset) => preset.value === value) || null;
 
+const collectCategoryOptions = (categories = [], path = []) =>
+  categories.flatMap((category) => [
+    {
+      value: String(category._id),
+      label: [...path, category.name].join(" / "),
+    },
+    ...collectCategoryOptions(category.children || [], [...path, category.name]),
+  ]);
+
+const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState("");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [parentCategory, setParentCategory] = useState("");
+  const [sortOrder, setSortOrder] = useState("0");
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [showOnHome, setShowOnHome] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+
+  const resetForm = useCallback(() => {
+    setEditingId("");
+    setName("");
+    setSlug("");
+    setParentCategory("");
+    setSortOrder("0");
+    setIsFeatured(false);
+    setShowOnHome(false);
+    setIsActive(true);
+    setError(null);
+  }, []);
+
+  const startEdit = useCallback((category) => {
+    setEditingId(String(category._id));
+    setName(category.name || "");
+    setSlug(category.slug || "");
+    setParentCategory(category.parentCategory ? String(category.parentCategory) : "");
+    setSortOrder(String(category.sortOrder ?? 0));
+    setIsFeatured(!!category.isFeatured);
+    setShowOnHome(!!category.showOnHome);
+    setIsActive(category.isActive ?? true);
+    setError(null);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!name.trim()) {
+      setError("Category name is required.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const payload = {
+      name: name.trim(),
+      slug: slug.trim() || undefined,
+      parentCategory: parentCategory || null,
+      sortOrder: Number(sortOrder || 0),
+      isFeatured,
+      showOnHome,
+      isActive,
+    };
+
+    try {
+      if (editingId) {
+        await axios.put(`${API_BASE}/admin/categories/${editingId}`, payload, { withCredentials: true });
+      } else {
+        await axios.post(`${API_BASE}/admin/categories`, payload, { withCredentials: true });
+      }
+
+      await onRefreshCategories();
+      toast({
+        title: editingId ? "Category updated" : "Category created",
+        variant: "success",
+      });
+      resetForm();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to save category";
+      setError(message);
+      toast({ title: "Category save failed", description: message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [editingId, isActive, isFeatured, name, onRefreshCategories, parentCategory, resetForm, showOnHome, slug, sortOrder, toast]);
+
+  const handleDelete = useCallback(
+    async (category) => {
+      if (!window.confirm(`Delete ${category.name}?`)) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        await axios.delete(`${API_BASE}/admin/categories/${category._id}`, { withCredentials: true });
+        await onRefreshCategories();
+        if (editingId === String(category._id)) {
+          resetForm();
+        }
+        toast({ title: "Category deleted", variant: "success" });
+      } catch (err) {
+        const message = err?.response?.data?.message || err?.message || "Failed to delete category";
+        setError(message);
+        toast({ title: "Delete failed", description: message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [editingId, onRefreshCategories, resetForm, toast]
+  );
+
+  const renderNodes = useCallback(
+    (nodes = [], path = []) =>
+      nodes.map((category) => {
+        const nextPath = [...path, category.name];
+        return (
+          <div key={category._id} className="space-y-3">
+            <div className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-white">{category.name}</p>
+                  <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
+                    {category.isActive ? "Active" : "Inactive"}
+                  </span>
+                  {category.children?.length ? (
+                    <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
+                      {category.children.length} children
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{nextPath.join(" / ")}</p>
+                <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => startEdit(category)}
+                  className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(category)}
+                  className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            {category.children?.length ? (
+              <div className="pl-4 border-l border-white/5">{renderNodes(category.children, nextPath)}</div>
+            ) : null}
+          </div>
+        );
+      }),
+    [handleDelete, startEdit]
+  );
+
+  const categoryOptions = collectCategoryOptions(categoryTree).filter((option) => option.value !== editingId);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6"
+    >
+      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
+          <h3 className="mt-2 text-xl font-semibold text-white">Category management</h3>
+          <p className="mt-1 text-sm text-white/50">Edit the shared category tree from inside the product workspace.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onRefreshCategories()}
+            className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
+          >
+            Refresh tree
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/25 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-3">
+          {renderNodes(categoryTree)}
+          {categoryTree.length === 0 ? (
+            <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+              No categories loaded yet.
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-[#d0c5af]">{editingId ? "Edit category" : "Create category"}</p>
+              <h4 className="mt-1 text-base font-semibold text-white">{editingId ? "Update taxonomy node" : "New taxonomy node"}</h4>
+            </div>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-full border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
+            >
+              New
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Name</span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                placeholder="Ladies / Clothing / Dresses"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Slug</span>
+              <input
+                value={slug}
+                onChange={(event) => setSlug(event.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                placeholder="dresses"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Parent category</span>
+              <select
+                value={parentCategory}
+                onChange={(event) => setParentCategory(event.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+              >
+                <option value="">Root category</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Sort order</span>
+              <input
+                type="number"
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+              />
+            </label>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                <span>Active</span>
+                <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
+              </label>
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                <span>Featured</span>
+                <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
+              </label>
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white sm:col-span-2">
+                <span>Show on home</span>
+                <input type="checkbox" checked={showOnHome} onChange={(event) => setShowOnHome(event.target.checked)} />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={loading}
+                className="rounded-full bg-[#D4AF37] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Saving..." : editingId ? "Update category" : "Create category"}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-full border border-white/10 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/25 hover:text-white"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialProductForm);
@@ -303,6 +614,7 @@ const Product = () => {
   const [activeSubcategories, setActiveSubcategories] = useState([]);
   const [categorySelection, setCategorySelection] = useState("");
   const [subCategorySelection, setSubCategorySelection] = useState("");
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [fabricSelection, setFabricSelection] = useState("");
   const [gsmSelection, setGsmSelection] = useState("");
   const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
@@ -329,23 +641,27 @@ const Product = () => {
     );
   }, [dispatch, currentPage, statusFilter, searchQuery]);
 
+  const loadCategoryTree = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/categories`);
+      if (response.data?.success) {
+        const categories = response.data.data || [];
+        setCategoryTree(buildCategoryTree(categories));
+        return categories;
+      }
+    } catch (err) {
+      console.error("Failed to load categories for admin form", err);
+    }
+
+    setCategoryTree([]);
+    return [];
+  }, []);
+
   useEffect(() => {
     dispatch(getAllDrops());
     fetchProducts();
-    
-    // Fetch dynamic category tree
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/categories`);
-        if (response.data?.success) {
-          setCategoryTree(buildCategoryTree(response.data.data || []));
-        }
-      } catch (err) {
-        console.error("Failed to load categories for admin form", err);
-      }
-    };
-    fetchCategories();
-  }, [dispatch, fetchProducts]);
+    loadCategoryTree();
+  }, [dispatch, fetchProducts, loadCategoryTree]);
 
   // Bulk operations on the product list. Selection wipes when productList
   // identity changes (filter/page change), so stale IDs can't leak through.
@@ -1809,12 +2125,30 @@ const Product = () => {
                 Low Stock (≤5)
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => setCategoryManagerOpen((state) => !state)}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/[0.08] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              {categoryManagerOpen ? "Hide Categories" : "Manage Categories"}
+            </button>
             <PrimaryButton onClick={openNewProductForm}>
               <Plus className="w-3 h-3" />
               New Product
             </PrimaryButton>
           </div>
         </SearchFilterBar>
+
+        <AnimatePresence>
+          {categoryManagerOpen ? (
+            <CategoryManagerPanel
+              categoryTree={categoryTree}
+              onRefreshCategories={loadCategoryTree}
+              onClose={() => setCategoryManagerOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
 
         {/* Bento Grid List Header */}
         <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
@@ -1986,7 +2320,7 @@ const Product = () => {
         )}
         </>
         )}
-      </div>>
+      </div>
       {isGalleryOpen ? (
         <ImageGalleryModal
           title={galleryTitle}

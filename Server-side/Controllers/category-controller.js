@@ -3,25 +3,85 @@ const AppError = require("../Utils/appError");
 const Category = require("../Models/Category");
 const slugify = require("slugify");
 
+const normalizeSortValue = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
+const normalizeCategorySlugBase = (value) =>
+  slugify(String(value || "").trim(), { lower: true, strict: true });
+
+const buildScopedCategorySlug = async ({ name, slug, parentCategory }) => {
+  const baseSlug = normalizeCategorySlugBase(slug || name);
+  if (!parentCategory) return baseSlug;
+
+  const parentId = typeof parentCategory === "object" ? parentCategory?._id || parentCategory : parentCategory;
+  if (!parentId) return baseSlug;
+
+  const parent = await Category.findById(parentId).select("slug").lean();
+  return parent?.slug ? `${parent.slug}-${baseSlug}` : baseSlug;
+};
+
+const refreshDescendantSlugs = async (parentCategoryId, parentSlug) => {
+  const children = await Category.find({ parentCategory: parentCategoryId }).select("_id name slug").lean();
+
+  for (const child of children) {
+    const childSlug = parentSlug ? `${parentSlug}-${normalizeCategorySlugBase(child.name)}` : normalizeCategorySlugBase(child.name);
+    if (child.slug !== childSlug) {
+      // eslint-disable-next-line no-await-in-loop
+      await Category.updateOne({ _id: child._id }, { slug: childSlug });
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await refreshDescendantSlugs(child._id, childSlug);
+  }
+};
+
+const sortCategoryNodes = (categories = []) =>
+  [...categories]
+    .sort(
+      (a, b) =>
+        normalizeSortValue(a.sortOrder) - normalizeSortValue(b.sortOrder) ||
+        String(a.name || "").localeCompare(String(b.name || ""))
+    )
+    .map((category) => ({
+      ...category,
+      children: sortCategoryNodes(category.children || []),
+    }));
+
+const buildCategoryTree = (categories = []) => {
+  const nodes = categories.map((category) => ({ ...category, children: [] }));
+  const byId = new Map(nodes.map((category) => [String(category._id), category]));
+  const roots = [];
+
+  nodes.forEach((category) => {
+    const parentId = category.parentCategory ? String(category.parentCategory) : null;
+    if (parentId && byId.has(parentId)) {
+      byId.get(parentId).children.push(category);
+    } else {
+      roots.push(category);
+    }
+  });
+
+  return sortCategoryNodes(roots);
+};
+
+const fetchCategorySubtree = async (parentId = null) => {
+  const categories = await Category.find({ parentCategory: parentId, isActive: true })
+    .sort({ sortOrder: 1, name: 1 })
+    .lean();
+
+  const nextLevel = await Promise.all(
+    categories.map(async (category) => ({
+      ...category,
+      children: await fetchCategorySubtree(category._id),
+    }))
+  );
+
+  return nextLevel;
+};
+
 const getMenu = catchAsync(async (req, res, next) => {
-  // Return top-level categories with their immediate children (two-level menu)
-  const parents = await Category.find({ parentCategory: null, isActive: true })
-    .sort({ sortOrder: 1, name: 1 })
-    .lean();
-
-  const parentIds = parents.map((p) => p._id);
-  const children = await Category.find({ parentCategory: { $in: parentIds }, isActive: true })
-    .sort({ sortOrder: 1, name: 1 })
-    .lean();
-
-  const childrenByParent = children.reduce((acc, ch) => {
-    const pid = String(ch.parentCategory);
-    acc[pid] = acc[pid] || [];
-    acc[pid].push(ch);
-    return acc;
-  }, {});
-
-  const menu = parents.map((p) => ({ ...p, children: childrenByParent[String(p._id)] || [] }));
+  const menu = await fetchCategorySubtree();
 
   res.status(200).json({ success: true, results: menu.length, data: menu });
 });
@@ -40,9 +100,7 @@ const getBySlug = catchAsync(async (req, res, next) => {
   const category = await Category.findOne({ slug, isActive: true }).lean();
   if (!category) return next(new AppError("Category not found", 404));
 
-  const children = await Category.find({ parentCategory: category._id, isActive: true })
-    .sort({ sortOrder: 1, name: 1 })
-    .lean();
+  const children = await fetchCategorySubtree(category._id);
 
   res.status(200).json({ success: true, data: { category: { ...category, children } } });
 });
@@ -56,7 +114,7 @@ const createCategory = catchAsync(async (req, res, next) => {
   const { name, parentCategory, slug, isFeatured, showOnHome, isActive, sortOrder, imageRef, meta } = req.body;
   if (!name) return next(new AppError("Category name is required", 400));
 
-  const finalSlug = slug && String(slug).trim().length > 0 ? slugify(String(slug), { lower: true, strict: true }) : slugify(String(name), { lower: true, strict: true });
+  const finalSlug = await buildScopedCategorySlug({ name, slug, parentCategory });
 
   const exists = await Category.findOne({ slug: finalSlug });
   if (exists) return next(new AppError("Category slug already exists", 400));
@@ -84,10 +142,26 @@ const updateCategory = catchAsync(async (req, res, next) => {
   if (!category) return next(new AppError("Category not found", 404));
 
   const updates = req.body || {};
-  if (updates.slug) updates.slug = slugify(String(updates.slug), { lower: true, strict: true });
+  const nextName = updates.name ? String(updates.name).trim() : category.name;
+  const nextParentCategory = Object.prototype.hasOwnProperty.call(updates, "parentCategory")
+    ? updates.parentCategory || null
+    : category.parentCategory;
+  const nextSlug = await buildScopedCategorySlug({
+    name: nextName,
+    slug: updates.slug || nextName,
+    parentCategory: nextParentCategory,
+  });
+
+  if (nextSlug !== category.slug) {
+    const duplicate = await Category.findOne({ slug: nextSlug, _id: { $ne: category._id } });
+    if (duplicate) return next(new AppError("Category slug already exists", 400));
+    updates.slug = nextSlug;
+  }
 
   Object.assign(category, updates);
   await category.save();
+
+  await refreshDescendantSlugs(category._id, category.slug);
 
   res.status(200).json({ success: true, data: category });
 });

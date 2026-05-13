@@ -33,6 +33,23 @@ import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
 
 // category slugs are passed via `?category=<slug>`; backend resolves slug or legacy string
 
+const formatCategoryLabel = (value = "") =>
+  String(value)
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const buildListingUrl = (segments = []) => {
+  const query = new URLSearchParams();
+  if (segments[0]) query.set("category", segments[0]);
+  if (segments[1]) query.set("subCategory", segments[1]);
+  if (segments.length > 2) query.set("categoryPath", segments.join("/"));
+  return `/shopping/product-list?${query.toString()}`;
+};
+
 const SORT_OPTIONS = [
   { value: "new", label: "Newest" },
   { value: "price_low", label: "Price · ascending" },
@@ -66,6 +83,8 @@ const ProductListing = () => {
   );
 
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
+  const subCategoryParam = (searchParams.get("subCategory") || "").toLowerCase();
+  const categoryPathParam = (searchParams.get("categoryPath") || "").toLowerCase();
   const filterParam = (searchParams.get("filter") || "").toLowerCase();
   const sortParam = (searchParams.get("sort") || "new").toLowerCase();
   const inStockOnly = searchParams.get("stock") === "in";
@@ -339,6 +358,12 @@ const ProductListing = () => {
       } else if (categoryParam) {
         // pass through the slug or legacy string; backend will resolve
         query.set("category", categoryParam);
+        if (subCategoryParam) {
+          query.set("subCategory", subCategoryParam);
+        }
+        if (categoryPathParam) {
+          query.set("categoryPath", categoryPathParam);
+        }
       }
 
       const response = await axios.get(
@@ -361,7 +386,7 @@ const ProductListing = () => {
     } finally {
       if (!silent) setIsLoading(false);
     }
-  }, [categoryParam, filterParam, isOffersListing]);
+  }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
 
   useEffect(() => {
     fetchListingData();
@@ -405,6 +430,21 @@ const ProductListing = () => {
     priceMinParam > PRICE_MIN ||
     priceMaxParam < PRICE_MAX;
   const hasFilterActive = inStockOnly || limitedOnly || refineActive;
+  const categoryTrail = useMemo(() => {
+    if (isOffersListing) return [{ value: "offers", label: "Offers" }];
+    if (categoryParam === "archive" || filterParam === "archive") {
+      return [{ value: "archive", label: "Archive" }];
+    }
+
+    const pathSegments = categoryPathParam
+      ? categoryPathParam.split("/").filter(Boolean)
+      : [categoryParam, subCategoryParam].filter(Boolean);
+
+    return pathSegments.map((segment) => ({
+      value: segment,
+      label: formatCategoryLabel(segment),
+    }));
+  }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
 
   return (
     <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-28">
@@ -417,6 +457,26 @@ const ProductListing = () => {
           
           {/* Main Product Grid (Left Pane) */}
           <div className="flex-1 w-full min-w-0">
+            <div className="mb-10 border-b border-white/5 pb-6">
+              <Eyebrow>{categoryTrail.length ? categoryTrail[categoryTrail.length - 1].label : "Catalogue"}</Eyebrow>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#d0c5af]">
+                <Link to="/shopping/product-list" className="hover:text-[#f2ca50] transition-colors">
+                  Shop
+                </Link>
+                {categoryTrail.map((segment, index) => (
+                  <React.Fragment key={`${segment.value}-${index}`}>
+                    <span className="text-[#574500]">/</span>
+                    <Link
+                      to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))}
+                      className="hover:text-[#f2ca50] transition-colors"
+                    >
+                      {segment.label}
+                    </Link>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
             {/* Top Bar inside main pane */}
             <div className="flex flex-col md:flex-row justify-end items-start md:items-end mb-8 gap-4">
               <div className="flex items-center gap-4">

@@ -68,6 +68,29 @@ const mergePopularProducts = (mostWished = [], bestSellers = [], currentSlug) =>
     .slice(0, 4);
 };
 
+const formatCategoryLabel = (value = "") =>
+  String(value)
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const buildCategoryTrail = (product = {}) => {
+  if (product.categoryPath) {
+    return String(product.categoryPath)
+      .split("/")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((value) => ({ value, label: formatCategoryLabel(value) }));
+  }
+
+  return [product.category, product.subCategory]
+    .filter(Boolean)
+    .map((value) => ({ value, label: formatCategoryLabel(value) }));
+};
+
 const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -379,6 +402,7 @@ const ProductDetails = () => {
   const productDropName = product.drop?.name || FALLBACK_DROP_NAME;
   const productSizes = getProductSizes(product);
   const colorsForSelectedSize = getColorsForSize(product, selectedSize);
+  const productCategoryTrail = buildCategoryTrail(product);
 
   const validateVariantSelection = () => {
     if (!hasVariants) {
@@ -663,8 +687,32 @@ const ProductDetails = () => {
           {/* RIGHT 40%: Sticky Details */}
           <div className="lg:col-span-6 sticky top-24 flex flex-col py-4">
             <p className="text-[#f2ca50] se-label tracking-[0.28em] text-[10px] mb-4">
-              {product.category}
-              {product.subCategory ? ` / ${product.subCategory}` : ""}
+              {productCategoryTrail.length > 0 ? (
+                productCategoryTrail.map((segment, index) => (
+                  <React.Fragment key={`${segment.value}-${index}`}>
+                    {index > 0 ? <span className="text-[#574500]"> / </span> : null}
+                    {index === 0 ? (
+                      <Link
+                        to={`/shopping/product-list?category=${encodeURIComponent(String(product.category || segment.value).toLowerCase())}`}
+                        className="hover:text-[#f2ca50] transition-colors"
+                      >
+                        {segment.label}
+                      </Link>
+                    ) : index === 1 ? (
+                      <Link
+                        to={`/shopping/product-list?category=${encodeURIComponent(String(product.category || "").toLowerCase())}&subCategory=${encodeURIComponent(String(product.subCategory || segment.value).toLowerCase())}`}
+                        className="hover:text-[#f2ca50] transition-colors"
+                      >
+                        {segment.label}
+                      </Link>
+                    ) : (
+                      <span>{segment.label}</span>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
+                <span>{product.category || "Category"}</span>
+              )}
               {product.isLimited && " • Limited Drop"}
             </p>
             <h1 className="se-serif text-4xl md:text-5xl text-[#e5e2e1] leading-[1.1] mb-4">

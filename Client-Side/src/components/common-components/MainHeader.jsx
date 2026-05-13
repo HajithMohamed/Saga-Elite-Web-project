@@ -2,12 +2,90 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame } from "lucide-react";
+import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight } from "lucide-react";
+import axios from "axios";
 import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
 import { getRemainingTime } from "@/utils/time";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+
+const DEFAULT_CATEGORY_ROOTS = [
+  { key: "gents", label: "Gents", slug: "gents", children: [] },
+  { key: "ladies", label: "Ladies", slug: "ladies", children: [] },
+  { key: "unisex", label: "Unisex", slug: "unisex", children: [] },
+];
+
+const buildCategoryUrl = (path = []) => {
+  const params = new URLSearchParams();
+  if (path[0]?.slug) params.set("category", path[0].slug);
+  if (path[1]?.slug) params.set("subCategory", path[1].slug);
+  if (path.length > 2) params.set("categoryPath", path.map((category) => category.slug).join("/"));
+  return `/shopping/product-list?${params.toString()}`;
+};
+
+const CategoryFlyoutItem = ({ category, path = [], onNavigate = () => {} }) => {
+  const nextPath = [...path, category];
+  const hasChildren = Array.isArray(category.children) && category.children.length > 0;
+
+  return (
+    <div className="relative group/category">
+      <Link
+        to={buildCategoryUrl(nextPath)}
+        onClick={onNavigate}
+        className="flex items-center justify-between gap-4 px-4 py-3 text-xs uppercase tracking-[0.18em] text-black hover:text-[#D4AF37] hover:bg-[#f8f5f0] transition-colors duration-200"
+      >
+        <span className="relative overflow-hidden">
+          <span className="relative z-10">{category.name}</span>
+          <span className="absolute bottom-0 left-0 w-0 h-px bg-[#D4AF37] transition-all duration-300 group-hover/category:w-full" />
+        </span>
+        {hasChildren ? <ChevronRight className="w-3.5 h-3.5 text-[#D4AF37]" /> : null}
+      </Link>
+
+      {hasChildren ? (
+        <div className="absolute left-full top-0 hidden group-hover/category:block pl-2 z-20">
+          <div className="min-w-[220px] bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" />
+            {category.children.map((child) => (
+              <CategoryFlyoutItem key={child._id} category={child} path={nextPath} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const CategoryMobileList = ({ categories = [], path = [], onNavigate }) => {
+  if (!categories.length) return null;
+
+  return (
+    <div className="space-y-1">
+      {categories.map((category) => {
+        const nextPath = [...path, category];
+        const hasChildren = Array.isArray(category.children) && category.children.length > 0;
+
+        return (
+          <div key={category._id} className="border-l border-[#2a2a2a] pl-4">
+            <Link
+              to={buildCategoryUrl(nextPath)}
+              onClick={onNavigate}
+              className="block py-3 text-[#e5e2e1] hover:text-[#f2ca50] transition-colors font-display text-2xl"
+            >
+              {category.name}
+            </Link>
+            {hasChildren ? (
+              <div className="ml-3 border-l border-[#2a2a2a]/80 pl-4 pb-2">
+                <CategoryMobileList categories={category.children} path={nextPath} onNavigate={onNavigate} />
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const AnnouncementBar = ({ items, nextDrop, countdown }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -80,6 +158,7 @@ const MainHeader = () => {
   const [scrolled, setScrolled] = useState(false);
   const [nextDrop, setNextDrop] = useState(null);
   const [countdown, setCountdown] = useState(EMPTY_COUNTDOWN);
+  const [menuCategories, setMenuCategories] = useState([]);
   const userMenuRef = useRef(null);
 
   const { user } = useSelector((state) => state.auth);
@@ -120,6 +199,28 @@ const MainHeader = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadCategories = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/categories/menu`);
+        if (!cancelled) {
+          setMenuCategories(response.data?.data || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setMenuCategories([]);
+        }
+      }
+    };
+
+    loadCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!nextDrop?.releaseDate) return undefined;
     const tick = () => setCountdown(getRemainingTime(nextDrop.releaseDate));
     tick();
@@ -138,14 +239,13 @@ const MainHeader = () => {
 
   const navItems = [
     { key: "home", label: "Home", to: "/shopping/home" },
-    { key: "gents", label: "Gents", to: "/shopping/product-list?category=gents" },
-    { key: "ladies", label: "Ladies", to: "/shopping/product-list?category=ladies" },
-    { key: "unisex", label: "Unisex", to: "/shopping/product-list?category=unisex" },
     { key: "drops", label: "Drops", to: "/shopping/drops" },
     { key: "catalog", label: "Catalog", to: "/shopping/product-list" },
     { key: "about", label: "About", to: "/about" },
     { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
   ];
+
+  const activeMenuCategories = menuCategories.length > 0 ? menuCategories : DEFAULT_CATEGORY_ROOTS;
 
   if (isAdminView) {
     return (
@@ -210,6 +310,40 @@ const MainHeader = () => {
                 {/* Hover glow line */}
                 <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]`} />
               </Link>
+            ))}
+
+            {activeMenuCategories.map((category) => (
+              <div key={category._id || category.key || category.slug} className="relative group">
+                <Link
+                  to={buildCategoryUrl([category])}
+                  className="relative group se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1"
+                >
+                  <span className="block transition-all duration-300 group-hover:-translate-y-full">
+                    {category.label || category.name}
+                  </span>
+                  <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-[#f2ca50]">
+                    {category.label || category.name}
+                  </span>
+                  <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
+                </Link>
+
+                {Array.isArray(category.children) && category.children.length > 0 ? (
+                  <div className="absolute left-0 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-2">
+                    <div className="bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] min-w-[260px] py-2 border border-gray-100 relative overflow-visible">
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" />
+
+                      {category.children.map((child) => (
+                        <CategoryFlyoutItem
+                          key={child._id}
+                          category={child}
+                          path={[category]}
+                          onNavigate={() => {}}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             ))}
           </nav>
 
@@ -324,6 +458,14 @@ const MainHeader = () => {
                   </Link>
                 </motion.div>
               ))}
+
+              <div className="pt-6 border-t border-[#2a2a2a]">
+                <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Shop by Category</p>
+                <CategoryMobileList
+                  categories={activeMenuCategories}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              </div>
             </div>
             
             <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
