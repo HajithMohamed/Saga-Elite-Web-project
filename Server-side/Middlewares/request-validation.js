@@ -457,13 +457,18 @@ const validateProductCreate = createValidationMiddleware((req) => {
   const relatedProductIds = Array.isArray(req.body.relatedProductIds)
     ? req.body.relatedProductIds.map((id, index) => sanitizeObjectId(id, `relatedProductIds[${index}]`))
     : [];
+  const hasCategoryId = !!req.body.categoryId;
 
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 }),
     artNo: sanitizeString(req.body.artNo, "artNo", { required: true, minLength: 2, maxLength: 50 }),
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
     brand: sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 }),
-    category: sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true }),
+    category: hasCategoryId
+      ? sanitizeOptionalPlainText(req.body.category, "category", { maxLength: 100 })
+      : sanitizeString(req.body.category, "category", { required: true, minLength: 1, maxLength: 100 }),
+    subCategory: sanitizeOptionalPlainText(req.body.subCategory, "subCategory", { maxLength: 120 }),
+    categoryId: req.body.categoryId ? sanitizeObjectId(req.body.categoryId, "categoryId") : undefined,
     drop: req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null,
     basePrice: sanitizeNumber(req.body.basePrice, "basePrice", { required: true, min: 0 }),
     originalPrice: sanitizeNumber(req.body.originalPrice ?? req.body.basePrice, "originalPrice", { min: 0 }),
@@ -492,11 +497,18 @@ const validateProductCreate = createValidationMiddleware((req) => {
 
 const validateProductUpdate = createValidationMiddleware((req) => {
   const body = {};
+  const hasCategoryId = !!req.body.categoryId;
 
   if (req.body.name !== undefined) body.name = sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 });
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
   if (req.body.brand !== undefined) body.brand = sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 });
-  if (req.body.category !== undefined) body.category = sanitizeEnum(req.body.category, PRODUCT_CATEGORIES, "category", { required: true });
+  if (req.body.category !== undefined) {
+    body.category = hasCategoryId
+      ? sanitizeOptionalPlainText(req.body.category, "category", { maxLength: 100 })
+      : sanitizeString(req.body.category, "category", { required: true, minLength: 1, maxLength: 100 });
+  }
+  if (req.body.subCategory !== undefined) body.subCategory = sanitizeOptionalPlainText(req.body.subCategory, "subCategory", { maxLength: 120 });
+  if (req.body.categoryId !== undefined) body.categoryId = req.body.categoryId ? sanitizeObjectId(req.body.categoryId, "categoryId") : null;
   if (req.body.drop !== undefined) body.drop = req.body.drop ? sanitizeObjectId(req.body.drop, "drop") : null;
   if (req.body.basePrice !== undefined) body.basePrice = sanitizeNumber(req.body.basePrice, "basePrice", { min: 0 });
   if (req.body.originalPrice !== undefined) body.originalPrice = sanitizeNumber(req.body.originalPrice, "originalPrice", { min: 0 });

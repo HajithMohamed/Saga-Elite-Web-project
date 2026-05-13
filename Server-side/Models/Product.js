@@ -128,6 +128,12 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    subCategory: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+    },
+
     categoryPath: {
       type: String,
       trim: true,
@@ -286,6 +292,7 @@ productSchema.index({ drop: 1, isActive: 1 });
 productSchema.index({ 
   name: "text", 
   category: "text", 
+  subCategory: "text",
   tags: "text", 
   brand: "text",
   categoryPath: "text" 
@@ -293,6 +300,7 @@ productSchema.index({
   weights: {
     name: 10,
     category: 5,
+    subCategory: 4,
     tags: 5,
     brand: 3,
     categoryPath: 2

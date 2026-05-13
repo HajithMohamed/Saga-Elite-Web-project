@@ -663,7 +663,9 @@ const ProductDetails = () => {
           {/* RIGHT 40%: Sticky Details */}
           <div className="lg:col-span-6 sticky top-24 flex flex-col py-4">
             <p className="text-[#f2ca50] se-label tracking-[0.28em] text-[10px] mb-4">
-              {product.category} {product.isLimited && "• Limited Drop"}
+              {product.category}
+              {product.subCategory ? ` / ${product.subCategory}` : ""}
+              {product.isLimited && " • Limited Drop"}
             </p>
             <h1 className="se-serif text-4xl md:text-5xl text-[#e5e2e1] leading-[1.1] mb-4">
               {product.name}
@@ -842,7 +844,7 @@ const ProductDetails = () => {
                     </div>
                   ) : null}
                   {productTab === "size" ? (
-                    <div className="space-y-4">
+                    <div id="size-guide" className="space-y-4">
                       {product.fitType && (
                         <p className="mb-4 text-white se-label tracking-widest text-xs">Fit: {product.fitType}</p>
                       )}

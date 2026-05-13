@@ -92,9 +92,9 @@ const initialProductForm = {
   fitType: "",
   careInstructions: "",
   sizeGuide: "",
-  categoryPath: "",
   brand: "Sovereign Elite",
   category: "",
+  categoryId: "",
   subCategory: "",
   drop: "",
   basePrice: "",
@@ -181,6 +181,108 @@ const getErrorMessage = (error, fallback = "Request failed") => {
   return error?.message || error?.error || error?.response?.data?.message || fallback;
 };
 
+const CUSTOM_OPTION = "__custom__";
+
+const MATERIAL_OPTIONS = [
+  "Cotton",
+  "Organic Cotton",
+  "Linen",
+  "Linen Blend",
+  "Denim",
+  "Jersey",
+  "French Terry",
+  "Fleece",
+  "Twill",
+  "Wool",
+  "Silk",
+  "Rayon",
+  "Viscose",
+  "Polyester",
+  "Nylon",
+  "Spandex",
+  "Tencel",
+  "Bamboo",
+  "Leather",
+];
+
+const GSM_OPTIONS = ["120", "140", "160", "180", "200", "220", "240", "260", "280", "300", "320", "340", "360", "380", "400"];
+
+const buildSizeGuideTemplate = (title) => [
+  `${title} size guide`,
+  "",
+  "Size | Chest (cm) | Length (cm)",
+  "XS | 86-91 | 66",
+  "S | 91-96 | 68",
+  "M | 96-101 | 70",
+  "L | 101-106 | 72",
+  "XL | 106-111 | 74",
+  "XXL | 111-116 | 76",
+  "",
+  "Measurements are approximate and may vary by style.",
+].join("\n");
+
+const SIZE_GUIDE_PRESETS = [
+  { value: "Sri Lanka", label: "Sri Lanka", guide: buildSizeGuideTemplate("Sri Lanka") },
+  { value: "India", label: "India", guide: buildSizeGuideTemplate("India") },
+  { value: "United States", label: "United States", guide: buildSizeGuideTemplate("United States") },
+  { value: "United Kingdom", label: "United Kingdom", guide: buildSizeGuideTemplate("United Kingdom") },
+  { value: "European Union", label: "European Union", guide: buildSizeGuideTemplate("European Union") },
+  { value: "Australia", label: "Australia", guide: buildSizeGuideTemplate("Australia") },
+];
+
+const normalizeText = (value = "") => String(value).trim().toLowerCase();
+
+const buildCategoryTree = (categories = []) => {
+  const nodes = categories.map((category) => ({ ...category, children: [] }));
+  const byId = new Map(nodes.map((category) => [String(category._id), category]));
+  const roots = [];
+
+  nodes.forEach((category) => {
+    const parentId = category.parentCategory ? String(category.parentCategory) : null;
+    if (parentId && byId.has(parentId)) {
+      byId.get(parentId).children.push(category);
+    } else {
+      roots.push(category);
+    }
+  });
+
+  const sortNodes = (list) =>
+    list
+      .sort(
+        (a, b) =>
+          Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) ||
+          normalizeText(a.name).localeCompare(normalizeText(b.name))
+      )
+      .map((node) => ({
+        ...node,
+        children: sortNodes(node.children || []),
+      }));
+
+  return sortNodes(roots);
+};
+
+const findCategoryNode = (categories = [], value) => {
+  const target = normalizeText(value);
+  if (!target) return null;
+
+  for (const category of categories) {
+    if (
+      normalizeText(category._id) === target ||
+      normalizeText(category.name) === target ||
+      normalizeText(category.slug) === target
+    ) {
+      return category;
+    }
+
+    const childMatch = findCategoryNode(category.children || [], value);
+    if (childMatch) return childMatch;
+  }
+
+  return null;
+};
+
+const findPresetByValue = (value, presets) => presets.find((preset) => preset.value === value) || null;
+
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialProductForm);
@@ -199,6 +301,12 @@ const Product = () => {
   const [activeFormTab, setActiveFormTab] = useState("basic");
   const [categoryTree, setCategoryTree] = useState([]);
   const [activeSubcategories, setActiveSubcategories] = useState([]);
+  const [categorySelection, setCategorySelection] = useState("");
+  const [subCategorySelection, setSubCategorySelection] = useState("");
+  const [fabricSelection, setFabricSelection] = useState("");
+  const [gsmSelection, setGsmSelection] = useState("");
+  const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
+  const [formSyncToken, setFormSyncToken] = useState(0);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -228,9 +336,9 @@ const Product = () => {
     // Fetch dynamic category tree
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/categories/menu`);
+        const response = await axios.get(`${API_BASE}/categories`);
         if (response.data?.success) {
-          setCategoryTree(response.data.data);
+          setCategoryTree(buildCategoryTree(response.data.data || []));
         }
       } catch (err) {
         console.error("Failed to load categories for admin form", err);
@@ -280,7 +388,13 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
+            setFormSyncToken((token) => token + 1);
     setActiveFormTab("basic");
+    setCategorySelection("");
+    setSubCategorySelection("");
+    setFabricSelection("");
+    setGsmSelection("");
+    setSizeGuideSelection(CUSTOM_OPTION);
   };
 
   const openNewProductForm = () => {
@@ -291,6 +405,7 @@ const Product = () => {
     setProductImages([]);
     setActiveFormTab("basic");
     setShowForm(true);
+    setFormSyncToken((token) => token + 1);
     if (draft) {
       toast({
         title: "Draft restored",
@@ -349,6 +464,86 @@ const Product = () => {
     });
   };
 
+  const syncFormSelections = useCallback(
+    (nextFormData) => {
+      const resolvedCategory = nextFormData.categoryId
+        ? findCategoryNode(categoryTree, nextFormData.categoryId)
+        : findCategoryNode(categoryTree, nextFormData.category);
+
+      let categoryNode = resolvedCategory;
+      let resolvedSubCategory = null;
+
+      if (resolvedCategory?.parentCategory) {
+        categoryNode = findCategoryNode(categoryTree, resolvedCategory.parentCategory) || resolvedCategory;
+        resolvedSubCategory = resolvedCategory;
+      } else if (categoryNode) {
+        resolvedSubCategory = nextFormData.subCategory
+          ? findCategoryNode(categoryNode.children || [], nextFormData.subCategory)
+          : null;
+
+        if (!resolvedSubCategory && nextFormData.category) {
+          const childMatch = findCategoryNode(categoryNode.children || [], nextFormData.category);
+          if (childMatch) {
+            resolvedSubCategory = childMatch;
+          }
+        }
+      }
+
+      if (categoryNode) {
+        const normalizedCategory = categoryNode.name || nextFormData.category || "";
+        const normalizedSubCategory = resolvedSubCategory?.name || nextFormData.subCategory || "";
+
+        setCategorySelection(String(categoryNode._id));
+        setActiveSubcategories(categoryNode.children || []);
+        setSubCategorySelection(
+          resolvedSubCategory ? String(resolvedSubCategory._id) : normalizedSubCategory ? CUSTOM_OPTION : ""
+        );
+
+        if (
+          nextFormData.category !== normalizedCategory ||
+          nextFormData.subCategory !== normalizedSubCategory ||
+          nextFormData.categoryId !== String(categoryNode._id)
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+            category: normalizedCategory,
+            subCategory: normalizedSubCategory,
+            categoryId: String(categoryNode._id),
+          }));
+        }
+      } else {
+        setCategorySelection(nextFormData.category ? CUSTOM_OPTION : "");
+        setActiveSubcategories([]);
+        setSubCategorySelection(nextFormData.subCategory ? CUSTOM_OPTION : "");
+      }
+
+      setFabricSelection(
+        nextFormData.fabric
+          ? MATERIAL_OPTIONS.includes(nextFormData.fabric)
+            ? nextFormData.fabric
+            : CUSTOM_OPTION
+          : ""
+      );
+      setGsmSelection(
+        nextFormData.gsm
+          ? GSM_OPTIONS.includes(String(nextFormData.gsm))
+            ? String(nextFormData.gsm)
+            : CUSTOM_OPTION
+          : ""
+      );
+
+      const matchedSizeGuide = findPresetByValue(nextFormData.sizeGuide, SIZE_GUIDE_PRESETS);
+      setSizeGuideSelection(matchedSizeGuide ? matchedSizeGuide.value : nextFormData.sizeGuide ? CUSTOM_OPTION : "");
+    },
+    [categoryTree]
+  );
+
+  useEffect(() => {
+    if (!showForm) return;
+    if (categoryTree.length === 0) return;
+    syncFormSelections(formData);
+  }, [showForm, categoryTree, formSyncToken, syncFormSelections]);
+
   const beginEdit = (product) => {
     setSelectedProductSlug(product.slug);
     setSelectedProductId(product._id);
@@ -362,9 +557,10 @@ const Product = () => {
       fitType: product.fitType || "",
       careInstructions: product.careInstructions || "",
       sizeGuide: product.sizeGuide || "",
-      categoryPath: product.categoryPath || "",
       brand: product.brand || "Sovereign Elite",
-      category: product.category || "Unisex",
+      category: product.category || "",
+      categoryId: product.categoryId || "",
+      subCategory: product.subCategory || "",
       drop: product.drop?._id || "",
       basePrice: product.basePrice || "",
       discountPercent: product.discountPercent || "0",
@@ -381,6 +577,7 @@ const Product = () => {
     });
     setActiveFormTab("basic");
     setShowForm(true);
+    setFormSyncToken((token) => token + 1);
     fetchProductImages(product._id);
   };
 
@@ -397,6 +594,7 @@ const Product = () => {
   const validateProductForm = () => {
     if (!formData.name.trim()) return "Product name is required.";
     if (!formData.artNo.trim()) return "Art No is required.";
+    if (!formData.category?.trim() && !formData.categoryId?.trim()) return "Category is required.";
     if (!formData.basePrice || Number(formData.basePrice) < 0) {
       return "Base price must be 0 or greater.";
     }
@@ -430,6 +628,8 @@ const Product = () => {
       let result;
       const cleanData = {
         ...formData,
+        categoryId: formData.categoryId || undefined,
+        subCategory: formData.subCategory || undefined,
         variants: formData.variants.filter(
           (v) =>
             v.sku?.trim() &&
@@ -440,6 +640,9 @@ const Product = () => {
             v.stock !== undefined
         ),
       };
+
+      if (!cleanData.categoryId) delete cleanData.categoryId;
+      if (!cleanData.subCategory) delete cleanData.subCategory;
 
       if (selectedProductSlug) {
         result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: cleanData })).unwrap();
@@ -518,6 +721,123 @@ const Product = () => {
     setFormData({ ...formData, variants: updatedVariants });
   };
 
+  const handleCategoryChange = (value) => {
+    setCategorySelection(value);
+
+    if (!value || value === CUSTOM_OPTION) {
+      setActiveSubcategories([]);
+      setSubCategorySelection("");
+      setFormData((prev) => ({
+        ...prev,
+        category: "",
+        categoryId: "",
+        subCategory: "",
+      }));
+      return;
+    }
+
+    const selectedCategory = findCategoryNode(categoryTree, value);
+    if (!selectedCategory) {
+      setActiveSubcategories([]);
+      setSubCategorySelection("");
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: value,
+        category: "",
+        subCategory: "",
+      }));
+      return;
+    }
+
+    setActiveSubcategories(selectedCategory.children || []);
+    setSubCategorySelection("");
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedCategory.name || "",
+      categoryId: String(selectedCategory._id),
+      subCategory: "",
+    }));
+  };
+
+  const handleCategoryTextChange = (value) => {
+    setCategorySelection(CUSTOM_OPTION);
+    setSubCategorySelection("");
+    setActiveSubcategories([]);
+    setFormData((prev) => ({
+      ...prev,
+      category: value,
+      categoryId: "",
+      subCategory: "",
+    }));
+  };
+
+  const handleSubCategoryChange = (value) => {
+    setSubCategorySelection(value);
+
+    if (!value || value === CUSTOM_OPTION) {
+      setFormData((prev) => ({ ...prev, subCategory: "" }));
+      return;
+    }
+
+    const selectedSubCategory = findCategoryNode(activeSubcategories, value);
+    if (!selectedSubCategory) {
+      setFormData((prev) => ({ ...prev, subCategory: value }));
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      subCategory: selectedSubCategory.name || "",
+    }));
+  };
+
+  const handleSubCategoryTextChange = (value) => {
+    setSubCategorySelection(CUSTOM_OPTION);
+    setFormData((prev) => ({ ...prev, subCategory: value }));
+  };
+
+  const handleFabricSelectionChange = (value) => {
+    setFabricSelection(value);
+    if (!value || value === CUSTOM_OPTION) {
+      setFormData((prev) => ({ ...prev, fabric: "" }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, fabric: value }));
+  };
+
+  const handleFabricTextChange = (value) => {
+    setFabricSelection(CUSTOM_OPTION);
+    setFormData((prev) => ({ ...prev, fabric: value }));
+  };
+
+  const handleGsmSelectionChange = (value) => {
+    setGsmSelection(value);
+    if (!value || value === CUSTOM_OPTION) {
+      setFormData((prev) => ({ ...prev, gsm: "" }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, gsm: value }));
+  };
+
+  const handleGsmTextChange = (value) => {
+    setGsmSelection(CUSTOM_OPTION);
+    setFormData((prev) => ({ ...prev, gsm: value }));
+  };
+
+  const handleSizeGuideSelectionChange = (value) => {
+    setSizeGuideSelection(value);
+    if (!value || value === CUSTOM_OPTION) return;
+    const preset = findPresetByValue(value, SIZE_GUIDE_PRESETS);
+    if (preset) {
+      setFormData((prev) => ({ ...prev, sizeGuide: preset.guide }));
+    }
+  };
+
+  const handleSizeGuideTextChange = (value) => {
+    setSizeGuideSelection(CUSTOM_OPTION);
+    setFormData((prev) => ({ ...prev, sizeGuide: value }));
+  };
+
   // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
 
   // Tabs
@@ -577,7 +897,7 @@ const Product = () => {
           title={formData.name?.trim() || (selectedProductSlug ? "Untitled product" : "New Product")}
           subtitle={
             formData.artNo
-              ? `${formData.artNo} · ${formData.category} · ${formData.brand}`
+              ? `${formData.artNo} · ${[formData.category, formData.subCategory].filter(Boolean).join(" / ") || "Uncategorized"} · ${formData.brand}`
               : "Set art number and pricing to continue"
           }
           onCancel={resetForm}
@@ -776,39 +1096,83 @@ const Product = () => {
               </LuxurySelect>
             </FormField>
 
-            <FormField label="Category" required>
-              <LuxurySelect
-                value={formData.category}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const parent = categoryTree.find(c => c.slug === val);
-                  setFormData({ ...formData, category: val, subCategory: "" });
-                  setActiveSubcategories(parent?.children || []);
-                }}
-              >
-                <option value="">Select Category</option>
-                {categoryTree.map((cat) => (
-                  <option key={cat._id} value={cat.slug}>{cat.name}</option>
-                ))}
-              </LuxurySelect>
-            </FormField>
-
-            {/* Conditionally show Sub-category if parent has children OR if one is selected */}
-            {(activeSubcategories.length > 0 || formData.subCategory) && (
-              <FormField label="Sub-Category" optional>
+            <FormField
+              label="Category"
+              required
+              helper="Pick an existing system category or create a new one on the fly."
+            >
+              <div className="space-y-3">
                 <LuxurySelect
-                  value={formData.subCategory}
-                  onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                  value={categorySelection}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                 >
-                  <option value="">None (Top-Level)</option>
-                  {activeSubcategories.map((subcat) => (
-                    <option key={subcat._id} value={subcat.slug}>
-                      {subcat.name}
+                  <option value="">Select Category</option>
+                  {categoryTree.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
                     </option>
                   ))}
+                  <option value={CUSTOM_OPTION}>Other / New category</option>
                 </LuxurySelect>
-              </FormField>
-            )}
+
+                {categorySelection === CUSTOM_OPTION ? (
+                  <LuxuryInput
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => handleCategoryTextChange(e.target.value)}
+                    placeholder="Enter a new category"
+                    maxLength={100}
+                  />
+                ) : null}
+              </div>
+            </FormField>
+
+            <FormField
+              label="Sub-Category"
+              optional
+              helper="Choose a sub-category from the selected category, or add a new one."
+            >
+              {categorySelection ? (
+                <div className="space-y-3">
+                  {activeSubcategories.length > 0 ? (
+                    <LuxurySelect
+                      value={subCategorySelection}
+                      onChange={(e) => handleSubCategoryChange(e.target.value)}
+                    >
+                      <option value="">No sub-category</option>
+                      {activeSubcategories.map((subcat) => (
+                        <option key={subcat._id} value={subcat._id}>
+                          {subcat.name}
+                        </option>
+                      ))}
+                      <option value={CUSTOM_OPTION}>Other / New sub-category</option>
+                    </LuxurySelect>
+                  ) : (
+                    <LuxuryInput
+                      type="text"
+                      value={formData.subCategory}
+                      onChange={(e) => handleSubCategoryTextChange(e.target.value)}
+                      placeholder="Enter a sub-category"
+                      maxLength={120}
+                    />
+                  )}
+
+                  {activeSubcategories.length > 0 && subCategorySelection === CUSTOM_OPTION ? (
+                    <LuxuryInput
+                      type="text"
+                      value={formData.subCategory}
+                      onChange={(e) => handleSubCategoryTextChange(e.target.value)}
+                      placeholder="Enter a new sub-category"
+                      maxLength={120}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-[11px] leading-relaxed text-white/35">
+                  Select a category first to add or pick a sub-category.
+                </p>
+              )}
+            </FormField>
 
             <FormField
               label="Collection Drop"
@@ -855,24 +1219,66 @@ const Product = () => {
           </FormField>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <FormField label="Fabric / Material" optional helper="E.g. 100% Premium Cotton">
-              <LuxuryInput
-                type="text"
-                value={formData.fabric}
-                onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
-                placeholder="100% Premium Cotton"
-                maxLength={200}
-              />
+            <FormField
+              label="Fabric / Material"
+              optional
+              helper="Choose a common material or enter a custom one."
+            >
+              <div className="space-y-3">
+                <LuxurySelect
+                  value={fabricSelection}
+                  onChange={(e) => handleFabricSelectionChange(e.target.value)}
+                >
+                  <option value="">Select material</option>
+                  {MATERIAL_OPTIONS.map((material) => (
+                    <option key={material} value={material}>
+                      {material}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_OPTION}>Other / Custom material</option>
+                </LuxurySelect>
+
+                {fabricSelection === CUSTOM_OPTION ? (
+                  <LuxuryInput
+                    type="text"
+                    value={formData.fabric}
+                    onChange={(e) => handleFabricTextChange(e.target.value)}
+                    placeholder="Enter a custom material"
+                    maxLength={200}
+                  />
+                ) : null}
+              </div>
             </FormField>
 
-            <FormField label="GSM" optional helper="Fabric weight, e.g. 280gsm">
-              <LuxuryInput
-                type="text"
-                value={formData.gsm}
-                onChange={(e) => setFormData({ ...formData, gsm: e.target.value })}
-                placeholder="280gsm"
-                maxLength={100}
-              />
+            <FormField
+              label="GSM"
+              optional
+              helper="Choose a common fabric weight or enter your own."
+            >
+              <div className="space-y-3">
+                <LuxurySelect
+                  value={gsmSelection}
+                  onChange={(e) => handleGsmSelectionChange(e.target.value)}
+                >
+                  <option value="">Select GSM</option>
+                  {GSM_OPTIONS.map((gsm) => (
+                    <option key={gsm} value={gsm}>
+                      {gsm} GSM
+                    </option>
+                  ))}
+                  <option value={CUSTOM_OPTION}>Other / Custom GSM</option>
+                </LuxurySelect>
+
+                {gsmSelection === CUSTOM_OPTION ? (
+                  <LuxuryInput
+                    type="text"
+                    value={formData.gsm}
+                    onChange={(e) => handleGsmTextChange(e.target.value)}
+                    placeholder="Enter a custom GSM"
+                    maxLength={100}
+                  />
+                ) : null}
+              </div>
             </FormField>
 
             <FormField label="Fit Type" optional helper="E.g. Oversized, Slim, Regular">
@@ -890,15 +1296,6 @@ const Product = () => {
               </LuxurySelect>
             </FormField>
 
-            <FormField label="Category Path" optional helper="Breadcrumb path, e.g. Ladies > Dresses > Midi">
-              <LuxuryInput
-                type="text"
-                value={formData.categoryPath}
-                onChange={(e) => setFormData({ ...formData, categoryPath: e.target.value })}
-                placeholder="Ladies > Tops > T-Shirts"
-                maxLength={200}
-              />
-            </FormField>
           </div>
 
           <FormField
@@ -919,16 +1316,31 @@ const Product = () => {
           <FormField
             label="Size Guide"
             optional
-            helper="Sizing information and measurement notes."
+            helper="Pick a country template or keep a custom size guide."
             hint={`${(formData.sizeGuide || '').length} / 2000`}
           >
-            <LuxuryTextarea
-              value={formData.sizeGuide}
-              onChange={(e) => setFormData({ ...formData, sizeGuide: e.target.value })}
-              placeholder="Model wears size M. Height 185cm, chest 96cm…"
-              rows={3}
-              maxLength={2000}
-            />
+            <div className="space-y-3">
+              <LuxurySelect
+                value={sizeGuideSelection}
+                onChange={(e) => handleSizeGuideSelectionChange(e.target.value)}
+              >
+                <option value="">Select a size guide</option>
+                {SIZE_GUIDE_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.label}
+                  </option>
+                ))}
+                <option value={CUSTOM_OPTION}>Other / Custom size guide</option>
+              </LuxurySelect>
+
+              <LuxuryTextarea
+                value={formData.sizeGuide}
+                onChange={(e) => handleSizeGuideTextChange(e.target.value)}
+                placeholder="Model wears size M. Height 185cm, chest 96cm…"
+                rows={3}
+                maxLength={2000}
+              />
+            </div>
           </FormField>
         </FormSection>
       ) : null}
@@ -1474,7 +1886,7 @@ const Product = () => {
 
                 <div className="col-span-1 md:col-span-2">
                   <span className="text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest whitespace-nowrap">
-                    {product.category || 'Uncategorized'}
+                    {[product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
                   </span>
                 </div>
 
