@@ -97,6 +97,7 @@ export const DropStory = () => {
           src="https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?q=80&w=2070"
           alt="Drop Inspiration"
           className="w-full h-full object-cover opacity-50"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
         <div className="absolute inset-0 bg-grain opacity-30 mix-blend-overlay"></div>
@@ -169,11 +170,14 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               src={
                 categoryImages?.gents?.main ||
                 categoryImages?.gents?.Shirts ||
-                "https://images.unsplash.com/photo-1516826957135-700ede19c6ce?w=800"
+                ""
               }
               alt="Gents"
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
+
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -199,11 +203,14 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               src={
                 categoryImages?.ladies?.main ||
                 categoryImages?.ladies?.Dresses ||
-                "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800"
+                ""
               }
               alt="Ladies"
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
+
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1f1a2e] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -227,11 +234,14 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               src={
                 categoryImages?.unisex?.main ||
                 categoryImages?.unisex?.Unisex ||
-                "https://images.unsplash.com/photo-1520975954732-57dd22299614?w=800"
+                ""
               }
               alt="Unisex"
               className="absolute inset-0 w-full h-full object-cover transition-all duration-[1.5s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 group-hover:blur-[2px]"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
+
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#131313] to-[#050505]" style={{zIndex: -1}} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 

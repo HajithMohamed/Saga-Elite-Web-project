@@ -218,6 +218,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
                     <img src={slide.imageUrl} alt={slide.headline} 
                          className="w-full h-full object-contain md:object-cover"
                          loading="eager"
+                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                          srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
                          sizes="100vw" />
                   </div>
@@ -657,12 +658,9 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
                <img
                  src={cat.img}
                  alt={cat.name}
-                 width={400}
-                 height={500}
-                 srcSet={`${cat.img} 400w, ${cat.img} 800w`}
-                 sizes="(max-width: 768px) 100vw, 33vw"
                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700"
                  loading="lazy"
+                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                />
              )}
              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent" />

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight } from "lucide-react";
+import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight, ArrowRight } from "lucide-react";
 import axios from "axios";
 import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
@@ -19,34 +19,60 @@ const buildCategoryUrl = (path = []) => {
   return `/shopping/product-list?${params.toString()}`;
 };
 
-const CategoryFlyoutItem = ({ category, path = [], onNavigate = () => {} }) => {
-  const nextPath = [...path, category];
-  const hasChildren = Array.isArray(category.children) && category.children.length > 0;
+const MegaMenuPanel = ({ category, onNavigate = () => {} }) => {
+  const subcategories = Array.isArray(category.children) ? category.children : [];
+  if (!subcategories.length) return null;
 
   return (
-    <div className="relative group/category">
-      <Link
-        to={buildCategoryUrl(nextPath)}
-        onClick={onNavigate}
-        className="flex items-center justify-between gap-4 px-4 py-3 text-xs uppercase tracking-[0.18em] text-black hover:text-[#D4AF37] hover:bg-[#f8f5f0] transition-colors duration-200"
-      >
-        <span className="relative overflow-hidden">
-          <span className="relative z-10">{category.name}</span>
-          <span className="absolute bottom-0 left-0 w-0 h-px bg-[#D4AF37] transition-all duration-300 group-hover/category:w-full" />
-        </span>
-        {hasChildren ? <ChevronRight className="w-3.5 h-3.5 text-[#D4AF37]" /> : null}
-      </Link>
+    <div className="absolute left-1/2 -translate-x-1/2 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 pt-4 w-screen max-w-[900px]">
+      <div className="bg-[#0e0e0e]/95 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden rounded-sm">
+        {/* Gold accent top border */}
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+        
+        <div className="p-8">
+          {/* Category header */}
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#2a2a2a]">
+            <Link
+              to={buildCategoryUrl([category])}
+              onClick={onNavigate}
+              className="font-display text-lg text-[#f2ca50] uppercase tracking-[0.2em] hover:text-[#ffe088] transition-colors"
+            >
+              Shop All {category.name}
+            </Link>
+            <ArrowRight className="w-4 h-4 text-[#D4AF37]/50" />
+          </div>
 
-      {hasChildren ? (
-        <div className="absolute left-full top-0 hidden group-hover/category:block pl-2 z-20">
-          <div className="min-w-[220px] bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" />
-            {category.children.map((child) => (
-              <CategoryFlyoutItem key={child._id} category={child} path={nextPath} onNavigate={onNavigate} />
+          {/* Multi-column subcategory grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {subcategories.map((sub) => (
+              <div key={sub._id}>
+                <Link
+                  to={buildCategoryUrl([category, sub])}
+                  onClick={onNavigate}
+                  className="block font-mono text-[11px] tracking-[0.2em] uppercase text-[#f2ca50] mb-3 hover:text-[#ffe088] transition-colors font-bold"
+                >
+                  {sub.name}
+                </Link>
+                {Array.isArray(sub.children) && sub.children.length > 0 && (
+                  <ul className="space-y-2">
+                    {sub.children.map((child) => (
+                      <li key={child._id}>
+                        <Link
+                          to={buildCategoryUrl([category, sub, child])}
+                          onClick={onNavigate}
+                          className="text-[12px] text-[#d0c5af] hover:text-[#e5e2e1] transition-colors block leading-relaxed"
+                        >
+                          {child.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             ))}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 };
@@ -234,9 +260,7 @@ const MainHeader = () => {
   const navItems = [
     { key: "home", label: "Home", to: "/shopping/home" },
     { key: "drops", label: "Drops", to: "/shopping/drops" },
-    { key: "catalog", label: "Catalog", to: "/shopping/product-list" },
     { key: "about", label: "About", to: "/about" },
-    { key: "elite-rewards", label: "Elite Rewards", to: "/shopping/rewards" },
   ];
 
   const activeMenuCategories = menuCategories;
@@ -295,48 +319,32 @@ const MainHeader = () => {
                 to={item.to}
                 className="relative group se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1"
               >
-                <span className={`block transition-all duration-300 group-hover:-translate-y-full ${item.isHot ? 'text-[#f2ca50]' : ''}`}>
+                <span className="block transition-all duration-300 group-hover:-translate-y-full">
                   {item.label}
                 </span>
-                <span className={`absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 ${item.isHot ? 'text-[#f2ca50] drop-shadow-[0_0_8px_rgba(242,202,80,0.8)]' : 'text-[#f2ca50]'}`}>
+                <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-[#f2ca50]">
                   {item.label}
                 </span>
-                {/* Hover glow line */}
-                <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]`} />
+                <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
               </Link>
             ))}
 
+            {/* Dynamic categories with mega-menu */}
             {activeMenuCategories.map((category) => (
-              <div key={category._id || category.key || category.slug} className="relative group">
+              <div key={category._id || category.slug} className="relative group">
                 <Link
                   to={buildCategoryUrl([category])}
-                  className="relative group se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1"
+                  className="relative se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1 block"
                 >
                   <span className="block transition-all duration-300 group-hover:-translate-y-full">
-                    {category.label || category.name}
+                    {category.name}
                   </span>
                   <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-[#f2ca50]">
-                    {category.label || category.name}
+                    {category.name}
                   </span>
                   <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
                 </Link>
-
-                {Array.isArray(category.children) && category.children.length > 0 ? (
-                  <div className="absolute left-0 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-2">
-                    <div className="bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] min-w-[260px] py-2 border border-gray-100 relative overflow-visible">
-                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40" />
-
-                      {category.children.map((child) => (
-                        <CategoryFlyoutItem
-                          key={child._id}
-                          category={child}
-                          path={[category]}
-                          onNavigate={() => {}}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
+                <MegaMenuPanel category={category} />
               </div>
             ))}
           </nav>
@@ -446,20 +454,44 @@ const MainHeader = () => {
                   <Link
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`font-display text-4xl block ${item.isHot ? 'text-[#f2ca50]' : 'text-[#e5e2e1] hover:text-[#d0c5af]'}`}
+                    className="font-display text-4xl block text-[#e5e2e1] hover:text-[#d0c5af]"
                   >
                     {item.label}
                   </Link>
                 </motion.div>
               ))}
 
-              <div className="pt-6 border-t border-[#2a2a2a]">
-                <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Shop by Category</p>
-                <CategoryMobileList
-                  categories={activeMenuCategories}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              </div>
+              {/* Dynamic categories inline */}
+              {activeMenuCategories.map((cat, i) => (
+                <motion.div
+                  key={cat._id}
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.25 + i * 0.05 }}
+                >
+                  <Link
+                    to={buildCategoryUrl([cat])}
+                    onClick={() => setMobileOpen(false)}
+                    className="font-display text-4xl block text-[#e5e2e1] hover:text-[#f2ca50]"
+                  >
+                    {cat.name}
+                  </Link>
+                  {Array.isArray(cat.children) && cat.children.length > 0 && (
+                    <div className="ml-4 mt-2 space-y-1 border-l border-[#2a2a2a] pl-4">
+                      {cat.children.map((sub) => (
+                        <Link
+                          key={sub._id}
+                          to={buildCategoryUrl([cat, sub])}
+                          onClick={() => setMobileOpen(false)}
+                          className="block text-lg text-[#d0c5af] hover:text-[#f2ca50] transition-colors py-1"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
             </div>
             
             <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
