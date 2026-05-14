@@ -1518,7 +1518,7 @@ const Product = () => {
                 {
                   label: "Price",
                   value: formData.basePrice
-                    ? `$${Number(formData.basePrice).toLocaleString()}`
+                    ? `LKR ${Number(formData.basePrice).toLocaleString()}`
                     : "—",
                 },
                 ...(Number(formData.discountPercent) > 0
@@ -2154,57 +2154,23 @@ const Product = () => {
                             type="color"
                             value={getVariantColorCode(v)}
                             onChange={(e) => handleVariantColorPick(i, e.target.value)}
-                            className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-white/10 bg-transparent p-1"
+                            className="h-8 w-8 shrink-0 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
                             title="Pick color"
-                            />
-                          <div className="hidden">
-                            <LuxurySelect
-                            value={COLOR_OPTIONS.find((c) => c.name.toLowerCase() === (v.color || "").toLowerCase()) ? v.color : (v.color ? "__custom" : "")}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === "__custom") {
-                                handleVariantChange(i, "color", "");
-                                handleVariantChange(i, "colorCode", "");
-                              } else {
-                                handleVariantChange(i, "color", val);
-                              }
-                            }}
-                            className="text-xs py-2 flex-1"
-                          >
-                            <option value="">Color…</option>
+                          />
+                          <LuxuryInput
+                            type="text"
+                            value={v.color || ""}
+                            list={`variant-color-options-${i}`}
+                            onChange={(e) => handleVariantChange(i, "color", e.target.value)}
+                            placeholder="Color name"
+                            className="text-xs py-1.5 flex-1"
+                          />
+                          <datalist id={`variant-color-options-${i}`}>
                             {COLOR_OPTIONS.map((c) => (
-                              <option key={c.name} value={c.name}>
-                                {c.name}
-                              </option>
+                              <option key={c.name} value={c.name} />
                             ))}
-                            <option value="__custom">Custom…</option>
-                            </LuxurySelect>
-                          </div>
+                          </datalist>
                         </div>
-                        {true && (
-                          <div className="flex gap-2 mt-1">
-                            <LuxuryInput
-                              type="text"
-                              value={v.color}
-                              list={`variant-color-options-${i}`}
-                              onChange={(e) => handleVariantChange(i, "color", e.target.value)}
-                              placeholder="Color name"
-                              className="text-xs py-1.5 flex-1"
-                            />
-                            <datalist id={`variant-color-options-${i}`}>
-                              {COLOR_OPTIONS.map((c) => (
-                                <option key={c.name} value={c.name} />
-                              ))}
-                            </datalist>
-                            <input
-                              type="color"
-                              value={v.colorCode || "#000000"}
-                              onChange={(e) => handleVariantChange(i, "colorCode", e.target.value)}
-                              className="hidden"
-                              title="Pick color"
-                            />
-                          </div>
-                        )}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <LuxuryInput
@@ -2523,14 +2489,14 @@ const Product = () => {
                   </div>
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <span className="text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest whitespace-nowrap">
+                <div className="col-span-1 md:col-span-2 min-w-0 pr-4">
+                  <span className="block truncate text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest">
                     {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
                   </span>
                 </div>
 
                 <div className="col-span-1 md:col-span-2">
-                  <span className="font-serif text-saga-primary font-bold text-lg">${product.basePrice || 0}</span>
+                  <span className="font-serif text-saga-primary font-bold text-lg">LKR {Number(product.basePrice || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="col-span-1 md:col-span-1">
