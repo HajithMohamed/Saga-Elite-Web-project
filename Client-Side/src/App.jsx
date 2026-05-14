@@ -57,8 +57,6 @@ const Alerts = lazy(() => import("./pages/admin-view/Alerts"));
 const AboutSiteConfig = lazy(() => import("./pages/admin-view/AboutSiteConfig"));
 const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
 const NewsletterSubscribersPage = lazy(() => import("./pages/admin-view/NewsletterSubscribersPage"));
-const ActivityTimeline = lazy(() => import("./pages/admin-view/ActivityTimeline"));
-const ContentHub = lazy(() => import("./pages/admin-view/ContentHub"));
 const PoliciesManager = lazy(() => import("./pages/admin-view/PoliciesManager"));
 const FooterManager = lazy(() => import("./pages/admin-view/FooterManager"));
 const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"));
@@ -261,13 +259,11 @@ function App() {
             <Route path="alerts" element={<PermissionGuard permission="manageReviews"><Alerts /></PermissionGuard>} />
             <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
             <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
-            <Route path="content" element={<PermissionGuard superAdminOnly><ContentHub /></PermissionGuard>} />
             <Route path="policies" element={<PermissionGuard superAdminOnly><PoliciesManager /></PermissionGuard>} />
             <Route path="footer" element={<PermissionGuard superAdminOnly><FooterManager /></PermissionGuard>} />
             <Route path="announcement" element={<PermissionGuard superAdminOnly><AnnouncementBar /></PermissionGuard>} />
             <Route path="contact-content" element={<PermissionGuard superAdminOnly><ContactPageManager /></PermissionGuard>} />
             <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
-            <Route path="activity" element={<ActivityTimeline />} />
             <Route path="newsletter" element={<NewsletterSubscribersPage />} />
             <Route path="account" element={<AdminAccount />} />
             <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />

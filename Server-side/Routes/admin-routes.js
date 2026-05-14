@@ -13,7 +13,6 @@ const {
 } = require("../Controllers/analytics-controller");
 const { validateObjectIdParam } = require("../Middlewares/request-validation");
 const { globalSearch } = require("../Controllers/admin-search-controller");
-const { listMyVisibleLogs } = require("../Controllers/admin-log-controller");
 const {
     createCategory,
     updateCategory,
@@ -23,7 +22,6 @@ const {
 const router = express.Router();
 
 router.get("/search", authMiddleware, requireAdmin, globalSearch);
-router.get("/activity", authMiddleware, requireAdmin, listMyVisibleLogs);
 
 router.get("/users/export", authMiddleware, requireSuperAdmin, exportCustomersCsv);
 router.get(

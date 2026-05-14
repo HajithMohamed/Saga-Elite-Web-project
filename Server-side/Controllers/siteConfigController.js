@@ -69,25 +69,6 @@ const ABOUT_KEYS = [
   "whatsapp_cta",
 ];
 
-// Keys exposed on the Content Hub "last updated" cards. Order drives the
-// card layout client-side.
-const SUMMARY_KEYS = [
-  "shop_brand_name",
-  "policy_terms",
-  "policy_privacy",
-  "policy_refund",
-  "policy_shipping",
-  "policy_cookie",
-  "footer_brand_description",
-  "footer_copyright",
-  "announcement_bar",
-  "faq_items",
-  "contact_form_settings",
-  "whatsapp_cta",
-  "about_timeline",
-  "about_studio_gallery",
-];
-
 const REWARD_REVIEW_DISCOUNT_KEY = "reward_review_discount";
 
 const DEFAULT_REWARD_REVIEW_DISCOUNT = {
@@ -123,22 +104,6 @@ exports.getAboutPageConfig = catchAsync(async (_req, res) => {
   docs.forEach((d) => {
     result[d.key] = d.value;
   });
-  res.status(200).json({ success: true, data: result });
-});
-
-exports.getConfigSummary = catchAsync(async (_req, res) => {
-  const docs = await SiteConfig.find(
-    { key: { $in: SUMMARY_KEYS } },
-    { key: 1, updatedAt: 1, _id: 0 }
-  );
-  const byKey = {};
-  docs.forEach((d) => {
-    byKey[d.key] = d.updatedAt;
-  });
-  const result = SUMMARY_KEYS.map((key) => ({
-    key,
-    updatedAt: byKey[key] || null,
-  }));
   res.status(200).json({ success: true, data: result });
 });
 
