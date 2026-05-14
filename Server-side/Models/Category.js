@@ -59,11 +59,10 @@ const categorySchema = new mongoose.Schema(
 );
 
 // Auto-generate slug from name when missing
-categorySchema.pre("validate", function (next) {
+categorySchema.pre("validate", function () {
   if (!this.slug && this.name) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model("Category", categorySchema);

@@ -321,7 +321,7 @@ const Login = () => {
               to="/auth/forgot-password"
               className="se-label text-[9px] uppercase tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
             >
-              Reset your access
+              Forgot password?
             </Link>
           </div>
         </motion.div>

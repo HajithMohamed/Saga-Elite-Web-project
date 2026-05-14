@@ -106,6 +106,10 @@ const ROUTE_META = [
   { match: /^\/legal\/privacy-policy$/, title: "Privacy Policy" },
   { match: /^\/legal\/terms-and-conditions$/, title: "Terms & Conditions" },
   { match: /^\/legal\/refund-policy$/, title: "Refund Policy" },
+  { match: /^\/auth\/forgot-password$/, title: "Reset Access" },
+  { match: /^\/auth\/verify-reset-otp$/, title: "Verify Reset Code" },
+  { match: /^\/auth\/reset-password-otp$/, title: "Verify Reset Code" },
+  { match: /^\/auth\/set-new-password$/, title: "Set New Password" },
 ];
 
 const RouteMetaManager = () => {
@@ -220,6 +224,7 @@ function App() {
             <Route path="login" element={<Navigate to="/" replace />} />
             <Route path="register" element={<Navigate to="/" replace />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="verify-reset-otp" element={<VerifyResetOtp />} />
             <Route path="reset-password-otp" element={<VerifyResetOtp />} />
             <Route path="set-new-password" element={<SetNewPassword />} />
             <Route path="verify-otp" element={<VerifyOtp />} />

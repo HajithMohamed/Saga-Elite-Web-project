@@ -16,6 +16,7 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
     location.pathname.includes("register") ||
     location.pathname.includes('verify-otp') ||
     location.pathname.includes('forgot-password') ||
+    location.pathname.includes('verify-reset-otp') ||
     location.pathname.includes('reset-password-otp') ||
     location.pathname.includes('set-new-password');
 

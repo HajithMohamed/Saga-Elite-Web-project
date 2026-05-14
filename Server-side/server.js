@@ -216,29 +216,57 @@ io.on("connection", (socket) => {
   });
 });
 
-const startServer = async () => {
+// Run slow maintenance tasks after the server is already accepting traffic.
+// This keeps health checks responsive while the seed and reconciliation work
+// finishes in the background.
+const runDeferredStartupTasks = async () => {
   try {
-    await connectToDB();
     await seedCategoryTaxonomy();
+  } catch (error) {
+    logger.error("Category taxonomy seed failed", {
+      error: error?.message || String(error),
+    });
+  }
+
+  try {
     await seedAboutSiteDefaults();
+  } catch (error) {
+    logger.error("About site defaults seed failed", {
+      error: error?.message || String(error),
+    });
+  }
+
+  try {
     // Reconcile Mongo's actual indexes with the current schema. Required
     // because changing index options (e.g. sparse → partialFilterExpression)
     // does not drop the old index — Mongoose only adds new ones.
-    try {
-      await ManualPayment.syncIndexes();
-    } catch (err) {
-      logger.error("ManualPayment.syncIndexes failed", { error: err?.message });
-    }
-    startManualPaymentCleanupJob();
-    startBankInboxWatcher();
+    await ManualPayment.syncIndexes();
+  } catch (err) {
+    logger.error("ManualPayment.syncIndexes failed", {
+      error: err?.message || String(err),
+    });
+  }
+
+  startManualPaymentCleanupJob();
+  startBankInboxWatcher();
+  initAgingStockJob();
+  initRecommendationsJobs();
+  initSmartAlertsJob();
+  initRecommendationsDigest();
+  initGuestPromoJob();
+};
+
+const startServer = async () => {
+  try {
+    await connectToDB();
 
     server.listen(PORT, () => {
-      initAgingStockJob();
-      initRecommendationsJobs();
-      initSmartAlertsJob();
-      initRecommendationsDigest();
-      initGuestPromoJob();
       logger.info("Server is listening", { port: PORT });
+      runDeferredStartupTasks().catch((error) => {
+        logger.error("Background startup task runner failed", {
+          error: error?.message || String(error),
+        });
+      });
     });
   } catch (error) {
     logger.error("Server startup error", { error });

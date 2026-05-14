@@ -3,6 +3,11 @@ import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { LoginForm, JoinOptions, RegisterForm, OtpPanel } from "./AuthForms";
+import {
+  ForgotPasswordForm,
+  VerifyResetOtpForm,
+  SetNewPasswordForm,
+} from "./RecoveryForms";
 
 /* ── Context ─────────────────────────────────────── */
 const DrawerCtx = createContext({ open: () => {}, close: () => {} });
@@ -31,11 +36,20 @@ const Tabs = ({ tab, setTab }) => (
 /* ── Provider + Drawer Shell ─────────────────────── */
 export const AuthDrawerProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  // view: login | register | register-email | otp
+  // view: login | register | register-email | otp | forgot-password | reset-otp | set-new-password
   const [view, setView] = useState("login");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryOtp, setRecoveryOtp] = useState("");
+  const [loginPrefillEmail, setLoginPrefillEmail] = useState("");
   const { isAuthenticated } = useSelector(s => s.auth);
 
-  const open = useCallback((startView = "login") => { setView(startView); setIsOpen(true); }, []);
+  const open = useCallback((startView = "login") => {
+    setView(startView);
+    setRecoveryEmail("");
+    setRecoveryOtp("");
+    setLoginPrefillEmail("");
+    setIsOpen(true);
+  }, []);
   const close = useCallback(() => { setIsOpen(false); }, []);
 
   // Lock body scroll
@@ -46,6 +60,7 @@ export const AuthDrawerProvider = ({ children }) => {
 
   // Tab derived from view
   const activeTab = view === "login" ? "login" : "register";
+  const isRecoveryView = ["forgot-password", "reset-otp", "set-new-password"].includes(view);
 
   const handleTabChange = (tab) => {
     setView(tab === "login" ? "login" : "register");
@@ -75,7 +90,7 @@ export const AuthDrawerProvider = ({ children }) => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed top-0 right-0 z-[201] h-full w-full sm:w-[420px] bg-[#0a0a0a] border-l border-[#2a2a2a] flex flex-col shadow-2xl"
+              className={`fixed top-0 right-0 z-[201] h-full w-full ${isRecoveryView ? "sm:w-[460px]" : "sm:w-[420px]"} bg-[#0a0a0a] border-l border-[#2a2a2a] flex flex-col shadow-2xl`}
             >
               {/* Gold left accent */}
               <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-[#f2ca50]/70 via-[#D4AF37]/20 to-transparent pointer-events-none" />
@@ -100,7 +115,13 @@ export const AuthDrawerProvider = ({ children }) => {
               <div className="flex-1 overflow-y-auto px-6 py-6 overscroll-contain">
                 <AnimatePresence mode="wait">
                   {view === "login" && (
-                    <LoginForm key="login" onClose={close} switchToRegister={() => setView("register")} />
+                    <LoginForm
+                      key="login"
+                      onClose={close}
+                      switchToRegister={() => setView("register")}
+                      onForgotPassword={() => setView("forgot-password")}
+                      initialEmail={loginPrefillEmail}
+                    />
                   )}
                   {view === "register" && (
                     <JoinOptions key="join" onEmailClick={() => setView("register-email")} onClose={close} />
@@ -110,6 +131,41 @@ export const AuthDrawerProvider = ({ children }) => {
                   )}
                   {view === "otp" && (
                     <OtpPanel key="otp" onClose={close} onBack={() => setView("register-email")} />
+                  )}
+                  {view === "forgot-password" && (
+                    <ForgotPasswordForm
+                      key="forgot-password"
+                      onBack={() => setView("login")}
+                      onNext={(email) => {
+                        setRecoveryEmail(email);
+                        setView("reset-otp");
+                      }}
+                    />
+                  )}
+                  {view === "reset-otp" && (
+                    <VerifyResetOtpForm
+                      key="reset-otp"
+                      email={recoveryEmail}
+                      onBack={() => setView("forgot-password")}
+                      onNext={(otp) => {
+                        setRecoveryOtp(otp);
+                        setView("set-new-password");
+                      }}
+                    />
+                  )}
+                  {view === "set-new-password" && (
+                    <SetNewPasswordForm
+                      key="set-new-password"
+                      email={recoveryEmail}
+                      otp={recoveryOtp}
+                      onBack={() => setView("reset-otp")}
+                      onDone={(email) => {
+                        setLoginPrefillEmail(email);
+                        setRecoveryOtp("");
+                        setRecoveryEmail(email);
+                        setView("login");
+                      }}
+                    />
                   )}
                 </AnimatePresence>
               </div>

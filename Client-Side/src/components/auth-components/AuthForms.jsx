@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check, CheckCheck, ChevronLeft, Mail, ShieldCheck } from "lucide-react";
 import {
@@ -40,10 +40,10 @@ export const SocialButtons = ({ onGoogleSuccess, onGoogleError, onFbSuccess, onF
 );
 
 /* ─── Login Form ─────────────────────────────────── */
-export const LoginForm = ({ onClose, switchToRegister }) => {
+export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initialEmail = "" }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [fd, setFd] = useState({ email: "", password: "" });
+  const [fd, setFd] = useState({ email: initialEmail, password: "" });
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -117,7 +117,22 @@ export const LoginForm = ({ onClose, switchToRegister }) => {
           <LuxuryInput id="l-password" type="password" label="Your Private Key" autoComplete="current-password"
             value={fd.password} error={touched.password ? errors.password : ""} onChange={set("password")} onBlur={() => setTouched(p => ({ ...p, password: true }))} />
           <div className="flex justify-end mt-1.5">
-            <a href="/auth/forgot-password" className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors">Reset access</a>
+            {onForgotPassword ? (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              >
+                Forgot password?
+              </button>
+            ) : (
+              <Link
+                to="/auth/forgot-password"
+                className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              >
+                Forgot password?
+              </Link>
+            )}
           </div>
         </div>
         <Btn variant="default" className={`${AUTH_PRIMARY_BTN} w-full`} iconRight={loading ? undefined : ArrowRight} type="submit" disabled={loading}>

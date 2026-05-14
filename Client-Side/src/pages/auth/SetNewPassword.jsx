@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { resetPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
@@ -44,7 +45,11 @@ const SetNewPassword = () => {
 
   if (!email || !otp) {
     return (
-      <div>
+      <motion.div
+        initial={{ opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
         <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
         <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
           Start again,<br />gently.
@@ -57,7 +62,7 @@ const SetNewPassword = () => {
             Back to forgot password
           </Btn>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
@@ -100,7 +105,11 @@ const SetNewPassword = () => {
   const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Eyebrow tone="gold" size="md">Reset · final step</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
         Set your<br />new key.
@@ -198,7 +207,7 @@ const SetNewPassword = () => {
         <ArrowLeft size={12} strokeWidth={1.5} />
         Cancel · return to sign in
       </Link>
-    </div>
+    </motion.div>
   );
 };
 
