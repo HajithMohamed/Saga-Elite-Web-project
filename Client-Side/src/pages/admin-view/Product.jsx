@@ -25,6 +25,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Edit2,
   Trash,
   Package,
@@ -35,6 +36,10 @@ import {
   Image as ImageIcon,
   Tag as TagIcon,
   Sparkles,
+  FolderTree,
+  GripVertical,
+  Check,
+  X as XIcon,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { SearchFilterBar } from "@/components/admin-components/_shared/SearchFilterBar";
