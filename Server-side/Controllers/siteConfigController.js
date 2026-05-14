@@ -88,12 +88,30 @@ const SUMMARY_KEYS = [
   "about_studio_gallery",
 ];
 
-const ALLOWED_KEYS = new Set([...ABOUT_KEYS, "bank_details"]);
+const REWARD_REVIEW_DISCOUNT_KEY = "reward_review_discount";
+
+const DEFAULT_REWARD_REVIEW_DISCOUNT = {
+  enabled: false,
+  discountType: "percent",
+  discountValue: 10,
+  codePrefix: "REVIEW",
+  expiryDays: 30,
+  maxUses: 1,
+};
+
+const ALLOWED_KEYS = new Set([
+  ...ABOUT_KEYS,
+  "bank_details",
+  REWARD_REVIEW_DISCOUNT_KEY,
+]);
 
 exports.getConfig = catchAsync(async (req, res, next) => {
   const rawKey = (req.params.key || "").trim().toLowerCase();
   const doc = await SiteConfig.findOne({ key: rawKey });
   if (!doc) {
+    if (rawKey === REWARD_REVIEW_DISCOUNT_KEY) {
+      return res.status(200).json({ success: true, data: DEFAULT_REWARD_REVIEW_DISCOUNT });
+    }
     return next(new AppError("Config not found", 404));
   }
   res.status(200).json({ success: true, data: doc.value });

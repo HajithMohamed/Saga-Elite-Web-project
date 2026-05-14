@@ -40,6 +40,7 @@ import {
   GripVertical,
   Check,
   X as XIcon,
+  Loader2,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { SearchFilterBar } from "@/components/admin-components/_shared/SearchFilterBar";
@@ -83,8 +84,8 @@ const defaultVariant = {
   size: "",
   color: "",
   colorCode: "",
-  stock: "0",
-  priceAdjustment: "0",
+  stock: "",
+  priceAdjustment: "",
 };
 
 const initialProductForm = {
@@ -101,6 +102,7 @@ const initialProductForm = {
   category: "",
   categoryId: "",
   subCategory: "",
+  categoryPath: "",
   drop: "",
   basePrice: "",
   discountPercent: "0",
@@ -149,6 +151,16 @@ const generateSku = (artNo, size, color) => {
   return parts.join("-");
 };
 
+const isHexColor = (value) => /^#[0-9A-F]{6}$/i.test(String(value || ""));
+
+const getVariantColorCode = (variant) => {
+  if (isHexColor(variant.colorCode)) return variant.colorCode;
+  const preset = COLOR_OPTIONS.find(
+    (color) => color.name.toLowerCase() === String(variant.color || "").toLowerCase()
+  );
+  return preset?.hex || "#000000";
+};
+
 // Draft key for the wizard's auto-save. Only used when creating a NEW product
 // (editing an existing one always loads server state, never a stale draft).
 const PRODUCT_DRAFT_KEY = "saga.admin.product.draft";
@@ -184,6 +196,21 @@ const PRODUCT_TAG_OPTIONS = [
 const getErrorMessage = (error, fallback = "Request failed") => {
   if (typeof error === "string") return error;
   return error?.message || error?.error || error?.response?.data?.message || fallback;
+};
+
+const rollbackCreatedProduct = async (product) => {
+  const slug = product?.slug;
+  if (!slug) return false;
+
+  try {
+    await axios.delete(`${API_BASE}/products/delete-product/${encodeURIComponent(slug)}`, {
+      withCredentials: true,
+    });
+    return true;
+  } catch (error) {
+    console.error("[Product] rollback failed after image upload error", error);
+    return false;
+  }
 };
 
 const CUSTOM_OPTION = "__custom__";
@@ -238,6 +265,13 @@ const SIZE_GUIDE_PRESETS = [
 
 const normalizeText = (value = "") => String(value).trim().toLowerCase();
 
+const normalizeCategorySegment = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const buildCategoryTree = (categories = []) => {
   const nodes = categories.map((category) => ({ ...category, children: [] }));
   const byId = new Map(nodes.map((category) => [String(category._id), category]));
@@ -286,6 +320,93 @@ const findCategoryNode = (categories = [], value) => {
 
   return null;
 };
+
+const findCategoryPath = (categories = [], value, path = []) => {
+  const target = normalizeText(value);
+  if (!target) return [];
+
+  for (const category of categories) {
+    const nextPath = [...path, category];
+    if (
+      normalizeText(category._id) === target ||
+      normalizeText(category.name) === target ||
+      normalizeText(category.slug) === target
+    ) {
+      return nextPath;
+    }
+
+    const childPath = findCategoryPath(category.children || [], value, nextPath);
+    if (childPath.length) return childPath;
+  }
+
+  return [];
+};
+
+const findCategoryPathBySegments = (categories = [], rawPath = "") => {
+  const segments = String(rawPath || "")
+    .split(/\/|>|\|/)
+    .map((segment) => normalizeCategorySegment(segment))
+    .filter(Boolean);
+
+  if (!segments.length) return [];
+
+  const path = [];
+  let candidates = categories;
+
+  for (const segment of segments) {
+    const match = candidates.find(
+      (category) =>
+        normalizeCategorySegment(category.slug) === segment ||
+        normalizeCategorySegment(category.name) === segment ||
+        normalizeCategorySegment(category._id) === segment
+    );
+
+    if (!match) return [];
+
+    path.push(match);
+    candidates = match.children || [];
+  }
+
+  return path;
+};
+
+const buildCategoryPathValue = (path = []) =>
+  path
+    .map((category) => category.slug || normalizeCategorySegment(category.name))
+    .filter(Boolean)
+    .join("/");
+
+const collectSubcategoryOptions = (rootCategory) => {
+  if (!rootCategory) return [];
+
+  const walk = (nodes = [], path = []) =>
+    nodes.flatMap((node) => {
+      const nextPath = [...path, node];
+      return [
+        {
+          value: String(node._id),
+          label: nextPath.map((item) => item.name).join(" / "),
+          node,
+          path: [rootCategory, ...nextPath],
+        },
+        ...walk(node.children || [], nextPath),
+      ];
+    });
+
+  return walk(rootCategory.children || []);
+};
+
+const formatCategoryPathDisplay = (value = "") =>
+  String(value || "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) =>
+      segment
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    )
+    .join(" / ");
 
 const findPresetByValue = (value, presets) => presets.find((preset) => preset.value === value) || null;
 
@@ -626,6 +747,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
                 value={sortOrder}
                 onChange={(event) => setSortOrder(event.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                placeholder="e.g. 10"
               />
             </label>
 
@@ -693,6 +815,7 @@ const Product = () => {
   const [gsmSelection, setGsmSelection] = useState("");
   const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
   const [formSyncToken, setFormSyncToken] = useState(0);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -704,7 +827,7 @@ const Product = () => {
   const { drops = [] } = useSelector((state) => state.drop) || {};
 
   const fetchProducts = useCallback(() => {
-    dispatch(
+    return dispatch(
       getAllProducts({
         page: currentPage,
         limit: LIMIT,
@@ -778,7 +901,8 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
-            setFormSyncToken((token) => token + 1);
+    setIsSavingProduct(false);
+    setFormSyncToken((token) => token + 1);
     setActiveFormTab("basic");
     setCategorySelection("");
     setSubCategorySelection("");
@@ -789,7 +913,7 @@ const Product = () => {
 
   const openNewProductForm = () => {
     const draft = loadProductDraft();
-    setFormData(draft ? { ...initialProductForm, ...draft } : initialProductForm);
+    setFormData(draft ? { ...initialProductForm, ...draft, artNo: "" } : initialProductForm);
     setSelectedProductSlug(null);
     setSelectedProductId(null);
     setProductImages([]);
@@ -856,49 +980,50 @@ const Product = () => {
 
   const syncFormSelections = useCallback(
     (nextFormData) => {
-      const resolvedCategory = nextFormData.categoryId
-        ? findCategoryNode(categoryTree, nextFormData.categoryId)
-        : findCategoryNode(categoryTree, nextFormData.category);
+      let categoryPath = findCategoryPathBySegments(categoryTree, nextFormData.categoryPath);
 
-      let categoryNode = resolvedCategory;
-      let resolvedSubCategory = null;
+      if (!categoryPath.length && nextFormData.categoryId) {
+        categoryPath = findCategoryPath(categoryTree, nextFormData.categoryId);
+      }
 
-      if (resolvedCategory?.parentCategory) {
-        categoryNode = findCategoryNode(categoryTree, resolvedCategory.parentCategory) || resolvedCategory;
-        resolvedSubCategory = resolvedCategory;
-      } else if (categoryNode) {
-        resolvedSubCategory = nextFormData.subCategory
-          ? findCategoryNode(categoryNode.children || [], nextFormData.subCategory)
-          : null;
+      if (!categoryPath.length && nextFormData.category) {
+        categoryPath = findCategoryPath(categoryTree, nextFormData.category);
+      }
 
-        if (!resolvedSubCategory && nextFormData.category) {
-          const childMatch = findCategoryNode(categoryNode.children || [], nextFormData.category);
-          if (childMatch) {
-            resolvedSubCategory = childMatch;
-          }
+      if (categoryPath.length === 1 && nextFormData.subCategory) {
+        const childPath = findCategoryPath(categoryPath[0].children || [], nextFormData.subCategory);
+        if (childPath.length) {
+          categoryPath = [categoryPath[0], ...childPath];
         }
       }
 
+      const categoryNode = categoryPath[0] || null;
+      const selectedLeaf = categoryPath[categoryPath.length - 1] || null;
+      const firstSubcategory = categoryPath[1] || null;
+
       if (categoryNode) {
         const normalizedCategory = categoryNode.name || nextFormData.category || "";
-        const normalizedSubCategory = resolvedSubCategory?.name || nextFormData.subCategory || "";
+        const normalizedSubCategory = firstSubcategory?.name || nextFormData.subCategory || "";
+        const normalizedCategoryId = String(selectedLeaf?._id || categoryNode._id);
+        const normalizedCategoryPath = buildCategoryPathValue(categoryPath);
+        const options = collectSubcategoryOptions(categoryNode);
 
         setCategorySelection(String(categoryNode._id));
-        setActiveSubcategories(categoryNode.children || []);
-        setSubCategorySelection(
-          resolvedSubCategory ? String(resolvedSubCategory._id) : normalizedSubCategory ? CUSTOM_OPTION : ""
-        );
+        setActiveSubcategories(options);
+        setSubCategorySelection(categoryPath.length > 1 ? String(selectedLeaf._id) : normalizedSubCategory ? CUSTOM_OPTION : "");
 
         if (
           nextFormData.category !== normalizedCategory ||
           nextFormData.subCategory !== normalizedSubCategory ||
-          nextFormData.categoryId !== String(categoryNode._id)
+          nextFormData.categoryId !== normalizedCategoryId ||
+          nextFormData.categoryPath !== normalizedCategoryPath
         ) {
           setFormData((prev) => ({
             ...prev,
             category: normalizedCategory,
             subCategory: normalizedSubCategory,
-            categoryId: String(categoryNode._id),
+            categoryId: normalizedCategoryId,
+            categoryPath: normalizedCategoryPath,
           }));
         }
       } else {
@@ -951,6 +1076,7 @@ const Product = () => {
       category: product.category || "",
       categoryId: product.categoryId || "",
       subCategory: product.subCategory || "",
+      categoryPath: product.categoryPath || "",
       drop: product.drop?._id || "",
       basePrice: product.basePrice || "",
       discountPercent: product.discountPercent || "0",
@@ -983,14 +1109,12 @@ const Product = () => {
 
   const validateProductForm = () => {
     if (!formData.name.trim()) return "Product name is required.";
-    if (!formData.artNo.trim()) return "Art No is required.";
     if (!formData.category?.trim() && !formData.categoryId?.trim()) return "Category is required.";
-    if (!formData.basePrice || Number(formData.basePrice) < 0) {
+    if (formData.basePrice === "" || formData.basePrice === null || Number(formData.basePrice) < 0) {
       return "Base price must be 0 or greater.";
     }
     const validVariants = formData.variants.filter(
       (v) =>
-        v.sku?.trim() &&
         v.size?.trim() &&
         v.color?.trim() &&
         v.stock !== "" &&
@@ -998,21 +1122,28 @@ const Product = () => {
         v.stock !== undefined
     );
     if (validVariants.length === 0) {
-      return "At least one variant with SKU, size, color, and stock is required.";
+      return "At least one variant with size, color, and stock is required.";
     }
     const partialCount = formData.variants.length - validVariants.length;
     if (partialCount > 0) {
-      return "Each variant needs SKU, size, color, and stock. Remove or complete partial rows.";
+      return "Each variant needs size, color, and stock. Remove or complete partial rows.";
     }
     return null;
   };
 
   const handleSubmit = async () => {
+    if (isSavingProduct) return;
+
     const validationError = validateProductForm();
     if (validationError) {
       toast({ title: "Check the form", description: validationError, variant: "destructive" });
       return;
     }
+
+    setIsSavingProduct(true);
+
+    const isCreatingProduct = !selectedProductSlug;
+    let createdProductForRollback = null;
 
     try {
       let result;
@@ -1022,7 +1153,6 @@ const Product = () => {
         subCategory: formData.subCategory || undefined,
         variants: formData.variants.filter(
           (v) =>
-            v.sku?.trim() &&
             v.size?.trim() &&
             v.color?.trim() &&
             v.stock !== "" &&
@@ -1038,6 +1168,7 @@ const Product = () => {
         result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: cleanData })).unwrap();
       } else {
         result = await dispatch(createProduct(cleanData)).unwrap();
+        createdProductForRollback = result.product || null;
       }
 
       const productId = result.product?._id;
@@ -1049,10 +1180,24 @@ const Product = () => {
           fd.append("refId", productId);
           fd.append("type", "product");
           newImages.forEach((img) => fd.append("images", img.file));
-          await axios.post(`${API_BASE}/image/upload-image`, fd, {
-            headers: { "Content-Type": "multipart/form-data" },
-            withCredentials: true,
-          });
+          try {
+            await axios.post(`${API_BASE}/image/upload-image`, fd, {
+              headers: { "Content-Type": "multipart/form-data" },
+              withCredentials: true,
+            });
+          } catch (uploadError) {
+            if (isCreatingProduct && createdProductForRollback) {
+              const rolledBack = await rollbackCreatedProduct(createdProductForRollback);
+              if (rolledBack) fetchProducts();
+              const uploadMessage = getErrorMessage(uploadError, "Image upload failed.");
+              throw new Error(
+                rolledBack
+                  ? `${uploadMessage} Product was not created.`
+                  : `${uploadMessage} Product was created, but automatic cleanup failed. Please delete it manually.`
+              );
+            }
+            throw uploadError;
+          }
         }
       }
 
@@ -1071,6 +1216,8 @@ const Product = () => {
         description: getErrorMessage(e, "Something went wrong while saving the product."),
         variant: "destructive",
       });
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -1102,6 +1249,29 @@ const Product = () => {
     setFormData({ ...formData, variants: updatedVariants });
   };
 
+  const handleVariantColorPick = (index, hex) => {
+    const pickedHex = isHexColor(hex) ? hex : "#000000";
+    const preset = COLOR_OPTIONS.find(
+      (color) => color.hex.toLowerCase() === pickedHex.toLowerCase()
+    );
+    const updatedVariants = [...formData.variants];
+    const current = updatedVariants[index] || {};
+    const nextColor = preset?.name || current.color || "Custom";
+    const variant = {
+      ...current,
+      color: nextColor,
+      colorCode: pickedHex,
+    };
+
+    const currentAuto = generateSku(formData.artNo, current.size, current.color);
+    if (!variant.sku || variant.sku === currentAuto) {
+      variant.sku = generateSku(formData.artNo, variant.size, variant.color);
+    }
+
+    updatedVariants[index] = variant;
+    setFormData({ ...formData, variants: updatedVariants });
+  };
+
   const addVariant = () => {
     setFormData({ ...formData, variants: [...formData.variants, { ...defaultVariant }] });
   };
@@ -1122,6 +1292,7 @@ const Product = () => {
         category: "",
         categoryId: "",
         subCategory: "",
+        categoryPath: "",
       }));
       return;
     }
@@ -1135,17 +1306,20 @@ const Product = () => {
         categoryId: value,
         category: "",
         subCategory: "",
+        categoryPath: "",
       }));
       return;
     }
 
-    setActiveSubcategories(selectedCategory.children || []);
+    setActiveSubcategories(collectSubcategoryOptions(selectedCategory));
     setSubCategorySelection("");
+    const rootPath = buildCategoryPathValue([selectedCategory]);
     setFormData((prev) => ({
       ...prev,
       category: selectedCategory.name || "",
       categoryId: String(selectedCategory._id),
       subCategory: "",
+      categoryPath: rootPath,
     }));
   };
 
@@ -1158,6 +1332,7 @@ const Product = () => {
       category: value,
       categoryId: "",
       subCategory: "",
+      categoryPath: "",
     }));
   };
 
@@ -1165,25 +1340,47 @@ const Product = () => {
     setSubCategorySelection(value);
 
     if (!value || value === CUSTOM_OPTION) {
-      setFormData((prev) => ({ ...prev, subCategory: "" }));
+      const rootCategory = findCategoryNode(categoryTree, categorySelection);
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: rootCategory?._id ? String(rootCategory._id) : prev.categoryId,
+        subCategory: "",
+        categoryPath: rootCategory ? buildCategoryPathValue([rootCategory]) : prev.categoryPath,
+      }));
       return;
     }
 
-    const selectedSubCategory = findCategoryNode(activeSubcategories, value);
-    if (!selectedSubCategory) {
+    const selectedOption = activeSubcategories.find((option) => option.value === value);
+    if (!selectedOption) {
       setFormData((prev) => ({ ...prev, subCategory: value }));
       return;
     }
 
+    const selectedPath = selectedOption.path || [];
+    const rootCategory = selectedPath[0];
+    const firstSubcategory = selectedPath[1];
+    const selectedLeaf = selectedPath[selectedPath.length - 1];
+
     setFormData((prev) => ({
       ...prev,
-      subCategory: selectedSubCategory.name || "",
+      category: rootCategory?.name || prev.category,
+      categoryId: selectedLeaf?._id ? String(selectedLeaf._id) : prev.categoryId,
+      subCategory: firstSubcategory?.name || selectedLeaf?.name || "",
+      categoryPath: buildCategoryPathValue(selectedPath),
     }));
   };
 
   const handleSubCategoryTextChange = (value) => {
     setSubCategorySelection(CUSTOM_OPTION);
-    setFormData((prev) => ({ ...prev, subCategory: value }));
+    const rootCategory = findCategoryNode(categoryTree, categorySelection);
+    const rootPath = rootCategory ? buildCategoryPathValue([rootCategory]) : "";
+    const customPath = [rootPath, normalizeCategorySegment(value)].filter(Boolean).join("/");
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: rootCategory?._id ? String(rootCategory._id) : prev.categoryId,
+      subCategory: value,
+      categoryPath: customPath,
+    }));
   };
 
   const handleFabricSelectionChange = (value) => {
@@ -1268,10 +1465,10 @@ const Product = () => {
   // Setup completion progress
   const completedCount = [
     formData.name?.trim().length >= 3,
-    formData.artNo?.trim().length >= 2,
+    Boolean(formData.category?.trim() || formData.categoryId?.trim()),
     Number(formData.basePrice) > 0,
     formData.variants.some(
-      (v) => v.sku?.trim() && v.size?.trim() && v.color?.trim() && v.stock !== ""
+      (v) => v.size?.trim() && v.color?.trim() && v.stock !== ""
     ),
     productImages.length > 0,
     formData.description?.trim().length > 0,
@@ -1287,12 +1484,21 @@ const Product = () => {
           title={formData.name?.trim() || (selectedProductSlug ? "Untitled product" : "New Product")}
           subtitle={
             formData.artNo
-              ? `${formData.artNo} · ${[formData.category, formData.subCategory].filter(Boolean).join(" / ") || "Uncategorized"} · ${formData.brand}`
-              : "Set art number and pricing to continue"
+              ? `${formData.artNo} · ${formatCategoryPathDisplay(formData.categoryPath) || [formData.category, formData.subCategory].filter(Boolean).join(" / ") || "Uncategorized"} · ${formData.brand}`
+              : "Art number will be generated automatically on save"
           }
           onCancel={resetForm}
           onPublish={handleSubmit}
-          publishLabel={selectedProductSlug ? "Save Product" : "Publish Product"}
+          publishLabel={
+            isSavingProduct
+              ? selectedProductSlug
+                ? "Saving Product"
+                : "Creating Product"
+              : selectedProductSlug
+                ? "Save Product"
+                : "Publish Product"
+          }
+          isSubmitting={isSavingProduct}
         />
       }
       rightRail={
@@ -1459,16 +1665,19 @@ const Product = () => {
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <FormField
               label="Art Number"
-              required
-              helper="Stable internal SKU root. Cannot be changed after orders exist."
+              optional
+              helper={
+                selectedProductSlug
+                  ? "Stable internal SKU root. Cannot be changed after orders exist."
+                  : "Generated automatically when the product is saved."
+              }
             >
               <LuxuryInput
                 type="text"
                 value={formData.artNo}
-                onChange={(e) =>
-                  setFormData({ ...formData, artNo: e.target.value })
-                }
-                placeholder="SE-OX-001"
+                readOnly
+                disabled={!selectedProductSlug}
+                placeholder="Generated automatically"
                 className="font-mono uppercase"
               />
             </FormField>
@@ -1518,9 +1727,9 @@ const Product = () => {
             </FormField>
 
             <FormField
-              label="Sub-Category"
+              label="Sub-Category Division"
               optional
-              helper="Choose a sub-category from the selected category, or add a new one."
+              helper="Choose any nested division under the selected category, or add a new one."
             >
               {categorySelection ? (
                 <div className="space-y-3">
@@ -1530,9 +1739,9 @@ const Product = () => {
                       onChange={(e) => handleSubCategoryChange(e.target.value)}
                     >
                       <option value="">No sub-category</option>
-                      {activeSubcategories.map((subcat) => (
-                        <option key={subcat._id} value={subcat._id}>
-                          {subcat.name}
+                      {activeSubcategories.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
                         </option>
                       ))}
                       <option value={CUSTOM_OPTION}>Other / New sub-category</option>
@@ -1555,6 +1764,12 @@ const Product = () => {
                       placeholder="Enter a new sub-category"
                       maxLength={120}
                     />
+                  ) : null}
+
+                  {formData.categoryPath ? (
+                    <p className="text-[11px] leading-relaxed text-white/35">
+                      {formatCategoryPathDisplay(formData.categoryPath)}
+                    </p>
                   ) : null}
                 </div>
               ) : (
@@ -1755,6 +1970,7 @@ const Product = () => {
                     setFormData({ ...formData, basePrice: e.target.value })
                   }
                   className="pl-7"
+                  placeholder="e.g. 4500"
                 />
               </div>
             </FormField>
@@ -1775,6 +1991,7 @@ const Product = () => {
                     discountPercent: e.target.value,
                   })
                 }
+                placeholder="0"
               />
             </FormField>
 
@@ -1790,6 +2007,7 @@ const Product = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, maxPerUser: e.target.value })
                 }
+                placeholder="e.g. 2"
               />
             </FormField>
 
@@ -1827,7 +2045,7 @@ const Product = () => {
                   setFormData({ ...formData, costPrice: e.target.value })
                 }
                 className="pl-12"
-                placeholder="0"
+                placeholder="e.g. 2800"
               />
             </div>
           </FormField>
@@ -1883,7 +2101,7 @@ const Product = () => {
                             onChange={(e) =>
                               handleVariantChange(i, "sku", e.target.value)
                             }
-                            placeholder="Auto-generated"
+                            placeholder={formData.artNo ? "Auto-generated" : "Generated after save"}
                             className="font-mono uppercase text-xs py-2"
                           />
                           {!v.sku && formData.artNo && (
@@ -1929,16 +2147,18 @@ const Product = () => {
                         )}
                       </td>
 
-                      {/* Color dropdown with swatches */}
+                      {/* Color picker with optional preset names */}
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          {v.colorCode && (
-                            <span
-                              className="w-4 h-4 shrink-0 rounded-full border border-white/20"
-                              style={{ backgroundColor: v.colorCode }}
+                          <input
+                            type="color"
+                            value={getVariantColorCode(v)}
+                            onChange={(e) => handleVariantColorPick(i, e.target.value)}
+                            className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-white/10 bg-transparent p-1"
+                            title="Pick color"
                             />
-                          )}
-                          <LuxurySelect
+                          <div className="hidden">
+                            <LuxurySelect
                             value={COLOR_OPTIONS.find((c) => c.name.toLowerCase() === (v.color || "").toLowerCase()) ? v.color : (v.color ? "__custom" : "")}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -1958,22 +2178,29 @@ const Product = () => {
                               </option>
                             ))}
                             <option value="__custom">Custom…</option>
-                          </LuxurySelect>
+                            </LuxurySelect>
+                          </div>
                         </div>
-                        {v.color && !COLOR_OPTIONS.find((c) => c.name.toLowerCase() === v.color.toLowerCase()) && (
+                        {true && (
                           <div className="flex gap-2 mt-1">
                             <LuxuryInput
                               type="text"
                               value={v.color}
+                              list={`variant-color-options-${i}`}
                               onChange={(e) => handleVariantChange(i, "color", e.target.value)}
                               placeholder="Color name"
                               className="text-xs py-1.5 flex-1"
                             />
+                            <datalist id={`variant-color-options-${i}`}>
+                              {COLOR_OPTIONS.map((c) => (
+                                <option key={c.name} value={c.name} />
+                              ))}
+                            </datalist>
                             <input
                               type="color"
                               value={v.colorCode || "#000000"}
                               onChange={(e) => handleVariantChange(i, "colorCode", e.target.value)}
-                              className="w-8 h-8 border-0 bg-transparent cursor-pointer"
+                              className="hidden"
                               title="Pick color"
                             />
                           </div>
@@ -1991,6 +2218,7 @@ const Product = () => {
                             )
                           }
                           className="text-xs py-2 text-right w-24"
+                          placeholder="0"
                         />
                       </td>
                       <td className="px-4 py-2.5 text-right">
@@ -2001,6 +2229,7 @@ const Product = () => {
                             handleVariantChange(i, "stock", e.target.value)
                           }
                           className="text-xs py-2 text-right w-20"
+                          placeholder="0"
                         />
                       </td>
                       <td className="px-4 py-2.5 text-right">
@@ -2030,43 +2259,34 @@ const Product = () => {
           title="Media"
           description="Hero and supporting imagery shown on storefront cards and detail pages."
         >
+          <ImageUpload
+            images={productImages}
+            setImages={setProductImages}
+            isMultiple
+            refModel="Product"
+            refId={selectedProductId || undefined}
+            type="product"
+            stagedOnly={!selectedProductId}
+          />
           {!selectedProductId ? (
-            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/30 p-8 text-center">
-              <ImageIcon className="mx-auto mb-3 h-8 w-8 text-white/20" />
-              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
-                Save the product to upload images
-              </p>
-              <p className="mt-2 text-[11px] text-white/40">
-                Recommended hero size: 1600×2000 · JPG / WEBP · Max 5 MB
-              </p>
-            </div>
-          ) : (
-            <>
-              <ImageUpload
-                images={productImages}
-                setImages={setProductImages}
-                isMultiple
-                refModel="Product"
-                refId={selectedProductId}
-                type="product"
-              />
-              {productImages.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    openProductGallery({
-                      name: formData.name,
-                      _id: selectedProductId,
-                      images: productImages,
-                    })
-                  }
-                  className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
-                >
-                  View all images
-                </button>
-              ) : null}
-            </>
-          )}
+            <p className="mt-3 text-[11px] text-white/40">
+              Pick images now. They stay in the browser until you save the product, then they upload automatically.
+            </p>
+          ) : productImages.length > 0 ? (
+            <button
+              type="button"
+              onClick={() =>
+                openProductGallery({
+                  name: formData.name,
+                  _id: selectedProductId,
+                  images: productImages,
+                })
+              }
+              className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+            >
+              View all images
+            </button>
+          ) : null}
         </FormSection>
       ) : null}
 
@@ -2109,7 +2329,7 @@ const Product = () => {
           <div className="mt-6 flex flex-col gap-3 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
-              disabled={isFirst}
+              disabled={isFirst || isSavingProduct}
               onClick={() => !isFirst && setActiveFormTab(tabIds[idx - 1])}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -2124,15 +2344,26 @@ const Product = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90"
+                disabled={isSavingProduct}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {selectedProductSlug ? "Save product" : "Publish product"}
+                {isSavingProduct ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                {isSavingProduct
+                  ? selectedProductSlug
+                    ? "Saving product"
+                    : "Creating product"
+                  : selectedProductSlug
+                    ? "Save product"
+                    : "Publish product"}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setActiveFormTab(tabIds[idx + 1])}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/[0.08] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+                disabled={isSavingProduct}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/[0.08] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next <ChevronRight className="h-3 w-3" />
               </button>
@@ -2294,7 +2525,7 @@ const Product = () => {
 
                 <div className="col-span-1 md:col-span-2">
                   <span className="text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest whitespace-nowrap">
-                    {[product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
+                    {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
                   </span>
                 </div>
 

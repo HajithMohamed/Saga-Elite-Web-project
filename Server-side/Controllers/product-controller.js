@@ -12,6 +12,10 @@ const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
 const { emitToAll } = require("../Utils/socket-service");
 const runInTransaction = require("../Utils/safe-transaction");
+const {
+    assignVariantSkus,
+    generateUniqueProductArtNo,
+} = require("../Utils/product-identity");
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminUser = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 
@@ -234,6 +238,7 @@ const addProduct = catchAsync(async (req, res, next) => {
         "isLimited",
         "isActive",
         "maxPerUser",
+        "lowStockThreshold",
         "variants"
     );
 
@@ -282,11 +287,8 @@ const addProduct = catchAsync(async (req, res, next) => {
         productData.drop = null;
     }
 
-    const existingProduct = await Product.findOne({ artNo: productData.artNo });
-
-    if (existingProduct) {
-        return next(new AppError("Product with this Art No already exists", 400));
-    }
+    productData.artNo = await generateUniqueProductArtNo(Product);
+    assignVariantSkus(productData.variants, productData.artNo);
 
     const newlyCreatedProduct = await Product.create(productData);
 
@@ -360,6 +362,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
         "isActive",
         "maxPerUser",
         "isLimited",
+        "lowStockThreshold",
         "variants"
     ];
 
@@ -419,6 +422,10 @@ const updateProduct = catchAsync(async (req, res, next) => {
 
     if (!product) {
         return next(new AppError("Product not found", 404));
+    }
+
+    if (Array.isArray(productData.variants)) {
+        assignVariantSkus(productData.variants, product.artNo);
     }
 
     const shouldNotifyOffer =
@@ -648,7 +655,18 @@ const getLandingProducts = catchAsync(async (req, res) => {
       const catSlug = slugify(String(category || ""), { lower: true, strict: true });
       const found = await Category.findOne({ slug: catSlug }).select("_id").lean();
       if (found) {
-        filter.categoryId = found._id;
+        const foundPath = await buildCategoryPathFromCategoryId(found._id);
+        const categoryRegex = new RegExp(`^${escapeRegex(String(category))}$`, "i");
+        filter.$or = [
+          { categoryId: found._id },
+          { category: categoryRegex },
+        ];
+
+        if (foundPath) {
+          filter.$or.push({
+            categoryPath: new RegExp(`^${escapeRegex(foundPath)}(?:/|$)`, "i"),
+          });
+        }
       } else {
         // fallback to legacy string matching
         filter.category = new RegExp(`^${escapeRegex(String(category))}$`, "i");

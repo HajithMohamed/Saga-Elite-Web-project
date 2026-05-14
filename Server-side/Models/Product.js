@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
+const {
+  assignVariantSkus,
+  generateProductArtNo,
+  normalizeArtNo,
+} = require("../Utils/product-identity");
 
 /* ===============================
    Variant Schema
@@ -57,6 +62,7 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 200,
+      index: true,
     },
 
     slug: {
@@ -311,8 +317,15 @@ productSchema.index({
 /* ===============================
    Slug Generation & Stock Calc
 =================================*/
+productSchema.pre("validate", function () {
+  this.artNo = normalizeArtNo(this.artNo) || generateProductArtNo();
+  if (this.variants && this.variants.length > 0) {
+    assignVariantSkus(this.variants, this.artNo);
+  }
+});
+
 productSchema.pre("save", function () {
-  if (this.isNew || this.isModified("name")) {
+  if (this.isNew || this.isModified("name") || this.isModified("artNo")) {
     this.slug = slugify(`${this.name}-${this.artNo}`, {
       lower: true,
       strict: true,

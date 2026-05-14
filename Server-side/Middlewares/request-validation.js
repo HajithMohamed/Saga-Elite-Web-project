@@ -263,11 +263,18 @@ const sanitizeVariants = (variants, { required = false } = {}) => {
     }
 
     return {
-      sku: sanitizeString(variant.sku, `variants[${index}].sku`, { required: true, maxLength: 50 }),
+      sku: sanitizeOptionalPlainText(variant.sku, `variants[${index}].sku`, { maxLength: 50 }),
       size: sanitizeString(variant.size, `variants[${index}].size`, { required: true, maxLength: 20 }),
       color: sanitizeString(variant.color, `variants[${index}].color`, { required: true, maxLength: 30 }),
+      colorCode: sanitizeOptionalPlainText(variant.colorCode, `variants[${index}].colorCode`, { maxLength: 20 }),
       stock: sanitizeNumber(variant.stock, `variants[${index}].stock`, { required: true, min: 0, integer: true }),
-      priceAdjustment: sanitizeNumber(variant.priceAdjustment ?? 0, `variants[${index}].priceAdjustment`, { min: 0 }),
+      priceAdjustment: sanitizeNumber(
+        variant.priceAdjustment === "" || variant.priceAdjustment === undefined || variant.priceAdjustment === null
+          ? 0
+          : variant.priceAdjustment,
+        `variants[${index}].priceAdjustment`,
+        { min: 0 }
+      ),
     };
   });
 };
@@ -461,8 +468,14 @@ const validateProductCreate = createValidationMiddleware((req) => {
 
   req.body = {
     name: sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 }),
-    artNo: sanitizeString(req.body.artNo, "artNo", { required: true, minLength: 2, maxLength: 50 }),
+    artNo: sanitizeOptionalPlainText(req.body.artNo, "artNo", { minLength: 2, maxLength: 50 }),
     description: sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 }),
+    story: sanitizeOptionalPlainText(req.body.story, "story", { maxLength: 3000 }),
+    fabric: sanitizeOptionalPlainText(req.body.fabric, "fabric", { maxLength: 200 }),
+    gsm: sanitizeOptionalPlainText(req.body.gsm, "gsm", { maxLength: 100 }),
+    fitType: sanitizeOptionalPlainText(req.body.fitType, "fitType", { maxLength: 100 }),
+    careInstructions: sanitizeOptionalPlainText(req.body.careInstructions, "careInstructions", { maxLength: 1000 }),
+    sizeGuide: sanitizeOptionalPlainText(req.body.sizeGuide, "sizeGuide", { maxLength: 2000 }),
     brand: sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 }),
     category: hasCategoryId
       ? sanitizeOptionalPlainText(req.body.category, "category", { maxLength: 100 })
@@ -501,6 +514,12 @@ const validateProductUpdate = createValidationMiddleware((req) => {
 
   if (req.body.name !== undefined) body.name = sanitizeString(req.body.name, "name", { required: true, minLength: 3, maxLength: 200 });
   if (req.body.description !== undefined) body.description = sanitizeOptionalPlainText(req.body.description, "description", { maxLength: 2000 });
+  if (req.body.story !== undefined) body.story = sanitizeOptionalPlainText(req.body.story, "story", { maxLength: 3000 });
+  if (req.body.fabric !== undefined) body.fabric = sanitizeOptionalPlainText(req.body.fabric, "fabric", { maxLength: 200 });
+  if (req.body.gsm !== undefined) body.gsm = sanitizeOptionalPlainText(req.body.gsm, "gsm", { maxLength: 100 });
+  if (req.body.fitType !== undefined) body.fitType = sanitizeOptionalPlainText(req.body.fitType, "fitType", { maxLength: 100 });
+  if (req.body.careInstructions !== undefined) body.careInstructions = sanitizeOptionalPlainText(req.body.careInstructions, "careInstructions", { maxLength: 1000 });
+  if (req.body.sizeGuide !== undefined) body.sizeGuide = sanitizeOptionalPlainText(req.body.sizeGuide, "sizeGuide", { maxLength: 2000 });
   if (req.body.brand !== undefined) body.brand = sanitizeString(req.body.brand, "brand", { required: true, minLength: 2, maxLength: 100 });
   if (req.body.category !== undefined) {
     body.category = hasCategoryId

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -237,48 +237,52 @@ const UsersPage = () => {
     }
   }, [dispatch, selectedUserId]);
 
-  const filteredUsers = users
-    .filter((user) => {
-      const matchesSearch =
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.provider.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsers = useMemo(
+    () =>
+      users
+        .filter((user) => {
+          const matchesSearch =
+            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.provider.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && user.isActive) ||
-        (statusFilter === "inactive" && !user.isActive);
+          const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && user.isActive) ||
+            (statusFilter === "inactive" && !user.isActive);
 
-      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+          const matchesRole = roleFilter === "all" || user.role === roleFilter;
 
-      const matchesMembership = (() => {
-        if (membershipFilter === "all") return true;
-        if (membershipFilter === "blocked") return !user.isActive;
-        return (user.membership || "standard") === membershipFilter;
-      })();
+          const matchesMembership = (() => {
+            if (membershipFilter === "all") return true;
+            if (membershipFilter === "blocked") return !user.isActive;
+            return (user.membership || "standard") === membershipFilter;
+          })();
 
-      return matchesSearch && matchesStatus && matchesRole && matchesMembership;
-    })
-    .sort((a, b) => {
-      switch (sortMode) {
-        case "spent_desc":
-          return (
-            (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
-          );
-        case "orders_desc":
-          return (
-            (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
-          );
-        case "last_active": {
-          const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
-          const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
-          return bDate - aDate;
-        }
-        case "newest":
-        default:
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      }
-    });
+          return matchesSearch && matchesStatus && matchesRole && matchesMembership;
+        })
+        .sort((a, b) => {
+          switch (sortMode) {
+            case "spent_desc":
+              return (
+                (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
+              );
+            case "orders_desc":
+              return (
+                (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
+              );
+            case "last_active": {
+              const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
+              const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
+              return bDate - aDate;
+            }
+            case "newest":
+            default:
+              return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          }
+        }),
+    [membershipFilter, roleFilter, searchTerm, sortMode, statusFilter, users]
+  );
 
   const bulk = useBulkSelection(filteredUsers);
   const [bulkPending, setBulkPending] = useState(false);

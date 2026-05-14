@@ -80,6 +80,17 @@ module.exports = (err, req, res, next) => {
         err.message = `Duplicate field value for ${fields}. Please use another value.`;
     }
 
+    const isMongoConnectivityError =
+        err.name === 'MongoServerSelectionError' ||
+        err.name === 'MongoNetworkError' ||
+        /server selection timed out|getaddrinfo|ECONNREFUSED|connection .* closed/i.test(err.message || '');
+
+    if (isMongoConnectivityError) {
+        err.statusCode = 503;
+        err.status = 'error';
+        err.message = 'Database connection is unavailable. Please try again shortly.';
+    }
+
     err.statusCode = err.statusCode || 500;
     err.status = err.status || "error";
 

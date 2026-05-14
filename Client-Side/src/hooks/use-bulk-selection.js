@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+const defaultGetId = (item) => item?._id;
+
+const normalizeId = (id) => (id == null ? null : String(id));
+
 /**
  * useBulkSelection — track a Set of selected item IDs.
  *
- * Resets selection automatically when the items array reference changes
- * (e.g., a filter or refetch swaps the list out), so callers don't end up
- * acting on stale IDs that are no longer visible.
+ * Resets selection when the visible item set changes, while avoiding loops
+ * caused by derived arrays that are recreated on every render.
  *
  *   const items = useFilteredProducts(...);
  *   const {
@@ -13,28 +16,33 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  *     isAllSelected, isSomeSelected, count,
  *   } = useBulkSelection(items, (item) => item._id);
  */
-const useBulkSelection = (items, getId = (item) => item?._id) => {
+const useBulkSelection = (items, getId = defaultGetId) => {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
-  // Wipe stale selection when the underlying list changes identity. This is
-  // intentionally reference-equality (filter/refetch creates a new array);
-  // a fresh fetch with same data shouldn't blow away the user's choice, so
-  // upstream should memoize the items array if that matters.
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [items]);
-
   const visibleIds = useMemo(
-    () => (Array.isArray(items) ? items.map(getId).filter(Boolean) : []),
+    () =>
+      Array.isArray(items)
+        ? items.map((item) => normalizeId(getId(item))).filter(Boolean)
+        : [],
     [items, getId]
   );
 
+  const visibleIdSignature = useMemo(
+    () => [...new Set(visibleIds)].sort().join("|"),
+    [visibleIds]
+  );
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [visibleIdSignature]);
+
   const toggle = useCallback((id) => {
-    if (id == null) return;
+    const normalizedId = normalizeId(id);
+    if (!normalizedId) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(normalizedId)) next.delete(normalizedId);
+      else next.add(normalizedId);
       return next;
     });
   }, []);
@@ -55,7 +63,13 @@ const useBulkSelection = (items, getId = (item) => item?._id) => {
 
   const clear = useCallback(() => setSelectedIds(new Set()), []);
 
-  const isSelected = useCallback((id) => selectedIds.has(id), [selectedIds]);
+  const isSelected = useCallback(
+    (id) => {
+      const normalizedId = normalizeId(id);
+      return normalizedId ? selectedIds.has(normalizedId) : false;
+    },
+    [selectedIds]
+  );
 
   const isAllSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
