@@ -2496,7 +2496,7 @@ const Product = () => {
                 </div>
 
                 <div className="col-span-1 md:col-span-2">
-                  <span className="font-serif text-saga-primary font-bold text-lg">LKR {Number(product.basePrice || 0).toLocaleString()}</span>
+                  <span className="text-[10px] uppercase tracking-widest text-saga-primary font-bold">LKR {Number(product.basePrice || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="col-span-1 md:col-span-1">
