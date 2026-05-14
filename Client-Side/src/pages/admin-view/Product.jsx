@@ -187,6 +187,7 @@ const getErrorMessage = (error, fallback = "Request failed") => {
 };
 
 const CUSTOM_OPTION = "__custom__";
+const CATEGORY_ROOT_TAGS = ["Gents", "Ladies", "Unisex"];
 
 const MATERIAL_OPTIONS = [
   "Cotton",
@@ -301,6 +302,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTag, setActiveTag] = useState(CATEGORY_ROOT_TAGS[0]);
   const [editingId, setEditingId] = useState("");
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -310,29 +312,58 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
   const [showOnHome, setShowOnHome] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
-  const resetForm = useCallback(() => {
-    setEditingId("");
-    setName("");
-    setSlug("");
-    setParentCategory("");
-    setSortOrder("0");
-    setIsFeatured(false);
-    setShowOnHome(false);
-    setIsActive(true);
-    setError(null);
-  }, []);
+  const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
+  const visibleCategoryTree = activeRootNode ? activeRootNode.children || [] : [];
+
+  const resetForm = useCallback(
+    (nextParentCategory = activeRootNode ? String(activeRootNode._id) : "") => {
+      setEditingId("");
+      setName("");
+      setSlug("");
+      setParentCategory(nextParentCategory);
+      setSortOrder("0");
+      setIsFeatured(false);
+      setShowOnHome(false);
+      setIsActive(true);
+      setError(null);
+    },
+    [activeRootNode]
+  );
+
+  useEffect(() => {
+    if (!categoryTree.length) return;
+
+    const activeRootExists = findCategoryNode(categoryTree, activeTag);
+    if (activeRootExists) return;
+
+    const fallbackTag = CATEGORY_ROOT_TAGS.find((tag) => findCategoryNode(categoryTree, tag));
+    if (fallbackTag) {
+      setActiveTag(fallbackTag);
+    }
+  }, [activeTag, categoryTree]);
+
+  const switchActiveTag = useCallback(
+    (tag) => {
+      const nextTag = CATEGORY_ROOT_TAGS.find((candidate) => normalizeText(candidate) === normalizeText(tag)) || CATEGORY_ROOT_TAGS[0];
+      const nextRootNode = findCategoryNode(categoryTree, nextTag);
+
+      setActiveTag(nextTag);
+      resetForm(nextRootNode ? String(nextRootNode._id) : "");
+    },
+    [categoryTree, resetForm]
+  );
 
   const startEdit = useCallback((category) => {
     setEditingId(String(category._id));
     setName(category.name || "");
     setSlug(category.slug || "");
-    setParentCategory(category.parentCategory ? String(category.parentCategory) : "");
+    setParentCategory(category.parentCategory ? String(category.parentCategory) : activeRootNode ? String(activeRootNode._id) : "");
     setSortOrder(String(category.sortOrder ?? 0));
     setIsFeatured(!!category.isFeatured);
     setShowOnHome(!!category.showOnHome);
     setIsActive(category.isActive ?? true);
     setError(null);
-  }, []);
+  }, [activeRootNode]);
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
@@ -346,7 +377,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
     const payload = {
       name: name.trim(),
       slug: slug.trim() || undefined,
-      parentCategory: parentCategory || null,
+      parentCategory: parentCategory || (activeRootNode ? String(activeRootNode._id) : null),
       sortOrder: Number(sortOrder || 0),
       isFeatured,
       showOnHome,
@@ -373,7 +404,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
     } finally {
       setLoading(false);
     }
-  }, [editingId, isActive, isFeatured, name, onRefreshCategories, parentCategory, resetForm, showOnHome, slug, sortOrder, toast]);
+  }, [activeRootNode, editingId, isActive, isFeatured, name, onRefreshCategories, parentCategory, resetForm, showOnHome, slug, sortOrder, toast]);
 
   const handleDelete = useCallback(
     async (category) => {
@@ -449,7 +480,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
     [handleDelete, startEdit]
   );
 
-  const categoryOptions = collectCategoryOptions(categoryTree).filter((option) => option.value !== editingId);
+  const categoryOptions = collectCategoryOptions(activeRootNode ? [activeRootNode] : []).filter((option) => option.value !== editingId);
 
   return (
     <motion.div
@@ -462,7 +493,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
           <h3 className="mt-2 text-xl font-semibold text-white">Category management</h3>
-          <p className="mt-1 text-sm text-white/50">Edit the shared category tree from inside the product workspace.</p>
+          <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -482,6 +513,37 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
         </div>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        {CATEGORY_ROOT_TAGS.map((tag) => {
+          const isActive = normalizeText(activeTag) === normalizeText(tag);
+          const rootNode = findCategoryNode(categoryTree, tag);
+
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => switchActiveTag(tag)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition ${
+                isActive
+                  ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                  : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
+              }`}
+            >
+              {tag}
+              <span className="rounded-full border border-current/20 px-2 py-0.5 text-[9px] tracking-[0.12em]">
+                {rootNode?.children?.length || 0}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeRootNode ? (
+        <div className="mb-4 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#f2ca50]">
+          Active tag: <span className="font-semibold">{activeRootNode.name}</span>
+        </div>
+      ) : null}
+
       {error ? (
         <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
           {error}
@@ -490,8 +552,13 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-3">
-          {renderNodes(categoryTree)}
-          {categoryTree.length === 0 ? (
+          {renderNodes(visibleCategoryTree, activeRootNode ? [activeRootNode.name] : [])}
+          {activeRootNode && visibleCategoryTree.length === 0 ? (
+            <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+              No subcategories exist under {activeRootNode.name} yet.
+            </div>
+          ) : null}
+          {!activeRootNode ? (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
               No categories loaded yet.
             </div>
@@ -541,7 +608,9 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
                 onChange={(event) => setParentCategory(event.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
               >
-                <option value="">Root category</option>
+                <option value="" disabled>
+                  Select a parent inside {activeRootNode?.name || activeTag}
+                </option>
                 {categoryOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
