@@ -970,17 +970,33 @@ const ParticleField = () => {
   );
 };
 
-export const HeroBackdropFX = () => (
-  <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
-    <Canvas
-      camera={{ position: [0, 0, 1.5], fov: 75 }}
-      gl={{ antialias: false, powerPreference: "low-power" }}
-      dpr={[1, 1.5]}
-    >
-      <ParticleField />
-    </Canvas>
-  </div>
-);
+export const HeroBackdropFX = () => {
+  const [hasError, setHasError] = useState(false);
+
+  // If WebGL context was lost, gracefully render nothing
+  if (hasError) return null;
+
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
+      <Canvas
+        camera={{ position: [0, 0, 1.5], fov: 75 }}
+        gl={{ antialias: false, powerPreference: "low-power" }}
+        dpr={[1, 1.5]}
+        frameloop="demand"
+        onCreated={({ gl }) => {
+          // Handle WebGL context lost gracefully instead of crashing
+          const canvas = gl.domElement;
+          canvas.addEventListener("webglcontextlost", (e) => {
+            e.preventDefault();
+            setHasError(true);
+          });
+        }}
+      >
+        <ParticleField />
+      </Canvas>
+    </div>
+  );
+};
 
 /* ──────────────────────────────────────────────────────────────────────────
    LIVE DROP COUNTDOWN XL — full-bleed cinematic countdown.

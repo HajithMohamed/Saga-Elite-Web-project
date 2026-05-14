@@ -1,6 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+
+// Suppress THREE.Clock deprecation warning from @react-three/fiber internals.
+// This is a known upstream issue — fiber still references THREE.Clock which was
+// deprecated in three.js r184+. Safe to remove once fiber is updated.
+const _origWarn = console.warn;
+console.warn = (...args) => {
+  if (typeof args[0] === "string" && args[0].includes("THREE.Clock")) return;
+  _origWarn.apply(console, args);
+};
 import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";

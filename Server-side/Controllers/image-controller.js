@@ -442,9 +442,10 @@ const getHeroImages = catchAsync(async (req, res, next) => {
     ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
-  if (!heroImages.length) {
-    return next(new AppError("No hero images found", 404));
-  }
+  // Return empty array gracefully — no 404 when DB simply has no images yet
+  // if (!heroImages.length) {
+  //   return next(new AppError("No hero images found", 404));
+  // }
 
   res.status(200).json({
     success: true,
@@ -461,9 +462,10 @@ const getAdImages = catchAsync(async (req, res, next) => {
     ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
-  if (!adImages.length) {
-    return next(new AppError("No ad images found", 404));
-  }
+  // Return empty array gracefully — no 404 when DB simply has no images yet
+  // if (!adImages.length) {
+  //   return next(new AppError("No ad images found", 404));
+  // }
 
   res.status(200).json({
     success: true,
@@ -512,9 +514,10 @@ const getCategoryLogoImages = catchAsync(async (req, res, next) => {
 
   const categoryLogoImages = await Image.find(filter).sort({ order: 1 });
 
-  if (!categoryLogoImages.length) {
-    return next(new AppError("No category logo images found", 404));
-  }
+  // Return empty array gracefully — no 404 when DB simply has no images yet
+  // if (!categoryLogoImages.length) {
+  //   return next(new AppError("No category logo images found", 404));
+  // }
 
   res.status(200).json({
     success: true,
