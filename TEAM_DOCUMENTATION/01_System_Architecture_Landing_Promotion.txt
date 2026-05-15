@@ -1,0 +1,421 @@
+PERSON 1 DOCUMENTATION
+Role: System Architecture, Landing Page and Promotion System Developer
+
+
+1. Role Summary
+---------------
+This role is responsible for the foundation and public-facing promotional
+experience of Saga Elite. The work includes project architecture, backend API
+registration, global middleware setup, landing page data loading, hero/banner
+systems, promotional drops, surprise gift logic, site configuration, public
+content pages and third-party authentication integrations.
+
+The role connects the brand experience to the backend. It makes sure the public
+homepage, hero section, banners, limited-edition promotion blocks, mystery gift
+section, contact/newsletter systems and editable site configuration are powered
+by real APIs and database collections.
+
+
+2. Frontend Responsibilities
+----------------------------
+Main public pages and components:
+
+- Client-Side/src/pages/shopping-view/Home.jsx
+  Main landing page. Loads hero slides, banners, active drops, next drop,
+  offers, product rails and mystery gift content.
+
+- Client-Side/src/components/landing/LandingSections.jsx
+  Contains major landing sections such as HeroCarousel, AnnouncementBar,
+  DropCountdownBand, LiveDropSection, MysteryGiftSection, MysteryGiftStrip,
+  OffersSlider, newsletter signup, hero visual effects and landing content
+  blocks.
+
+- Client-Side/src/components/landing/CinematicLanding.jsx
+  Cinematic brand/story sections used on the landing page.
+
+- Client-Side/src/components/landing/ForYouRail.jsx
+  Personalized product rails for customer-facing recommendations.
+
+- Client-Side/src/services/landing-api.js
+  Frontend service that collects landing data from multiple backend endpoints:
+  products, deals, categories, images, drops, offers and banners.
+
+- Client-Side/src/components/common-components/MainHeader.jsx
+  Public header with drop announcement/countdown support, navigation, search,
+  notifications and auth drawer integration.
+
+- Client-Side/src/components/common-components/MainFooter.jsx
+  Public footer with brand information, social links, newsletter CTA and legal
+  navigation.
+
+- Client-Side/src/pages/Legal/AboutPage.jsx
+- Client-Side/src/pages/Legal/ContactPage.jsx
+- Client-Side/src/pages/Legal/PrivacyPolicyPage.jsx
+- Client-Side/src/pages/Legal/TermsConditionsPage.jsx
+- Client-Side/src/pages/Legal/RefundPolicyPage.jsx
+- Client-Side/src/pages/Legal/DeliveryPolicyPage.jsx
+  Public trust, policy and brand content pages.
+
+Admin/frontend pages owned or heavily supported:
+
+- Client-Side/src/pages/admin-view/HomeImages.jsx
+  Admin image management for hero, ad, logo and category-logo media.
+
+- Client-Side/src/pages/admin-view/GiftManager.jsx
+  Admin interface for mystery gift/collectible creation and analytics.
+
+- Client-Side/src/pages/admin-view/AboutSiteConfig.jsx
+  Admin-managed brand, founder, contact, social, stats, values, team and
+  materials configuration.
+
+- Client-Side/src/pages/admin-view/SeoSettings.jsx
+  SEO, branding, maintenance mode, payment settings and inventory threshold
+  configuration.
+
+- Client-Side/src/pages/admin-view/PoliciesManager.jsx
+  Admin-managed policy content.
+
+- Client-Side/src/pages/admin-view/FooterManager.jsx
+  Footer content management.
+
+- Client-Side/src/pages/admin-view/AnnouncementBar.jsx
+  Announcement bar configuration.
+
+- Client-Side/src/pages/admin-view/ContactPageManager.jsx
+  Public contact page and contact form settings.
+
+- Client-Side/src/pages/admin-view/ContactInquiriesPage.jsx
+  Admin view for contact form submissions.
+
+- Client-Side/src/pages/admin-view/NewsletterSubscribersPage.jsx
+  Admin view for newsletter subscribers.
+
+- Client-Side/src/pages/admin-view/CommunityPage.jsx
+  Testimonials, social/community and influencer-related admin content.
+
+
+3. Backend Responsibilities
+---------------------------
+Main server and API setup:
+
+- Server-side/server.js
+  Express app setup, global middleware registration, API route mounting,
+  Socket.io setup, database startup and background job startup.
+
+Important routes:
+
+- Server-side/Routes/banner-routes.js
+- Server-side/Routes/deal-routes.js
+- Server-side/Routes/gift-routes.js
+- Server-side/Routes/image-routes.js
+- Server-side/Routes/category-routes.js
+- Server-side/Routes/siteConfigRoutes.js
+- Server-side/Routes/contactRoutes.js
+- Server-side/Routes/newsletterRoutes.js
+- Server-side/Routes/influencer-routes.js
+- Server-side/Routes/google-routes.js
+- Server-side/Routes/facebook-routes.js
+- Server-side/Routes/authRoutes.js
+
+Important controllers:
+
+- Server-side/Controllers/banner-controller.js
+  Active banners and banner feed for landing/promotion.
+
+- Server-side/Controllers/deal-controller.js
+  Active deals used by landing and product promotion.
+
+- Server-side/Controllers/gift-controller.js
+  Gift CRUD, gift analytics and gift order lookup.
+
+- Server-side/Controllers/image-controller.js
+  Image upload, product/drop/hero/ad/logo/category-logo retrieval, image order,
+  primary image, active image and receipt upload support.
+
+- Server-side/Controllers/category-controller.js
+  Public category tree, featured categories and category CRUD support through
+  admin routes.
+
+- Server-side/Controllers/siteConfigController.js
+  Editable key-value site configuration such as about content, brand settings,
+  policies, SEO, maintenance and bank/payment content.
+
+- Server-side/Controllers/contactController.js
+  Public contact form submission and admin contact inquiry management.
+
+- Server-side/Controllers/newsletterController.js
+  Newsletter subscription and admin subscriber list.
+
+- Server-side/Controllers/influencer-controller.js
+  Influencer/community partner management.
+
+- Server-side/Controllers/google-auth-controller.js
+  Google token verification and account creation/login flow.
+
+- Server-side/Controllers/facebook-auth-controller.js
+  Facebook token debugging/profile fetch and account creation/login flow.
+
+- Server-side/Controllers/auth-controller.js
+  Shared authentication support, OTP and guest registration support.
+
+Important utility/config files:
+
+- Server-side/Config/runtime-config.js
+  Runtime environment validation.
+
+- Server-side/Config/cors-config.js
+  CORS origin handling.
+
+- Server-side/Config/cloudinary-config.js
+  Cloudinary configuration.
+
+- Server-side/Utils/image-upload.js
+  Upload file buffer to Cloudinary.
+
+- Server-side/Utils/seed-site-about-defaults.js
+  Seeds default site/about configuration.
+
+- Server-side/Utils/send-mail.js
+- Server-side/Utils/email-template.js
+  Shared transactional email support.
+
+
+4. Database and Model Responsibilities
+--------------------------------------
+Primary models:
+
+- Banner
+  Stores landing/promotion banners with title, image, CTA, active window,
+  display order and active status.
+
+- Gift
+  Stores mystery collectibles. Key fields: name, drop, isActive, probability,
+  condition, minOrderValue, rarity, description, internalNotes and imageUrl.
+
+- Image
+  Stores Cloudinary image metadata for Product, Drop, Review, User and System
+  images. Used for hero, ad, logo and category-logo media.
+
+- SiteConfig
+  Key-value store for editable site content, branding, SEO, maintenance,
+  policies, contact content and payment details.
+
+- Category
+  Category tree with name, slug, parentCategory, ancestors and display fields.
+
+- Banner
+  Active promotional banner collection used by landing APIs.
+
+- Deal
+  Active deal records connected to promotional product display.
+
+- ContactInquiry
+  Stores customer contact form submissions with status and response metadata.
+
+- NewsletterSubscriber
+  Stores newsletter email subscribers.
+
+- Influencer
+  Stores influencer or community collaborator records.
+
+- AdminLog
+  Stores admin audit actions generated by admin-log-middleware.
+
+- User
+  Shared with Person 4 for Google/Facebook account integration.
+
+
+5. Middleware Used By This Role
+-------------------------------
+- helmet, compression, cookieParser, express.json and configureCors in server.js
+  Global server protection, compression, cookies, JSON body parsing and CORS.
+
+- guest-tracking-middleware.js
+  Assigns a guestToken cookie for public sessions.
+
+- rateLimitinMiddleware.js
+  Applies authLimiter, generalLimiter and contactLimiter.
+
+- customMiddleware.js
+  Logs request method, URL, IP, user agent, status and duration.
+
+- maintenance-mode.js
+  Blocks public traffic if the maintenance SiteConfig key is enabled.
+
+- optional-auth-middleware.js
+  Allows public product/drop/landing requests to optionally include user data.
+
+- auth-middleware.js
+  Protects admin-only content management APIs.
+
+- admin-middleware.js
+  Protects admin pages and endpoints with requireAdmin, requireSuperAdmin and
+  requirePermission.
+
+- request-validation.js
+  Used for validateBannerCreate, validateBannerUpdate, validateDropCreate,
+  validateDropUpdate, validateImageUploadRequest, validateImageReorder,
+  validateDeleteAllImages, validateNewsletterSubscribe, validateContactSubmission,
+  validateContactUpdate, validateGoogleAuth and validateFacebookAuth.
+
+- multer-middleware.js
+  Used for image upload and receipt image/PDF upload support.
+
+- admin-log-middleware.js
+  Records successful admin changes to banners, images, gifts, site config and
+  related resources.
+
+
+6. Main Business Logic
+----------------------
+Landing page data logic:
+
+1. Home.jsx calls getLandingData() from landing-api.js.
+2. landing-api.js performs parallel API calls for products, deals, category
+   logo images, ad images, offers, active drops, active banners and hero images.
+3. If active banners exist, the hero uses banner data.
+4. If no banners exist, the hero falls back to system hero images.
+5. Active drops can override hero slides and announcement sections.
+6. Offers and deals are mapped into promotional product cards.
+7. The page remains usable even if one API call fails.
+
+Banner logic:
+
+1. Admin creates banner with image, title, CTA and active window.
+2. Backend filters active banners by isActive and active date range.
+3. Frontend normalizes the banner payload into carousel slides.
+4. Display order controls ordering.
+
+Gift/mystery collectible logic:
+
+1. Admin creates gifts in GiftManager.
+2. Gift can be global or attached to a drop.
+3. Gift can be always available, min order value based or per drop.
+4. Order controller selects eligible gifts using weighted probability.
+5. Gift is attached to the order but hidden until confirmation/reveal logic.
+6. Gift analytics shows how many orders received gifts.
+
+Site configuration logic:
+
+1. Admin saves site config values by key.
+2. SiteConfig stores flexible Mixed values.
+3. Public pages use useShopAbout or direct site-config calls.
+4. Maintenance mode also reads from SiteConfig.
+
+OAuth integration logic:
+
+1. Frontend sends Google/Facebook access token.
+2. Backend verifies token or fetches social profile.
+3. Existing user is found by provider ID or email.
+4. New user is created if needed.
+5. create-send-token utility issues JWT and cookie response.
+
+
+7. Admin Panel Flow
+-------------------
+Admin image/banner/content flow:
+
+1. Admin logs in.
+2. Admin opens Home Images, About Site Config, SEO Settings, Footer Manager,
+   Policies Manager, Announcement Bar or Gift Manager.
+3. PermissionGuard checks route access.
+4. Backend checks authMiddleware and admin permissions.
+5. Request is validated.
+6. Controller updates Image, Banner, SiteConfig, Gift or related model.
+7. admin-log-middleware records the action.
+8. Public page uses the updated content on refresh.
+
+Gift manager flow:
+
+1. Admin creates gift with rarity and condition.
+2. Admin can attach gift to a drop or keep it global.
+3. Admin can edit or deactivate a gift.
+4. Analytics counts attached and revealed gifts.
+5. Order system uses active gifts during checkout/order confirmation.
+
+Contact/newsletter flow:
+
+1. Customer submits contact form or newsletter email.
+2. Backend validates and stores the record.
+3. Admin views inquiries or subscribers.
+4. Admin can update inquiry status.
+
+
+8. Shopping/Public Flow
+-----------------------
+1. Customer visits the homepage.
+2. Public layout renders MainHeader, Home and MainFooter.
+3. Guest tracking middleware creates a guest token.
+4. Home page loads hero, banners, live drop, products, offers and gift sections.
+5. Customer can open drops, product listing, offers, about, contact or legal
+   pages.
+6. Customer sees active promotional content and drop countdowns.
+7. Customer can subscribe to newsletter or send a contact inquiry.
+8. Customer later receives gift eligibility through the checkout/order system.
+
+
+9. Important API Endpoints
+--------------------------
+- GET /api/v1/banners/active
+- GET /api/v1/banners/feed
+- POST /api/v1/banners
+- PATCH /api/v1/banners/:id
+- DELETE /api/v1/banners/:id
+
+- GET /api/v1/deals/active
+
+- GET /api/v1/gifts
+- POST /api/v1/gifts
+- PATCH /api/v1/gifts/:giftId
+- GET /api/v1/gifts/analytics
+- GET /api/v1/gifts/:giftId/orders
+
+- POST /api/v1/image/upload-image
+- GET /api/v1/image/get-hero-images
+- GET /api/v1/image/get-ad-images
+- GET /api/v1/image/get-logo-images
+- GET /api/v1/image/get-category-logo-images
+- PATCH /api/v1/image/reorder-images
+
+- GET /api/v1/site-config/about
+- GET /api/v1/site-config/:key
+- PUT /api/v1/site-config/:key
+
+- POST /api/v1/newsletter/subscribe
+- GET /api/v1/newsletter/admin/subscribers
+
+- POST /api/v1/contact
+- GET /api/v1/contact/admin
+- PATCH /api/v1/contact/admin/:id
+
+- POST /api/v1/google/auth
+- POST /api/v1/facebook/auth
+
+
+10. Integration With Other Roles
+--------------------------------
+Works with Person 2:
+Landing page displays products, active drops, categories and stock-aware product
+cards from the product/drop system.
+
+Works with Person 3:
+Gift selection is attached to orders and only becomes meaningful after payment
+and order confirmation.
+
+Works with Person 4:
+Admin-only content pages use RBAC, admin layout, authentication, audit logs and
+super-admin site configuration permissions.
+
+
+11. Presentation Points
+-----------------------
+- I designed the main architecture and route structure for the MERN platform.
+- I built the public landing page and hero/banner promotional system.
+- I connected frontend landing sections to backend APIs instead of static data.
+- I implemented the mystery gift system and admin gift management.
+- I supported site configuration, public legal/content pages, newsletter and
+  contact management.
+- I integrated Google and Facebook login at API level.
+- I helped secure the system using validation, maintenance mode, rate limits,
+  CORS, request logging and admin audit logging.
+

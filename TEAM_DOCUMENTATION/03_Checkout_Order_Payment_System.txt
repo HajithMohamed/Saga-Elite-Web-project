@@ -1,0 +1,472 @@
+PERSON 3 DOCUMENTATION
+Role: Checkout, Order, Payment and Notification System Developer
+
+
+1. Role Summary
+---------------
+This role owns the customer purchase journey after product selection. It covers
+cart-to-checkout flow, order creation, stock deduction during checkout, payment
+reference generation, manual bank payment proof upload, sample card payment,
+admin payment verification, order status management, refunds, invoices,
+customer notifications, admin payment alerts and real-time order/payment
+updates.
+
+This role connects the customer side and operations side. It makes sure that
+orders are created correctly, payments are verified, customers are notified and
+admins can manage order fulfillment.
+
+
+2. Frontend Responsibilities
+----------------------------
+Customer shopping/payment pages:
+
+- Client-Side/src/pages/shopping-view/Cart.jsx
+  Cart view with products, variants, quantities, stock checks and checkout CTA.
+
+- Client-Side/src/pages/shopping-view/Checkout.jsx
+  Checkout form for address, contact number, order notes, coupon/payment method
+  and order submission.
+
+- Client-Side/src/pages/shopping-view/OrderSuccess.jsx
+  Confirmation page after successful order creation.
+
+- Client-Side/src/pages/shopping-view/Orders.jsx
+  Customer order history page.
+
+- Client-Side/src/pages/shopping-view/OrderTracking.jsx
+  Order status tracking page with socket refresh support.
+
+- Client-Side/src/pages/ManualPaymentPage.jsx
+  Manual payment page for reference number, bank details, receipt/proof upload,
+  payment status and customer instructions.
+
+- Client-Side/src/pages/CardPaymentPage.jsx
+  Card/sample payment page.
+
+- Client-Side/src/pages/FindPaymentPage.jsx
+  Customer payment lookup page.
+
+Payment components:
+
+- Client-Side/src/components/Payment/ManualPaymentInstructions.jsx
+- Client-Side/src/components/Payment/PaymentReference.jsx
+- Client-Side/src/components/Payment/ProofSubmission.jsx
+  Manual payment instructions, reference display and proof upload UI.
+
+Admin pages/components:
+
+- Client-Side/src/pages/admin-view/Orders.jsx
+  Admin order management board/list with status updates and order actions.
+
+- Client-Side/src/pages/admin-view/PendingPaymentsPage.jsx
+  Admin manual payment queue.
+
+- Client-Side/src/pages/admin-view/PaymentVerificationPage.jsx
+  Detailed payment verification screen with proof, order, status, approve/reject
+  flow and notes.
+
+- Client-Side/src/components/admin-components/OrderDetailDrawer.jsx
+  Admin order details, timeline and quick actions.
+
+- Client-Side/src/components/admin-components/RefundOrderModal.jsx
+  Refund modal and refund reason/note submission.
+
+Redux/API support:
+
+- Client-Side/src/store/order-slice/index.js
+  createOrder, fetchUserOrders, fetchAdminOrders, fetchOrderById,
+  fetchDashboardStats, updateOrderStatus, refundOrder and bulkUpdateOrderStatus.
+
+- Client-Side/src/store/manualPaymentSlice.js
+  Manual payment generation, proof submission, receipt upload, status lookup,
+  pending queue, verification and method summary state.
+
+- Client-Side/src/api/manualPaymentAPI.js
+  Manual payment HTTP calls.
+
+- Client-Side/src/api/cardPaymentAPI.js
+  Card/sample payment HTTP calls.
+
+- Client-Side/src/store/notification-slice/index.jsx
+  Web notification state used by customer/admin notification UI.
+
+
+3. Backend Responsibilities
+---------------------------
+Important routes:
+
+- Server-side/Routes/order-routes.js
+- Server-side/Routes/manualPaymentRoutes.js
+- Server-side/Routes/notification-routes.js
+- Server-side/Routes/bank-sms-webhook-routes.js
+- Server-side/Routes/whatsapp-webhook-routes.js
+- Server-side/Routes/shipping-zone-routes.js
+- Server-side/Routes/coupon-routes.js
+- Server-side/Routes/image-routes.js
+
+Important controllers:
+
+- Server-side/Controllers/order-controller.js
+  Order creation, user orders, admin orders, single order, status update,
+  refunds, dashboard stats, invoice PDF and bulk order status update.
+
+- Server-side/Controllers/manualPaymentController.js
+  Reference generation, proof submission, receipt upload, sample card payment,
+  payment lookup, pending payment queue, payment detail, admin verification,
+  extension request, payment link resend and method summary.
+
+- Server-side/Controllers/notification-controller.js
+  Customer/admin notifications, read status, admin notification sending,
+  notification updates and notification listing.
+
+- Server-side/Controllers/shipping-zone-controller.js
+  Public/admin shipping zones, fees, provinces and active state.
+
+- Server-side/Controllers/coupon-controller.js
+  Coupon validation during checkout and customer rewards.
+
+- Server-side/Controllers/whatsapp-webhook-controller.js
+  WhatsApp webhook verification and incoming message handling.
+
+Important utilities/jobs:
+
+- Server-side/Utils/safe-transaction.js
+  Transaction wrapper used to keep order/stock/payment operations consistent.
+
+- Server-side/Utils/referenceGenerator.js
+  Unique order/manual payment reference generation.
+
+- Server-side/Utils/invoice-pdf.js
+  Streams order invoice PDF.
+
+- Server-side/Utils/receipt-ocr.js
+  OCR processing for uploaded receipts.
+
+- Server-side/Utils/bank-email-watcher.js
+  IMAP watcher for bank credit confirmation emails.
+
+- Server-side/Utils/bank-parsers/
+  Bank message parsing logic.
+
+- Server-side/Utils/manual-payment-cleanup.js
+  Expires old manual payment/order records and restores stock safely.
+
+- Server-side/Utils/notification-service.js
+  Creates and broadcasts notifications.
+
+- Server-side/Utils/socket-service.js
+  Emits order/payment/notification socket events.
+
+- Server-side/Utils/send-mail.js
+- Server-side/Utils/email-template.js
+  Transactional emails.
+
+- Server-side/Utils/whatsapp-service.js
+  WhatsApp customer/admin notifications.
+
+- Server-side/Utils/reward-service.js
+  Reward/coupon issuing after important order events.
+
+
+4. Database and Model Responsibilities
+--------------------------------------
+Primary models:
+
+- Order
+  Stores order data. Important fields:
+  user, guest, guestEmail, slug, items, totalAmount, shippingAddress,
+  contactNumber, paymentMethod, paymentProofUrl, transactionId,
+  paymentProofHash, paymentVerifiedAt, referenceNumber, status,
+  cancellationReason, cancelledAt, cancelledBy, refundAmount, refundReason,
+  refundNote, refundedAt, refundedBy, paymentStatus, gift, notes, couponCode,
+  couponDiscount and expiresAt.
+
+  Order item fields:
+  product, productName, productArtNo, productSlug, variantSku, size, color,
+  quantity, unitPrice and totalPrice.
+
+  Important statuses:
+  pending, pending_payment, verification_pending, confirmed, shipped,
+  delivered, cancelled, refund_requested and refunded.
+
+- ManualPayment
+  Stores payment references and verification records. Important fields:
+  referenceNumber, slug, orderId, userId, guestId, amount, currency,
+  paymentType, cardDetails, proofUrl, proofSubmittedAt, status, generatedAt,
+  expiresAt, verifiedAt, verifiedBy, rejectionReason, adminNotes,
+  extensionGranted, OCR audit data and bankVerification data.
+
+  Important statuses:
+  pending_payment, proof_submitted, pending_bank_confirmation, verified,
+  rejected and expired.
+
+- Notification
+  Stores user notifications for drop, offer, order, admin, reminder and system
+  messages.
+
+- ShippingZone
+  Stores Sri Lankan delivery zones, provinces, fees, estimated days and active
+  state.
+
+- Coupon
+  Stores discount rules used at checkout.
+
+- UserCoupon
+  Stores user reward coupons.
+
+- Product
+  Stock is deducted/restored from Product variants during order operations.
+
+- Gift
+  Gift is selected and attached to Order.
+
+- Guest and User
+  Orders can belong to registered users or guests.
+
+- OrphanBankCredit
+  Stores unmatched bank credits detected by bank integration.
+
+
+5. Middleware Used By This Role
+-------------------------------
+- auth-middleware.js
+  Required for authenticated checkout, user orders, admin order/payment routes
+  and customer manual payment records.
+
+- optional-auth-middleware.js
+  Supports guest/customer flows where a user may or may not be logged in.
+
+- admin-middleware.js
+  Important permission checks:
+  requirePermission("orders")
+  requirePermission("verifyPayments")
+  requirePermission("manageInventory") for shipping zones
+
+- request-validation.js
+  Important validators:
+  validateOrderCreate, validateOrderStatusUpdate, validateBulkOrderStatus,
+  validateManualPaymentReference, validateManualPaymentProof,
+  validateManualPaymentDecision, validateSampleCardPayment,
+  validateNotificationMessage, validateNotificationUpdate and validateObjectIdParam.
+
+- multer-middleware.js
+  receiptUpload allows image/PDF proof upload for manual payments.
+
+- rateLimitinMiddleware.js
+  contactLimiter protects payment lookup/proof and contact-like operations.
+
+- admin-log-middleware.js
+  Logs admin order changes, payment verification, refunds and shipping updates.
+
+- guest-tracking-middleware.js
+  Provides guestToken for guest checkout and guest payment lookup.
+
+- maintenance-mode.js
+  Can block public checkout/order operations during maintenance.
+
+
+6. Main Business Logic
+----------------------
+Order creation logic:
+
+1. Customer submits checkout form with items, address, contact, payment method,
+   coupon and optional guest email.
+2. validateOrderCreate sanitizes order input.
+3. order-controller uses a transaction.
+4. Each product and selected variant is loaded.
+5. Variant stock is checked.
+6. Product quantity limits and previous purchases are checked.
+7. Variant stock is deducted.
+8. Coupon is evaluated and discount is applied if valid.
+9. Gift eligibility is calculated and gift is attached.
+10. Order is created with payment status and order status.
+11. Manual payment record may be created if payment method is bank transfer.
+12. Email, WhatsApp, notification and socket events are sent.
+
+Manual payment logic:
+
+1. Customer creates an order with manual bank transfer.
+2. Backend generates a unique ManualPayment reference and slug.
+3. Customer sees bank details and reference number.
+4. Customer uploads proof image/PDF or submits proof URL.
+5. OCR extracts reference/amount where possible.
+6. Payment moves into proof_submitted or pending_bank_confirmation.
+7. Admin reviews in PendingPaymentsPage or PaymentVerificationPage.
+8. Admin approves or rejects.
+9. Approval updates ManualPayment, Order status and paymentStatus.
+10. Rejection updates payment/order status and sends customer notification.
+
+Bank auto-verification logic:
+
+1. bank-email-watcher polls configured bank inbox.
+2. Bank parser extracts amount, reference and transaction data.
+3. Matching ManualPayment is found.
+4. bankVerification is updated.
+5. Payment can move to verified if data matches.
+6. Customer/admin receive notifications.
+
+Order status logic:
+
+1. Admin updates order status.
+2. Controller checks allowed transitions.
+3. Cancellation restores product stock.
+4. Delivered status updates user stats and membership tier.
+5. Delivered status can send review request.
+6. Socket events refresh customer and admin order views.
+
+Refund logic:
+
+1. Admin opens refund modal.
+2. Admin enters amount, reason and note.
+3. Backend validates refund conditions.
+4. Order is marked refunded/refund data recorded.
+5. Customer is notified.
+
+Invoice logic:
+
+1. Admin/customer requests invoice.
+2. getOrderInvoice loads order and bank/site config.
+3. invoice-pdf streams PDF response.
+
+
+7. Admin Panel Flow
+-------------------
+Admin order flow:
+
+1. Admin opens /admin/order.
+2. PermissionGuard checks orders permission.
+3. Backend checks authMiddleware and requirePermission("orders").
+4. Admin sees all orders and order details.
+5. Admin changes order status or performs bulk status update.
+6. Backend validates transition.
+7. Customer gets web/email/WhatsApp notification where applicable.
+8. Socket event refreshes order dashboards.
+
+Admin payment verification flow:
+
+1. Admin opens /admin/payments/pending or /admin/manual-payments.
+2. PermissionGuard checks verifyPayments permission.
+3. Admin sees queue of pending/proof-submitted payments.
+4. Admin opens payment detail.
+5. Admin reviews proof image, OCR data, order amount and bank status.
+6. Admin approves or rejects with notes.
+7. Backend updates ManualPayment and Order.
+8. Customer receives decision notification.
+9. Admin log records the verification action.
+
+Admin shipping flow:
+
+1. Admin opens /admin/shipping.
+2. PermissionGuard checks manageInventory permission.
+3. Admin creates/edits province zones, delivery fee and free-above threshold.
+4. Checkout can use shipping zone data for delivery calculation/display.
+
+
+8. Shopping Flow
+----------------
+Customer checkout flow:
+
+1. Customer browses products or drops.
+2. Customer adds selected variant to cart.
+3. Cart displays quantity and remaining stock.
+4. Customer opens checkout.
+5. Customer enters shipping address and contact number.
+6. Customer applies coupon if available.
+7. Customer chooses payment method.
+8. Backend creates order and deducts stock.
+9. Customer is sent to success/payment page.
+
+Manual payment customer flow:
+
+1. Customer chooses manual bank transfer.
+2. Order is created as pending_payment.
+3. Manual payment reference is generated.
+4. Customer transfers money using shown bank details.
+5. Customer uploads receipt/proof.
+6. Customer can check status or request extension.
+7. After admin/bank approval, order becomes confirmed.
+
+Card/sample payment customer flow:
+
+1. Customer chooses card payment.
+2. CardPaymentPage collects cardholder data.
+3. Backend validates card number using Luhn check.
+4. Payment record is created/verified through sample flow.
+5. Order status updates.
+
+Order tracking flow:
+
+1. Customer opens order tracking.
+2. Page fetches order status.
+3. Socket events order:refresh and order:refresh:public update the page.
+4. Customer sees status changes without manual refresh.
+
+
+9. Important API Endpoints
+--------------------------
+- POST /api/v1/orders/create-order
+- GET /api/v1/orders/user-orders
+- GET /api/v1/orders/get-all-orders
+- GET /api/v1/orders/get-order/:id
+- PUT /api/v1/orders/update-order-status/:id
+- PATCH /api/v1/orders/:id/refund
+- GET /api/v1/orders/dashboard-stats
+- GET /api/v1/orders/:id/invoice
+- PATCH /api/v1/orders/bulk/status
+
+- POST /api/v1/manual-payment/generate
+- POST /api/v1/payments/generate-reference
+- POST /api/v1/manual-payments/proof
+- POST /api/v1/manual-payments/receipt
+- POST /api/v1/payments/card/sample
+- GET /api/v1/payments/my-pending
+- GET /api/v1/admin/manual-payments
+- GET /api/v1/admin/manual-payments/summary
+- GET /api/v1/admin/manual-payments/:id
+- PUT /api/v1/admin/manual-payments/:id/verify
+- POST /api/v1/manual-payments/lookup
+- POST /api/v1/manual-payments/:slug/extension
+- POST /api/v1/manual-payments/:slug/send-link
+
+- GET /api/v1/notifications
+- PATCH /api/v1/notifications/:id/read
+- POST /api/v1/notifications/admin/send
+- GET /api/v1/notifications/admin
+
+- GET /api/v1/shipping-zones
+- POST /api/v1/shipping-zones
+- PATCH /api/v1/shipping-zones/:id
+
+- POST /api/webhooks/bank-sms
+- GET /api/webhooks/whatsapp
+- POST /api/webhooks/whatsapp
+
+
+10. Integration With Other Roles
+--------------------------------
+Works with Person 1:
+Mystery gift selection uses Gift records created in the promotion system.
+SiteConfig bank/payment details are displayed in manual payment flow.
+
+Works with Person 2:
+Order creation reads Product variants and deducts/restores stock.
+Product pages send selected variant details to cart/checkout.
+
+Works with Person 4:
+Auth, user profile, admin permissions and customer notification dropdowns are
+required for checkout, order history and admin payment/order management.
+
+
+11. Presentation Points
+-----------------------
+- I built the checkout and order creation flow.
+- I implemented stock deduction during order placement.
+- I developed manual bank payment references, proof upload and admin
+  verification.
+- I added sample card payment support and payment lookup flow.
+- I built admin order management, payment queue and refund handling.
+- I implemented customer/admin email, WhatsApp, web notification and socket
+  updates.
+- I connected order delivery with invoices, review requests, rewards and
+  membership updates.
+
