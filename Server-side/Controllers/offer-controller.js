@@ -4,6 +4,19 @@ const AppError = require("../Utils/appError");
 const Offer = require("../Models/Offer");
 const Product = require("../Models/Product");
 const filterObj = require("../Utils/filter-object");
+const { emitToAll } = require("../Utils/socket-service");
+
+const PRODUCT_IMAGE_POPULATE = {
+  path: "images",
+  select: "url altText colorTag order isPrimary",
+  options: { sort: { isPrimary: -1, order: 1, createdAt: 1 } },
+};
+
+const PUBLIC_PRODUCT_SELECT =
+  "name slug artNo brand category subCategory categoryPath basePrice originalPrice salePrice discountPercent variants totalStock isLimited soldCount wishCount createdAt";
+
+const ADMIN_PRODUCT_SELECT =
+  "name slug artNo basePrice salePrice costPrice discountPercent totalStock";
 
 const OFFER_FIELDS = [
   "name",
@@ -20,6 +33,89 @@ const OFFER_FIELDS = [
   "isActive",
   "estimatedMarginAfterDiscount",
 ];
+
+const escapeRegex = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeCategorySlug = (value = "") =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const buildCategoryConditions = (categories = []) =>
+  categories
+    .map((category) => String(category || "").trim())
+    .filter(Boolean)
+    .flatMap((category) => {
+      const escapedCategory = escapeRegex(category);
+      const categorySlug = normalizeCategorySlug(category);
+      const conditions = [
+        { category: new RegExp(`^${escapedCategory}$`, "i") },
+      ];
+
+      if (categorySlug) {
+        conditions.push({
+          categoryPath: new RegExp(`^${escapeRegex(categorySlug)}(?:/|$)`, "i"),
+        });
+      }
+
+      return conditions;
+    });
+
+const mergeOfferProducts = (offer, categoryProducts = []) => {
+  const seen = new Set();
+  const products = [];
+
+  [...(offer.products || []), ...categoryProducts].forEach((product) => {
+    const key = String(product?._id || product?.id || "");
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    products.push(product);
+  });
+
+  return { ...offer, products };
+};
+
+const hydrateCategoryProducts = async (offers, req) => {
+  const productLimit = Math.min(
+    Math.max(Number(req.query.productLimit) || 48, 1),
+    100
+  );
+
+  return Promise.all(
+    offers.map(async (offer) => {
+      const categoryConditions = buildCategoryConditions(
+        offer.applicableCategories
+      );
+
+      if (categoryConditions.length === 0) {
+        return mergeOfferProducts(offer);
+      }
+
+      const categoryProducts = await Product.find({
+        isActive: true,
+        $or: categoryConditions,
+      })
+        .sort({ arrivedAt: -1, createdAt: -1 })
+        .limit(productLimit)
+        .select(PUBLIC_PRODUCT_SELECT)
+        .populate(PRODUCT_IMAGE_POPULATE)
+        .lean({ virtuals: true });
+
+      return mergeOfferProducts(offer, categoryProducts);
+    })
+  );
+};
+
+const emitOfferRefresh = (action, offerId) => {
+  emitToAll("offer:refresh", {
+    action,
+    offerId: offerId ? String(offerId) : null,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -42,12 +138,19 @@ const listPublicOffers = catchAsync(async (req, res) => {
 
   const offers = await Offer.find(filter)
     .sort({ displayOrder: 1, createdAt: -1 })
-    .populate("products", "name slug artNo basePrice salePrice discountPercent")
-    .lean();
+    .populate({
+      path: "products",
+      match: { isActive: true },
+      select: PUBLIC_PRODUCT_SELECT,
+      populate: PRODUCT_IMAGE_POPULATE,
+    })
+    .lean({ virtuals: true });
+
+  const hydratedOffers = await hydrateCategoryProducts(offers, req);
 
   res.status(200).json({
     success: true,
-    data: { offers, count: offers.length },
+    data: { offers: hydratedOffers, count: hydratedOffers.length },
   });
 });
 
@@ -72,10 +175,7 @@ const listAdminOffers = catchAsync(async (req, res) => {
 
   const offers = await Offer.find(filter)
     .sort({ createdAt: -1 })
-    .populate(
-      "products",
-      "name slug artNo basePrice salePrice costPrice discountPercent totalStock"
-    )
+    .populate("products", ADMIN_PRODUCT_SELECT)
     .populate("createdBy", "email")
     .lean();
 
@@ -99,6 +199,9 @@ const createOffer = catchAsync(async (req, res, next) => {
   if (!offerData.type) {
     return next(new AppError("Offer type is required", 400));
   }
+  if (typeof offerData.showOnHomepage === "undefined") {
+    offerData.showOnHomepage = true;
+  }
 
   // Validate product references if any
   if (Array.isArray(offerData.products) && offerData.products.length > 0) {
@@ -120,8 +223,10 @@ const createOffer = catchAsync(async (req, res, next) => {
 
   const offer = await Offer.create(offerData);
   const populated = await Offer.findById(offer._id)
-    .populate("products", "name slug artNo basePrice salePrice costPrice discountPercent")
+    .populate("products", ADMIN_PRODUCT_SELECT)
     .lean();
+
+  emitOfferRefresh("created", offer._id);
 
   res.status(201).json({
     success: true,
@@ -156,12 +261,14 @@ const updateOffer = catchAsync(async (req, res, next) => {
     new: true,
     runValidators: true,
   })
-    .populate("products", "name slug artNo basePrice salePrice costPrice discountPercent")
+    .populate("products", ADMIN_PRODUCT_SELECT)
     .lean();
 
   if (!offer) {
     return next(new AppError("Offer not found", 404));
   }
+
+  emitOfferRefresh("updated", offer._id);
 
   res.status(200).json({
     success: true,
@@ -196,6 +303,8 @@ const deleteOffer = catchAsync(async (req, res, next) => {
   }
 
   await offer.deleteOne();
+
+  emitOfferRefresh("deleted", id);
 
   res.status(200).json({
     success: true,

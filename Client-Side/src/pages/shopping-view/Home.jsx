@@ -82,6 +82,7 @@ const Home = () => {
   useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:created", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:updated", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("offer:refresh", debouncedRefetch, [debouncedRefetch]);
 
   usePageMeta({ title: "Saga Elite — Own The Drop.", fullTitle: true });
 

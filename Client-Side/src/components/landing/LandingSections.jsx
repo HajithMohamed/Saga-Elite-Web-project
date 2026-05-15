@@ -70,6 +70,7 @@ export const InlineDropCountdown = ({ endDate }) => {
 export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [initialNow] = useState(() => Date.now());
   const navigate = useNavigate();
 
   const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
@@ -102,8 +103,13 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
       }))
     : slides;
 
-  const dropIsUpcoming = nextDrop && new Date(nextDrop.releaseDate) > new Date();
-  const daysUntilDrop = nextDrop ? (new Date(nextDrop.releaseDate).getTime() - Date.now()) / 86400000 : 999;
+  const nextDropTime = nextDrop?.releaseDate
+    ? new Date(nextDrop.releaseDate).getTime()
+    : null;
+  const dropIsUpcoming = Number.isFinite(nextDropTime) && nextDropTime > initialNow;
+  const daysUntilDrop = Number.isFinite(nextDropTime)
+    ? (nextDropTime - initialNow) / 86400000
+    : 999;
   const isUpcomingSoon = dropIsUpcoming && daysUntilDrop <= 7;
 
   // Gesture handling for mobile
@@ -494,6 +500,19 @@ export const TrustBar = () => {
 export const OffersSlider = ({ offers = [] }) => {
   const scrollerRef = useRef(null);
   const scrollBy = (d) => scrollerRef.current?.scrollBy({ left: d, behavior: 'smooth' });
+  const offerCards = useMemo(
+    () =>
+      offers.flatMap((offer, offerIndex) =>
+        (offer.products || []).filter(Boolean).map((product, productIndex) => ({
+          offer,
+          product,
+          key: `${offer._id || offer.id || offerIndex}-${product._id || product.id || productIndex}`,
+        }))
+      ),
+    [offers]
+  );
+
+  if (offerCards.length === 0) return null;
 
   return (
     <section className="py-10 bg-[#0e0e0e] border-y border-[#4d4635]/40">
@@ -523,11 +542,9 @@ export const OffersSlider = ({ offers = [] }) => {
           </button>
 
           <div ref={scrollerRef} className="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-2 scrollbar-hide">
-            {offers.map((offer) =>
-              offer.products.map((product) => (
-                <OfferCard key={`${offer._id}-${product._id || product.id}`} product={product} offer={offer} />
-              ))
-            )}
+            {offerCards.map(({ key, product, offer }) => (
+              <OfferCard key={key} product={product} offer={offer} />
+            ))}
           </div>
 
           <button className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"

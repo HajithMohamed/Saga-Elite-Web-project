@@ -53,7 +53,7 @@ const initialForm = {
   applicableCategories: [],
   startsAt: "",
   endsAt: "",
-  showOnHomepage: false,
+  showOnHomepage: true,
   displayOrder: 0,
   isActive: true,
 };
