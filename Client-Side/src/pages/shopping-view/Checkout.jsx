@@ -291,6 +291,10 @@ const Checkout = () => {
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
   const [couponExpanded, setCouponExpanded] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [rewardSuggestions, setRewardSuggestions] = useState([]);
 
   // Saved addresses (Fix #4) — for both guests and registered users
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -447,7 +451,11 @@ const Checkout = () => {
       ? 0 
       : selectedDelivery.price;
 
-  const finalTotal = checkoutTotal + shippingFee;
+  const couponDiscount = Math.min(
+    checkoutTotal,
+    Math.max(0, Number(appliedCoupon?.discount || 0))
+  );
+  const finalTotal = Math.max(0, checkoutTotal - couponDiscount) + shippingFee;
   const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - checkoutTotal);
   const shippingProgress = Math.min(100, (checkoutTotal / FREE_SHIPPING_THRESHOLD) * 100);
 
@@ -455,6 +463,89 @@ const Checkout = () => {
   const whatsAppLink = displayBankDetails.whatsapp
     ? `https://wa.me/${displayBankDetails.whatsapp.replace(/\D/g, "")}`
     : "#";
+
+  const checkoutProductIds = useMemo(
+    () =>
+      checkoutItems
+        .map((item) => item.product?.id || item.product?._id)
+        .filter(Boolean),
+    [checkoutItems]
+  );
+  const checkoutProductKey = checkoutProductIds.join("|");
+
+  useEffect(() => {
+    setAppliedCoupon(null);
+  }, [checkoutTotal, checkoutProductKey]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRewardSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    axiosInstance
+      .get("/coupons/my-rewards")
+      .then((res) => {
+        if (cancelled) return;
+        const rewards = res.data?.data?.rewards || [];
+        setRewardSuggestions(
+          rewards.filter((reward) => reward.status === "available").slice(0, 3)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setRewardSuggestions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const applyCouponCode = async (codeToApply = couponInput) => {
+    const code = String(codeToApply || "").trim().toUpperCase();
+    if (!code) {
+      toast({ title: "Enter a reward code", variant: "destructive" });
+      return;
+    }
+    if (checkoutTotal <= 0) {
+      toast({ title: "Add items before applying a reward", variant: "destructive" });
+      return;
+    }
+
+    setCouponApplying(true);
+    try {
+      const res = await axiosInstance.post("/coupons/validate", {
+        code,
+        subtotal: checkoutTotal,
+        productIds: checkoutProductIds,
+      });
+      const data = res.data?.data;
+      setAppliedCoupon(data);
+      setCouponInput(data?.code || code);
+      setFormData((prev) => ({ ...prev, couponCode: data?.code || code }));
+      toast({
+        title: "Reward applied",
+        description: `You saved ${formatLKR(data?.discount || 0)}.`,
+        variant: "success",
+      });
+    } catch (err) {
+      setAppliedCoupon(null);
+      toast({
+        title: "Reward not applied",
+        description: err?.response?.data?.message || err?.message || "Check the code and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setFormData((prev) => ({ ...prev, couponCode: "" }));
+  };
 
   const handlePhoneChange = (e) => {
     let val = e.target.value.replace(/\D/g, "");
@@ -679,6 +770,7 @@ const Checkout = () => {
           paymentMethod: formData.paymentMethod,
           notes: `Delivery Mode: ${formData.deliveryMode}\n${formData.notes}`,
           guestEmail: formData.email,
+          couponCode: appliedCoupon?.code || undefined,
         })
       ).unwrap();
 
@@ -1239,15 +1331,57 @@ const Checkout = () => {
                 {/* Coupon Section */}
                 <div className="border-t border-[#1c1b1b] py-4">
                   <button type="button" onClick={() => setCouponExpanded(!couponExpanded)} className="flex items-center justify-between w-full text-sm text-[#99907c] hover:text-white transition-colors">
-                    <span className="flex items-center gap-2"><Gift size={16}/> Gift Card / Promo Code</span>
+                    <span className="flex items-center gap-2"><Gift size={16}/> Member Rewards / Promo Code</span>
                     <ChevronDown className={cn("w-4 h-4 transition-transform", couponExpanded && "rotate-180")}/>
                   </button>
                   <AnimatePresence>
                     {couponExpanded && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="flex gap-2 mt-4">
-                          <input type="text" placeholder="Enter code" className="flex-1 bg-[#1a1a1a] border border-[#333] rounded-lg px-3 text-sm text-white outline-none focus:border-[var(--accent)]" />
-                          <button type="button" className="bg-[#333] hover:bg-[#444] text-white px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors">Apply</button>
+                        <div className="mt-4 space-y-3">
+                          {rewardSuggestions.length > 0 && (
+                            <div className="space-y-2 rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="se-label text-[9px] uppercase tracking-[0.26em] text-[var(--accent)]">Unlocked rewards</p>
+                                <Link to="/shopping/rewards" className="text-[10px] uppercase tracking-widest text-[#d0c5af] hover:text-white">View all</Link>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {rewardSuggestions.map((reward) => (
+                                  <button
+                                    key={reward.id}
+                                    type="button"
+                                    onClick={() => applyCouponCode(reward.code)}
+                                    disabled={couponApplying}
+                                    className="rounded-full border border-[#4d4635]/60 bg-[#0a0a0a] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e5e2e1] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                                  >
+                                    {reward.code}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                              placeholder="Enter code"
+                              className="h-11 flex-1 rounded-lg border border-[#333] bg-[#1a1a1a] px-3 text-sm uppercase tracking-wider text-white outline-none focus:border-[var(--accent)]"
+                            />
+                            {appliedCoupon ? (
+                              <button type="button" onClick={removeCoupon} className="rounded-lg bg-[#333] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#444]">
+                                Remove
+                              </button>
+                            ) : (
+                              <button type="button" onClick={() => applyCouponCode()} disabled={couponApplying} className="rounded-lg bg-[#333] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#444] disabled:opacity-50">
+                                {couponApplying ? "Checking" : "Apply"}
+                              </button>
+                            )}
+                          </div>
+                          {appliedCoupon ? (
+                            <p className="text-xs text-[var(--accent)]">
+                              {appliedCoupon.code} applied. You saved {formatLKR(appliedCoupon.discount)}.
+                            </p>
+                          ) : null}
                         </div>
                       </motion.div>
                     )}
@@ -1259,6 +1393,12 @@ const Checkout = () => {
                     <span>Subtotal</span>
                     <span>{formatLKR(checkoutTotal)}</span>
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between se-body text-sm text-[var(--accent)]">
+                      <span>Reward discount</span>
+                      <span>-{formatLKR(couponDiscount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-start se-body text-sm text-[#99907c]">
                     <span className="inline-flex items-center gap-2">
                       <Truck className="h-3.5 w-3.5" />

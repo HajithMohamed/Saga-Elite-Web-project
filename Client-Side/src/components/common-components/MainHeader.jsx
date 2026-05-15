@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight, ArrowRight } from "lucide-react";
+import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight, ArrowRight, TicketPercent } from "lucide-react";
 import axios from "axios";
 import { logoutUserAction } from "@/store/auth-slice";
 import { fetchUpcomingDrop } from "@/services/landing-api";
@@ -359,6 +359,11 @@ const MainHeader = () => {
               <AnimatedBadge count={wishlistCount} />
             </Link>
             {user && <NotificationsDropdown />}
+            {user && (
+              <Link to="/shopping/rewards" className="hidden sm:block text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300" aria-label="My rewards">
+                <TicketPercent className="w-[18px] h-[18px]" />
+              </Link>
+            )}
             <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
               <ShoppingBag className="w-[18px] h-[18px]" />
               <AnimatedBadge count={cartCount} />
@@ -390,6 +395,7 @@ const MainHeader = () => {
                       </div>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/rewards" onClick={() => setUserMenuOpen(false)}>My Rewards</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>

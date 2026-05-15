@@ -17,6 +17,7 @@ const COLLECTIONS_TO_RESET = [
   "reviews",
   "drops",
   "coupons",
+  "usercoupons",
   "smartalerts",
   "adminlogs",
   "notifications",

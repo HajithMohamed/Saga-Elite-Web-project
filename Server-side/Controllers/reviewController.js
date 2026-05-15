@@ -5,6 +5,7 @@ const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Coupon = require("../Models/Coupon");
+const UserCoupon = require("../Models/UserCoupon");
 const SiteConfig = require("../Models/SiteConfig");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
@@ -77,10 +78,25 @@ const tryIssueReviewReward = async (review) => {
       discountType,
       discountValue,
       maxUses,
+      perUserLimit: 1,
       startsAt,
       endsAt,
       isActive: true,
+      isPersonalized: true,
       issuedFor: "review_reward",
+    });
+
+    await UserCoupon.create({
+      user: review.userId,
+      coupon: coupon._id,
+      code: coupon.code,
+      source: "review_reward",
+      sourceRef: review._id,
+      expiresAt: endsAt,
+      metadata: {
+        reviewId: review._id,
+        productId: review.productId,
+      },
     });
 
     review.rewardCouponIssued = true;

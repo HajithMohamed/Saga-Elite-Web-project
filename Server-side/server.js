@@ -68,6 +68,7 @@ const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const guestRoutes = require("./Routes/guestRoutes");
 const guestTrackingMiddleware = require("./Middlewares/guest-tracking-middleware");
 const { initGuestPromoJob } = require("./Utils/guest-promo-job");
+const { initCartAbandonmentJob } = require("./Utils/cart-abandonment-job");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 const ManualPayment = require("./Models/ManualPayment");
 
@@ -254,6 +255,7 @@ const runDeferredStartupTasks = async () => {
   initSmartAlertsJob();
   initRecommendationsDigest();
   initGuestPromoJob();
+  initCartAbandonmentJob();
 };
 
 const startServer = async () => {

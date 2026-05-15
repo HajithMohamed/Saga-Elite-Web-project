@@ -19,6 +19,7 @@ const {
 } = require("../Utils/phone-validator");
 const logger = require("../Utils/logger");
 const { recordLoginAttempt } = require("../Utils/login-activity-service");
+const { ensureWelcomeReward } = require("../Utils/reward-service");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -275,6 +276,13 @@ const otpVerify = catchAsync(async(req, res, next)=>{
     } catch (err) {
         logger.error("Welcome email failed after OTP verification", { error: err });
     }
+
+    await ensureWelcomeReward(user).catch((err) =>
+        logger.warn("Welcome reward issuance failed", {
+            userId: user._id,
+            error: err?.message,
+        })
+    );
 
     await trySendAuthWhatsApp(
         user,

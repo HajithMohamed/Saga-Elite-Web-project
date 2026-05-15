@@ -35,6 +35,10 @@ const ISSUED_FOR_OPTIONS = [
   { value: "review_reward", label: "Review reward" },
   { value: "referral", label: "Referral" },
   { value: "birthday", label: "Birthday" },
+  { value: "first_order", label: "First order" },
+  { value: "cart_recovery", label: "Cart recovery" },
+  { value: "drop_launch", label: "Drop launch" },
+  { value: "mystery_reward", label: "Mystery reward" },
 ];
 
 const initialForm = {

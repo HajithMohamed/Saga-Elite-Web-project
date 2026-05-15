@@ -9,6 +9,7 @@ const CheckAuth = ({ isAuthenticated, user, children }) => {
   const isShoppingRoute = location.pathname.startsWith("/shopping");
   const isProtectedShoppingRoute = location.pathname.includes("account") ||
                                    location.pathname.includes("orders") ||
+                                   location.pathname.includes("rewards") ||
                                    location.pathname.includes("wishlist");
 
   const isPublicRoute = location.pathname === "/" ||

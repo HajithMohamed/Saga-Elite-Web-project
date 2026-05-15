@@ -14,6 +14,7 @@ const SiteConfig = require("../Models/SiteConfig");
 const UserActivityLog = require("../Models/UserActivityLog");
 const { computeMembershipTier } = require("../Utils/membership-tier");
 const { evaluateCoupon } = require("./coupon-controller");
+const { issueVipTierReward } = require("../Utils/reward-service");
 const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
@@ -119,23 +120,93 @@ const addressMatchesOrder = (a, b) =>
     String(a?.postalCode || "").trim().toLowerCase() ===
     String(b?.postalCode || "").trim().toLowerCase();
 
+const pickWeightedGift = (gifts = []) => {
+    const weighted = gifts
+        .map((gift) => ({
+            gift,
+            weight: Math.max(0, Number(gift.probability ?? 100)),
+        }))
+        .filter((entry) => entry.weight > 0);
+
+    if (!weighted.length) return null;
+
+    const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    let cursor = Math.random() * totalWeight;
+
+    for (const entry of weighted) {
+        cursor -= entry.weight;
+        if (cursor <= 0) return entry.gift;
+    }
+
+    return weighted[weighted.length - 1].gift;
+};
+
+const giftMatchesOrder = (gift, { subtotal, hasDrop }) => {
+    if (!gift?.isActive) return false;
+    if (gift.condition === "min_order_value") {
+        return subtotal >= Number(gift.minOrderValue || 0);
+    }
+    if (gift.condition === "per_drop") {
+        return hasDrop && Boolean(gift.drop);
+    }
+    return true;
+};
+
+const selectMysteryGift = async ({ dropId, subtotal, session }) => {
+    const scopes = [];
+    if (dropId) scopes.push({ drop: dropId });
+    scopes.push({ drop: null });
+
+    for (const scope of scopes) {
+        const query = Gift.find({ isActive: true, ...scope });
+        if (session) query.session(session);
+        const gifts = await query;
+        const eligible = gifts.filter((gift) =>
+            giftMatchesOrder(gift, { subtotal, hasDrop: Boolean(dropId) })
+        );
+        const selected = pickWeightedGift(eligible);
+        if (selected) return selected;
+    }
+
+    return null;
+};
+
 const createOrder = catchAsync(async (req, res, next) => {
     const {
         items,
-        user,
-        guest,
-        guestEmailNormalized,
         shippingAddress,
         contactNumber,
         paymentMethod,
         paymentProofUrl,
         notes,
         couponCode,
-        isBankTransferPayment,
-        isLegacyManualPayment,
         structuredAddress,
-        normalizedCheckoutMode,
+        checkoutMode,
+        guestEmail,
     } = req.body;
+
+    const user = req.userInfo || null;
+    const guestEmailNormalized = user ? null : String(guestEmail || "").trim().toLowerCase();
+    const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
+    const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
+    const isLegacyManualPayment = paymentMethod === "manual";
+    let guest = null;
+
+    if (!user && guestEmailNormalized) {
+        guest = await Guest.findOneAndUpdate(
+            { email: guestEmailNormalized },
+            {
+                $setOnInsert: {
+                    email: guestEmailNormalized,
+                },
+                $set: {
+                    lastUsedAt: new Date(),
+                    ...(contactNumber ? { phone: contactNumber } : {}),
+                },
+            },
+            { new: true, upsert: true }
+        );
+    }
 
     const createdOrder = await runInTransaction(async (session) => {
         const orderItems = [];
@@ -228,6 +299,8 @@ const createOrder = catchAsync(async (req, res, next) => {
 
         let appliedCoupon = null;
         let appliedDiscount = 0;
+        let appliedUserCoupon = null;
+        const merchandiseSubtotal = totalAmount;
 
         if (couponCode && String(couponCode).trim()) {
             const productIds = items.map((it) => it.productId);
@@ -236,11 +309,15 @@ const createOrder = catchAsync(async (req, res, next) => {
                 code: couponCode,
                 subtotal: totalAmount,
                 productIds,
+                userId: user?._id || null,
+                user,
+                session,
             });
 
             if (result) {
                 appliedCoupon = result.coupon;
                 appliedDiscount = result.discount;
+                appliedUserCoupon = result.userCoupon || null;
 
                 totalAmount = Math.max(0, totalAmount - appliedDiscount);
 
@@ -267,19 +344,11 @@ const createOrder = catchAsync(async (req, res, next) => {
 
         // Surprise gifts are a registered-user perk only.
         if (user) {
-            if (dropId) {
-                selectedGift = await Gift.findOne({
-                    isActive: true,
-                    drop: dropId,
-                }).session(session);
-            }
-
-            if (!selectedGift) {
-                selectedGift = await Gift.findOne({
-                    isActive: true,
-                    drop: null,
-                }).session(session);
-            }
+            selectedGift = await selectMysteryGift({
+                dropId,
+                subtotal: merchandiseSubtotal,
+                session,
+            });
         }
 
         // ✅ Single, complete orderPayload declaration (duplicate removed)
@@ -322,6 +391,13 @@ const createOrder = catchAsync(async (req, res, next) => {
         }
 
         const [orderDocument] = await Order.create([orderPayload], { session });
+
+        if (appliedUserCoupon && !appliedUserCoupon.redeemed) {
+            appliedUserCoupon.redeemed = true;
+            appliedUserCoupon.redeemedAt = new Date();
+            appliedUserCoupon.redeemedOrder = orderDocument._id;
+            await appliedUserCoupon.save({ session, validateModifiedOnly: true });
+        }
 
         if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
             const purchaseRows = orderPayload.items.map((item) => ({
@@ -892,6 +968,14 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
                         await User.updateOne(
                             { _id: order.user },
                             { $set: { membership: nextTier } }
+                        );
+                        issueVipTierReward(order.user, nextTier, { notify: true }).catch((rewardErr) =>
+                            logger.warn("[reward] VIP tier coupon failed", {
+                                orderId: order._id,
+                                userId: order.user,
+                                tier: nextTier,
+                                error: rewardErr?.message,
+                            })
                         );
                     }
                 }

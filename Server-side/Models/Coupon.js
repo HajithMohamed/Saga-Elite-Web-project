@@ -36,10 +36,44 @@ const couponSchema = new mongoose.Schema(
       default: null, // null = unlimited
       min: 0,
     },
+    perUserLimit: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
     usedCount: {
       type: Number,
       default: 0,
       min: 0,
+    },
+    maxDiscountAmount: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    firstOrderOnly: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    stackable: {
+      type: Boolean,
+      default: false,
+    },
+    autoApply: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isPersonalized: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    eligibleMemberships: {
+      type: [String],
+      enum: ["standard", "elite", "rare", "legend", "vip"],
+      default: [],
     },
     applicableProducts: [
       {
@@ -67,7 +101,18 @@ const couponSchema = new mongoose.Schema(
     },
     issuedFor: {
       type: String,
-      enum: ["review_reward", "vip", "campaign", "manual", "referral", "birthday"],
+      enum: [
+        "review_reward",
+        "vip",
+        "campaign",
+        "manual",
+        "referral",
+        "birthday",
+        "first_order",
+        "cart_recovery",
+        "drop_launch",
+        "mystery_reward",
+      ],
       default: "manual",
     },
     createdBy: {

@@ -3,7 +3,11 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Coupon = require("../Models/Coupon");
 const Product = require("../Models/Product");
+const Order = require("../Models/Order");
+const User = require("../Models/User");
+const UserCoupon = require("../Models/UserCoupon");
 const filterObj = require("../Utils/filter-object");
+const { ensureWelcomeReward, SOURCE_LABELS } = require("../Utils/reward-service");
 
 const CREATE_FIELDS = [
   "code",
@@ -18,6 +22,13 @@ const CREATE_FIELDS = [
   "endsAt",
   "isActive",
   "issuedFor",
+  "perUserLimit",
+  "maxDiscountAmount",
+  "firstOrderOnly",
+  "stackable",
+  "autoApply",
+  "isPersonalized",
+  "eligibleMemberships",
 ];
 
 const UPDATE_FIELDS = CREATE_FIELDS.filter((f) => f !== "code"); // code is immutable post-create
@@ -28,10 +39,19 @@ const UPDATE_FIELDS = CREATE_FIELDS.filter((f) => f !== "code"); // code is immu
 | Returns { coupon, discount } when valid, or throws AppError.
 |--------------------------------------------------------------------------
 */
-const evaluateCoupon = async ({ code, subtotal, productIds = [] }) => {
+const evaluateCoupon = async ({
+  code,
+  subtotal,
+  productIds = [],
+  userId = null,
+  user = null,
+  session = null,
+} = {}) => {
   if (!code) return null;
   const upper = String(code).trim().toUpperCase();
-  const coupon = await Coupon.findOne({ code: upper });
+  const couponQuery = Coupon.findOne({ code: upper });
+  if (session) couponQuery.session(session);
+  const coupon = await couponQuery;
   if (!coupon) {
     throw new AppError(`Coupon "${upper}" not found`, 404);
   }
@@ -56,6 +76,72 @@ const evaluateCoupon = async ({ code, subtotal, productIds = [] }) => {
       `Minimum order value of LKR ${coupon.minOrderValue} required`,
       400
     );
+  }
+
+  const resolvedUserId = userId || user?._id || user?.id || null;
+  let ownerRecord = null;
+
+  if (resolvedUserId) {
+    const ownerQuery = UserCoupon.findOne({
+      user: resolvedUserId,
+      coupon: coupon._id,
+    });
+    if (session) ownerQuery.session(session);
+    ownerRecord = await ownerQuery;
+  }
+
+  if (coupon.isPersonalized && !ownerRecord) {
+    throw new AppError("This reward is reserved for another account", 403);
+  }
+
+  if (ownerRecord?.redeemed) {
+    throw new AppError("This reward has already been redeemed", 400);
+  }
+
+  if (
+    ownerRecord?.expiresAt &&
+    new Date(ownerRecord.expiresAt).getTime() < Date.now()
+  ) {
+    throw new AppError("This reward has expired", 400);
+  }
+
+  if (coupon.firstOrderOnly) {
+    if (!resolvedUserId) {
+      throw new AppError("Please sign in to use this first-order reward", 401);
+    }
+    const orderCount = await Order.countDocuments({
+      user: resolvedUserId,
+      status: { $nin: ["cancelled", "refunded"] },
+    });
+    if (orderCount > 0) {
+      throw new AppError("This coupon is only valid on your first order", 400);
+    }
+  }
+
+  if (Array.isArray(coupon.eligibleMemberships) && coupon.eligibleMemberships.length > 0) {
+    let member = user;
+    if (!member && resolvedUserId) {
+      const userQuery = User.findById(resolvedUserId).select("membership");
+      if (session) userQuery.session(session);
+      member = await userQuery;
+    }
+    if (!member || !coupon.eligibleMemberships.includes(member.membership)) {
+      throw new AppError("This coupon is reserved for a different membership tier", 403);
+    }
+  }
+
+  if (coupon.perUserLimit != null) {
+    if (!resolvedUserId) {
+      throw new AppError("Please sign in to use this limited reward", 401);
+    }
+    const usedByUser = await Order.countDocuments({
+      user: resolvedUserId,
+      couponCode: coupon.code,
+      status: { $nin: ["cancelled", "refunded"] },
+    });
+    if (usedByUser >= coupon.perUserLimit) {
+      throw new AppError("You have already used this coupon", 400);
+    }
   }
 
   // Product / category restrictions: if either list is non-empty, at least
@@ -112,9 +198,12 @@ const evaluateCoupon = async ({ code, subtotal, productIds = [] }) => {
   } else {
     discount = Math.round(coupon.discountValue);
   }
+  if (coupon.maxDiscountAmount != null && discount > coupon.maxDiscountAmount) {
+    discount = Math.round(coupon.maxDiscountAmount);
+  }
   if (discount > subtotal) discount = subtotal;
 
-  return { coupon, discount };
+  return { coupon, discount, userCoupon: ownerRecord };
 };
 
 /*
@@ -134,6 +223,8 @@ const validateCoupon = catchAsync(async (req, res, next) => {
       code,
       subtotal,
       productIds: productIds || [],
+      userId: req.userInfo?._id || req.userInfo?.id || null,
+      user: req.userInfo || null,
     });
     if (!result) return next(new AppError("Coupon code is required", 400));
 
@@ -145,6 +236,8 @@ const validateCoupon = catchAsync(async (req, res, next) => {
         discountValue: result.coupon.discountValue,
         discount: result.discount,
         finalTotal: subtotal - result.discount,
+        isPersonalized: Boolean(result.coupon.isPersonalized),
+        source: result.userCoupon?.source || result.coupon.issuedFor,
       },
     });
   } catch (err) {
@@ -249,11 +342,61 @@ const deleteCoupon = catchAsync(async (req, res, next) => {
   });
 });
 
+const serializeUserCoupon = (record) => {
+  const coupon = record.coupon || {};
+  const expiresAt = record.expiresAt || coupon.endsAt || null;
+  const expired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
+  const status = record.redeemed ? "redeemed" : expired ? "expired" : "available";
+
+  return {
+    id: record._id,
+    code: record.code || coupon.code,
+    source: record.source,
+    sourceLabel: SOURCE_LABELS[record.source] || "Member reward",
+    status,
+    assignedAt: record.assignedAt,
+    expiresAt,
+    redeemedAt: record.redeemedAt,
+    metadata: record.metadata || {},
+    coupon: coupon?._id
+      ? {
+          id: coupon._id,
+          description: coupon.description,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          minOrderValue: coupon.minOrderValue || 0,
+          maxDiscountAmount: coupon.maxDiscountAmount,
+          firstOrderOnly: Boolean(coupon.firstOrderOnly),
+          eligibleMemberships: coupon.eligibleMemberships || [],
+        }
+      : null,
+  };
+};
+
+const listMyRewards = catchAsync(async (req, res) => {
+  await ensureWelcomeReward(req.userInfo);
+
+  const rewards = await UserCoupon.find({ user: req.userInfo._id })
+    .sort({ redeemed: 1, expiresAt: 1, assignedAt: -1 })
+    .populate("coupon")
+    .lean({ virtuals: true });
+
+  const serialized = rewards.map(serializeUserCoupon);
+  res.status(200).json({
+    success: true,
+    data: {
+      rewards: serialized,
+      availableCount: serialized.filter((reward) => reward.status === "available").length,
+    },
+  });
+});
+
 module.exports = {
   validateCoupon,
   listAdminCoupons,
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  listMyRewards,
   evaluateCoupon, // exported for the order controller hook
 };

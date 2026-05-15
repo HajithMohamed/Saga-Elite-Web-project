@@ -19,6 +19,7 @@ const emptyForm = {
   name: "",
   drop: "global",
   isActive: true,
+  probability: 100,
   condition: "always",
   minOrderValue: 0,
   rarity: "common",
@@ -156,6 +157,7 @@ const GiftManager = () => {
       name: gift.name || "",
       drop: gift.drop?._id || gift.drop || "global",
       isActive: gift.isActive !== false,
+      probability: gift.probability ?? 100,
       condition: gift.condition || "always",
       minOrderValue: gift.minOrderValue || 0,
       rarity: gift.rarity || "common",
@@ -196,6 +198,7 @@ const GiftManager = () => {
       const payload = {
         ...form,
         drop: form.drop === "global" ? null : form.drop,
+        probability: Math.max(0, Math.min(100, Number(form.probability ?? 100))),
         minOrderValue: Number(form.minOrderValue || 0),
       };
 
@@ -412,6 +415,9 @@ const GiftManager = () => {
                         <span className="rounded-full border border-white/10 bg-black/40 px-2 py-1 text-gray-400">
                           {gift.orderCount || 0} orders
                         </span>
+                        <span className="rounded-full border border-white/10 bg-black/40 px-2 py-1 text-gray-400">
+                          weight {gift.probability ?? 100}
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-1.5 pt-1">
@@ -561,6 +567,18 @@ const GiftManager = () => {
                   min="0"
                   value={form.minOrderValue}
                   onChange={(event) => setForm((current) => ({ ...current, minOrderValue: event.target.value }))}
+                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm text-gray-300">
+                Selection weight (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.probability}
+                  onChange={(event) => setForm((current) => ({ ...current, probability: event.target.value }))}
                   className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
                 />
               </label>

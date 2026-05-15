@@ -573,6 +573,10 @@ const COUPON_ISSUED_FOR = [
   "review_reward",
   "referral",
   "birthday",
+  "first_order",
+  "cart_recovery",
+  "drop_launch",
+  "mystery_reward",
 ];
 
 const sanitizeCouponPayload = (body, { isUpdate = false } = {}) => {
@@ -955,6 +959,8 @@ const validateOrderCreate = createValidationMiddleware((req) => {
     paymentProofUrl: sanitizeUrl(req.body.paymentProofUrl, "paymentProofUrl", { required: false }),
     notes: sanitizeOptionalPlainText(req.body.notes, "notes", { maxLength: 1000 }),
     guestEmail: sanitizeEmail(req.body.guestEmail, "guestEmail", { required: false }),
+    couponCode: sanitizeOptionalPlainText(req.body.couponCode, "couponCode", { maxLength: 40 }),
+    dropId: req.body.dropId ? sanitizeObjectId(req.body.dropId, "dropId") : undefined,
   };
 });
 

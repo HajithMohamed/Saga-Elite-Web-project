@@ -10,6 +10,7 @@ const giftPayloadFields = [
   "name",
   "drop",
   "isActive",
+  "probability",
   "condition",
   "minOrderValue",
   "rarity",
@@ -97,6 +98,7 @@ exports.createGift = catchAsync(async (req, res, next) => {
 
   const gift = await Gift.create({
     ...giftData,
+    probability: Number(giftData.probability ?? 100),
     minOrderValue: Number(giftData.minOrderValue || 0),
     isActive: giftData.isActive !== undefined ? giftData.isActive !== false : true,
   });
@@ -189,6 +191,7 @@ exports.updateGift = catchAsync(async (req, res, next) => {
 
   Object.assign(gift, {
     ...giftData,
+    ...(giftData.probability !== undefined ? { probability: Number(giftData.probability ?? 100) } : {}),
     ...(giftData.minOrderValue !== undefined ? { minOrderValue: Number(giftData.minOrderValue || 0) } : {}),
   });
 
