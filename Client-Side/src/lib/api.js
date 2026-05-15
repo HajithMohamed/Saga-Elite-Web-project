@@ -12,8 +12,15 @@ export const API_ROOT_URL = API_V1_URL.replace(/\/v\d+$/i, "");
 export const ORDERS_API_URL = `${API_V1_URL}/orders`;
 
 const envSocketUrl = trimTrailingSlash(import.meta.env.VITE_SOCKET_URL || "");
+const devSocketTarget = trimTrailingSlash(
+  import.meta.env.VITE_BACKEND_TARGET ||
+    (/^https?:\/\//i.test(envApiUrl)
+      ? envApiUrl.replace(/\/api(?:\/v\d+)?$/i, "")
+      : "http://localhost:5001")
+);
 export const SOCKET_URL =
   envSocketUrl ||
+  (import.meta.env.DEV ? devSocketTarget : "") ||
   (/^https?:\/\//i.test(API_BASE_URL)
     ? API_BASE_URL.replace(/\/api(?:\/v\d+)?$/i, "")
     : typeof window !== "undefined"

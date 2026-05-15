@@ -31,12 +31,12 @@ test.describe("A2 — Bulk operations on Products", () => {
     // Wait for the page to refetch — the bar disappears once selection clears.
     await expect(bar).toBeHidden({ timeout: 10_000 });
 
-    // Verify the audit-log endpoint captured the bulk action with succeededCount = 2.
+    // Verify the super-admin audit log captured the bulk action with succeededCount = 2.
     await expect
       .poll(
         async () => {
           const res = await page.request.get(
-            `${BACKEND_URL}/api/v1/admin/activity?category=product&limit=10`
+            `${BACKEND_URL}/api/v1/super-admin/logs?category=product&limit=10`
           );
           if (!res.ok()) return null;
           const body = await res.json();

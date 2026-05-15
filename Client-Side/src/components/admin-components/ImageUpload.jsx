@@ -21,6 +21,7 @@ const ImageUpload = ({
   type,
   label, // Added label prop
   disabled = false,
+  stagedOnly = false,
   onUploadSuccess,
 }) => {
   const inputRef = useRef(null);
@@ -262,22 +263,24 @@ const ImageUpload = ({
 
       {images.length > 0 && (
         <>
-          <Button
-            onClick={uploadImages}
-            disabled={disabled || isUploading || images.every((i) => i.isUploaded)}
-            className="w-full"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              "Upload Images"
-            )}
-          </Button>
+          {!stagedOnly ? (
+            <Button
+              onClick={uploadImages}
+              disabled={disabled || isUploading || images.every((i) => i.isUploaded)}
+              className="w-full"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Upload Images"
+              )}
+            </Button>
+          ) : null}
 
-          {uploadError && (
+          {uploadError && !stagedOnly && (
             <p className="text-red-500 text-sm">{uploadError}</p>
           )}
 

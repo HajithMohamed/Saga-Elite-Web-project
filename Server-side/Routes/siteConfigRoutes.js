@@ -7,7 +7,6 @@ const ctrl = require("../Controllers/siteConfigController");
 const router = express.Router();
 
 router.get("/about", ctrl.getAboutPageConfig);
-router.get("/_summary", ctrl.getConfigSummary);
 router.get("/:key", ctrl.getConfig);
 router.put("/:key", authMiddleware, requireSuperAdmin, adminLogMiddleware, ctrl.upsertConfig);
 

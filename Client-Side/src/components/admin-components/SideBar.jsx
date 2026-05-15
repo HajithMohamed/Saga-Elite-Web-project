@@ -27,7 +27,6 @@ import {
   Globe,
   Sparkles,
   AlertTriangle,
-  Layers3,
   Layout,
   ScrollText,
 } from "lucide-react";
@@ -43,10 +42,9 @@ import { API_V1_URL } from "@/lib/api";
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
   Store: ["Products", "Drops", "Mystery Collectibles"],
-  Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries", "Activity"],
+  Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Content: [
-    "Content Hub",
     "Brand & About",
     "Home Images",
     "Policies",
@@ -320,15 +318,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <Inbox className="h-5 w-5" />,
       permission: null,
     },
-    {
-      label: "Activity",
-      path: "/admin/activity",
-      icon: <ScrollText className="h-5 w-5" />,
-      // No permission gate — server filters logs per role; sub-admins just
-      // see less. Avoids hiding the menu item entirely from sub-admins who
-      // have at least one permission.
-      permission: null,
-    },
 
     // Marketing
     {
@@ -373,13 +362,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     },
 
     // Content
-    {
-      label: "Content Hub",
-      path: "/admin/content",
-      icon: <Layers3 className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
     {
       label: "Brand & About",
       path: "/admin/about-content",

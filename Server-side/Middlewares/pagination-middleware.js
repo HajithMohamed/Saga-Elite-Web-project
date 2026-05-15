@@ -2,8 +2,18 @@ const mongoose = require("mongoose");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Category = require("../Models/Category");
+const slugify = require("slugify");
 
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeCategoryPath = (value) => {
+  const segments = String(value || "")
+    .split(/\/|>|\|/)
+    .map((segment) => slugify(String(segment || "").trim(), { lower: true, strict: true }))
+    .filter(Boolean);
+
+  return segments.length ? segments.join("/") : "";
+};
 
 const resolveCategoryValues = async (value) => {
   const raw = String(value || "").trim();
@@ -39,6 +49,7 @@ const paginatedResult = (Model) =>
       brand,
       category,
       subCategory,
+      categoryPath,
       color,
       minPrice,
       maxPrice,
@@ -87,6 +98,12 @@ const paginatedResult = (Model) =>
       const subCategoryValues = await resolveCategoryValues(subCategory);
       if (subCategoryValues.length > 0) {
         matchStage.subCategory = { $in: subCategoryValues };
+      }
+    }
+    if (categoryPath) {
+      const normalizedPath = normalizeCategoryPath(categoryPath);
+      if (normalizedPath) {
+        matchStage.categoryPath = new RegExp(`^${escapeRegex(normalizedPath)}(?:/|$)`, "i");
       }
     }
 

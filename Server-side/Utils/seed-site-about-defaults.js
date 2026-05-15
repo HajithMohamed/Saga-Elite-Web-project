@@ -62,6 +62,18 @@ const DEFAULT_ABOUT_ROWS = [
       deadline: "Pay within 24 hours to confirm your order.",
     },
   },
+  {
+    key: "reward_review_discount",
+    label: "Review Discount Reward",
+    value: {
+      enabled: false,
+      discountType: "percent",
+      discountValue: 10,
+      codePrefix: "REVIEW",
+      expiryDays: 30,
+      maxUses: 1,
+    },
+  },
 ];
 
 const seedAboutSiteDefaults = async () => {

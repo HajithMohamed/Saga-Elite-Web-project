@@ -8,8 +8,8 @@ import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard"
 import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 
 const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = false }) => {
-  // Default to the SuperAdmin slice so existing SuperAdminDashboard.jsx
-  // mounts unchanged. New ActivityTimeline page passes its own data via props.
+  // Default to the SuperAdmin slice while still allowing callers to pass
+  // their own logs explicitly.
   const fallback = useSelector((s) => s.superAdmin);
   const activityLogs = logsProp ?? fallback.activityLogs;
   const logsLoading = loadingProp ?? fallback.logsLoading;
