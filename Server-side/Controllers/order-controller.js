@@ -127,6 +127,7 @@ const createOrder = catchAsync(async (req, res, next) => {
         guestEmailNormalized,
         shippingAddress,
         contactNumber,
+        alternativePhone,
         paymentMethod,
         paymentProofUrl,
         notes,
@@ -291,6 +292,7 @@ const createOrder = catchAsync(async (req, res, next) => {
             totalAmount,
             shippingAddress: shippingAddress.trim(),
             contactNumber: contactNumber.trim(),
+            alternativePhone: alternativePhone?.trim(),
             paymentMethod,
             paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
             referenceNumber: isLegacyManualPayment

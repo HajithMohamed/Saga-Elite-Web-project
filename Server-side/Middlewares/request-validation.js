@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 
 const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
@@ -83,6 +87,31 @@ const sanitizeOptionalPlainText = (value, field, { maxLength, minLength } = {}) 
 
   return normalized;
 };
+
+const sanitizeSriLankanPhone = (value, field, { required = true } = {}) => {
+  const phone = sanitizeOptionalPlainText(value, field, { maxLength: 50 });
+
+  if (!phone) {
+    if (required) fail(`${field} is required`);
+    return undefined;
+  }
+
+  if (!isValidSriLankanMobile(phone)) {
+    fail(`Please provide a valid ${field}`);
+  }
+
+  return phone;
+};
+
+const sanitizeOptionalSriLankanPhone = (value, field) => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return sanitizeSriLankanPhone(value, field, { required: false });
+};
+
+const normalizePhoneForMatch = (value) => normalizeSriLankanMobile(value) || "";
 
 const sanitizeEmail = (value, field = "email", { required = true } = {}) => {
   if (value === undefined || value === null || value === "") {
@@ -945,12 +974,23 @@ const sanitizeStructuredAddress = (input) => {
 };
 
 const validateOrderCreate = createValidationMiddleware((req) => {
+  const contactNumber = sanitizeSriLankanPhone(req.body.contactNumber, "contactNumber");
+  const alternativePhone = sanitizeOptionalSriLankanPhone(req.body.alternativePhone, "alternativePhone");
+
+  if (
+    alternativePhone &&
+    normalizePhoneForMatch(contactNumber) === normalizePhoneForMatch(alternativePhone)
+  ) {
+    fail("alternativePhone must be different from contactNumber");
+  }
+
   req.body = {
     items: sanitizeOrderItems(req.body.items),
     checkoutMode: req.body.checkoutMode === "buyNow" ? "buyNow" : "cart",
     shippingAddress: sanitizeOptionalPlainText(req.body.shippingAddress, "shippingAddress", { required: true, minLength: 8, maxLength: 1000 }),
     structuredAddress: sanitizeStructuredAddress(req.body.structuredAddress),
-    contactNumber: sanitizeOptionalPlainText(req.body.contactNumber, "contactNumber", { required: true, minLength: 7, maxLength: 50 }),
+    contactNumber,
+    alternativePhone,
     paymentMethod: sanitizeEnum(req.body.paymentMethod, PAYMENT_METHODS, "paymentMethod", { required: true }),
     paymentProofUrl: sanitizeUrl(req.body.paymentProofUrl, "paymentProofUrl", { required: false }),
     notes: sanitizeOptionalPlainText(req.body.notes, "notes", { maxLength: 1000 }),

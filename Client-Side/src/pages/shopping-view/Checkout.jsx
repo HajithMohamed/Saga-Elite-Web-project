@@ -122,6 +122,76 @@ const PAYMENT_METHODS = [
   },
 ];
 
+const VALID_SRI_LANKAN_MOBILE_PREFIXES = new Set(["70", "71", "72", "74", "75", "76", "77", "78"]);
+
+const stripPhoneDigits = (value) => String(value || "").replace(/\D/g, "");
+
+const normalizeSriLankanPhoneForMatch = (value) => {
+  const digits = stripPhoneDigits(value);
+  if (!digits) return "";
+
+  if (digits.startsWith("0094") && digits.length >= 13) {
+    return `94${digits.slice(4)}`;
+  }
+
+  if (digits.startsWith("94") && digits.length >= 11) {
+    return digits.slice(0, 11);
+  }
+
+  if (digits.startsWith("0") && digits.length === 10) {
+    return `94${digits.slice(1)}`;
+  }
+
+  if (digits.length === 9 && VALID_SRI_LANKAN_MOBILE_PREFIXES.has(digits.slice(0, 2))) {
+    return `94${digits}`;
+  }
+
+  return digits;
+};
+
+const isValidSriLankanMobile = (value) => {
+  const digits = stripPhoneDigits(value);
+  if (!digits) return false;
+
+  let localDigits = digits;
+
+  if (localDigits.startsWith("0094") && localDigits.length >= 13) {
+    localDigits = localDigits.slice(4);
+  } else if (localDigits.startsWith("94") && localDigits.length >= 11) {
+    localDigits = localDigits.slice(2);
+  } else if (localDigits.startsWith("0") && localDigits.length === 10) {
+    localDigits = localDigits.slice(1);
+  }
+
+  if (localDigits.length !== 9) return false;
+  return VALID_SRI_LANKAN_MOBILE_PREFIXES.has(localDigits.slice(0, 2));
+};
+
+const formatSriLankanPhoneInput = (value) => {
+  const digits = stripPhoneDigits(value);
+  if (!digits) return "";
+
+  let localDigits = digits;
+
+  if (localDigits.startsWith("0094") && localDigits.length >= 13) {
+    localDigits = localDigits.slice(4);
+  } else if (localDigits.startsWith("94") && localDigits.length >= 11) {
+    localDigits = localDigits.slice(2);
+  } else if (localDigits.startsWith("0") && localDigits.length === 10) {
+    localDigits = localDigits.slice(1);
+  }
+
+  if (localDigits.length === 9) {
+    localDigits = `0${localDigits}`;
+  }
+
+  const display = localDigits.length > 10 ? localDigits.slice(0, 10) : localDigits;
+
+  if (display.length <= 3) return display;
+  if (display.length <= 6) return `${display.slice(0, 3)} ${display.slice(3)}`;
+  return `${display.slice(0, 3)} ${display.slice(3, 6)} ${display.slice(6, 10)}`;
+};
+
 const useCheckoutPersistence = (initialValue) => {
   const [val, setVal] = useState(() => {
     if (typeof window === "undefined") return initialValue;
@@ -132,6 +202,7 @@ const useCheckoutPersistence = (initialValue) => {
       return initialValue;
     }
   });
+
 
   useEffect(() => {
     window.localStorage.setItem(CHECKOUT_PERSIST_KEY, JSON.stringify(val));
@@ -263,13 +334,14 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isAuthenticated } = useSelector((s) => s.auth);
+  const { isAuthenticated, user } = useSelector((s) => s.auth);
   const { items, totalPrice } = useSelector((s) => s.cart.cart);
 
   const [formData, setFormData, clearPersisted] = useCheckoutPersistence({
     fullName: "",
     email: "",
     phone: "",
+    alternativePhone: "",
     country: "Sri Lanka",
     addressLine: "",
     city: "",
@@ -389,6 +461,36 @@ const Checkout = () => {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    setFormData((prev) => {
+      const next = { ...prev };
+      let updated = false;
+
+      const profileName = String(user.name || user.username || "").trim();
+      const profileEmail = String(user.email || "").trim();
+      const profilePhone = formatSriLankanPhoneInput(user.phoneNumber || "");
+
+      if (!next.fullName.trim() && profileName) {
+        next.fullName = profileName;
+        updated = true;
+      }
+
+      if (!next.email.trim() && profileEmail) {
+        next.email = profileEmail;
+        updated = true;
+      }
+
+      if (!next.phone.trim() && profilePhone) {
+        next.phone = profilePhone;
+        updated = true;
+      }
+
+      return updated ? next : prev;
+    });
+  }, [isAuthenticated, user, setFormData]);
+
   const fetchGuestAddresses = (email) => {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
     axiosInstance
@@ -457,12 +559,15 @@ const Checkout = () => {
     : "#";
 
   const handlePhoneChange = (e) => {
-    let val = e.target.value.replace(/\D/g, "");
-    if (val.length > 10) val = val.substring(0, 10);
-    if (val.length > 3 && val.length <= 6) val = `${val.slice(0,3)} ${val.slice(3)}`;
-    else if (val.length > 6) val = `${val.slice(0,3)} ${val.slice(3,6)} ${val.slice(6)}`;
+    const val = formatSriLankanPhoneInput(e.target.value);
     setFormData((prev) => ({ ...prev, phone: val }));
-    setErrors((prev) => ({ ...prev, phone: undefined }));
+    setErrors((prev) => ({ ...prev, phone: undefined, alternativePhone: undefined }));
+  };
+
+  const handleAlternativePhoneChange = (e) => {
+    const val = formatSriLankanPhoneInput(e.target.value);
+    setFormData((prev) => ({ ...prev, alternativePhone: val }));
+    setErrors((prev) => ({ ...prev, alternativePhone: undefined }));
   };
 
   const handleEmailChange = (e) => {
@@ -547,7 +652,20 @@ const Checkout = () => {
       if (!formData.fullName.trim()) next.fullName = "Required";
       if (!formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email))
         next.email = "Enter a valid email";
-      if (!formData.phone.trim() || formData.phone.length < 11) next.phone = "Valid phone required";
+      if (!formData.phone.trim() || !isValidSriLankanMobile(formData.phone)) {
+        next.phone = "Enter a valid Sri Lankan mobile number";
+      }
+
+      if (formData.alternativePhone.trim()) {
+        if (!isValidSriLankanMobile(formData.alternativePhone)) {
+          next.alternativePhone = "Enter a valid Sri Lankan mobile number";
+        } else if (
+          normalizeSriLankanPhoneForMatch(formData.phone) ===
+          normalizeSriLankanPhoneForMatch(formData.alternativePhone)
+        ) {
+          next.alternativePhone = "Alternative phone must be different from the primary phone";
+        }
+      }
     }
     if ((step === "address" || step === "all") && formData.deliveryMode !== "pickup") {
       if (!formData.addressLine.trim()) next.addressLine = "Required";
@@ -559,12 +677,17 @@ const Checkout = () => {
       if (!formData.termsAccepted) next.termsAccepted = "Please accept the terms";
     }
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return next;
   };
 
   const proceedToStep = (step) => {
-    if (currentStep === "contact" && validateStep("contact")) setCurrentStep("address");
-    else if (currentStep === "address" && validateStep("address")) setCurrentStep("payment");
+    if (currentStep === "contact") {
+      const nextErrors = validateStep("contact");
+      if (Object.keys(nextErrors).length === 0) setCurrentStep("address");
+    } else if (currentStep === "address") {
+      const nextErrors = validateStep("address");
+      if (Object.keys(nextErrors).length === 0) setCurrentStep("payment");
+    }
     else if (step) setCurrentStep(step); // allow backward nav without validation
   };
 
@@ -597,15 +720,24 @@ const Checkout = () => {
       toast({ title: "Your bag is empty", variant: "destructive" });
       return;
     }
-    if (!validateStep("all")) {
+    const nextErrors = validateStep("all");
+    if (Object.keys(nextErrors).length > 0) {
       toast({
         title: "Check your details",
         description: "Some required fields need attention.",
         variant: "destructive",
       });
       // Find first error step
-      if (errors.fullName || errors.email || errors.phone) setCurrentStep("contact");
-      else if (errors.addressLine || errors.city || errors.district) setCurrentStep("address");
+      if (
+        nextErrors.fullName ||
+        nextErrors.email ||
+        nextErrors.phone ||
+        nextErrors.alternativePhone
+      ) {
+        setCurrentStep("contact");
+      } else if (nextErrors.addressLine || nextErrors.city || nextErrors.district) {
+        setCurrentStep("address");
+      }
       return;
     }
 
@@ -676,6 +808,7 @@ const Checkout = () => {
           shippingAddress,
           structuredAddress,
           contactNumber: formData.phone,
+          alternativePhone: formData.alternativePhone || undefined,
           paymentMethod: formData.paymentMethod,
           notes: `Delivery Mode: ${formData.deliveryMode}\n${formData.notes}`,
           guestEmail: formData.email,
@@ -875,6 +1008,15 @@ const Checkout = () => {
                     onChange={handlePhoneChange}
                     error={errors.phone}
                     placeholder="07X XXX XXXX"
+                  />
+                  <Field
+                    label="Alternative phone number"
+                    type="tel"
+                    value={formData.alternativePhone}
+                    onChange={handleAlternativePhoneChange}
+                    error={errors.alternativePhone}
+                    placeholder="07X XXX XXXX"
+                    className="sm:col-span-2"
                   />
                   <div className="sm:col-span-2 mt-4">
                     <button type="button" onClick={() => proceedToStep("address")} className="w-full h-12 bg-white text-black font-semibold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors">

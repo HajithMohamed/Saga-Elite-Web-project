@@ -103,6 +103,11 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 50,
     },
+    alternativePhone: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+    },
     paymentMethod: {
       type: String,
       enum: ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"],
