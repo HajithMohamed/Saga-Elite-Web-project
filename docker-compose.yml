@@ -1,7 +1,7 @@
 services:
   backend:
     build:
-      context: ./Server-side
+      context: .
       dockerfile: Dockerfile
     container_name: saga_backend
     restart: unless-stopped
@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./Server-side:/app
-      - /app/node_modules
+      - ./Server-side:/workspace/Server-side
+      - /workspace/Server-side/node_modules
     networks:
       - saga_network
 

@@ -1,0 +1,9 @@
+# Auto-detect text files and normalise line endings
+* text=auto
+
+# Force LF for files that must run in Linux containers
+*.sh text eol=lf
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf
+.dockerignore text eol=lf
+nginx.conf text eol=lf
