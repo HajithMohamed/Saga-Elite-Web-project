@@ -19,7 +19,9 @@ const ImageUpload = ({
   refId,
   refModel,
   type,
+  type,
   label, // Added label prop
+  colorTag, // Added colorTag prop
   disabled = false,
   stagedOnly = false,
   onUploadSuccess,
@@ -44,6 +46,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag,
     }));
 
     if (isMultiple) {
@@ -67,6 +70,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag,
     }));
 
     if (isMultiple) {
@@ -138,6 +142,7 @@ const ImageUpload = ({
     if (refId) formData.append("refId", refId);
     if (type) formData.append("type", type);
     if (label) formData.append("label", label); // Append label if exists
+    if (colorTag) formData.append("colorTag", colorTag); // Append colorTag if exists
 
     filesToUpload.forEach((img) =>
       formData.append("images", img.file)

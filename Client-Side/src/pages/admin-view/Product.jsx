@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Fragment } from "react";
+import React, { useEffect, useState, useCallback, useMemo, Fragment } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -419,6 +419,59 @@ const collectCategoryOptions = (categories = [], path = []) =>
     ...collectCategoryOptions(category.children || [], [...path, category.name]),
   ]);
 
+const PaginatedCategoryChildren = ({ childrenNodes, path, renderNodesFn }) => {
+  const [page, setPage] = useState(1);
+  const size = 5;
+  const totalPages = Math.ceil(childrenNodes.length / size);
+  const visible = childrenNodes.slice((page - 1) * size, page * size);
+
+  if (childrenNodes.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {renderNodesFn(visible, path)}
+      {totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-center gap-1.5 border-t border-white/5 pt-3">
+          <button
+            type="button"
+            disabled={page === 1}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 transition hover:text-white disabled:opacity-20"
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+          
+          <div className="flex gap-1">
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPage(i + 1)}
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold transition ${
+                  page === i + 1 
+                    ? "bg-[#D4AF37] text-black" 
+                    : "border border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            disabled={page === totalPages}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 transition hover:text-white disabled:opacity-20"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -432,9 +485,31 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
   const [isFeatured, setIsFeatured] = useState(false);
   const [showOnHome, setShowOnHome] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [q, setQ] = useState("");
+  const [categoryPage, setCategoryPage] = useState(1);
+  const CATEGORY_PAGE_SIZE = 6;
 
   const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
-  const visibleCategoryTree = activeRootNode ? activeRootNode.children || [] : [];
+  
+  const filterTree = useCallback((nodes) => {
+    if (!q.trim()) return nodes;
+    const query = q.toLowerCase();
+    
+    return nodes.map(node => {
+      const matches = node.name.toLowerCase().includes(query) || (node.slug && node.slug.toLowerCase().includes(query));
+      const filteredChildren = node.children ? filterTree(node.children) : [];
+      
+      if (matches || filteredChildren.length > 0) {
+        return { ...node, children: filteredChildren };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [q]);
+
+  const visibleCategoryTree = useMemo(() => {
+    const base = activeRootNode ? activeRootNode.children || [] : [];
+    return filterTree(base);
+  }, [activeRootNode, filterTree]);
 
   const resetForm = useCallback(
     (nextParentCategory = activeRootNode ? String(activeRootNode._id) : "") => {
@@ -447,6 +522,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       setShowOnHome(false);
       setIsActive(true);
       setError(null);
+      setCategoryPage(1); // Reset page on form reset/tag switch
     },
     [activeRootNode]
   );
@@ -470,6 +546,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
 
       setActiveTag(nextTag);
       resetForm(nextRootNode ? String(nextRootNode._id) : "");
+      setCategoryPage(1); // Reset page when switching root tags
     },
     [categoryTree, resetForm]
   );
@@ -593,7 +670,13 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
             </div>
 
             {category.children?.length ? (
-              <div className="pl-4 border-l border-white/5">{renderNodes(category.children, nextPath)}</div>
+              <div className="pl-4 border-l border-white/5">
+                {nextPath.length >= 2 ? (
+                  <PaginatedCategoryChildren childrenNodes={category.children} path={nextPath} renderNodesFn={renderNodes} />
+                ) : (
+                  renderNodes(category.children, nextPath)
+                )}
+              </div>
             ) : null}
           </div>
         );
@@ -615,6 +698,16 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
           <h3 className="mt-2 text-xl font-semibold text-white">Category management</h3>
           <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
+          <div className="mt-4 relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
+            <input 
+              type="text" 
+              placeholder="Search categories…" 
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full rounded-full border border-white/10 bg-black/40 py-2 pl-9 pr-4 text-[11px] text-white outline-none focus:border-[#D4AF37]/50 transition"
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -673,10 +766,61 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-3">
-          {renderNodes(visibleCategoryTree, activeRootNode ? [activeRootNode.name] : [])}
+          {(() => {
+            const totalItems = visibleCategoryTree.length;
+            const totalPages = Math.ceil(totalItems / CATEGORY_PAGE_SIZE);
+            const startIndex = (categoryPage - 1) * CATEGORY_PAGE_SIZE;
+            const paginatedNodes = visibleCategoryTree.slice(startIndex, startIndex + CATEGORY_PAGE_SIZE);
+
+            return (
+              <>
+                {renderNodes(paginatedNodes, activeRootNode ? [activeRootNode.name] : [])}
+                
+                {totalPages > 1 ? (
+                  <div className="mt-6 flex items-center justify-center gap-2 border-t border-white/5 pt-6">
+                    <button
+                      type="button"
+                      disabled={categoryPage === 1}
+                      onClick={() => setCategoryPage(p => Math.max(1, p - 1))}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 transition hover:text-white disabled:opacity-20"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    
+                    <div className="flex gap-1.5">
+                      {[...Array(totalPages)].map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setCategoryPage(i + 1)}
+                          className={`flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold transition ${
+                            categoryPage === i + 1 
+                              ? "bg-[#D4AF37] text-black" 
+                              : "border border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={categoryPage === totalPages}
+                      onClick={() => setCategoryPage(p => Math.min(totalPages, p + 1))}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 transition hover:text-white disabled:opacity-20"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            );
+          })()}
+          
           {activeRootNode && visibleCategoryTree.length === 0 ? (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
-              No subcategories exist under {activeRootNode.name} yet.
+              {q ? "No categories match your search." : `No subcategories exist under ${activeRootNode.name} yet.`}
             </div>
           ) : null}
           {!activeRootNode ? (
@@ -798,7 +942,13 @@ const Product = () => {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [productImages, setProductImages] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryTitle, setGalleryTitle] = useState("");
@@ -832,11 +982,11 @@ const Product = () => {
         page: currentPage,
         limit: LIMIT,
         isActive: statusFilter === "all" || statusFilter === "low_stock" ? undefined : statusFilter,
-        search: searchQuery,
+        search: debouncedSearchQuery,
         maxStock: statusFilter === "low_stock" ? 5 : undefined,
       })
     );
-  }, [dispatch, currentPage, statusFilter, searchQuery]);
+  }, [dispatch, currentPage, statusFilter, debouncedSearchQuery]);
 
   const loadCategoryTree = useCallback(async () => {
     try {
@@ -2055,166 +2205,194 @@ const Product = () => {
       {activeFormTab === "variants" ? (
         <FormSection
           number="04"
-          title="Variants"
-          description="Each combination of size and colour with its own SKU and stock."
+          title="Variants (Color Groups)"
+          description="Group sizes and stock under specific colors."
           action={
             <button
               type="button"
-              onClick={addVariant}
+              onClick={() => {
+                setFormData({
+                  ...formData,
+                  variants: [...formData.variants, { ...defaultVariant, color: "New Color" }]
+                });
+              }}
               className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Variant
+              Add Color Group
             </button>
           }
         >
-          <div className="overflow-x-auto admin-panel border border-white/[0.06]">
-            <table className="w-full text-left min-w-[640px]">
-              <thead className="bg-white/[0.02]">
-                <tr className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/50">
-                  <th className="px-4 py-3 font-semibold">SKU</th>
-                  <th className="px-4 py-3 font-semibold">Size</th>
-                  <th className="px-4 py-3 font-semibold">Color</th>
-                  <th className="px-4 py-3 font-semibold text-right">Price Adj.</th>
-                  <th className="px-4 py-3 font-semibold text-right">Stock</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.05]">
-                <AnimatePresence initial={false}>
-                  {formData.variants.map((v, i) => (
-                    <motion.tr
-                      key={`variant-row-${i}`}
-                      layout
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                      className="hover:bg-white/[0.02] transition"
-                    >
-                      {/* Auto-generated SKU (editable) */}
-                      <td className="px-4 py-2.5">
-                        <div className="relative">
-                          <LuxuryInput
-                            type="text"
-                            value={v.sku}
-                            onChange={(e) =>
-                              handleVariantChange(i, "sku", e.target.value)
-                            }
-                            placeholder={formData.artNo ? "Auto-generated" : "Generated after save"}
-                            className="font-mono uppercase text-xs py-2"
-                          />
-                          {!v.sku && formData.artNo && (
-                            <button
-                              type="button"
-                              onClick={() => handleVariantChange(i, "sku", generateSku(formData.artNo, v.size, v.color))}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#D4AF37] uppercase tracking-wider hover:underline"
-                              title="Auto-generate SKU"
+          <div className="space-y-6">
+            {Object.entries(
+              formData.variants.reduce((acc, v, i) => {
+                const c = v.color || "Unassigned";
+                if (!acc[c]) acc[c] = [];
+                acc[c].push({ ...v, originalIndex: i });
+                return acc;
+              }, {})
+            ).map(([colorGroup, variantsInGroup]) => (
+              <div key={colorGroup} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-6 w-6 rounded-full border border-white/20"
+                      style={{ backgroundColor: variantsInGroup[0].colorCode || "#000000" }}
+                    />
+                    <LuxuryInput
+                      type="text"
+                      value={variantsInGroup[0].color || ""}
+                      list={`color-group-options-${colorGroup}`}
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        const newCode = COLOR_OPTIONS.find(c => c.name.toLowerCase() === newColor.toLowerCase())?.hex || variantsInGroup[0].colorCode;
+                        const newVariants = [...formData.variants];
+                        variantsInGroup.forEach(v => {
+                          newVariants[v.originalIndex] = { ...newVariants[v.originalIndex], color: newColor, colorCode: newCode };
+                        });
+                        setFormData({ ...formData, variants: newVariants });
+                      }}
+                      placeholder="Color Name"
+                      className="text-sm font-bold w-40"
+                    />
+                    <datalist id={`color-group-options-${colorGroup}`}>
+                      {COLOR_OPTIONS.map((c) => (
+                        <option key={c.name} value={c.name} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        variants: [...formData.variants, { ...defaultVariant, color: variantsInGroup[0].color, colorCode: variantsInGroup[0].colorCode }]
+                      });
+                    }}
+                    className="text-[10px] uppercase tracking-widest text-[#D4AF37] hover:text-white transition"
+                  >
+                    + Add Size
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-transparent">
+                      <tr className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/40">
+                        <th className="px-3 py-2 font-semibold">SKU</th>
+                        <th className="px-3 py-2 font-semibold">Size</th>
+                        <th className="px-3 py-2 font-semibold text-right">Price Adj.</th>
+                        <th className="px-3 py-2 font-semibold text-right">Stock</th>
+                        <th className="px-3 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.05]">
+                      <AnimatePresence initial={false}>
+                        {variantsInGroup.map((v) => {
+                          const i = v.originalIndex;
+                          return (
+                            <motion.tr
+                              key={`variant-${i}`}
+                              initial={{ opacity: 0, y: -8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -8 }}
+                              className="hover:bg-white/[0.02] transition"
                             >
-                              Gen
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                              <td className="px-3 py-2">
+                                <div className="relative">
+                                  <LuxuryInput
+                                    type="text"
+                                    value={v.sku}
+                                    onChange={(e) => handleVariantChange(i, "sku", e.target.value)}
+                                    placeholder={formData.artNo ? "Auto" : "Generated"}
+                                    className="font-mono uppercase text-xs w-32"
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <LuxurySelect
+                                    value={SIZE_OPTIONS.includes(v.size) ? v.size : (v.size ? "__custom" : "")}
+                                    onChange={(e) => {
+                                      handleVariantChange(i, "size", e.target.value === "__custom" ? "" : e.target.value);
+                                    }}
+                                    className="text-xs w-24"
+                                  >
+                                    <option value="">Size…</option>
+                                    {SIZE_OPTIONS.map((s) => (
+                                      <option key={s} value={s}>{s}</option>
+                                    ))}
+                                    <option value="__custom">Custom…</option>
+                                  </LuxurySelect>
+                                  {v.size && !SIZE_OPTIONS.includes(v.size) && (
+                                    <LuxuryInput
+                                      type="text"
+                                      value={v.size}
+                                      onChange={(e) => handleVariantChange(i, "size", e.target.value)}
+                                      placeholder="Custom"
+                                      className="text-xs w-20"
+                                    />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <LuxuryInput
+                                  type="number"
+                                  value={v.priceAdjustment}
+                                  onChange={(e) => handleVariantChange(i, "priceAdjustment", e.target.value)}
+                                  className="text-xs text-right w-20"
+                                  placeholder="0"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <LuxuryInput
+                                  type="number"
+                                  value={v.stock}
+                                  onChange={(e) => handleVariantChange(i, "stock", e.target.value)}
+                                  className="text-xs text-right w-20"
+                                  placeholder="0"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => removeVariant(i)}
+                                  className="text-white/40 hover:text-rose-400 transition"
+                                  title="Remove size"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
 
-                      {/* Size dropdown with presets */}
-                      <td className="px-4 py-2.5">
-                        <LuxurySelect
-                          value={SIZE_OPTIONS.includes(v.size) ? v.size : (v.size ? "__custom" : "")}
-                          onChange={(e) => {
-                            if (e.target.value === "__custom") {
-                              handleVariantChange(i, "size", "");
-                            } else {
-                              handleVariantChange(i, "size", e.target.value);
-                            }
-                          }}
-                          className="text-xs py-2"
-                        >
-                          <option value="">Size…</option>
-                          {SIZE_OPTIONS.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                          <option value="__custom">Custom…</option>
-                        </LuxurySelect>
-                        {v.size && !SIZE_OPTIONS.includes(v.size) && (
-                          <LuxuryInput
-                            type="text"
-                            value={v.size}
-                            onChange={(e) => handleVariantChange(i, "size", e.target.value)}
-                            placeholder="Custom size"
-                            className="text-xs py-1.5 mt-1"
-                          />
-                        )}
-                      </td>
-
-                      {/* Color picker with optional preset names */}
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={getVariantColorCode(v)}
-                            onChange={(e) => handleVariantColorPick(i, e.target.value)}
-                            className="h-8 w-8 shrink-0 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
-                            title="Pick color"
-                          />
-                          <LuxuryInput
-                            type="text"
-                            value={v.color || ""}
-                            list={`variant-color-options-${i}`}
-                            onChange={(e) => handleVariantChange(i, "color", e.target.value)}
-                            placeholder="Color name"
-                            className="text-xs py-1.5 flex-1"
-                          />
-                          <datalist id={`variant-color-options-${i}`}>
-                            {COLOR_OPTIONS.map((c) => (
-                              <option key={c.name} value={c.name} />
-                            ))}
-                          </datalist>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <LuxuryInput
-                          type="number"
-                          value={v.priceAdjustment}
-                          onChange={(e) =>
-                            handleVariantChange(
-                              i,
-                              "priceAdjustment",
-                              e.target.value
-                            )
-                          }
-                          className="text-xs py-2 text-right w-24"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <LuxuryInput
-                          type="number"
-                          value={v.stock}
-                          onChange={(e) =>
-                            handleVariantChange(i, "stock", e.target.value)
-                          }
-                          className="text-xs py-2 text-right w-20"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        {formData.variants.length > 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeVariant(i)}
-                            className="text-white/40 hover:text-rose-400 transition"
-                            title="Remove variant"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        ) : null}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
+                <div className="mt-6 border-t border-white/5 pt-4">
+                  <p className="text-xs font-semibold text-white/70 mb-3 uppercase tracking-wider">Images for {colorGroup}</p>
+                  <ImageUpload
+                    images={productImages.filter(img => img.colorTag === colorGroup)}
+                    setImages={(updater) => {
+                      setProductImages(prevAll => {
+                        const prevColor = prevAll.filter(img => img.colorTag === colorGroup);
+                        const newColor = typeof updater === "function" ? updater(prevColor) : updater;
+                        return [...prevAll.filter(img => img.colorTag !== colorGroup), ...newColor];
+                      });
+                    }}
+                    isMultiple
+                    refModel="Product"
+                    refId={selectedProductId || undefined}
+                    type="product"
+                    colorTag={colorGroup}
+                    stagedOnly={!selectedProductId}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </FormSection>
       ) : null}
@@ -2359,10 +2537,6 @@ const Product = () => {
       </div>
 
       <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
-        {isLoading ? (
-          <SkeletonGrid count={6} />
-        ) : (
-        <>
         <SearchFilterBar 
           searchValue={searchQuery} 
           onSearchChange={setSearchQuery} 
@@ -2410,6 +2584,11 @@ const Product = () => {
             </PrimaryButton>
           </div>
         </SearchFilterBar>
+
+        {isLoading ? (
+          <SkeletonGrid count={6} />
+        ) : (
+        <>
 
         <AnimatePresence>
           {categoryManagerOpen ? (

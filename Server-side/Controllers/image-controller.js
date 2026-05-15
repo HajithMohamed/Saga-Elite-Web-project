@@ -73,7 +73,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const uploadImages = catchAsync(async (req, res, next) => {
-  const imageData = filterObj(req.body, "refId", "refModel", "type", "label");
+  const imageData = filterObj(req.body, "refId", "refModel", "type", "label", "colorTag");
 
   // Log upload attempt
   actionLogger.info({
@@ -226,6 +226,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
           type: imageData.type || refModelToType[imageData.refModel] || "other",
           refModel: imageData.refModel,
           label: imageData.label,
+          colorTag: imageData.colorTag,
           order: existingImagesCount + index,
           isPrimary: existingImagesCount === 0 && index === 0,
           metadata: {
