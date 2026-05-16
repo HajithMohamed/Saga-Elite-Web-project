@@ -3,21 +3,19 @@
 # Usage: docker compose up --build backend
 FROM node:22-alpine
 
-WORKDIR /workspace/Server-side
+WORKDIR /app
 
-# Install dependencies first (layer cache optimisation)
-COPY Server-side/package.json Server-side/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# Copy package files from correct path
+COPY Server-side/package*.json ./
+
+# Install dependencies
+RUN npm install --no-audit --no-fund
 
 # Copy application source
-COPY Server-side/ .
-
-# Non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
-    chown -R appuser:appgroup /workspace
-USER appuser
+COPY Server-side/ ./
 
 EXPOSE 5001
 
-# --watch enables automatic restart on file changes (Node >= 18.11)
+# Run as root for development (easier for file permissions)
+# For production, use Dockerfile.prod which has proper user setup
 CMD ["node", "--watch", "server.js"]

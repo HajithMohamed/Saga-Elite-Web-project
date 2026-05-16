@@ -9,11 +9,20 @@ services:
       - "5001:5001"
     env_file:
       - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
     volumes:
-      - ./Server-side:/workspace/Server-side
-      - /workspace/Server-side/node_modules
+      - ./Server-side:/app
+      - /app/node_modules
     networks:
       - saga_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "http://localhost:5001/api/v1/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   frontend:
     build:
@@ -24,12 +33,14 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5001/api/v1
+      - VITE_API_URL=http://backend:5001/api/v1
+      - VITE_SOCKET_URL=http://backend:5001
     volumes:
       - ./Client-Side:/app
       - /app/node_modules
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - saga_network
 
