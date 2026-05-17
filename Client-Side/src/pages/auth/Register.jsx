@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { registerUserAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
+import { describeAuthError } from "@/lib/auth-errors";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/editorial";
 
 const VALID_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
+
+void motion;
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
@@ -35,31 +38,6 @@ const isValidSriLankanMobile = (raw) => {
   else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
 
   return local.length === 9 && VALID_MOBILE_PREFIXES.includes(local.slice(0, 2));
-};
-
-const describeAuthError = (err) => {
-  if (typeof err === "string") {
-    return { title: "Registration failed", description: err };
-  }
-
-  const status = err?.response?.status;
-  const serverMsg = err?.response?.data?.message;
-
-  if (status === 409) {
-    return {
-      title: "Account already exists",
-      description:
-        serverMsg || "An account with this email already exists. Sign in instead.",
-    };
-  }
-
-  return {
-    title: "Registration failed",
-    description:
-      serverMsg ||
-      err?.message ||
-      "Some details weren't accepted. Check the fields and try again.",
-  };
 };
 
 const validateForm = (data, touched) => {
@@ -172,7 +150,9 @@ const Register = () => {
       });
     } catch (err) {
       console.error("[register] error", err);
-      const { title, description } = describeAuthError(err);
+      const { title, description } = describeAuthError(err, {
+        title: "Registration failed",
+      });
       toast({ title, description, variant: "destructive" });
     } finally {
       setIsLoading(false);

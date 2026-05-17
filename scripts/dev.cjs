@@ -19,6 +19,8 @@ const processes = [
   },
 ];
 
+const backendHealthUrl = processes[0].waitFor;
+
 const reset = "\x1b[0m";
 const children = new Map();
 let shuttingDown = false;
@@ -29,6 +31,15 @@ function pipeWithPrefix(stream, name, color) {
   rl.on("line", (line) => {
     process.stdout.write(`${color}[${name}]${reset} ${line}\n`);
   });
+}
+
+async function isBackendHealthy(url) {
+  try {
+    const response = await fetch(url, { method: "GET" });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 function stopAll(exitCode = 0) {
@@ -44,25 +55,40 @@ function stopAll(exitCode = 0) {
   setTimeout(() => process.exit(exitCode), 250);
 }
 
-for (const proc of processes) {
-  if (proc.waitFor) {
-    startProcess(proc);
-    waitForHttp(proc.waitFor)
-      .then(() => {
-        const nextProcess = processes[processes.indexOf(proc) + 1];
-        if (nextProcess && !shuttingDown) {
-          startProcess(nextProcess);
-        }
-      })
-      .catch((error) => {
-        console.error(`${proc.color}[${proc.name}]${reset} ${error.message}`);
-        stopAll(1);
-      });
-    break;
+async function main() {
+  const backendIsAlreadyRunning = await isBackendHealthy(backendHealthUrl);
+
+  if (backendIsAlreadyRunning) {
+    const frontendProcess = processes[1];
+    console.log(
+      `${processes[0].color}[${processes[0].name}]${reset} Reusing existing backend at ${backendHealthUrl}`
+    );
+    if (frontendProcess && !shuttingDown) {
+      startProcess(frontendProcess);
+    }
+    return;
   }
 
-  startProcess(proc);
+  const backendProcess = processes[0];
+  const frontendProcess = processes[1];
+
+  startProcess(backendProcess);
+  waitForHttp(backendProcess.waitFor)
+    .then(() => {
+      if (frontendProcess && !shuttingDown) {
+        startProcess(frontendProcess);
+      }
+    })
+    .catch((error) => {
+      console.error(`${backendProcess.color}[${backendProcess.name}]${reset} ${error.message}`);
+      stopAll(1);
+    });
 }
+
+main().catch((error) => {
+  console.error(error);
+  stopAll(1);
+});
 
 function startProcess(proc) {
   const child = spawn(proc.command, proc.args, {

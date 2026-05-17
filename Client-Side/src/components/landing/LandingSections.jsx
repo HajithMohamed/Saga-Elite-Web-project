@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -989,6 +989,22 @@ const ParticleField = () => {
 
 export const HeroBackdropFX = () => {
   const [hasError, setHasError] = useState(false);
+  const canvasRef = useRef(null);
+
+  const handleContextLost = useCallback((event) => {
+    event.preventDefault();
+    setHasError(true);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    canvas.addEventListener("webglcontextlost", handleContextLost);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+    };
+  }, [handleContextLost]);
 
   // If WebGL context was lost, gracefully render nothing
   if (hasError) return null;
@@ -1001,12 +1017,7 @@ export const HeroBackdropFX = () => {
         dpr={[1, 1.5]}
         frameloop="demand"
         onCreated={({ gl }) => {
-          // Handle WebGL context lost gracefully instead of crashing
-          const canvas = gl.domElement;
-          canvas.addEventListener("webglcontextlost", (e) => {
-            e.preventDefault();
-            setHasError(true);
-          });
+          canvasRef.current = gl.domElement;
         }}
       >
         <ParticleField />

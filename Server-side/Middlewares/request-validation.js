@@ -13,7 +13,7 @@ const ADMIN_PERMISSION_KEYS = ["products", "orders", "users", "notifications", "
 const ADMIN_ROLE_VALUES = ["admin", "sub_admin"];
 const SUB_ROLE_VALUES = ["order_manager", "product_manager", "marketing_manager", "support_admin", "inventory_manager"];
 
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 const createValidationMiddleware = (validatorFn) => (req, res, next) => {
   try {
@@ -333,7 +333,7 @@ const validateAuthRegister = createValidationMiddleware((req) => {
   const email = sanitizeEmail(req.body.email);
   const password = sanitizePassword(req.body.password);
   const confirmPassword = sanitizePassword(req.body.confirmPassword, "confirmPassword");
-  const phoneNumber = sanitizeString(req.body.phoneNumber, "phoneNumber", { maxLength: 20 });
+  const phoneNumber = req.body.phoneNumber ? sanitizeString(req.body.phoneNumber, "phoneNumber", { maxLength: 20 }) : undefined;
   const username = sanitizeOptionalPlainText(req.body.username, "username", { maxLength: 120 });
 
   req.body = { email, password, confirmPassword, phoneNumber: phoneNumber || undefined, username };

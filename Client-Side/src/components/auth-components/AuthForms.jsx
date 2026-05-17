@@ -11,6 +11,7 @@ import {
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
+import { describeAuthError } from "@/lib/auth-errors";
 import LuxuryInput from "./LuxuryInput";
 import OtpCells from "./OtpCells";
 import GoogleAuthButton from "./GoogleAuthButton";
@@ -23,10 +24,12 @@ const PHONE = /^(\+?94|0)?7[0-9]{8}$/;
 const GOOGLE = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FB = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 
-export const resolveUser = (p) =>
+void motion;
+
+const resolveUser = (p) =>
   p?.data?.user ?? (p?.data && typeof p.data === "object" ? p.data : null) ?? p?.user ?? null;
 
-export const resolveDest = (user) => {
+const resolveDest = (user) => {
   const r = String(user?.role || "").toLowerCase();
   return ["admin","super_admin","superadmin","sub_admin"].includes(r) ? "/admin/dashboard" : "/shopping/home";
 };
@@ -74,7 +77,12 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
       toast({ title: "Welcome back", variant: "success" });
       onClose();
       navigate(resolveDest(resolveUser(r)), { replace: true });
-    }).catch(err => toast({ title: "Login failed", description: err?.response?.data?.message || err?.message, variant: "destructive" }));
+    }).catch((err) => {
+      const { title, description } = describeAuthError(err, {
+        title: "Login failed",
+      });
+      toast({ title, description, variant: "destructive" });
+    });
   };
 
   const handleGoogle = async ({ access_token }) => {
@@ -251,7 +259,10 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
       toast({ title: "Welcome to the atelier", description: "Verify your email to continue.", variant: "success" });
       onOtpRequired();
     } catch (err) {
-      toast({ title: "Registration failed", description: err?.response?.data?.message || err?.message, variant: "destructive" });
+      const { title, description } = describeAuthError(err, {
+        title: "Registration failed",
+      });
+      toast({ title, description, variant: "destructive" });
     } finally { setLoading(false); }
   };
 
