@@ -332,11 +332,26 @@ const validateObjectIdParam = (paramName, label = paramName) =>
 const validateAuthRegister = createValidationMiddleware((req) => {
   const email = sanitizeEmail(req.body.email);
   const password = sanitizePassword(req.body.password);
-  const confirmPassword = sanitizePassword(req.body.confirmPassword, "confirmPassword");
-  const phoneNumber = sanitizeString(req.body.phoneNumber, "phoneNumber", { maxLength: 20 });
+  // confirmPassword just needs to be a non-empty string here;
+  // the controller checks it equals password and the model validates the final value.
+  const confirmPassword = sanitizeString(req.body.confirmPassword, "confirmPassword", {
+    required: true,
+    minLength: 8,
+    maxLength: 128,
+  });
+  // Phone is optional at registration — treat empty string as absent.
+  const phoneNumber = sanitizeOptionalPlainText(req.body.phoneNumber, "phoneNumber", {
+    maxLength: 20,
+  });
   const username = sanitizeOptionalPlainText(req.body.username, "username", { maxLength: 120 });
 
-  req.body = { email, password, confirmPassword, phoneNumber: phoneNumber || undefined, username };
+  req.body = {
+    email,
+    password,
+    confirmPassword,
+    phoneNumber: phoneNumber || undefined,
+    username,
+  };
 });
 
 const validateAuthLogin = createValidationMiddleware((req) => {
