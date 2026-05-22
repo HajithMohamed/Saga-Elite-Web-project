@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Fragment } from "react";
+import React, { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -215,6 +215,7 @@ const rollbackCreatedProduct = async (product) => {
 
 const CUSTOM_OPTION = "__custom__";
 const CATEGORY_ROOT_TAGS = ["Gents", "Ladies", "Unisex"];
+const CATEGORY_MANAGER_PAGE_SIZE = 6;
 
 const MATERIAL_OPTIONS = [
   "Cotton",
@@ -419,7 +420,7 @@ const collectCategoryOptions = (categories = [], path = []) =>
     ...collectCategoryOptions(category.children || [], [...path, category.name]),
   ]);
 
-const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
+const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose, panelRef }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -432,9 +433,23 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
   const [isFeatured, setIsFeatured] = useState(false);
   const [showOnHome, setShowOnHome] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
   const visibleCategoryTree = activeRootNode ? activeRootNode.children || [] : [];
+  const totalPages = Math.max(1, Math.ceil(visibleCategoryTree.length / CATEGORY_MANAGER_PAGE_SIZE));
+  const activePage = Math.min(currentPage, totalPages);
+  const pageStart = (activePage - 1) * CATEGORY_MANAGER_PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + CATEGORY_MANAGER_PAGE_SIZE, visibleCategoryTree.length);
+  const pagedCategoryTree = visibleCategoryTree.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTag]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const resetForm = useCallback(
     (nextParentCategory = activeRootNode ? String(activeRootNode._id) : "") => {
@@ -469,6 +484,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       const nextRootNode = findCategoryNode(categoryTree, nextTag);
 
       setActiveTag(nextTag);
+      setCurrentPage(1);
       resetForm(nextRootNode ? String(nextRootNode._id) : "");
     },
     [categoryTree, resetForm]
@@ -513,6 +529,9 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       }
 
       await onRefreshCategories();
+      if (!editingId) {
+        setCurrentPage(1);
+      }
       toast({
         title: editingId ? "Category updated" : "Category created",
         variant: "success",
@@ -608,7 +627,9 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6"
+      id="category-manager-panel"
+      ref={panelRef}
+      className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6 scroll-mt-6"
     >
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
@@ -671,9 +692,61 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
         </div>
       ) : null}
 
+      {visibleCategoryTree.length > CATEGORY_MANAGER_PAGE_SIZE ? (
+        <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+              Showing {pageStart + 1}-{pageEnd} of {visibleCategoryTree.length} categories
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={activePage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Previous category page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                const isActivePage = activePage === pageNumber;
+
+                return (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNumber)}
+                    className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.2em] transition ${
+                      isActivePage
+                        ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                        : "border-white/10 bg-black/40 text-white/65 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                disabled={activePage === totalPages}
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="Next category page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-3">
-          {renderNodes(visibleCategoryTree, activeRootNode ? [activeRootNode.name] : [])}
+          {renderNodes(pagedCategoryTree, activeRootNode ? [activeRootNode.name] : [])}
           {activeRootNode && visibleCategoryTree.length === 0 ? (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
               No subcategories exist under {activeRootNode.name} yet.
@@ -816,6 +889,7 @@ const Product = () => {
   const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
   const [formSyncToken, setFormSyncToken] = useState(0);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const categoryManagerRef = useRef(null);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -859,6 +933,11 @@ const Product = () => {
     fetchProducts();
     loadCategoryTree();
   }, [dispatch, fetchProducts, loadCategoryTree]);
+
+  useEffect(() => {
+    if (!categoryManagerOpen || !categoryManagerRef.current) return;
+    categoryManagerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [categoryManagerOpen]);
 
   // Bulk operations on the product list. Selection wipes when productList
   // identity changes (filter/page change), so stale IDs can't leak through.
@@ -2399,6 +2478,8 @@ const Product = () => {
             <button
               type="button"
               onClick={() => setCategoryManagerOpen((state) => !state)}
+              aria-expanded={categoryManagerOpen}
+              aria-controls="category-manager-panel"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/[0.08] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
             >
               <Settings className="h-3.5 w-3.5" />
@@ -2417,6 +2498,7 @@ const Product = () => {
               categoryTree={categoryTree}
               onRefreshCategories={loadCategoryTree}
               onClose={() => setCategoryManagerOpen(false)}
+              panelRef={categoryManagerRef}
             />
           ) : null}
         </AnimatePresence>
