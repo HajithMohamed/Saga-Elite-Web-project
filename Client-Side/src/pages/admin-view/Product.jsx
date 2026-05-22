@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, Fragment } from "react";
+import React, { useEffect, useState, useCallback, Fragment } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -420,7 +420,7 @@ const collectCategoryOptions = (categories = [], path = []) =>
     ...collectCategoryOptions(category.children || [], [...path, category.name]),
   ]);
 
-const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose, panelRef }) => {
+const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -624,17 +624,19 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose, pane
 
   return (
     <motion.div
+      id="category-manager-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-manager-title"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      id="category-manager-panel"
-      ref={panelRef}
-      className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6 scroll-mt-6"
+      className="overflow-x-hidden overflow-y-auto rounded-3xl border border-white/10 bg-[#111111] p-5 shadow-2xl md:p-6 max-h-[calc(100vh-2rem)]"
     >
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
-          <h3 className="mt-2 text-xl font-semibold text-white">Category management</h3>
+          <h3 id="category-manager-title" className="mt-2 text-xl font-semibold text-white">Category management</h3>
           <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -889,7 +891,6 @@ const Product = () => {
   const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
   const [formSyncToken, setFormSyncToken] = useState(0);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
-  const categoryManagerRef = useRef(null);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -935,8 +936,23 @@ const Product = () => {
   }, [dispatch, fetchProducts, loadCategoryTree]);
 
   useEffect(() => {
-    if (!categoryManagerOpen || !categoryManagerRef.current) return;
-    categoryManagerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!categoryManagerOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setCategoryManagerOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [categoryManagerOpen]);
 
   // Bulk operations on the product list. Selection wipes when productList
@@ -2477,13 +2493,13 @@ const Product = () => {
             </div>
             <button
               type="button"
-              onClick={() => setCategoryManagerOpen((state) => !state)}
+              onClick={() => setCategoryManagerOpen(true)}
               aria-expanded={categoryManagerOpen}
               aria-controls="category-manager-panel"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/[0.08] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
             >
               <Settings className="h-3.5 w-3.5" />
-              {categoryManagerOpen ? "Hide Categories" : "Manage Categories"}
+              Manage Categories
             </button>
             <PrimaryButton onClick={openNewProductForm}>
               <Plus className="w-3 h-3" />
@@ -2494,14 +2510,38 @@ const Product = () => {
 
         <AnimatePresence>
           {categoryManagerOpen ? (
-            <CategoryManagerPanel
-              categoryTree={categoryTree}
-              onRefreshCategories={loadCategoryTree}
-              onClose={() => setCategoryManagerOpen(false)}
-              panelRef={categoryManagerRef}
-            />
+            <motion.div
+              key="category-manager-overlay"
+              className="fixed inset-0 z-[80] bg-black/70 px-4 py-4 backdrop-blur-sm md:px-6 md:py-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCategoryManagerOpen(false)}
+            >
+              <div className="flex min-h-full items-start justify-center">
+                <div className="w-full max-w-[min(1180px,calc(100vw-2rem))]" onClick={(event) => event.stopPropagation()}>
+                  <CategoryManagerPanel
+                    categoryTree={categoryTree}
+                    onRefreshCategories={loadCategoryTree}
+                    onClose={() => setCategoryManagerOpen(false)}
+                  />
+                </div>
+              </div>
+            </motion.div>
           ) : null}
         </AnimatePresence>
+
+        {!categoryManagerOpen ? (
+          <button
+            type="button"
+            onClick={() => setCategoryManagerOpen(true)}
+            className="fixed bottom-24 left-4 z-[70] inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black shadow-2xl transition hover:bg-[#E1BE47] md:bottom-8 md:left-8"
+            aria-label="Open category manager"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Categories
+          </button>
+        ) : null}
 
         {/* Bento Grid List Header */}
         <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
