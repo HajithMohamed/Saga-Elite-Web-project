@@ -420,6 +420,20 @@ const collectCategoryOptions = (categories = [], path = []) =>
     ...collectCategoryOptions(category.children || [], [...path, category.name]),
   ]);
 
+const flattenCategoryRows = (categories = [], path = []) =>
+  categories.flatMap((category) => {
+    const nextPath = [...path, category];
+
+    return [
+      {
+        ...category,
+        breadcrumb: nextPath.map((item) => item.name).join(" / "),
+        level: Math.max(0, nextPath.length - 1),
+      },
+      ...flattenCategoryRows(category.children || [], nextPath),
+    ];
+  });
+
 const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -436,12 +450,12 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
   const [currentPage, setCurrentPage] = useState(1);
 
   const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
-  const visibleCategoryTree = activeRootNode ? activeRootNode.children || [] : [];
-  const totalPages = Math.max(1, Math.ceil(visibleCategoryTree.length / CATEGORY_MANAGER_PAGE_SIZE));
+  const visibleCategoryRows = activeRootNode ? flattenCategoryRows(activeRootNode.children || [], [activeRootNode]) : [];
+  const totalPages = Math.max(1, Math.ceil(visibleCategoryRows.length / CATEGORY_MANAGER_PAGE_SIZE));
   const activePage = Math.min(currentPage, totalPages);
   const pageStart = (activePage - 1) * CATEGORY_MANAGER_PAGE_SIZE;
-  const pageEnd = Math.min(pageStart + CATEGORY_MANAGER_PAGE_SIZE, visibleCategoryTree.length);
-  const pagedCategoryTree = visibleCategoryTree.slice(pageStart, pageEnd);
+  const pageEnd = Math.min(pageStart + CATEGORY_MANAGER_PAGE_SIZE, visibleCategoryRows.length);
+  const pagedCategoryRows = visibleCategoryRows.slice(pageStart, pageEnd);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -570,56 +584,6 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
     [editingId, onRefreshCategories, resetForm, toast]
   );
 
-  const renderNodes = useCallback(
-    (nodes = [], path = []) =>
-      nodes.map((category) => {
-        const nextPath = [...path, category.name];
-        return (
-          <div key={category._id} className="space-y-3">
-            <div className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-white">{category.name}</p>
-                  <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
-                    {category.isActive ? "Active" : "Inactive"}
-                  </span>
-                  {category.children?.length ? (
-                    <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
-                      {category.children.length} children
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{nextPath.join(" / ")}</p>
-                <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => startEdit(category)}
-                  className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(category)}
-                  className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-
-            {category.children?.length ? (
-              <div className="pl-4 border-l border-white/5">{renderNodes(category.children, nextPath)}</div>
-            ) : null}
-          </div>
-        );
-      }),
-    [handleDelete, startEdit]
-  );
-
   const categoryOptions = collectCategoryOptions(activeRootNode ? [activeRootNode] : []).filter((option) => option.value !== editingId);
 
   return (
@@ -631,7 +595,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="overflow-x-hidden overflow-y-auto rounded-3xl border border-white/10 bg-[#111111] p-5 shadow-2xl md:p-6 max-h-[calc(100vh-2rem)]"
+      className="mb-8 rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6"
     >
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
@@ -694,11 +658,11 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
         </div>
       ) : null}
 
-      {visibleCategoryTree.length > CATEGORY_MANAGER_PAGE_SIZE ? (
+      {visibleCategoryRows.length > CATEGORY_MANAGER_PAGE_SIZE ? (
         <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-              Showing {pageStart + 1}-{pageEnd} of {visibleCategoryTree.length} categories
+              Showing {pageStart + 1}-{pageEnd} of {visibleCategoryRows.length} categories
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -748,8 +712,44 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-3">
-          {renderNodes(pagedCategoryTree, activeRootNode ? [activeRootNode.name] : [])}
-          {activeRootNode && visibleCategoryTree.length === 0 ? (
+          {pagedCategoryRows.map((category) => (
+            <div key={category._id} className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between" style={{ marginLeft: `${Math.min(category.level, 3) * 10}px` }}>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-white">{category.name}</p>
+                  <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
+                    {category.isActive ? "Active" : "Inactive"}
+                  </span>
+                  {category.children?.length ? (
+                    <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
+                      {category.children.length} children
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{category.breadcrumb}</p>
+                <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => startEdit(category)}
+                  className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(category)}
+                  className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {activeRootNode && visibleCategoryRows.length === 0 ? (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
               No subcategories exist under {activeRootNode.name} yet.
             </div>
@@ -934,26 +934,6 @@ const Product = () => {
     fetchProducts();
     loadCategoryTree();
   }, [dispatch, fetchProducts, loadCategoryTree]);
-
-  useEffect(() => {
-    if (!categoryManagerOpen) return undefined;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setCategoryManagerOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [categoryManagerOpen]);
 
   // Bulk operations on the product list. Selection wipes when productList
   // identity changes (filter/page change), so stale IDs can't leak through.
@@ -1452,15 +1432,17 @@ const Product = () => {
     }
 
     const selectedPath = selectedOption.path || [];
-    const rootCategory = selectedPath[0];
-    const firstSubcategory = selectedPath[1];
     const selectedLeaf = selectedPath[selectedPath.length - 1];
+
+    setCategorySelection(String(selectedLeaf._id));
+    setActiveSubcategories(collectSubcategoryOptions(selectedLeaf));
+    setSubCategorySelection("");
 
     setFormData((prev) => ({
       ...prev,
-      category: rootCategory?.name || prev.category,
+      category: selectedLeaf?.name || prev.category,
       categoryId: selectedLeaf?._id ? String(selectedLeaf._id) : prev.categoryId,
-      subCategory: firstSubcategory?.name || selectedLeaf?.name || "",
+      subCategory: "",
       categoryPath: buildCategoryPathValue(selectedPath),
     }));
   };
@@ -1793,7 +1775,7 @@ const Product = () => {
             <FormField
               label="Category"
               required
-              helper="Pick an existing system category or create a new one on the fly."
+              helper="Pick any node in the tree. Nested categories can become the active main category too."
             >
               <div className="space-y-3">
                 <LuxurySelect
@@ -1801,9 +1783,9 @@ const Product = () => {
                   onChange={(e) => handleCategoryChange(e.target.value)}
                 >
                   <option value="">Select Category</option>
-                  {categoryTree.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
-                      {cat.name}
+                  {collectCategoryOptions(categoryTree).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                   <option value={CUSTOM_OPTION}>Other / New category</option>
@@ -1824,7 +1806,7 @@ const Product = () => {
             <FormField
               label="Sub-Category Division"
               optional
-              helper="Choose any nested division under the selected category, or add a new one."
+              helper="Choose a child of the selected category to drill deeper into the tree."
             >
               {categorySelection ? (
                 <div className="space-y-3">
@@ -2493,13 +2475,13 @@ const Product = () => {
             </div>
             <button
               type="button"
-              onClick={() => setCategoryManagerOpen(true)}
+              onClick={() => setCategoryManagerOpen((state) => !state)}
               aria-expanded={categoryManagerOpen}
               aria-controls="category-manager-panel"
               className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/[0.08] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
             >
               <Settings className="h-3.5 w-3.5" />
-              Manage Categories
+              {categoryManagerOpen ? "Hide Categories" : "Manage Categories"}
             </button>
             <PrimaryButton onClick={openNewProductForm}>
               <Plus className="w-3 h-3" />
@@ -2510,38 +2492,13 @@ const Product = () => {
 
         <AnimatePresence>
           {categoryManagerOpen ? (
-            <motion.div
-              key="category-manager-overlay"
-              className="fixed inset-0 z-[80] bg-black/70 px-4 py-4 backdrop-blur-sm md:px-6 md:py-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setCategoryManagerOpen(false)}
-            >
-              <div className="flex min-h-full items-start justify-center">
-                <div className="w-full max-w-[min(1180px,calc(100vw-2rem))]" onClick={(event) => event.stopPropagation()}>
-                  <CategoryManagerPanel
-                    categoryTree={categoryTree}
-                    onRefreshCategories={loadCategoryTree}
-                    onClose={() => setCategoryManagerOpen(false)}
-                  />
-                </div>
-              </div>
-            </motion.div>
+            <CategoryManagerPanel
+              categoryTree={categoryTree}
+              onRefreshCategories={loadCategoryTree}
+              onClose={() => setCategoryManagerOpen(false)}
+            />
           ) : null}
         </AnimatePresence>
-
-        {!categoryManagerOpen ? (
-          <button
-            type="button"
-            onClick={() => setCategoryManagerOpen(true)}
-            className="fixed bottom-24 left-4 z-[70] inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black shadow-2xl transition hover:bg-[#E1BE47] md:bottom-8 md:left-8"
-            aria-label="Open category manager"
-          >
-            <Settings className="h-3.5 w-3.5" />
-            Categories
-          </button>
-        ) : null}
 
         {/* Bento Grid List Header */}
         <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
