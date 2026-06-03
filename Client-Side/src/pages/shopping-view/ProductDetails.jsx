@@ -370,6 +370,24 @@ const ProductDetails = () => {
     setProduct((currentProduct) => applyLiveProductUpdate(currentProduct, liveUpdate));
   }, [liveProductUpdates, product?._id]);
 
+  // Color-based gallery filtering. Keep this hook before early returns so the
+  // product page always renders hooks in the same order while data loads.
+  const activeGalleryImages = useMemo(() => {
+    const allImages = product?.images || [];
+    if (!selectedColor || allImages.length === 0) return allImages;
+
+    const colorKey = selectedColor.toLowerCase();
+    const tagged = allImages.filter(
+      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+    );
+    const fallback = allImages.filter(
+      (img) => !img.colorTag || String(img.colorTag).trim() === ""
+    );
+
+    if (tagged.length > 0) return [...tagged, ...fallback];
+    return allImages;
+  }, [product?.images, selectedColor]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
@@ -447,28 +465,6 @@ const ProductDetails = () => {
     // Reset gallery to first image of the new color
     setActiveImageIndex(0);
   };
-
-  // ──── Color-based gallery filtering ────
-  // When a color is selected, show only images tagged with that color.
-  // Untagged images (colorTag === "") are included as fallback.
-  // If no images match the selected color at all, show everything.
-  const activeGalleryImages = useMemo(() => {
-    const allImages = product?.images || [];
-    if (!selectedColor || allImages.length === 0) return allImages;
-
-    const colorKey = selectedColor.toLowerCase();
-    const tagged = allImages.filter(
-      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
-    );
-    const fallback = allImages.filter(
-      (img) => !img.colorTag || String(img.colorTag).trim() === ""
-    );
-
-    // If we found color-specific images, show them + untagged fallbacks
-    if (tagged.length > 0) return [...tagged, ...fallback];
-    // No images match this color — show all images (backward compat)
-    return allImages;
-  }, [product?.images, selectedColor]);
 
   const handleAddToCart = () => {
     if (!hasVariants) {

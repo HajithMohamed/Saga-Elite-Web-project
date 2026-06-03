@@ -9,6 +9,11 @@ const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const winston = require("winston");
 const { imageSize } = require("image-size");
+const {
+  deleteLocalImage,
+  isLocalImagePublicId,
+  storeLocalImage,
+} = require("../Utils/local-image-storage");
 
 const MAX_IMAGES_PER_ENTITY = 10;
 
@@ -71,6 +76,73 @@ if (process.env.NODE_ENV !== "production") {
     })
   );
 }
+
+const isTransientUploadFailure = (errors = []) =>
+  errors.some((error) =>
+    /request timeout|timed out|etimedout|econnreset|enotfound|eai_again|socket hang up/i.test(
+      String(error || "")
+    )
+  );
+
+const isLocalImageFallbackEnabled = () => {
+  const runtimeEnv = String(process.env.NODE_ENV || "development").toLowerCase();
+  const disabled =
+    String(process.env.DISABLE_LOCAL_IMAGE_FALLBACK || "").toLowerCase() === "true";
+  return runtimeEnv !== "production" && !disabled;
+};
+
+const getDevCloudinaryOptions = () => {
+  if (!isLocalImageFallbackEnabled()) return undefined;
+
+  const retries = Number(process.env.CLOUDINARY_DEV_UPLOAD_RETRIES);
+  const timeout = Number(process.env.CLOUDINARY_DEV_UPLOAD_TIMEOUT_MS);
+
+  return {
+    retries: Number.isFinite(retries) && retries >= 0 ? retries : 0,
+    timeout: Number.isFinite(timeout) && timeout > 0 ? timeout : 15000,
+  };
+};
+
+const uploadToImageStorage = async (file, folder) => {
+  try {
+    return await uploadToCloudinary(
+      file.buffer,
+      folder,
+      file.mimetype,
+      getDevCloudinaryOptions()
+    );
+  } catch (error) {
+    const shouldFallback =
+      isLocalImageFallbackEnabled() &&
+      isTransientUploadFailure([error?.message, error?.code, error?.name]);
+
+    if (!shouldFallback) throw error;
+
+    const localResult = await storeLocalImage({
+      buffer: file.buffer,
+      folder,
+      mimetype: file.mimetype,
+    });
+
+    actionLogger.warn({
+      action: "image_upload_local_fallback",
+      folder,
+      reason: error?.message || String(error),
+      publicId: localResult.public_id,
+      url: localResult.secure_url,
+    });
+
+    return localResult;
+  }
+};
+
+const deleteImageAsset = async (publicId) => {
+  if (!publicId) return null;
+  if (isLocalImagePublicId(publicId)) {
+    return deleteLocalImage(publicId);
+  }
+  return cloudinary.uploader.destroy(publicId);
+};
 
 const uploadImages = catchAsync(async (req, res, next) => {
   const imageData = filterObj(req.body, "refId", "refModel", "type", "label", "colorTag");
@@ -193,11 +265,10 @@ const uploadImages = catchAsync(async (req, res, next) => {
   for (let i = 0; i < req.files.length; i += CONCURRENCY) {
     const batch = req.files.slice(i, i + CONCURRENCY).map((file, batchIdx) => {
       const index = i + batchIdx;
-      return uploadToCloudinary(
-        file.buffer,
-        cloudinaryFolder,
-        file.mimetype,
-      ).then((result) => ({ result, index }));
+      return uploadToImageStorage(file, cloudinaryFolder).then((result) => ({
+        result,
+        index,
+      }));
     });
 
     const batchResults = await Promise.allSettled(batch);
@@ -252,14 +323,17 @@ const uploadImages = catchAsync(async (req, res, next) => {
           refId: imageData.refId || null,
           publicId: result.public_id,
           url: result.secure_url,
+          storage: result.storage || "cloudinary",
           order: imageDoc.order,
         });
       } catch (dbError) {
-        await cloudinary.uploader.destroy(result.public_id);
+        await deleteImageAsset(result.public_id);
         failedUploads.push(`DB save failed for upload ${index}`);
       }
     } else {
-      failedUploads.push(`Upload failed: ${uploadResult.reason.message}`);
+      failedUploads.push(
+        `Upload failed: ${uploadResult.reason?.message || String(uploadResult.reason)}`
+      );
     }
   }
 
@@ -269,7 +343,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
 
   if (failedUploads.length > 0) {
     for (const image of uploadedImages) {
-      await cloudinary.uploader.destroy(image.publicId);
+      await deleteImageAsset(image.publicId);
       await Image.findByIdAndDelete(image._id);
     }
 
@@ -284,8 +358,14 @@ const uploadImages = catchAsync(async (req, res, next) => {
       errors: failedUploads,
     });
 
+    const transientFailure = isTransientUploadFailure(failedUploads);
     return next(
-      new AppError(`Upload failed: ${failedUploads.join(", ")}`, 500),
+      new AppError(
+        transientFailure
+          ? "Image upload service timed out. Please try again in a moment."
+          : `Upload failed: ${failedUploads.join(", ")}`,
+        transientFailure ? 503 : 500
+      )
     );
   }
 
@@ -345,14 +425,10 @@ const updateImage = catchAsync(async (req, res, next) => {
   }
 
   // Upload new image
-  const uploadResult = await uploadToCloudinary(
-    req.file.buffer,
-    cloudinaryFolder,
-    req.file.mimetype
-  );
+  const uploadResult = await uploadToImageStorage(req.file, cloudinaryFolder);
 
-  // Delete old image from cloudinary
-  await cloudinary.uploader.destroy(image.publicId);
+  // Delete old image from persistent storage
+  await deleteImageAsset(image.publicId);
 
   // Update image document
   image.url = uploadResult.secure_url;
@@ -683,7 +759,7 @@ const deleteImage = catchAsync(async (req, res, next) => {
   image.isPrimary = false;
   await image.save();
 
-  await cloudinary.uploader.destroy(image.publicId);
+  await deleteImageAsset(image.publicId);
 
   if (wasPrimary) {
     const siblingQuery = { refModel: image.refModel, isDeleted: false };
@@ -817,8 +893,8 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
 
   await Image.deleteMany(query);
 
-  const cloudinaryDeletes = imagesToDelete.map(img => cloudinary.uploader.destroy(img.publicId));
-  await Promise.allSettled(cloudinaryDeletes);
+  const imageAssetDeletes = imagesToDelete.map((img) => deleteImageAsset(img.publicId));
+  await Promise.allSettled(imageAssetDeletes);
 
   actionLogger.info({
     action: "delete_all_images",
@@ -888,11 +964,7 @@ const uploadReceiptImage = catchAsync(async (req, res, next) => {
     return next(new AppError("No receipt payload found", 400));
   }
 
-  const result = await uploadToCloudinary(
-    req.file.buffer,
-    "saga-elite/receipts",
-    req.file.mimetype
-  );
+  const result = await uploadToImageStorage(req.file, "saga-elite/receipts");
 
   actionLogger.info({
     action: "receipt_upload_success",

@@ -83,6 +83,13 @@ app.use(configureCors());
 app.use(guestTrackingMiddleware);
 app.use(compression());
 app.use(
+  "/Uploads",
+  express.static(path.resolve(__dirname, "Uploads"), {
+    fallthrough: false,
+    maxAge: process.env.NODE_ENV === "production" ? "7d" : 0,
+  })
+);
+app.use(
   express.json({
     limit: "10kb",
   })

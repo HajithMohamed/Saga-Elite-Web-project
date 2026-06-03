@@ -17,6 +17,7 @@ import ImageUpload from "@/components/admin-components/ImageUpload";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+import { compressImageFile } from "@/lib/image-compression";
 import {
   Search,
   Settings,
@@ -161,6 +162,22 @@ const getVariantColorCode = (variant) => {
   return preset?.hex || "#000000";
 };
 
+const normalizeColorKey = (value = "") => String(value || "").trim().toLowerCase();
+
+const getImageForVariantColor = (images = [], color = "") => {
+  const colorKey = normalizeColorKey(color);
+  if (!colorKey) return null;
+  return (
+    images.find((image) => normalizeColorKey(image?.colorTag) === colorKey) || null
+  );
+};
+
+const revokeBlobUrl = (url) => {
+  if (typeof url === "string" && url.startsWith("blob:")) {
+    URL.revokeObjectURL(url);
+  }
+};
+
 // Draft key for the wizard's auto-save. Only used when creating a NEW product
 // (editing an existing one always loads server state, never a stale draft).
 const PRODUCT_DRAFT_KEY = "saga.admin.product.draft";
@@ -195,7 +212,7 @@ const PRODUCT_TAG_OPTIONS = [
 
 const getErrorMessage = (error, fallback = "Request failed") => {
   if (typeof error === "string") return error;
-  return error?.message || error?.error || error?.response?.data?.message || fallback;
+  return error?.response?.data?.message || error?.message || error?.error || fallback;
 };
 
 const rollbackCreatedProduct = async (product) => {
@@ -877,6 +894,7 @@ const Product = () => {
   const [productImages, setProductImages] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
   const [uploadColorTag, setUploadColorTag] = useState("");
+  const [variantImageBusyIndex, setVariantImageBusyIndex] = useState(null);
   const [galleryTitle, setGalleryTitle] = useState("");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
@@ -977,6 +995,8 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
+    setUploadColorTag("");
+    setVariantImageBusyIndex(null);
     setIsSavingProduct(false);
     setFormSyncToken((token) => token + 1);
     setActiveFormTab("basic");
@@ -993,6 +1013,8 @@ const Product = () => {
     setSelectedProductSlug(null);
     setSelectedProductId(null);
     setProductImages([]);
+    setUploadColorTag("");
+    setVariantImageBusyIndex(null);
     setActiveFormTab("basic");
     setShowForm(true);
     setFormSyncToken((token) => token + 1);
@@ -1021,7 +1043,10 @@ const Product = () => {
   const fetchProductImages = async (id) => {
     try {
       const res = await axios.get(`${API_BASE}/image/get-product-images/${id}`);
-      const loadedImages = res.data.images || [];
+      const loadedImages = (res.data.images || []).map((image) => ({
+        ...image,
+        isUploaded: true,
+      }));
       setProductImages(loadedImages);
       return loadedImages;
     } catch {
@@ -1207,6 +1232,44 @@ const Product = () => {
     return null;
   };
 
+  const uploadProductImagesByColorTag = async (productId, imagesToUpload = []) => {
+    const groups = imagesToUpload.reduce((map, image) => {
+      const tag = String(image?.colorTag || "").trim();
+      const key = tag.toLowerCase();
+      const existing = map.get(key) || { colorTag: tag, images: [] };
+      existing.images.push(image);
+      map.set(key, existing);
+      return map;
+    }, new Map());
+
+    const uploadedImages = [];
+
+    for (const group of groups.values()) {
+      const fd = new FormData();
+      fd.append("refModel", "Product");
+      fd.append("refId", productId);
+      fd.append("type", "product");
+      if (group.colorTag) fd.append("colorTag", group.colorTag);
+      group.images.forEach((img) => fd.append("images", img.file));
+
+      const res = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+
+      uploadedImages.push(
+        ...(res.data?.images || []).map((image) => ({
+          ...image,
+          isUploaded: true,
+        }))
+      );
+
+      group.images.forEach((img) => revokeBlobUrl(img.url));
+    }
+
+    return uploadedImages;
+  };
+
   const handleSubmit = async () => {
     if (isSavingProduct) return;
 
@@ -1251,19 +1314,8 @@ const Product = () => {
       if (productId) {
         const newImages = productImages.filter((img) => !img.isUploaded && img.file);
         if (newImages.length > 0) {
-          const fd = new FormData();
-          fd.append("refModel", "Product");
-          fd.append("refId", productId);
-          fd.append("type", "product");
-          newImages.forEach((img) => fd.append("images", img.file));
-          // Attach color tag if images were tagged during upload
-          const imgColorTag = newImages[0]?.colorTag || uploadColorTag;
-          if (imgColorTag) fd.append("colorTag", imgColorTag);
           try {
-            await axios.post(`${API_BASE}/image/upload-image`, fd, {
-              headers: { "Content-Type": "multipart/form-data" },
-              withCredentials: true,
-            });
+            await uploadProductImagesByColorTag(productId, newImages);
           } catch (uploadError) {
             if (isCreatingProduct && createdProductForRollback) {
               const rolledBack = await rollbackCreatedProduct(createdProductForRollback);
@@ -1358,6 +1410,136 @@ const Product = () => {
   const removeVariant = (index) => {
     const updatedVariants = formData.variants.filter((_, i) => i !== index);
     setFormData({ ...formData, variants: updatedVariants });
+  };
+
+  const handleVariantImageSelect = (index) => {
+    const variant = formData.variants[index];
+    const colorTag = String(variant?.color || "").trim();
+
+    if (!colorTag) {
+      toast({
+        title: "Add a colour first",
+        description: "Variant images are matched by the colour name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (event) => {
+      const originalFile = event.target.files?.[0];
+      if (!originalFile) return;
+
+      setVariantImageBusyIndex(index);
+
+      try {
+        const file = await compressImageFile(originalFile);
+        if (!file) return;
+
+        const existingImage = getImageForVariantColor(productImages, colorTag);
+
+        if (!selectedProductId) {
+          const stagedImage = {
+            file,
+            url: URL.createObjectURL(file),
+            isUploaded: false,
+            label: `Variant: ${colorTag}`,
+            colorTag,
+          };
+
+          setProductImages((prev) => {
+            const existingIndex = prev.findIndex(
+              (img) => normalizeColorKey(img?.colorTag) === normalizeColorKey(colorTag)
+            );
+            if (existingIndex === -1) return [...prev, stagedImage];
+
+            const next = [...prev];
+            revokeBlobUrl(next[existingIndex]?.url);
+            next[existingIndex] = stagedImage;
+            return next;
+          });
+          setUploadColorTag(colorTag);
+          toast({
+            title: "Variant image staged",
+            description: `${colorTag} image will upload when the product is saved.`,
+            variant: "success",
+          });
+          return;
+        }
+
+        if (existingImage?._id) {
+          const fd = new FormData();
+          fd.append("image", file);
+
+          const res = await axios.patch(
+            `${API_BASE}/image/update-image/${existingImage._id}`,
+            fd,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+              withCredentials: true,
+            }
+          );
+
+          if (res.data?.success) {
+            const updatedImage = {
+              ...res.data.image,
+              colorTag: res.data.image?.colorTag || existingImage.colorTag || colorTag,
+              isUploaded: true,
+            };
+            setProductImages((prev) =>
+              prev.map((img) => (img._id === existingImage._id ? updatedImage : img))
+            );
+            setUploadColorTag(colorTag);
+            toast({
+              title: "Variant image updated",
+              description: `${colorTag} image was replaced.`,
+              variant: "success",
+            });
+          }
+          return;
+        }
+
+        const fd = new FormData();
+        fd.append("refModel", "Product");
+        fd.append("refId", selectedProductId);
+        fd.append("type", "product");
+        fd.append("colorTag", colorTag);
+        fd.append("images", file);
+
+        const res = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        });
+
+        if (res.data?.success) {
+          const uploaded = (res.data.images || []).map((image) => ({
+            ...image,
+            isUploaded: true,
+          }));
+          setProductImages((prev) => [...prev, ...uploaded]);
+          setUploadColorTag(colorTag);
+          toast({
+            title: "Variant image added",
+            description: `${colorTag} image is ready for storefront switching.`,
+            variant: "success",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Variant image failed",
+          description: getErrorMessage(error, "Could not save this variant image."),
+          variant: "destructive",
+        });
+      } finally {
+        setVariantImageBusyIndex(null);
+        input.value = "";
+      }
+    };
+
+    input.click();
   };
 
   const handleCategoryChange = (value) => {
@@ -2150,9 +2332,10 @@ const Product = () => {
           }
         >
           <div className="overflow-x-auto admin-panel border border-white/[0.06]">
-            <table className="w-full text-left min-w-[640px]">
+            <table className="w-full text-left min-w-[860px]">
               <thead className="bg-white/[0.02]">
                 <tr className="text-[10px] uppercase tracking-[0.15em] font-semibold text-white/50">
+                  <th className="px-4 py-3 font-semibold">Image</th>
                   <th className="px-4 py-3 font-semibold">SKU</th>
                   <th className="px-4 py-3 font-semibold">Size</th>
                   <th className="px-4 py-3 font-semibold">Color</th>
@@ -2163,7 +2346,12 @@ const Product = () => {
               </thead>
               <tbody className="divide-y divide-white/[0.05]">
                 <AnimatePresence initial={false}>
-                  {formData.variants.map((v, i) => (
+                  {formData.variants.map((v, i) => {
+                    const variantImage = getImageForVariantColor(productImages, v.color);
+                    const hasVariantColor = Boolean(String(v.color || "").trim());
+                    const isVariantImageBusy = variantImageBusyIndex === i;
+
+                    return (
                     <motion.tr
                       key={`variant-row-${i}`}
                       layout
@@ -2173,6 +2361,45 @@ const Product = () => {
                       transition={{ duration: 0.2 }}
                       className="hover:bg-white/[0.02] transition"
                     >
+                      <td className="px-4 py-2.5">
+                        <div className="flex min-w-[190px] items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleVariantImageSelect(i)}
+                            disabled={!hasVariantColor || isVariantImageBusy || isSavingProduct}
+                            className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] text-white/45 transition hover:border-[#D4AF37]/45 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-45"
+                            title={hasVariantColor ? `Manage ${v.color} image` : "Add colour before image"}
+                          >
+                            {variantImage?.url ? (
+                              <img
+                                src={variantImage.url}
+                                alt={`${v.color} variant`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="h-5 w-5" />
+                            )}
+                            {isVariantImageBusy ? (
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/55">
+                                <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" />
+                              </span>
+                            ) : null}
+                          </button>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => handleVariantImageSelect(i)}
+                              disabled={!hasVariantColor || isVariantImageBusy || isSavingProduct}
+                              className="block text-left text-[10px] font-bold uppercase tracking-[0.16em] text-[#D4AF37] transition hover:text-[#f2ca50] disabled:cursor-not-allowed disabled:text-white/30"
+                            >
+                              {variantImage ? "Change image" : "Add image"}
+                            </button>
+                            <p className="mt-1 truncate text-[10px] text-white/35">
+                              {hasVariantColor ? `Tag: ${v.color}` : "Add colour first"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
                       {/* Auto-generated SKU (editable) */}
                       <td className="px-4 py-2.5">
                         <div className="relative">
@@ -2292,7 +2519,8 @@ const Product = () => {
                         ) : null}
                       </td>
                     </motion.tr>
-                  ))}
+                    );
+                  })}
                 </AnimatePresence>
               </tbody>
             </table>

@@ -136,43 +136,60 @@ const ImageUpload = ({
     setIsUploading(true);
     setUploadError(null);
 
-    const formData = new FormData();
-    formData.append("refModel", refModel);
-    if (refId) formData.append("refId", refId);
-    if (type) formData.append("type", type);
-    if (label) formData.append("label", label); // Append label if exists
-    if (colorTag) formData.append("colorTag", colorTag); // Append color tag for variant images
-
-    filesToUpload.forEach((img) =>
-      formData.append("images", img.file)
-    );
-
     try {
-      const res = await axios.post(
-        `${API_BASE}/image/upload-image`,
-        formData,
-        {
+      const groups = filesToUpload.reduce((map, img) => {
+        const tag = String(img.colorTag || colorTag || "").trim();
+        const key = tag.toLowerCase();
+        const existing = map.get(key) || { colorTag: tag, images: [] };
+        existing.images.push(img);
+        map.set(key, existing);
+        return map;
+      }, new Map());
+
+      const uploaded = [];
+
+      for (const group of groups.values()) {
+        const formData = new FormData();
+        formData.append("refModel", refModel);
+        if (refId) formData.append("refId", refId);
+        if (type) formData.append("type", type);
+        if (label) formData.append("label", label);
+        if (group.colorTag) formData.append("colorTag", group.colorTag);
+
+        group.images.forEach((img) => formData.append("images", img.file));
+
+        const res = await axios.post(`${API_BASE}/image/upload-image`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
-        }
-      );
-
-      if (res.data.success) {
-        const uploaded = res.data.images.map((img) => ({
-          ...img,
-          isUploaded: true,
-        }));
-
-        images.forEach((img) => {
-          if (!img.isUploaded) URL.revokeObjectURL(img.url);
         });
 
-        setImages(uploaded);
-        if (onUploadSuccess) {
-          onUploadSuccess(uploaded);
+        if (!res.data.success) {
+          throw new Error(res.data.message || "Upload failed");
         }
+
+        uploaded.push(
+          ...(res.data.images || []).map((img) => ({
+            ...img,
+            isUploaded: true,
+          }))
+        );
+      }
+
+      images.forEach((img) => {
+        if (!img.isUploaded) URL.revokeObjectURL(img.url);
+      });
+
+      if (isMultiple) {
+        const uploadedSourceSet = new Set(filesToUpload);
+        setImages((prev) => [
+          ...prev.filter((img) => !uploadedSourceSet.has(img)),
+          ...uploaded,
+        ]);
       } else {
-        setUploadError(res.data.message || "Upload failed");
+        setImages(uploaded);
+      }
+      if (onUploadSuccess) {
+        onUploadSuccess(uploaded);
       }
     } catch (err) {
       setUploadError(

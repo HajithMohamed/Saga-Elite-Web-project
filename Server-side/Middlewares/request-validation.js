@@ -521,6 +521,12 @@ const validateImageUploadRequest = createValidationMiddleware((req) => {
     });
   }
 
+  if (req.body.colorTag !== undefined && req.body.colorTag !== null && req.body.colorTag !== "") {
+    validated.colorTag = sanitizeString(req.body.colorTag, "colorTag", {
+      maxLength: 64,
+    });
+  }
+
   req.body = validated;
 });
 
