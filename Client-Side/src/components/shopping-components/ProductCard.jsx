@@ -108,8 +108,10 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const primaryImage = product?.images?.[0]?.url || "/LOGO.png";
   const secondaryImage = product?.images?.[1]?.url || null;
   const [activeColor, setActiveColor] = useState(null);
-  const displayImage = activeColor
-    ? imageByColor.get(activeColor.toLowerCase()) || primaryImage
+  const [lockedColor, setLockedColor] = useState(null);
+  const previewColor = lockedColor || activeColor;
+  const displayImage = previewColor
+    ? imageByColor.get(previewColor.toLowerCase()) || primaryImage
     : primaryImage;
 
   // Sizes with aggregated stock (across colors) — for the hover preview strip.
@@ -446,7 +448,9 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       {distinctColors.length >= 2 && (
         <div
           className="px-2 -mt-1 mb-1 flex items-center gap-1.5"
-          onMouseLeave={() => setActiveColor(null)}
+          onMouseLeave={() => {
+            if (!lockedColor) setActiveColor(null);
+          }}
         >
           {distinctColors.slice(0, 5).map((color) => {
             const isActive =
@@ -461,11 +465,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
                 <ColorSwatch
                   color={color}
                   size={18}
-                  selected={isActive}
+                  selected={isActive || (lockedColor && lockedColor.toLowerCase() === color.toLowerCase())}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setActiveColor(color);
+                    // Toggle lock: clicking locks preview color until cleared
+                    if (lockedColor && lockedColor.toLowerCase() === color.toLowerCase()) {
+                      setLockedColor(null);
+                      setActiveColor(null);
+                    } else {
+                      setLockedColor(color);
+                      setActiveColor(color);
+                    }
                   }}
                 />
               </span>

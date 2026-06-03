@@ -108,7 +108,7 @@ const VariantSelectors = ({
                   key={color}
                   color={color}
                   label={color}
-                  size={36}
+                  size={28}
                   selected={isSelected}
                   disabled={isDisabled}
                   onClick={() => onColorChange?.(color)}

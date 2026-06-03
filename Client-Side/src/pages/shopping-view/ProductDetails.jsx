@@ -36,6 +36,7 @@ import VariantSelectors, {
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
+import { ColorSwatch } from "@/components/ui/editorial";
 
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
@@ -388,6 +389,21 @@ const ProductDetails = () => {
     return allImages;
   }, [product?.images, selectedColor]);
 
+  const distinctColors = useMemo(() => {
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    const seen = new Set();
+    const out = [];
+    for (const v of variants) {
+      const c = String(v?.color || "").trim();
+      if (!c) continue;
+      const key = c.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(c);
+    }
+    return out;
+  }, [product?.variants]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
@@ -463,6 +479,18 @@ const ProductDetails = () => {
     setSelectedVariantSku(matchedVariant?.sku || "");
     setVariantErrors((current) => ({ ...current, color: "" }));
     // Reset gallery to first image of the new color
+    setActiveImageIndex(0);
+  };
+
+  const handleDistinctColorClick = (color) => {
+    // When clicking a distinct color from the product overview, try to preserve size
+    let matchedVariant = null;
+    if (selectedSize) matchedVariant = getVariantBySelection(product, selectedSize, color);
+    if (!matchedVariant) {
+      matchedVariant = (product.variants || []).find((v) => String(v?.color || "") === String(color));
+    }
+    setSelectedColor(color);
+    setSelectedVariantSku(matchedVariant?.sku || "");
     setActiveImageIndex(0);
   };
 
@@ -611,7 +639,7 @@ const ProductDetails = () => {
           {/* LEFT 60%: Image Gallery */}
           <div className="lg:col-span-6 flex flex-col gap-4">
             <div
-              className="relative w-full aspect-[4/5] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
+              className="relative w-full aspect-[4/5] max-h-[560px] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
               onMouseMove={handleHeroPointerMove}
               onMouseLeave={handleHeroPointerLeave}
             >
@@ -693,11 +721,29 @@ const ProductDetails = () => {
                     key={img._id || i}
                     onClick={() => setActiveImageIndex(i)}
                     style={i === activeImageIndex ? { borderColor: `rgba(${dynamicRgb}, 0.8)`, boxShadow: `0 0 15px rgba(${dynamicRgb}, 0.2)` } : {}}
-                    className={`relative shrink-0 w-24 h-32 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                    className={`relative shrink-0 w-16 h-24 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
                       i === activeImageIndex ? "scale-105" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={img.url} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Distinct colour swatches (show all product colours) */}
+            {distinctColors.length > 0 && (
+              <div className="mt-4 flex items-center gap-3">
+                {distinctColors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDistinctColorClick(color);
+                    }}
+                    className="inline-flex"
+                    aria-pressed={String(selectedColor) === String(color)}
+                  >
+                    <ColorSwatch color={color} size={28} selected={selectedColor === color} />
                   </button>
                 ))}
               </div>
