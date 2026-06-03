@@ -89,20 +89,6 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
 
   const handleMouseLeave = () => setMouseOffset({ x: 0, y: 0 });
 
-  const displaySlides = activeDrops.length > 0
-    ? activeDrops.map((d, i) => ({
-        id: d._id || d.slug || `drop-${i}`,
-        imageUrl: d.images?.[0]?.url || d.coverImageUrl || '',
-        label: '🔴 LIVE DROP',
-        headline: d.name,
-        subheadline: d.description,
-        ctaText: 'SHOP THE DROP',
-        ctaLink: `/shopping/drop/${d.slug}`,
-        endDate: d.endDate,
-        isDrop: true
-      }))
-    : slides;
-
   const nextDropTime = nextDrop?.releaseDate
     ? new Date(nextDrop.releaseDate).getTime()
     : null;
@@ -111,6 +97,47 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
     ? (nextDropTime - initialNow) / 86400000
     : 999;
   const isUpcomingSoon = dropIsUpcoming && daysUntilDrop <= 7;
+
+  const displaySlides = useMemo(() => {
+    const result = [];
+    
+    if (activeDrops && activeDrops.length > 0) {
+      activeDrops.forEach((d, i) => {
+        result.push({
+          id: d._id || d.slug || `drop-${i}`,
+          imageUrl: d.images?.[0]?.url || d.coverImageUrl || d.products?.[0]?.images?.[0]?.url || '',
+          label: '🔴 LIVE DROP',
+          headline: d.name,
+          subheadline: d.description,
+          ctaText: 'SHOP THE DROP',
+          ctaLink: `/shopping/drop/${d.slug}`,
+          endDate: d.endDate,
+          isDrop: true
+        });
+      });
+    }
+    
+    if (dropIsUpcoming && nextDrop) {
+      result.push({
+        id: nextDrop._id || nextDrop.slug || 'next-drop',
+        imageUrl: nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || nextDrop.products?.[0]?.images?.[0]?.url || '',
+        label: '⚡ COMING SOON',
+        headline: nextDrop.name,
+        subheadline: nextDrop.description || 'Something rare is being prepared. Stay ready.',
+        ctaText: isUpcomingSoon ? '🔔 REMIND ME' : 'VIEW DROPS',
+        ctaLink: '/shopping/drops',
+        endDate: nextDrop.releaseDate,
+        isUpcoming: true,
+        isDrop: true
+      });
+    }
+    
+    if (slides && slides.length > 0) {
+      result.push(...slides);
+    }
+    
+    return result;
+  }, [activeDrops, dropIsUpcoming, nextDrop, slides, isUpcomingSoon]);
 
   // Gesture handling for mobile
   const touchStartX = useRef(null);
@@ -126,66 +153,12 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
   };
 
   useEffect(() => {
-    // If it's upcoming (and no active drops), it shows static Upcoming state, so no rotation.
-    if (displaySlides.length === 0 && dropIsUpcoming) return; 
     if (paused || displaySlides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % displaySlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [displaySlides.length, paused, dropIsUpcoming]);
-
-  // STATE: Upcoming drop (only if no active slides/drops)
-  if (displaySlides.length === 0 && dropIsUpcoming) {
-    return (
-      <section className="relative h-[58vh] md:h-[62vh] lg:h-[68vh] max-h-[700px] overflow-hidden bg-[#0a0a0a]">
-        <div className="absolute inset-0 grid grid-cols-2 md:grid-cols-4 gap-px opacity-40">
-          {(nextDrop.products || []).slice(0, 4).map((p, i) => (
-            <div key={i} className="relative overflow-hidden">
-              {p.images?.[0]?.url && (
-                <img src={p.images[0].url} alt=""
-                     className="w-full h-full object-cover filter blur-2xl scale-110 brightness-50"
-                     aria-hidden="true" loading="lazy" />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="absolute inset-0 bg-[#0a0a0a]/80" />
-        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4">
-            ⚡ COMING SOON
-          </p>
-          <h1 className="font-display text-[42px] md:text-[80px] leading-none text-[#FAF7F2] mb-4 uppercase drop-shadow-2xl">
-            {nextDrop.name}
-          </h1>
-          <p className="font-sans text-base text-[#FAF7F2]/70 max-w-md mb-6">
-            {nextDrop.description || 'Something rare is being prepared. Stay ready.'}
-          </p>
-          <p className="font-sans text-sm text-[#d0c5af] mb-8 uppercase tracking-widest font-bold">
-            DROPS {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4">
-            {isUpcomingSoon && (
-              <button onClick={() => {
-                  toast({ title: "You're on the list", description: `We'll notify you when ${nextDrop.name} goes live.` });
-                }}
-                className="flex items-center justify-center gap-2 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:bg-[#ffe088] transition-colors font-bold"
-              >
-                🔔 REMIND ME
-              </button>
-            )}
-            <a href={`https://wa.me/+94770704274?text=Notify me when ${nextDrop.name} drops`}
-               target="_blank" rel="noopener noreferrer"
-               className="flex items-center justify-center gap-2 border border-[#FAF7F2]/40 text-white px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#25D366] hover:text-[#25D366] transition-colors font-bold">
-              <MessageCircle className="w-4 h-4" /> WHATSAPP
-            </a>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  }, [displaySlides.length, paused]);
 
   // STATE: Carousel (Active Drops or Standard Slides)
   return (
@@ -272,13 +245,19 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
                     className="mt-8 flex flex-wrap gap-4"
                   >
                     <button
-                      onClick={() => navigate(slide.ctaLink)}
+                      onClick={() => {
+                        if (slide.isUpcoming && slide.ctaText.includes('REMIND ME')) {
+                          toast({ title: "You're on the list", description: `We'll notify you when ${slide.headline} goes live.` });
+                        } else {
+                          navigate(slide.ctaLink);
+                        }
+                      }}
                       className="relative overflow-hidden group bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.28em] font-bold"
                     >
                       <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
                       <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                     </button>
-                    {slide.isDrop && (
+                    {slide.isDrop && !slide.isUpcoming && (
                       <button
                         onClick={() => navigate('/shopping/drops')}
                         className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold"
@@ -500,19 +479,25 @@ export const TrustBar = () => {
 export const OffersSlider = ({ offers = [] }) => {
   const scrollerRef = useRef(null);
   const scrollBy = (d) => scrollerRef.current?.scrollBy({ left: d, behavior: 'smooth' });
-  const offerCards = useMemo(
+  const offerItems = useMemo(
     () =>
-      offers.flatMap((offer, offerIndex) =>
-        (offer.products || []).filter(Boolean).map((product, productIndex) => ({
+      offers.flatMap((offer, offerIndex) => {
+        const products = (offer.products || []).filter(Boolean);
+        if (products.length === 0) return [];
+        const bannerKey = `banner-${offer._id || offer.id || offerIndex}`;
+        const banner = { isBanner: true, offer, key: bannerKey };
+        const productCards = products.map((product, productIndex) => ({
+          isBanner: false,
           offer,
           product,
           key: `${offer._id || offer.id || offerIndex}-${product._id || product.id || productIndex}`,
-        }))
-      ),
+        }));
+        return [banner, ...productCards];
+      }),
     [offers]
   );
 
-  if (offerCards.length === 0) return null;
+  if (offerItems.length === 0) return null;
 
   return (
     <section className="py-10 bg-[#0e0e0e] border-y border-[#4d4635]/40">
@@ -529,7 +514,7 @@ export const OffersSlider = ({ offers = [] }) => {
               Selected pieces at special prices — for a short time only
             </p>
           </div>
-          <Link to="/shopping/product-list?filter=offers"
+          <Link to="/offers"
                 className="text-[#f2ca50] text-sm hover:text-[#ffe088] transition-colors">
             View All Offers →
           </Link>
@@ -542,9 +527,11 @@ export const OffersSlider = ({ offers = [] }) => {
           </button>
 
           <div ref={scrollerRef} className="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-2 scrollbar-hide">
-            {offerCards.map(({ key, product, offer }) => (
-              <OfferCard key={key} product={product} offer={offer} />
-            ))}
+            {offerItems.map((item) => 
+              item.isBanner 
+                ? <OfferBannerCard key={item.key} offer={item.offer} />
+                : <OfferCard key={item.key} product={item.product} offer={item.offer} />
+            )}
           </div>
 
           <button className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"
@@ -554,6 +541,50 @@ export const OffersSlider = ({ offers = [] }) => {
         </div>
       </div>
     </section>
+  );
+};
+
+// 🎪 OFFER BANNER CARD
+const OfferBannerCard = ({ offer }) => {
+  const bgImage = offer.products?.[0]?.images?.[0]?.url || "";
+  const [timeLeft, setTimeLeft] = useState(getRemainingTime(offer.endsAt));
+  
+  useEffect(() => {
+    if (!offer.endsAt) return;
+    const iv = setInterval(() => setTimeLeft(getRemainingTime(offer.endsAt)), 1000);
+    return () => clearInterval(iv);
+  }, [offer.endsAt]);
+
+  return (
+    <div className="w-[280px] md:w-[320px] shrink-0 snap-start group relative border border-[#4d4635]/60 bg-[#1a1a1a] hover:border-[#f2ca50]/80 transition-colors overflow-hidden flex flex-col justify-end p-6 rounded-sm">
+      <div className="absolute inset-0 bg-[#0a0a0a]">
+        {bgImage && (
+          <img src={bgImage} className="w-full h-full object-cover opacity-40 group-hover:scale-105 group-hover:opacity-50 transition-all duration-700" alt="" loading="lazy" />
+        )}
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/70 to-transparent" />
+      <div className="relative z-10 text-left">
+        <span className="bg-[#f2ca50] text-[#0a0a0a] font-sans text-[10px] px-2 py-0.5 tracking-[0.15em] font-bold mb-3 inline-block uppercase">
+          {offer.badgeText || "SPECIAL OFFER"}
+        </span>
+        <h3 className="font-display text-2xl md:text-[28px] text-[#FAF7F2] leading-tight mb-2 tracking-wide uppercase drop-shadow-md">
+          {offer.name}
+        </h3>
+        <p className="font-sans text-[13px] text-[#d0c5af] mb-4 line-clamp-2">
+          {offer.description}
+        </p>
+        
+        {offer.endsAt && (
+           <div className="font-mono text-[#e5e2e1] text-[11px] mb-5 tracking-widest pl-1 border-l-2 border-[#f2ca50]">
+             TIME LEFT: <span className="text-[#f2ca50] pl-1">{timeLeft.days ?? timeLeft.d}D {timeLeft.hh ?? timeLeft.h}:{timeLeft.mm ?? timeLeft.m}:{timeLeft.ss ?? timeLeft.s}</span>
+           </div>
+        )}
+
+        <Link to={`/offers`} className="inline-flex items-center gap-2 border border-[#FAF7F2]/30 bg-transparent text-[#FAF7F2] px-6 py-2.5 font-sans text-[11px] uppercase tracking-[0.2em] font-bold hover:bg-[#f2ca50] hover:text-[#0a0a0a] hover:border-[#f2ca50] transition-colors">
+          Explore Detail <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+    </div>
   );
 };
 
