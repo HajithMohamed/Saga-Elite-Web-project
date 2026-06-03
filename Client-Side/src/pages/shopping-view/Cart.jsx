@@ -30,8 +30,17 @@ import usePageMeta from "@/hooks/use-page-meta";
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
 
-const productImage = (product) =>
-  product?.image || product?.images?.[0]?.url || "/LOGO.png";
+const productImage = (product, variantColor) => {
+  // Prefer an image tagged with the variant's color
+  if (variantColor && Array.isArray(product?.images)) {
+    const colorKey = variantColor.toLowerCase();
+    const matched = product.images.find(
+      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+    );
+    if (matched?.url) return matched.url;
+  }
+  return product?.image || product?.images?.[0]?.url || "/LOGO.png";
+};
 
 const variantLabel = (variant = {}) =>
   [variant?.size].filter(Boolean).join(" · ") || "Standard";
@@ -260,7 +269,7 @@ const Cart = () => {
                         style={{ aspectRatio: "4/5" }}
                       >
                         <img
-                          src={productImage(item.product)}
+                          src={productImage(item.product, item.variant?.color)}
                           alt={item.product?.name || "Piece"}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                           loading="lazy"
@@ -466,7 +475,7 @@ const Cart = () => {
                   {items.slice(0, 3).map((it, idx) => (
                     <img 
                       key={it.id} 
-                      src={productImage(it.product)} 
+                      src={productImage(it.product, it.variant?.color)} 
                       className="w-10 h-10 rounded-full border-2 border-[#0a0a0a] object-cover filter brightness-75"
                       style={{ zIndex: 3 - idx }}
                       alt=""

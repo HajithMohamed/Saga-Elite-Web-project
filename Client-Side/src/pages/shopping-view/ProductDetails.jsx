@@ -444,7 +444,31 @@ const ProductDetails = () => {
     setSelectedColor(color);
     setSelectedVariantSku(matchedVariant?.sku || "");
     setVariantErrors((current) => ({ ...current, color: "" }));
+    // Reset gallery to first image of the new color
+    setActiveImageIndex(0);
   };
+
+  // ──── Color-based gallery filtering ────
+  // When a color is selected, show only images tagged with that color.
+  // Untagged images (colorTag === "") are included as fallback.
+  // If no images match the selected color at all, show everything.
+  const activeGalleryImages = useMemo(() => {
+    const allImages = product?.images || [];
+    if (!selectedColor || allImages.length === 0) return allImages;
+
+    const colorKey = selectedColor.toLowerCase();
+    const tagged = allImages.filter(
+      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+    );
+    const fallback = allImages.filter(
+      (img) => !img.colorTag || String(img.colorTag).trim() === ""
+    );
+
+    // If we found color-specific images, show them + untagged fallbacks
+    if (tagged.length > 0) return [...tagged, ...fallback];
+    // No images match this color — show all images (backward compat)
+    return allImages;
+  }, [product?.images, selectedColor]);
 
   const handleAddToCart = () => {
     if (!hasVariants) {
@@ -600,13 +624,13 @@ const ProductDetails = () => {
                   style={{ background: heroGlowBackground }}
                 />
                 <motion.img
-                  key={activeImageIndex}
+                  key={`${selectedColor || 'all'}-${activeImageIndex}`}
                   initial={{ opacity: 0, scale: 1.06, filter: "blur(8px)" }}
                   animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                   whileHover={{ scale: 1.08 }}
                   transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
                   style={{ x: heroImageX, y: heroImageY }}
-                  src={product.images?.[activeImageIndex]?.url}
+                  src={activeGalleryImages[activeImageIndex]?.url}
                   alt={product.name}
                   className="relative z-10 w-full h-full object-cover cursor-zoom-in will-change-transform"
                   onClick={() => setLightboxOpen(true)}
@@ -666,9 +690,9 @@ const ProductDetails = () => {
                 </button>
             </div>
             {/* Thumbnails */}
-            {product.images?.length > 1 && (
+            {activeGalleryImages.length > 1 && (
               <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 mt-4">
-                {product.images.map((img, i) => (
+                {activeGalleryImages.map((img, i) => (
                   <button
                     key={img._id || i}
                     onClick={() => setActiveImageIndex(i)}
@@ -1086,7 +1110,7 @@ const ProductDetails = () => {
             >
               <motion.img
                 src={
-                  product.images?.[activeImageIndex]?.url || "/placeholder.jpg"
+                  activeGalleryImages[activeImageIndex]?.url || "/placeholder.jpg"
                 }
                 alt={product.name}
                 className="max-h-[90vh] max-w-full object-contain"

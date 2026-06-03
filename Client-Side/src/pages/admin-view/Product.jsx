@@ -876,6 +876,7 @@ const Product = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [productImages, setProductImages] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
+  const [uploadColorTag, setUploadColorTag] = useState("");
   const [galleryTitle, setGalleryTitle] = useState("");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
@@ -1255,6 +1256,9 @@ const Product = () => {
           fd.append("refId", productId);
           fd.append("type", "product");
           newImages.forEach((img) => fd.append("images", img.file));
+          // Attach color tag if images were tagged during upload
+          const imgColorTag = newImages[0]?.colorTag || uploadColorTag;
+          if (imgColorTag) fd.append("colorTag", imgColorTag);
           try {
             await axios.post(`${API_BASE}/image/upload-image`, fd, {
               headers: { "Content-Type": "multipart/form-data" },
@@ -2302,6 +2306,53 @@ const Product = () => {
           title="Media"
           description="Hero and supporting imagery shown on storefront cards and detail pages."
         >
+          {/* Color tag selector for batch-tagging uploaded images */}
+          {formData.variants?.length > 0 && (() => {
+            const seen = new Set();
+            const variantColors = formData.variants
+              .map((v) => v.color?.trim())
+              .filter((c) => {
+                if (!c || seen.has(c.toLowerCase())) return false;
+                seen.add(c.toLowerCase());
+                return true;
+              });
+            return variantColors.length > 0 ? (
+              <div className="mb-5 space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-white/50">
+                  Assign colour to images
+                </p>
+                <p className="text-[11px] text-white/35 leading-relaxed">
+                  Select a colour before uploading to automatically tag images for that variant.
+                  Customers will see these images when they select this colour on the product page.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setUploadColorTag("")}
+                    className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${!uploadColorTag ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]" : "border-white/10 text-white/55 hover:border-white/20 hover:text-white"}`}
+                  >
+                    No tag (general)
+                  </button>
+                  {variantColors.map((color) => {
+                    const preset = COLOR_OPTIONS.find((o) => o.name.toLowerCase() === color.toLowerCase());
+                    const hex = preset?.hex || "#808080";
+                    const isActive = uploadColorTag.toLowerCase() === color.toLowerCase();
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setUploadColorTag(color)}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${isActive ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]" : "border-white/10 text-white/55 hover:border-white/20 hover:text-white"}`}
+                      >
+                        <span className="inline-block w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: hex }} />
+                        {color}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null;
+          })()}
           <ImageUpload
             images={productImages}
             setImages={setProductImages}
@@ -2309,6 +2360,7 @@ const Product = () => {
             refModel="Product"
             refId={selectedProductId || undefined}
             type="product"
+            colorTag={uploadColorTag}
             stagedOnly={!selectedProductId}
           />
           {!selectedProductId ? (

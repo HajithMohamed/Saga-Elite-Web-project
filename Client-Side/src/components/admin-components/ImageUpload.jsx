@@ -20,6 +20,7 @@ const ImageUpload = ({
   refModel,
   type,
   label, // Added label prop
+  colorTag, // Color tag for variant-based image grouping
   disabled = false,
   stagedOnly = false,
   onUploadSuccess,
@@ -44,6 +45,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag: colorTag || "",
     }));
 
     if (isMultiple) {
@@ -67,6 +69,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag: colorTag || "",
     }));
 
     if (isMultiple) {
@@ -138,6 +141,7 @@ const ImageUpload = ({
     if (refId) formData.append("refId", refId);
     if (type) formData.append("type", type);
     if (label) formData.append("label", label); // Append label if exists
+    if (colorTag) formData.append("colorTag", colorTag); // Append color tag for variant images
 
     filesToUpload.forEach((img) =>
       formData.append("images", img.file)

@@ -178,6 +178,20 @@ const getSingleProduct = catchAsync(async (req, res, next) => {
     const isAdmin = isAdminUser(req.userInfo);
     let productResponse = product.toObject({ virtuals: true });
 
+    // Build color → images map for variant gallery switching.
+    // Images tagged with a colorTag are grouped under that color key.
+    // Untagged images go into the "_default" group (shown as fallback).
+    if (Array.isArray(productResponse.images)) {
+        const colorImageMap = {};
+        for (const img of productResponse.images) {
+            const tag = String(img.colorTag || "").trim().toLowerCase();
+            const key = tag || "_default";
+            if (!colorImageMap[key]) colorImageMap[key] = [];
+            colorImageMap[key].push(img);
+        }
+        productResponse.colorImageMap = colorImageMap;
+    }
+
     if (!isAdmin) {
         delete productResponse.costPrice;
         // Fire-and-forget viewCount increment (only for non-admin reads)

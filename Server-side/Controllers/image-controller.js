@@ -73,7 +73,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const uploadImages = catchAsync(async (req, res, next) => {
-  const imageData = filterObj(req.body, "refId", "refModel", "type", "label");
+  const imageData = filterObj(req.body, "refId", "refModel", "type", "label", "colorTag");
 
   // Log upload attempt
   actionLogger.info({
@@ -226,6 +226,7 @@ const uploadImages = catchAsync(async (req, res, next) => {
           type: imageData.type || refModelToType[imageData.refModel] || "other",
           refModel: imageData.refModel,
           label: imageData.label,
+          colorTag: imageData.colorTag || "",
           order: existingImagesCount + index,
           isPrimary: existingImagesCount === 0 && index === 0,
           metadata: {
@@ -837,6 +838,44 @@ const deleteAllImages = catchAsync(async (req, res, next) => {
 });
 
 /* ==============================
+   Update Image Metadata (colorTag, altText, label)
+============================== */
+const updateImageMeta = catchAsync(async (req, res, next) => {
+  const imageId = req.params.id;
+
+  if (!imageId || !mongoose.Types.ObjectId.isValid(imageId)) {
+    return next(new AppError("Valid image ID is required", 400));
+  }
+
+  const image = await Image.findOne({ _id: imageId, isDeleted: false });
+  if (!image) {
+    return next(new AppError("Image not found", 404));
+  }
+
+  const allowed = filterObj(req.body, "colorTag", "altText", "label");
+
+  if (Object.keys(allowed).length === 0) {
+    return next(new AppError("Provide at least one field to update (colorTag, altText, label)", 400));
+  }
+
+  Object.assign(image, allowed);
+  await image.save({ validateModifiedOnly: true });
+
+  actionLogger.info({
+    action: "update_image_meta",
+    userId: req.userInfo ? req.userInfo._id : null,
+    imageId: image._id,
+    updatedFields: Object.keys(allowed),
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Image metadata updated successfully",
+    image,
+  });
+});
+
+/* ==============================
    Upload Receipt Image (Users)
 ============================== */
 const uploadReceiptImage = catchAsync(async (req, res, next) => {
@@ -887,4 +926,5 @@ module.exports = {
   reorderImages,
   deleteAllImages,
   updateImage,
+  updateImageMeta,
 };
