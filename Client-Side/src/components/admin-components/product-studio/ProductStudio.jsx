@@ -3,6 +3,7 @@ import { ProductFormProvider, useProductForm } from './ProductFormContext';
 import { StickyHeader } from './StickyHeader';
 import { WorkspaceLeft } from './WorkspaceLeft';
 import { WorkspaceRight } from './WorkspaceRight';
+import { motion } from 'framer-motion';
 
 export const ProductStudio = ({ 
   initialData, 
@@ -40,7 +41,12 @@ const ProductStudioContent = ({ categoryTree, drops, onBack, onSaveDraft, onSubm
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0a]">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="fixed inset-0 z-[100] bg-[#0a0a0a] overflow-x-hidden overflow-y-auto"
+    >
       <StickyHeader 
         onBack={onBack}
         onSaveDraft={onSaveDraft}
@@ -53,6 +59,6 @@ const ProductStudioContent = ({ categoryTree, drops, onBack, onSaveDraft, onSubm
           <WorkspaceRight />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

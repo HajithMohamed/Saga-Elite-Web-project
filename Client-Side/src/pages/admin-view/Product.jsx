@@ -41,10 +41,12 @@ import {
   GripVertical,
   Check,
   X as XIcon,
+  AlertCircle,
+  Download,
   Loader2,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
-import { SearchFilterBar } from "@/components/admin-components/_shared/SearchFilterBar";
+import { SearchFilterBar, FilterSelect } from "@/components/admin-components/_shared/SearchFilterBar";
 import {
   pageVariants,
   containerVariants,
@@ -436,6 +438,15 @@ const collectCategoryOptions = (categories = [], path = []) =>
       label: [...path, category.name].join(" / "),
     },
     ...collectCategoryOptions(category.children || [], [...path, category.name]),
+  ]);
+
+const collectFilterCategoryOptions = (categories = [], path = []) =>
+  categories.flatMap((category) => [
+    {
+      value: category.name,
+      label: [...path, category.name].join(" / "),
+    },
+    ...collectFilterCategoryOptions(category.children || [], [...path, category.name]),
   ]);
 
 const flattenCategoryRows = (categories = [], path = []) =>
@@ -890,6 +901,9 @@ const Product = () => {
   const [selectedProductId, setSelectedProductId] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [dropFilter, setDropFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [productImages, setProductImages] = useState([]);
@@ -911,6 +925,7 @@ const Product = () => {
   const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
   const [formSyncToken, setFormSyncToken] = useState(0);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [bulkPendingAction, setBulkPendingAction] = useState(null);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -929,9 +944,80 @@ const Product = () => {
         isActive: statusFilter === "all" || statusFilter === "low_stock" ? undefined : statusFilter,
         search: searchQuery,
         maxStock: statusFilter === "low_stock" ? 5 : undefined,
+        category: categoryFilter || undefined,
+        drop: dropFilter || undefined,
+        sort: sortFilter || undefined,
       })
     );
-  }, [dispatch, currentPage, statusFilter, searchQuery]);
+  }, [dispatch, currentPage, statusFilter, searchQuery, categoryFilter, dropFilter, sortFilter]);
+
+  const handleStatusFilterChange = (val) => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+  const handleCategoryFilterChange = (val) => {
+    setCategoryFilter(val);
+    setCurrentPage(1);
+  };
+  const handleDropFilterChange = (val) => {
+    setDropFilter(val);
+    setCurrentPage(1);
+  };
+  const handleSortFilterChange = (val) => {
+    setSortFilter(val);
+    setCurrentPage(1);
+  };
+  const handleSearchFilterChange = (val) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+  const handleResetFilters = () => {
+    setStatusFilter("all");
+    setCategoryFilter("");
+    setDropFilter("");
+    setSortFilter("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    if (productList.length === 0) {
+      toast({
+        title: "No products to export",
+        description: "The product list is empty.",
+        variant: "warning"
+      });
+      return;
+    }
+    const headers = ["Name", "Art No", "Category", "SubCategory", "Base Price", "Total Stock", "Status", "Updated At"];
+    const rows = productList.map(product => {
+      const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+      return [
+        `"${product.name.replace(/"/g, '""')}"`,
+        `"${product.artNo || ''}"`,
+        `"${product.category || ''}"`,
+        `"${product.subCategory || ''}"`,
+        product.basePrice || 0,
+        stock,
+        product.isActive ? "Published" : "Draft",
+        product.updatedAt ? new Date(product.updatedAt).toISOString() : ""
+      ];
+    });
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Product_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Export Successful",
+      description: `Exported ${productList.length} products to CSV.`,
+      variant: "success"
+    });
+  };
 
   const loadCategoryTree = useCallback(async () => {
     try {
@@ -1691,75 +1777,150 @@ const Product = () => {
 
   // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
   // ----- LEDGER LIST VIEW -----
+  // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
+  // ----- LEDGER LIST VIEW -----
+  const bulkActions = [
+    { label: "Activate", onClick: () => runBulkProductAction("activate") },
+    { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
+    {
+      label: "Delete",
+      variant: "destructive",
+      confirm: {
+        title: `Delete ${bulk.count} product${bulk.count === 1 ? "" : "s"}?`,
+        body: "Products will be permanently removed. Order history is preserved but the product pages will return 404.",
+        confirmLabel: "Delete forever",
+      },
+      onClick: () => runBulkProductAction("delete"),
+    },
+  ];
+
+  const runBulkAction = (action) => {
+    if (action.confirm) {
+      setBulkPendingAction(action);
+      return;
+    }
+    action.onClick?.();
+  };
+
+  const confirmBulkPending = () => {
+    if (!bulkPendingAction) return;
+    bulkPendingAction.onClick?.();
+    setBulkPendingAction(null);
+  };
+
   return (
     <Fragment>
     <AdminPage
       eyebrow="Catalog management"
       title="Product Ledger"
       description="Manage products, variants, stock, visibility, and gallery assets."
+      actions={
+        <>
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+          >
+            <Download className="h-4 w-4" /> Export
+          </button>
+          <PrimaryButton onClick={openNewProductForm}>
+            <Plus className="h-4 w-4" /> Create Product
+          </PrimaryButton>
+        </>
+      }
     >
     <motion.div
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-white/10"
+      className="w-full flex-1 flex flex-col max-w-full overflow-x-hidden"
     >
-      <div className="border-b border-white/10 px-6 py-3">
+      <div className="w-full">
         <ToastFlash show={showProductSaved} message="Product saved" />
       </div>
 
-      <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
+      <div className="w-full pb-12 pt-6 scroll-smooth">
         {isLoading ? (
           <SkeletonGrid count={6} />
         ) : (
         <>
         <SearchFilterBar 
           searchValue={searchQuery} 
-          onSearchChange={setSearchQuery} 
+          onSearchChange={handleSearchFilterChange} 
           searchPlaceholder="Search the collection…"
           className="mb-8 justify-between"
         >
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex bg-surface-container-low p-1 border border-outline-variant/10">
-              <button
-                onClick={() => setStatusFilter("true")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "true" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setStatusFilter("all")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "all" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStatusFilter("false")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "false" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                Inactive
-              </button>
-              <button
-                onClick={() => setStatusFilter("low_stock")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "low_stock" ? 'bg-[#ffb4ab]/20 text-[#ffb4ab]' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                Low Stock (≤5)
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Status Dropdown */}
+            <FilterSelect
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              options={[
+                { value: "all", label: "Status: All" },
+                { value: "true", label: "Status: Active" },
+                { value: "false", label: "Status: Inactive" },
+                { value: "low_stock", label: "Status: Low Stock" }
+              ]}
+              className="min-w-[150px]"
+            />
+
+            {/* Category Dropdown */}
+            <FilterSelect
+              value={categoryFilter}
+              onChange={handleCategoryFilterChange}
+              options={[
+                { value: "", label: "Category: All" },
+                ...collectFilterCategoryOptions(categoryTree)
+              ]}
+              className="min-w-[170px]"
+            />
+
+            {/* Drop Dropdown */}
+            <FilterSelect
+              value={dropFilter}
+              onChange={handleDropFilterChange}
+              options={[
+                { value: "", label: "Drop: All" },
+                ...drops.map(d => ({ value: d._id, label: `Drop: ${d.name}` }))
+              ]}
+              className="min-w-[160px]"
+            />
+
+            {/* Sort Dropdown */}
+            <FilterSelect
+              value={sortFilter}
+              onChange={handleSortFilterChange}
+              options={[
+                { value: "", label: "Sort By: Newest" },
+                { value: "basePrice", label: "Price: Low to High" },
+                { value: "-basePrice", label: "Price: High to Low" },
+                { value: "name", label: "Name: A-Z" },
+                { value: "-name", label: "Name: Z-A" }
+              ]}
+              className="min-w-[160px]"
+            />
+
+            {/* Manage Categories inline toggle */}
             <button
               type="button"
               onClick={() => setCategoryManagerOpen((state) => !state)}
               aria-expanded={categoryManagerOpen}
               aria-controls="category-manager-panel"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/[0.08] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] transition hover:bg-[#D4AF37]/15"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-transparent px-4 text-[13px] font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
             >
-              <Settings className="h-3.5 w-3.5" />
-              {categoryManagerOpen ? "Hide Categories" : "Manage Categories"}
+              <Settings className="h-4 w-4" />
+              Taxonomy
             </button>
-            <PrimaryButton onClick={openNewProductForm}>
-              <Plus className="w-3 h-3" />
-              New Product
-            </PrimaryButton>
+
+            {/* Reset Filters button */}
+            {(statusFilter !== "all" || categoryFilter !== "" || dropFilter !== "" || sortFilter !== "" || searchQuery !== "") && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         </SearchFilterBar>
 
@@ -1773,168 +1934,254 @@ const Product = () => {
           ) : null}
         </AnimatePresence>
 
-        {/* Bento Grid List Header */}
-        <div className="hidden md:flex items-center gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
-          <input
-            type="checkbox"
-            aria-label="Select all products on this page"
-            checked={bulk.isAllSelected}
-            ref={(el) => {
-              if (el) el.indeterminate = bulk.isSomeSelected;
-            }}
-            onChange={bulk.toggleAll}
-            className="h-4 w-4 cursor-pointer accent-saga-primary"
-            data-testid="admin-bulk-select-all"
-          />
-          <div className="grid grid-cols-12 gap-4 flex-1">
-            <div className="col-span-5">Product Details</div>
-            <div className="col-span-2">Category</div>
-            <div className="col-span-2">Valuation</div>
-            <div className="col-span-1">Stock</div>
-            <div className="col-span-1">Status</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-        </div>
-
-        {/* Product Rows */}
-        <motion.div
-          className="space-y-3"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {productList.map((product) => {
-            const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
-            return (
-              <motion.div
-                key={product._id}
-                variants={itemVariants}
-                whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
-                transition={{ duration: 0.2 }}
-                className={`group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center admin-panel border ${
-                  bulk.isSelected(product._id)
-                    ? "border-saga-primary/60 bg-saga-primary/5"
-                    : "border-outline-variant/5 bg-surface-container/30"
-                } p-6 transition-colors hover:bg-surface-bright/80`}
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${product.name}`}
-                  checked={bulk.isSelected(product._id)}
-                  onChange={() => bulk.toggle(product._id)}
-                  className="absolute top-3 right-3 z-10 h-4 w-4 cursor-pointer accent-saga-primary md:top-1/2 md:right-auto md:left-1 md:-translate-y-1/2"
-                  data-testid="admin-bulk-row-select"
-                />
-
-                <div className="col-span-1 md:col-span-5 flex items-center gap-6">
-                  <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
-                    {product.images && product.images.length > 0 ? (
-                      <img className="w-full h-full object-cover" src={product.images[0].url} alt={product.name} />
-                    ) : (
-                      <Package className="w-6 h-6 text-outline-variant/50" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-white font-serif font-bold text-lg leading-tight group-hover:text-saga-primary transition-colors">{product.name}</h4>
-                    <p className="text-xs text-on-surface-variant opacity-60 mt-1 uppercase font-mono">SKU: {product.artNo || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="col-span-1 md:col-span-2 min-w-0 pr-4">
-                  <span className="block truncate text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest">
-                    {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
+        {/* Inline Bulk Actions Bar */}
+        <AnimatePresence>
+          {bulk.count > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white" data-testid="admin-bulk-count">
+                    {bulk.count}
                   </span>
+                  <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]">selected</span>
                 </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <span className="text-[10px] uppercase tracking-widest text-saga-primary font-bold">LKR {Number(product.basePrice || 0).toLocaleString()}</span>
-                </div>
-
-                <div className="col-span-1 md:col-span-1">
-                  <span className={`text-sm ${stock === 0 ? 'text-saga-error font-bold' : 'text-on-surface'}`}>{stock} Units</span>
-                </div>
-
-                <div className="col-span-1 md:col-span-1">
-                  <div className="flex items-center gap-2">
-                    <PulseDot active={product.isActive} />
-                    <span className={`text-[10px] uppercase tracking-widest font-bold ${product.isActive ? 'text-saga-primary' : 'text-outline-variant'}`}>
-                      {product.isActive ? 'Live' : 'Archived'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="col-span-1 flex flex-wrap justify-end gap-3 md:col-span-1">
-                  <button type="button" onClick={() => openProductGallery(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="View images">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => beginEdit(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="Edit product">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  {bulkActions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      disabled={bulkPending}
+                      onClick={() => runBulkAction(action)}
+                      data-testid={`admin-bulk-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      className={`rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${
+                        action.variant === "destructive"
+                          ? "border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                          : "border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                      }`}
+                    >
+                      {bulkPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        action.label
+                      )}
+                    </button>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
-                    className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="Delete product"
+                    onClick={bulk.clear}
+                    disabled={bulkPending}
+                    className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition hover:border-white/20 hover:text-white"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    Cancel
                   </button>
                 </div>
-                <div className="col-span-1 md:col-span-12">
-                  <ConfirmInline
-                    show={deleteConfirmSlug === product.slug}
-                    message="Delete this product permanently?"
-                    onCancel={() => setDeleteConfirmSlug(null)}
-                    onConfirm={() => {
-                      const slug = product.slug;
-                      setDeleteConfirmSlug(null);
-                      dispatch(deleteProduct(slug)).then(() => fetchProducts());
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Native Data Table Layout */}
+        <div className="w-full max-w-full overflow-x-auto rounded-[20px] border border-[#D4AF37]/12 bg-[#090909]">
+          <table className="min-w-full border-collapse text-left text-[14px]">
+            <thead className="sticky top-0 z-10 bg-[#0B0B0B]">
+              <tr className="border-b border-[#D4AF37]/12 bg-[#111] text-[12px] uppercase tracking-wider text-[#A0A0A0] font-semibold">
+                <th className="py-4 pl-4 pr-3 w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all products on this page"
+                    checked={bulk.isAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = bulk.isSomeSelected;
                     }}
+                    onChange={bulk.toggleAll}
+                    className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                    data-testid="admin-bulk-select-all"
                   />
-                </div>
-              </motion.div>
-            );
-          })}
+                </th>
+                <th className="py-4 px-3 min-w-[220px]">Product</th>
+                <th className="py-4 px-3 w-[120px]">Art No.</th>
+                <th className="py-4 px-3 min-w-[160px]">Category</th>
+                <th className="py-4 px-3 w-[100px]">Variants</th>
+                <th className="py-4 px-3 w-[120px]">Price</th>
+                <th className="py-4 px-3 w-[100px]">Stock</th>
+                <th className="py-4 px-3 w-[125px]">Status</th>
+                <th className="py-4 px-3 w-[120px]">Updated</th>
+                <th className="py-4 px-3 text-right pr-4 w-[110px]">Actions</th>
+              </tr>
+            </thead>
+            <motion.tbody
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {productList.map((product) => {
+                const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+                const isSelected = bulk.isSelected(product._id);
+                return (
+                  <Fragment key={product._id}>
+                    <motion.tr
+                      variants={itemVariants}
+                      whileHover={{ backgroundColor: "#101010" }}
+                      transition={{ duration: 0.2 }}
+                      className={`border-b border-[#D4AF37]/12 transition-colors hover:bg-[#101010] even:bg-[#050505] odd:bg-[#0B0B0B] ${
+                        isSelected ? "bg-[#D4AF37]/10" : ""
+                      }`}
+                    >
+                      <td className="py-4 pl-4 pr-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${product.name}`}
+                          checked={isSelected}
+                          onChange={() => bulk.toggle(product._id)}
+                          className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                          data-testid="admin-bulk-row-select"
+                        />
+                      </td>
+                      <td className="py-4 px-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-[#101010] shrink-0 overflow-hidden border border-[#D4AF37]/12 flex items-center justify-center rounded-lg">
+                            {product.images && product.images.length > 0 ? (
+                              <img className="w-full h-full object-cover" src={product.images[0].url} alt={product.name} />
+                            ) : (
+                              <Package className="w-5 h-5 text-white/30" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span 
+                              onClick={() => beginEdit(product)}
+                              className="block text-[14px] font-normal text-white truncate hover:text-[#D4AF37] cursor-pointer transition-colors"
+                            >
+                              {product.name}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                        {product.artNo || 'N/A'}
+                      </td>
+                      <td className="py-4 px-3 text-[14px] font-normal text-[#A0A0A0]">
+                        {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
+                      </td>
+                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                        {product.variants?.length || 0} variant{product.variants?.length === 1 ? '' : 's'}
+                      </td>
+                      <td className="py-4 px-3 text-[14px] font-normal text-white">
+                        LKR {Number(product.basePrice || 0).toLocaleString()}
+                      </td>
+                      <td className="py-4 px-3 text-[14px] font-normal">
+                        <span className={`${stock === 0 ? 'text-rose-400 font-bold' : stock <= 5 ? 'text-amber-400 font-medium' : 'text-[#A0A0A0]'}`}>
+                          {stock} units
+                        </span>
+                      </td>
+                      <td className="py-4 px-3">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${product.isActive ? 'border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-[#707070]/20 bg-black/40 text-[#707070]'}`}>
+                          {product.isActive ? 'Active' : 'Draft'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                        {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </td>
+                      <td className="py-4 px-3 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            type="button" 
+                            onClick={() => openProductGallery(product)} 
+                            className="hover:text-[#D4AF37] hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg" 
+                            title="View images"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => beginEdit(product)} 
+                            className="hover:text-[#D4AF37] hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg" 
+                            title="Edit product"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
+                            className="hover:text-rose-400 hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg"
+                            title="Delete product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                    {deleteConfirmSlug === product.slug && (
+                      <tr className="border-b border-white/5 bg-rose-500/[0.02]">
+                        <td colSpan={10} className="py-3 px-6">
+                          <ConfirmInline
+                            show={true}
+                            message="Delete this product permanently?"
+                            onCancel={() => setDeleteConfirmSlug(null)}
+                            onConfirm={() => {
+                              const slug = product.slug;
+                              setDeleteConfirmSlug(null);
+                              dispatch(deleteProduct(slug)).then(() => fetchProducts());
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </motion.tbody>
+          </table>
 
           {productList.length === 0 && (
-            <div className="py-20 text-center border border-dashed border-outline-variant/30 text-on-surface-variant font-sans">
+            <div className="py-20 text-center border-t border-white/10 text-white/40 font-sans">
               <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No products found in the ledger.</p>
             </div>
           )}
-        </motion.div>
+        </div>
 
-        {/* Pagination */}
+        {/* Boxed Style Pagination */}
         {productList.length > 0 && pagination.totalPages > 1 && (
-          <div className="mt-12 flex flex-col md:flex-row justify-between items-center bg-surface-container-low p-6 border border-outline-variant/10 gap-4">
-            <span className="text-xs uppercase tracking-widest text-outline-variant font-bold">Showing {productList.length} masterpieces</span>
-            <div className="flex gap-2">
+          <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-white/10 bg-black/40 rounded-2xl p-4 gap-4">
+            <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
+              Showing {productList.length} products
+            </span>
+            <div className="flex items-center gap-1.5">
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="w-10 h-10 flex items-center justify-center bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant hover:text-saga-primary transition-colors disabled:opacity-50"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              {[...Array(pagination.totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-10 h-10 flex items-center justify-center border font-bold text-xs transition-colors ${
-                    currentPage === i + 1
-                      ? 'bg-saga-primary text-on-primary border-saga-primary'
-                      : 'bg-surface-container-highest border-outline-variant/20 text-on-surface-variant hover:text-saga-primary'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {[...Array(pagination.totalPages)].map((_, i) => {
+                const pageNum = i + 1;
+                const isCurrent = currentPage === pageNum;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
+                      isCurrent
+                        ? 'bg-white text-black border-transparent font-bold'
+                        : 'border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
 
               <button
                 disabled={currentPage === pagination.totalPages}
                 onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                className="w-10 h-10 flex items-center justify-center bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant hover:text-saga-primary transition-colors disabled:opacity-50"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1968,26 +2215,59 @@ const Product = () => {
         />
       ) : null}
     </AnimatePresence>
-    <BulkActionBar
-      count={bulk.count}
-      onClear={bulk.clear}
-      pending={bulkPending}
-      label="products selected"
-      actions={[
-        { label: "Activate", onClick: () => runBulkProductAction("activate") },
-        { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
-        {
-          label: "Delete",
-          variant: "destructive",
-          confirm: {
-            title: `Delete ${bulk.count} product${bulk.count === 1 ? "" : "s"}?`,
-            body: "Products will be permanently removed. Order history is preserved but the product pages will return 404.",
-            confirmLabel: "Delete forever",
-          },
-          onClick: () => runBulkProductAction("delete"),
-        },
-      ]}
-    />
+
+    {/* Bulk Actions confirmation dialog */}
+    <AnimatePresence>
+      {bulkPendingAction && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setBulkPendingAction(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, y: 10 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.95, y: 10 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-black p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10">
+                <AlertCircle className="h-5 w-5 text-rose-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white">
+                  {bulkPendingAction.confirm.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  {bulkPendingAction.confirm.body}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBulkPendingAction(null)}
+                className="rounded-full border border-gray-700 px-5 py-2 text-xs font-bold uppercase tracking-widest text-gray-300 hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmBulkPending}
+                className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold uppercase tracking-widest text-rose-200 hover:bg-rose-500/30"
+              >
+                {bulkPendingAction.confirm.confirmLabel || "Confirm"}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </Fragment>
   );
 };
