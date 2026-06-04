@@ -7,12 +7,11 @@ import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
   AnnouncementBar,
-  HeroCarousel,
+  EditorialHeroSection,
   HeroBackdropFX,
-  SeasonalEventBanner,
   LiveDropCountdownXL,
   ProductSlider,
-  OffersSlider,
+  EditorialOffersShowcase,
   MysteryGiftSpline,
   WhyChooseSaga,
   TrendingFitsMarquee,
@@ -143,24 +142,12 @@ const Home = () => {
           <AnnouncementBar activeDrop={payload.activeDrop} />
 
           {/* 2. Hero — cinematic */}
-          <HeroCarousel
+          <EditorialHeroSection
             slides={heroSlides}
             activeDrops={payload.activeDrops}
             nextDrop={nextDrop}
           />
 
-          {/* 2.5 Seasonal Event Banner */}
-          <SeasonalEventBanner 
-            title="AWURUDU EVENT"
-            targetDate={new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString()} // 3 days from now
-            benefits={[
-              "Up to 25% Off",
-              "Mystery Gift Rewards",
-              "Free Delivery Above Rs. 7,500"
-            ]}
-            ctaText="Shop Event"
-            ctaLink="/shopping/drops"
-          />
 
           {/* 3. Collection selector — Asymmetric */}
           <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
@@ -179,9 +166,9 @@ const Home = () => {
           <ForYouRail variant="recently-viewed" />
           <ForYouRail variant="trending-style" />
 
-          {/* 6. Active offers slider */}
+          {/* 6. Active offers showcase */}
           {payload.offers && payload.offers.length > 0 && (
-            <OffersSlider offers={payload.offers} />
+            <EditorialOffersShowcase offers={payload.offers} />
           )}
 
           {/* 7. Next drop countdown */}

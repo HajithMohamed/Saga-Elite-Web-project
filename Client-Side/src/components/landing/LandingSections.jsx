@@ -66,223 +66,157 @@ export const InlineDropCountdown = ({ endDate }) => {
       ))}
     </div>
   );
-};// 🎬 HERO SECTION (MAIN IMPACT ZONE)
-export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
+};
+
+// 🎬 EDITORIAL HERO SECTION (MAIN IMPACT ZONE)
+export const EditorialHeroSection = ({ slides = [], activeDrops = [], nextDrop = null }) => {
   const [initialNow] = useState(() => Date.now());
-  const navigate = useNavigate();
 
-  const [mouseOffset, setMouseOffset] = useState({ x: 0, y: 0 });
-  const sectionRef = useRef(null);
+  // Derive data
+  const liveDrop = activeDrops && activeDrops.length > 0 ? activeDrops[0] : null;
+  const upcomingDrop = nextDrop;
+  
+  // Use first active drop, or next drop, or first slide for the main banner
+  const primaryCampaign = liveDrop 
+    ? {
+        label: '🔴 LIVE DROP',
+        headline: liveDrop.name,
+        subheadline: liveDrop.description,
+        imageUrl: liveDrop.images?.[0]?.url || liveDrop.coverImageUrl || liveDrop.products?.[0]?.images?.[0]?.url || "https://images.unsplash.com/photo-1549439602-43ebca2327af?w=1920&q=80",
+        ctaText: 'SHOP THE DROP',
+        ctaLink: `/shopping/drop/${liveDrop.slug}`,
+      }
+    : upcomingDrop
+      ? {
+          label: '⚡ COMING SOON',
+          headline: upcomingDrop.name,
+          subheadline: upcomingDrop.description || 'Something rare is being prepared. Stay ready.',
+          imageUrl: upcomingDrop.images?.[0]?.url || upcomingDrop.coverImageUrl || upcomingDrop.products?.[0]?.images?.[0]?.url || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1920&q=80",
+          ctaText: 'VIEW DROPS',
+          ctaLink: '/shopping/drops',
+        }
+      : slides.length > 0
+        ? {
+            label: slides[0].label || 'Exclusive',
+            headline: slides[0].headline,
+            subheadline: slides[0].subheadline,
+            imageUrl: slides[0].imageUrl || "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&q=80",
+            ctaText: slides[0].ctaText || 'SHOP NOW',
+            ctaLink: slides[0].ctaLink || '/shopping/product-list',
+          }
+        : {
+            label: 'SAGA ELITE',
+            headline: 'LUXURY ESSENTIALS',
+            subheadline: 'Curated fashion for the elite.',
+            imageUrl: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&q=80",
+            ctaText: 'EXPLORE',
+            ctaLink: '/shopping/product-list',
+          };
 
-  const handleMouseMove = (e) => {
-    const rect = sectionRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    setMouseOffset({
-      x: ((e.clientX - cx) / rect.width) * 14,
-      y: ((e.clientY - cy) / rect.height) * 8,
-    });
-  };
-
-  const handleMouseLeave = () => setMouseOffset({ x: 0, y: 0 });
-
-  const nextDropTime = nextDrop?.releaseDate
-    ? new Date(nextDrop.releaseDate).getTime()
-    : null;
-  const dropIsUpcoming = Number.isFinite(nextDropTime) && nextDropTime > initialNow;
-  const daysUntilDrop = Number.isFinite(nextDropTime)
-    ? (nextDropTime - initialNow) / 86400000
-    : 999;
-  const isUpcomingSoon = dropIsUpcoming && daysUntilDrop <= 7;
-
-  const displaySlides = useMemo(() => {
-    const result = [];
-    
-    if (activeDrops && activeDrops.length > 0) {
-      activeDrops.forEach((d, i) => {
-        result.push({
-          id: d._id || d.slug || `drop-${i}`,
-          imageUrl: d.images?.[0]?.url || d.coverImageUrl || d.products?.[0]?.images?.[0]?.url || '',
-          label: '🔴 LIVE DROP',
-          headline: d.name,
-          subheadline: d.description,
-          ctaText: 'SHOP THE DROP',
-          ctaLink: `/shopping/drop/${d.slug}`,
-          endDate: d.endDate,
-          isDrop: true
-        });
-      });
-    }
-    
-    if (dropIsUpcoming && nextDrop) {
-      result.push({
-        id: nextDrop._id || nextDrop.slug || 'next-drop',
-        imageUrl: nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || nextDrop.products?.[0]?.images?.[0]?.url || '',
-        label: '⚡ COMING SOON',
-        headline: nextDrop.name,
-        subheadline: nextDrop.description || 'Something rare is being prepared. Stay ready.',
-        ctaText: isUpcomingSoon ? '🔔 REMIND ME' : 'VIEW DROPS',
-        ctaLink: '/shopping/drops',
-        endDate: nextDrop.releaseDate,
-        isUpcoming: true,
-        isDrop: true
-      });
-    }
-    
-    if (slides && slides.length > 0) {
-      result.push(...slides);
-    }
-    
-    return result;
-  }, [activeDrops, dropIsUpcoming, nextDrop, slides, isUpcomingSoon]);
-
-  // Gesture handling for mobile
-  const touchStartX = useRef(null);
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 50) {
-      if (delta > 0) setActiveIndex(prev => (prev + 1) % displaySlides.length);
-      else setActiveIndex(prev => (prev - 1 + displaySlides.length) % displaySlides.length);
-    }
-    touchStartX.current = null;
-  };
-
-  useEffect(() => {
-    if (paused || displaySlides.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % displaySlides.length);
-    }, 8000);
-    return () => clearInterval(timer);
-  }, [displaySlides.length, paused]);
-
-  // STATE: Carousel (Active Drops or Standard Slides)
   return (
-    <section 
-      ref={sectionRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="relative h-[60vh] md:h-[80vh] lg:h-[100vh] min-h-[600px] w-full overflow-hidden bg-[#050505]"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
-      <AnimatePresence initial={false} custom={activeIndex}>
-        {displaySlides.map((slide, index) => {
-          if (index !== activeIndex) return null;
-          return (
-            <motion.div
-              key={slide.id || index}
-              initial={{ opacity: 0, scale: 1.05 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 2.5, ease: "easeInOut" }}
-              className="absolute inset-0"
-              onMouseEnter={() => setPaused(true)}
-              onMouseLeave={() => setPaused(false)}
-            >
-              <div
-                className="w-full h-full"
-                style={{
-                  transform: `translate(${mouseOffset.x}px, ${mouseOffset.y}px)`,
-                  transition: 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)',
-                  willChange: 'transform',
-                }}
-              >
-                {slide.imageUrl ? (
-                  <div className="w-full h-full bg-[#050505]">
-                    <img src={slide.imageUrl} alt={slide.headline} 
-                         className="w-full h-full object-cover md:object-center object-top"
-                         loading="eager"
-                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                         srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
-                         sizes="100vw" />
-                  </div>
-                ) : (
-                  <div className="w-full h-full" style={{ background: slide.fallback }} />
-                )}
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent pointer-events-none" />
-              <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full overflow-hidden flex justify-center mix-blend-overlay">
-                <span className="font-display text-[20vw] font-black text-[#ffffff] opacity-[0.03] leading-none whitespace-nowrap" style={{ transform: `translate(${mouseOffset.x * -0.5}px, ${mouseOffset.y * -0.5}px)` }}>RARE</span>
-              </div>
-              
-              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-end pb-16 md:pb-24 items-start`}>
-                <div className="max-w-3xl text-left">
-                  <motion.p
-                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
-                    className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
-                  >
-                    {slide.label || "Exclusive"}
-                  </motion.p>
-                  <motion.h2
-                    initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}
-                    className="font-display text-[32px] md:text-[56px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter"
-                  >
-                    {slide.headline.split('\n').map((line, i) => (
-                      <React.Fragment key={i}>{line}<br /></React.Fragment>
-                    ))}
-                  </motion.h2>
-                  <motion.p
-                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7, duration: 0.8 }}
-                    className="font-sans text-sm md:text-base text-[#FAF7F2]/80 mt-4 max-w-lg leading-relaxed"
-                  >
-                    {slide.subheadline}
-                  </motion.p>
-                  
-                  {slide.isDrop && slide.endDate && (
-                    <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8, duration: 0.8 }} className="mt-4">
-                      <InlineDropCountdown endDate={slide.endDate} />
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9, duration: 0.8 }}
-                    className="mt-8 flex flex-wrap gap-4"
-                  >
-                    <button
-                      onClick={() => {
-                        if (slide.isUpcoming && slide.ctaText.includes('REMIND ME')) {
-                          toast({ title: "You're on the list", description: `We'll notify you when ${slide.headline} goes live.` });
-                        } else {
-                          navigate(slide.ctaLink);
-                        }
-                      }}
-                      className="relative overflow-hidden group bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.28em] font-bold"
-                    >
-                      <span className="relative z-10">{slide.ctaText || "Explore Drop"}</span>
-                      <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
-                    </button>
-                    {slide.isDrop && !slide.isUpcoming && (
-                      <button
-                        onClick={() => navigate('/shopping/drops')}
-                        className="border border-[#FAF7F2]/40 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] tracking-[0.28em] uppercase hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors font-bold"
-                      >
-                        VIEW ALL PIECES
-                      </button>
-                    )}
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-
-      {/* Modern Dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">
-        {displaySlides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setActiveIndex(index)}
-            className={`h-0.5 transition-all duration-300 ${activeIndex === index ? "w-8 bg-[#f2ca50]" : "w-6 bg-[#FAF7F2]/40 hover:bg-[#FAF7F2]/60"}`}
-            aria-label={`Go to slide ${index + 1}`}
+    <section className="relative w-full min-h-[70vh] bg-[#050505] overflow-hidden flex flex-col lg:flex-row border-b border-[#1f1f1f]">
+      {/* LEFT: PRIMARY CAMPAIGN (Spans 8 cols conceptually, taking up ~65% width) */}
+      <div className="relative flex-1 lg:w-[65%] min-h-[50vh] lg:min-h-[70vh] group overflow-hidden bg-[#111]">
+        {/* Parallax Image */}
+        <motion.div 
+          className="absolute inset-0 w-full h-full transform transition-transform duration-[2s] ease-[0.22,1,0.36,1] group-hover:scale-105"
+        >
+          <img 
+            src={primaryCampaign.imageUrl} 
+            alt={primaryCampaign.headline}
+            className="w-full h-full object-cover opacity-60 md:opacity-70"
+            loading="eager"
           />
-        ))}
+        </motion.div>
+        
+        {/* Grain overlay & Gradients */}
+        <div className="absolute inset-0 bg-grain opacity-30 mix-blend-overlay pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/60 to-transparent pointer-events-none" />
+
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12 lg:p-16 max-w-3xl z-10">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}
+            className="font-mono text-[10px] md:text-[11px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
+          >
+            {primaryCampaign.label}
+          </motion.p>
+          
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
+            className="font-display text-5xl md:text-6xl lg:text-7xl xl:text-[80px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter mb-4 drop-shadow-lg"
+          >
+            {primaryCampaign.headline.split('\n').map((line, i) => (
+              <React.Fragment key={i}>{line}<br /></React.Fragment>
+            ))}
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="font-sans text-sm md:text-base text-[#FAF7F2]/70 max-w-lg leading-relaxed mb-8"
+          >
+            {primaryCampaign.subheadline}
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+            className="flex flex-wrap gap-4"
+          >
+            <Link to={primaryCampaign.ctaLink} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
+              <span className="relative z-10">{primaryCampaign.ctaText}</span>
+              <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+            </Link>
+            <Link to="/shopping/product-list" className="inline-flex items-center justify-center border border-[#FAF7F2]/30 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors duration-300">
+              EXPLORE ALL
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* RIGHT: STACKED UTILITY CARDS (Spans 4 cols conceptually, taking up ~35% width) */}
+      <div className="relative lg:w-[35%] flex flex-col bg-[#0a0a0a] border-l border-[#1f1f1f]">
+        
+        {/* 1. Live Drop Card */}
+        {liveDrop && (
+          <Link to={`/shopping/drop/${liveDrop.slug}`} className="flex-1 min-h-[160px] group relative overflow-hidden border-b border-[#1f1f1f] bg-[#0c0c0c] hover:bg-[#111] transition-colors p-8 flex flex-col justify-center">
+             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Flame className="w-24 h-24 text-[#f2ca50]" />
+             </div>
+             <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577]">Live Now</span>
+                </div>
+                <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">{liveDrop.name}</h3>
+                <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1">Shop Collection</span>
+             </div>
+          </Link>
+        )}
+
+        {/* 2. Upcoming Drop Card */}
+        {upcomingDrop && (
+          <Link to="/shopping/drops" className="flex-1 min-h-[160px] group relative overflow-hidden border-b border-[#1f1f1f] bg-[#080808] hover:bg-[#0c0c0c] transition-colors p-8 flex flex-col justify-center">
+             <div className="relative z-10">
+                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-2 block">Coming Soon</span>
+                <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">{upcomingDrop.name}</h3>
+                <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#d0c5af] border-b border-[#d0c5af]/30 pb-1">View Details</span>
+             </div>
+          </Link>
+        )}
+
+        {/* 3. VIP Access Card */}
+        <Link to="/auth/register" className="flex-1 min-h-[160px] group relative overflow-hidden bg-[#0a0a0a] hover:bg-[#111] transition-colors p-8 flex flex-col justify-center">
+           <div className="absolute bottom-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
+              <Diamond className="w-32 h-32 text-[#FAF7F2]" />
+           </div>
+           <div className="relative z-10">
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-2 block">Saga Elite</span>
+              <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">VIP Access</h3>
+              <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#d0c5af] border-b border-[#d0c5af]/30 pb-1">Unlock Privileges</span>
+           </div>
+        </Link>
+
       </div>
     </section>
   );
@@ -551,80 +485,35 @@ export const TrustBar = () => {
   );
 };
 
-// 🎪 OFFERS SYSTEM HOMEPAGE SECTION
-export const OffersSlider = ({ offers = [] }) => {
-  const scrollerRef = useRef(null);
-  const scrollBy = (d) => scrollerRef.current?.scrollBy({ left: d, behavior: 'smooth' });
-  const offerItems = useMemo(
-    () =>
-      offers.flatMap((offer, offerIndex) => {
-        const products = (offer.products || []).filter(Boolean);
-        if (products.length === 0) return [];
-        const bannerKey = `banner-${offer._id || offer.id || offerIndex}`;
-        const banner = { isBanner: true, offer, key: bannerKey };
-        const productCards = products.map((product, productIndex) => ({
-          isBanner: false,
-          offer,
-          product,
-          key: `${offer._id || offer.id || offerIndex}-${product._id || product.id || productIndex}`,
-        }));
-        return [banner, ...productCards];
-      }),
-    [offers]
-  );
+// 🎪 EDITORIAL OFFERS SHOWCASE (MODERN CAMPAIGN SECTION)
+export const EditorialOffersShowcase = ({ offers = [] }) => {
+  // Extract offers that actually have products
+  const validOffers = useMemo(() => offers.filter(o => o.products && o.products.length > 0), [offers]);
+  
+  if (validOffers.length === 0) return null;
 
-  if (offerItems.length === 0) return null;
+  // We only display the primary (featured) offer in this minimalist luxury block
+  const featuredOffer = validOffers[0];
 
   return (
-    <section className="py-10 bg-[#0e0e0e] border-y border-[#4d4635]/40">
-      <div className={sectionContainer}>
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">
-              Active Offers
-            </p>
-            <h3 className="font-display text-[28px] text-[#e5e2e1] mt-1">
-              Limited-Time Deals
-            </h3>
-            <p className="text-[13px] text-[#d0c5af]">
-              Selected pieces at special prices — for a short time only
-            </p>
-          </div>
-          <Link to="/offers"
-                className="text-[#f2ca50] text-sm hover:text-[#ffe088] transition-colors">
-            View All Offers →
-          </Link>
+    <section className="bg-[#050505] w-full py-8 md:py-12">
+      <div className={`${sectionContainer} flex flex-col items-center justify-center`}>
+        {/* Header section */}
+        <div className="mb-8 md:mb-10 text-center">
+           <h3 className="font-display text-3xl md:text-4xl text-[#F4E8C5] tracking-wide mb-2">EXCLUSIVE CAMPAIGNS</h3>
+           <p className="font-sans text-xs md:text-sm tracking-[0.2em] uppercase text-[#F5F5F5] font-light">Limited Edition Releases & Curated Drops</p>
         </div>
 
-        <div className="relative">
-          <button className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"
-                  onClick={() => scrollBy(-300)} aria-label="Scroll left">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-
-          <div ref={scrollerRef} className="flex gap-5 overflow-x-auto snap-x scroll-smooth pb-2 scrollbar-hide">
-            {offerItems.map((item) => 
-              item.isBanner 
-                ? <OfferBannerCard key={item.key} offer={item.offer} />
-                : <OfferCard key={item.key} product={item.product} offer={item.offer} />
-            )}
-          </div>
-
-          <button className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 rounded-full border border-[#4d4635] bg-[#0e0e0e] text-[#e5e2e1] p-2 hover:border-[#f2ca50] transition-colors"
-                  onClick={() => scrollBy(300)} aria-label="Scroll right">
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        {/* Central Block */}
+        <FeaturedCampaignCard offer={featuredOffer} />
       </div>
     </section>
   );
 };
 
-// 🎪 OFFER BANNER CARD
-const OfferBannerCard = ({ offer }) => {
-  const bgImage = offer.products?.[0]?.images?.[0]?.url || "";
-  const [timeLeft, setTimeLeft] = useState(getRemainingTime(offer.endsAt));
-  
+const FeaturedCampaignCard = ({ offer }) => {
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(offer.endsAt));
+
   useEffect(() => {
     if (!offer.endsAt) return;
     const iv = setInterval(() => setTimeLeft(getRemainingTime(offer.endsAt)), 1000);
@@ -632,73 +521,59 @@ const OfferBannerCard = ({ offer }) => {
   }, [offer.endsAt]);
 
   return (
-    <div className="w-[280px] md:w-[320px] shrink-0 snap-start group relative border border-[#4d4635]/60 bg-[#1a1a1a] hover:border-[#f2ca50]/80 transition-colors overflow-hidden flex flex-col justify-end p-6 rounded-sm">
-      <div className="absolute inset-0 bg-[#0a0a0a]">
-        {bgImage && (
-          <img src={bgImage} className="w-full h-full object-cover opacity-40 group-hover:scale-105 group-hover:opacity-50 transition-all duration-700" alt="" loading="lazy" />
-        )}
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/70 to-transparent" />
-      <div className="relative z-10 text-left">
-        <span className="bg-[#f2ca50] text-[#0a0a0a] font-sans text-[10px] px-2 py-0.5 tracking-[0.15em] font-bold mb-3 inline-block uppercase">
-          {offer.badgeText || "SPECIAL OFFER"}
-        </span>
-        <h3 className="font-display text-2xl md:text-[28px] text-[#FAF7F2] leading-tight mb-2 tracking-wide uppercase drop-shadow-md">
+    <motion.div 
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="w-full max-w-5xl mx-auto border border-[#C4A760] rounded-[8px] bg-[#050505] relative overflow-hidden"
+    >
+      {/* Subtle weave pattern background using repeating gradient */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.05]"
+        style={{
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, #ffffff 2px, #ffffff 4px)`,
+          backgroundSize: '10px 10px'
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#121212]/80 pointer-events-none" />
+      
+      <div className="relative z-10 px-6 py-8 md:py-10 flex flex-col items-center text-center">
+        {/* Label Badge */}
+        <div className="bg-[#C4A760] text-[#1A1A1A] font-sans text-[10px] px-3 py-1 uppercase tracking-widest font-bold mb-6 rounded-[4px]">
+           {offer.badgeText || "SPECIAL OFFER"}
+        </div>
+        
+        {/* Large Clean Headline */}
+        <h2 className="font-display text-4xl md:text-6xl lg:text-7xl text-[#F4E8C5] leading-none tracking-tight mb-5 drop-shadow-sm">
           {offer.name}
-        </h3>
-        <p className="font-sans text-[13px] text-[#d0c5af] mb-4 line-clamp-2">
+        </h2>
+        
+        {/* Body Text */}
+        <p className="font-sans text-sm md:text-base text-[#F5F5F5] max-w-2xl leading-relaxed mb-8 md:mb-10 font-light">
           {offer.description}
         </p>
         
-        {offer.endsAt && (
-           <div className="font-mono text-[#e5e2e1] text-[11px] mb-5 tracking-widest pl-1 border-l-2 border-[#f2ca50]">
-             TIME LEFT: <span className="text-[#f2ca50] pl-1">{timeLeft.days ?? timeLeft.d}D {timeLeft.hh ?? timeLeft.h}:{timeLeft.mm ?? timeLeft.m}:{timeLeft.ss ?? timeLeft.s}</span>
-           </div>
-        )}
-
-        <Link to={`/offers`} className="inline-flex items-center gap-2 border border-[#FAF7F2]/30 bg-transparent text-[#FAF7F2] px-6 py-2.5 font-sans text-[11px] uppercase tracking-[0.2em] font-bold hover:bg-[#f2ca50] hover:text-[#0a0a0a] hover:border-[#f2ca50] transition-colors">
-          Explore Detail <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
-    </div>
-  );
-};
-
-// 🎁 OFFER CARD
-const OfferCard = ({ product, offer }) => {
-  const discountedPrice = Math.round(product.basePrice * (1 - offer.discountPercent / 100));
-  const [timeLeft, setTimeLeft] = useState(getRemainingTime(offer.endsAt));
-
-  useEffect(() => {
-    const iv = setInterval(() => setTimeLeft(getRemainingTime(offer.endsAt)), 1000);
-    return () => clearInterval(iv);
-  }, [offer.endsAt]);
-
-  return (
-    <Link to={`/shopping/product/${product.slug}`} className="w-[200px] md:w-[220px] shrink-0 snap-start group border border-[#4d4635] bg-[#131313] hover:border-[#f2ca50] transition-colors overflow-hidden block">
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#1c1b1b]">
-        {product.images?.[0]?.url && (
-          <img src={product.images[0].url} alt={product.name} loading="lazy" width={220} height={293} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        )}
-        <span className="absolute top-3 left-3 bg-[#ffb4ab] text-[#0a0a0a] font-sans text-[10px] px-2 py-0.5 tracking-[0.1em]">
-          {offer.badgeText || `SAVE ${offer.discountPercent}%`}
-        </span>
-        <div className="absolute bottom-0 left-0 right-0 bg-[#0a0a0a]/90 py-1.5 text-center">
-          <span className="font-mono text-[#f2ca50] text-[11px]">
-            ⏱ {timeLeft.hh || timeLeft.h || '00'}:{timeLeft.mm || timeLeft.m || '00'}:{timeLeft.ss || timeLeft.s || '00'}
-          </span>
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Link 
+            to={`/offers`} 
+            className="bg-[#C4A760] text-[#1A1A1A] px-8 py-3 font-sans text-sm font-bold uppercase tracking-widest hover:bg-[#F4E8C5] transition-colors"
+          >
+            Explore Campaign
+          </Link>
+          
+          {offer.endsAt && (
+            <div className="flex items-center gap-3 border border-[#C4A760]/30 bg-[#121212] px-5 py-3">
+              <span className="font-sans text-[9px] md:text-[10px] text-[#F5F5F5] uppercase tracking-widest">Ends In</span>
+              <span className="font-sans text-[#FFD700] text-sm font-medium tracking-[0.2em]">
+                {timeLeft.d ?? timeLeft.days}D : {timeLeft.hh ?? timeLeft.h}H : {timeLeft.mm ?? timeLeft.m}M
+              </span>
+            </div>
+          )}
         </div>
       </div>
-      <div className="p-3">
-        <h4 className="font-sans text-sm text-[#e5e2e1] truncate">{product.name}</h4>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-[#f2ca50] font-medium text-sm">{formatLkr(discountedPrice)}</span>
-          <span className="text-[#d0c5af] line-through text-xs">{formatLkr(product.basePrice)}</span>
-          <span className="bg-[#ffb4ab]/20 text-[#ffb4ab] text-[10px] px-1.5 py-0.5">-{offer.discountPercent}%</span>
-        </div>
-        <p className="font-sans text-[10px] text-[#99907c] mt-1">{offer.description || 'Limited time offer'}</p>
-      </div>
-    </Link>
+    </motion.div>
   );
 };
 
