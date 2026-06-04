@@ -592,7 +592,7 @@ const ProductDetails = () => {
           {/* LEFT 60%: Image Gallery */}
           <div className="lg:col-span-6 relative flex flex-col gap-3">
             <div
-              className="relative w-full flex-1 bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
+              className="relative w-full h-[70vh] bg-[#131313] overflow-hidden group rounded-[2rem] border border-[#1c1b1b]"
               onMouseMove={handleHeroPointerMove}
               onMouseLeave={handleHeroPointerLeave}
             >

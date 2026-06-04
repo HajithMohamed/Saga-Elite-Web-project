@@ -115,7 +115,15 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     : primaryImage;
 
   const [imgLoaded, setImgLoaded] = useState(false);
-  useEffect(() => { setImgLoaded(false); }, [displayImage]);
+  
+  // Create a ref to check if image is already loaded from cache
+  const imgRef = useRef(null);
+  useEffect(() => {
+    setImgLoaded(false);
+    if (imgRef.current?.complete) {
+      setImgLoaded(true);
+    }
+  }, [displayImage]);
 
   // Sizes with aggregated stock (across colors) — for the hover preview strip.
   const sizesWithStock = useMemo(() => {
@@ -257,6 +265,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
         {/* Primary / color-swap image */}
         <img
+          ref={imgRef}
           key={displayImage}
           src={displayImage}
           alt={product?.name || "Piece"}
@@ -425,7 +434,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       </Link>
 
       {/* Metadata */}
-      <Link to={productHref} className="block transition-all duration-500 p-2 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:-translate-y-2 md:group-hover:translate-y-0">
+      <Link to={productHref} className="block transition-all duration-500 p-2 mt-2">
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col flex-1">
             <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-widest leading-snug line-clamp-1">

@@ -423,12 +423,12 @@ const ProductListing = () => {
   }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
 
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-28">
+    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-20">
 
       {/* STICKY FILTER RAIL */}
       
       {/* Editorial layout container: Grid with right filter sidebar */}
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8 lg:py-16">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-8 lg:pb-16 pt-0">
         <div className="flex flex-col lg:flex-row gap-12 items-start relative">
           
           {/* Main Product Grid (Left Pane) */}
@@ -457,6 +457,7 @@ const ProductListing = () => {
             <div className="flex flex-col md:flex-row justify-end items-start md:items-end mb-8 gap-4">
               <div className="flex items-center gap-4">
                 <SortDropdown
+                  options={SORT_OPTIONS}
                   value={sortParam}
                   onChange={(v) => {
                     const p = new URLSearchParams(searchParams);
@@ -578,7 +579,7 @@ const ProductListing = () => {
           </div>
 
           {/* Right Sidebar (Desktop only) */}
-          <div className="hidden lg:block w-[320px] shrink-0">
+          <div className="hidden lg:block w-[320px] shrink-0 sticky top-24 self-start h-max">
              <FilterSidebar
                 selectedColors={colorsParam}
                 selectedSizes={sizesParam}
