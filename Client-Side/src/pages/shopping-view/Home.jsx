@@ -10,7 +10,7 @@ import {
   HeroBackdropFX,
   LiveDropCountdownXL,
   ProductSlider,
-  EditorialOffersShowcase,
+  SeasonalCampaignSlider,
   MysteryGiftSpline,
   WhyChooseSaga,
   TrendingFitsMarquee,
@@ -143,6 +143,10 @@ const Home = () => {
             nextDrop={nextDrop}
           />
 
+          {/* 2. Offers & Campaigns Slider */}
+          {payload.offers && payload.offers.length > 0 && (
+            <SeasonalCampaignSlider offers={payload.offers} />
+          )}
 
           {/* 3. Collection selector — Asymmetric */}
           <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
@@ -160,11 +164,6 @@ const Home = () => {
           <ForYouRail variant="for-you" />
           <ForYouRail variant="recently-viewed" />
           <ForYouRail variant="trending-style" />
-
-          {/* 6. Active offers showcase */}
-          {payload.offers && payload.offers.length > 0 && (
-            <EditorialOffersShowcase offers={payload.offers} />
-          )}
 
           {/* 7. Next drop countdown */}
           {!payload.activeDrop && nextDrop?.releaseDate ? (

@@ -504,131 +504,167 @@ export const TrustBar = () => {
   );
 };
 
-// 🎪 EDITORIAL OFFERS SHOWCASE (MODERN CAMPAIGN SECTION)
-export const EditorialOffersShowcase = ({ offers = [] }) => {
+// 🎪 SEASONAL CAMPAIGN SLIDER (LUXURY EDITORIAL SECTION)
+export const SeasonalCampaignSlider = ({ offers = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Extract offers that actually have products
-  const validOffers = useMemo(() => offers.filter(o => o.products && o.products.length > 0), [offers]);
-  
-  // Auto-advance logic
+  // Filter and sort campaigns
+  const campaigns = useMemo(() => {
+    // We only want active offers that haven't ended yet
+    const now = new Date().getTime();
+    let valid = offers.filter(o => !o.endDate || new Date(o.endDate).getTime() > now);
+    
+    // Sort logic:
+    // 1. Highest discount first
+    // 2. Closest ending campaign second
+    valid.sort((a, b) => {
+      const discountA = a.discountPercentage || 0;
+      const discountB = b.discountPercentage || 0;
+      if (discountB !== discountA) return discountB - discountA;
+      
+      const endA = a.endDate ? new Date(a.endDate).getTime() : Infinity;
+      const endB = b.endDate ? new Date(b.endDate).getTime() : Infinity;
+      return endA - endB;
+    });
+    return valid;
+  }, [offers]);
+
   useEffect(() => {
-    if (validOffers.length <= 1) return;
+    if (campaigns.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % validOffers.length);
-    }, 5000);
+      setCurrentIndex((prev) => (prev + 1) % campaigns.length);
+    }, 6000);
     return () => clearInterval(interval);
-  }, [validOffers]);
+  }, [campaigns.length]);
 
-  if (validOffers.length === 0) return null;
+  if (campaigns.length === 0) return null;
 
-  const currentOffer = validOffers[currentIndex];
+  const currentCampaign = campaigns[currentIndex];
+
+  const handleNext = () => setCurrentIndex(prev => (prev + 1) % campaigns.length);
+  const handlePrev = () => setCurrentIndex(prev => (prev - 1 + campaigns.length) % campaigns.length);
 
   return (
-    <section className="bg-[#050505] w-full py-8 md:py-12 relative">
-      <div className={`${sectionContainer} flex flex-col items-center justify-center`}>
-        {/* Header section */}
-        <div className="mb-8 md:mb-10 text-center">
-           <h3 className="font-display text-3xl md:text-4xl text-[#F4E8C5] tracking-wide mb-2">EXCLUSIVE CAMPAIGNS</h3>
-           <p className="font-sans text-xs md:text-sm tracking-[0.2em] uppercase text-[#F5F5F5] font-light">Limited Edition Releases & Curated Drops</p>
-        </div>
+    <section className="bg-[#050505] w-full min-h-[350px] md:min-h-[400px] relative overflow-hidden flex border-b border-[#1f1f1f]">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentCampaign._id || currentIndex}
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -100 }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          className="w-full flex flex-col md:flex-row relative"
+          // Add touch swipe support
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={1}
+          onDragEnd={(e, { offset, velocity }) => {
+            const swipe = offset.x;
+            if (swipe < -50) handleNext();
+            else if (swipe > 50) handlePrev();
+          }}
+        >
+          {/* LEFT 55%: Content */}
+          <div className="w-full md:w-[55%] flex flex-col justify-center px-8 py-8 md:px-12 lg:px-16 z-10 bg-[#050505] relative order-2 md:order-1">
+            <div className="absolute inset-0 bg-grain opacity-10 pointer-events-none" />
+            
+            <div className="relative z-10 max-w-xl">
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#f2ca50] mb-3 flex items-center gap-2">
+                 <span className="w-1 h-1 bg-[#f2ca50] rounded-full animate-pulse" />
+                 {currentCampaign.campaignType || "Seasonal Campaign"}
+              </span>
 
-        {/* Central Block Slider */}
-        <div className="w-full relative overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentOffer._id || currentIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="w-full"
-            >
-              <FeaturedCampaignCard offer={currentOffer} />
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-3 drop-shadow-sm">
+                {currentCampaign.title || currentCampaign.name}
+              </h2>
 
-        {/* Slide Indicators */}
-        {validOffers.length > 1 && (
-          <div className="flex gap-2 mt-8">
-            {validOffers.map((_, i) => (
+              <p className="font-sans text-xs md:text-sm text-[#d0c5af] leading-relaxed mb-6 font-light max-w-md line-clamp-3">
+                {currentCampaign.description}
+              </p>
+
+              <div className="flex flex-wrap gap-x-6 gap-y-3 mb-6 items-center">
+                {currentCampaign.discountPercentage > 0 && (
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Discount</span>
+                    <span className="font-sans text-lg text-[#f2ca50] tracking-tighter">{currentCampaign.discountPercentage}% OFF</span>
+                  </div>
+                )}
+                
+                {currentCampaign.endDate && (
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Ends In</span>
+                    <div className="scale-75 origin-left -ml-1 mt-0">
+                       <InlineDropCountdown endDate={currentCampaign.endDate} />
+                    </div>
+                  </div>
+                )}
+
+                {currentCampaign.products && currentCampaign.products.length > 0 && (
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Collection Size</span>
+                    <span className="font-sans text-xs text-[#FAF7F2] tracking-widest uppercase mt-0.5">{currentCampaign.products.length} Products</span>
+                  </div>
+                )}
+              </div>
+
+              {currentCampaign.categories && currentCampaign.categories.length > 0 && (
+                <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-[#8c8577] mb-6">
+                  {currentCampaign.categories.join(' • ')}
+                </div>
+              )}
+
+              <Link 
+                to={`/shopping/product-list?offer=${currentCampaign._id}`} 
+                className="inline-flex bg-[#FAF7F2] text-[#050505] px-6 py-3 font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#f2ca50] transition-colors"
+              >
+                SHOP COLLECTION
+              </Link>
+            </div>
+          </div>
+
+          {/* RIGHT 45%: Image */}
+          <div className="w-full md:w-[45%] h-[200px] md:h-auto relative bg-[#0a0a0a] overflow-hidden order-1 md:order-2 flex items-center justify-center pointer-events-none">
+             {currentCampaign.bannerImage ? (
+                <img 
+                  src={currentCampaign.bannerImage} 
+                  alt={currentCampaign.title || currentCampaign.name} 
+                  className="w-full h-full object-cover object-center opacity-90 scale-105 hover:scale-110 transition-transform duration-[10s] ease-out"
+                />
+             ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-[#12100A] via-[#050505] to-[#1A1608] flex items-center justify-center p-8 text-center">
+                   <div className="font-display text-6xl md:text-8xl text-[#f2ca50]/5 uppercase tracking-tighter leading-none break-words absolute inset-0 flex items-center justify-center rotate-[-10deg] scale-150">
+                     {currentCampaign.title || currentCampaign.name}
+                   </div>
+                   <div className="relative z-10 border border-[#f2ca50]/20 p-8">
+                     <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">Limited Edition</span>
+                   </div>
+                </div>
+             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent md:bg-gradient-to-r md:from-[#050505] md:via-[#050505]/40 md:to-transparent" />
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Progress & Navigation overlay */}
+      {campaigns.length > 1 && (
+        <div className="absolute bottom-6 left-8 md:left-16 lg:left-24 z-20 flex items-center gap-8">
+          <div className="flex gap-2">
+            {campaigns.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentIndex(i)}
-                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-8 bg-[#C4A760]' : 'w-2 bg-[#FAF7F2]/30 hover:bg-[#FAF7F2]/50'}`}
+                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-8 bg-[#f2ca50]' : 'w-2 bg-[#FAF7F2]/20 hover:bg-[#FAF7F2]/40'}`}
               />
             ))}
           </div>
-        )}
-      </div>
-    </section>
-  );
-};
-
-const FeaturedCampaignCard = ({ offer }) => {
-  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(offer.endsAt));
-
-  useEffect(() => {
-    if (!offer.endsAt) return;
-    const iv = setInterval(() => setTimeLeft(getRemainingTime(offer.endsAt)), 1000);
-    return () => clearInterval(iv);
-  }, [offer.endsAt]);
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full max-w-5xl mx-auto border border-[#C4A760] rounded-[8px] bg-[#050505] relative overflow-hidden"
-    >
-      {/* Subtle weave pattern background using repeating gradient */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.05]"
-        style={{
-          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, #ffffff 2px, #ffffff 4px)`,
-          backgroundSize: '10px 10px'
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#121212]/80 pointer-events-none" />
-      
-      <div className="relative z-10 px-6 py-8 md:py-10 flex flex-col items-center text-center">
-        {/* Label Badge */}
-        <div className="bg-[#C4A760] text-[#1A1A1A] font-sans text-[10px] px-3 py-1 uppercase tracking-widest font-bold mb-6 rounded-[4px]">
-           {offer.badgeText || "SPECIAL OFFER"}
-        </div>
-        
-        {/* Large Clean Headline */}
-        <h2 className="font-display text-4xl md:text-6xl lg:text-7xl text-[#F4E8C5] leading-none tracking-tight mb-5 drop-shadow-sm">
-          {offer.name}
-        </h2>
-        
-        {/* Body Text */}
-        <p className="font-sans text-sm md:text-base text-[#F5F5F5] max-w-2xl leading-relaxed mb-8 md:mb-10 font-light">
-          {offer.description}
-        </p>
-        
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Link 
-            to={`/offers`} 
-            className="bg-[#C4A760] text-[#1A1A1A] px-8 py-3 font-sans text-sm font-bold uppercase tracking-widest hover:bg-[#F4E8C5] transition-colors"
-          >
-            Explore Campaign
-          </Link>
           
-          {offer.endsAt && (
-            <div className="flex items-center gap-3 border border-[#C4A760]/30 bg-[#121212] px-5 py-3">
-              <span className="font-sans text-[9px] md:text-[10px] text-[#F5F5F5] uppercase tracking-widest">Ends In</span>
-              <span className="font-sans text-[#FFD700] text-sm font-medium tracking-[0.2em]">
-                {timeLeft.d ?? timeLeft.days}D : {timeLeft.hh ?? timeLeft.h}H : {timeLeft.mm ?? timeLeft.m}M
-              </span>
-            </div>
-          )}
+          <div className="hidden md:flex gap-4 items-center">
+            <button onClick={handlePrev} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowLeft className="w-5 h-5" /></button>
+            <button onClick={handleNext} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowRight className="w-5 h-5" /></button>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      )}
+    </section>
   );
 };
 
