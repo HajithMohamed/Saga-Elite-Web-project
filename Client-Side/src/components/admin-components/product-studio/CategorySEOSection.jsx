@@ -23,20 +23,20 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
 
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md">
-      <h2 className="mb-6 text-lg font-semibold text-white">Organization & SEO</h2>
+      <h2 className="mb-6 text-lg font-semibold text-white">Category & Tags</h2>
       
       <div className="grid gap-6">
         <div className="space-y-4">
           <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Category Assignment</label>
-          <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+          <div className="rounded-xl border border-white/10 bg-black/40 p-4 max-h-[400px] overflow-y-auto" data-lenis-prevent="true">
             <p className="mb-3 text-xs text-white/40">Select the primary category for this product.</p>
             {categoryTree.length === 0 ? (
               <div className="text-sm text-white/30">Loading categories...</div>
             ) : (
               <div className="space-y-2">
-                {categoryTree.map(category => (
+                {categoryTree.map((category, index) => (
                   <CategoryNode 
-                    key={category._id} 
+                    key={`${category._id}-${index}`} 
                     node={category} 
                     selectedId={formData.categoryId}
                     onSelect={(id, pathStr, nodePath) => {
@@ -121,9 +121,9 @@ const CategoryNode = ({ node, level = 0, selectedId, onSelect, pathStr = [], nod
       
       {expanded && hasChildren && (
         <div className="mt-1 space-y-1">
-          {node.children.map(child => (
+          {node.children.map((child, index) => (
             <CategoryNode 
-              key={child._id} 
+              key={`${child._id}-${level}-${index}`} 
               node={child} 
               level={level + 1} 
               selectedId={selectedId}

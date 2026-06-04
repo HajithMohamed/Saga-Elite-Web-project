@@ -35,10 +35,12 @@ export const OverviewSection = ({ drops = [] }) => {
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Description</label>
           <textarea 
+            data-lenis-prevent="true"
             value={formData.description}
             onChange={(e) => updateField('description', e.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+            rows={8}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37] [&::-webkit-scrollbar]:hidden resize-y"
             placeholder="Detailed product description..."
           />
         </div>
@@ -94,10 +96,12 @@ export const OverviewSection = ({ drops = [] }) => {
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Product Story (Optional)</label>
           <textarea 
+            data-lenis-prevent="true"
             value={formData.story}
             onChange={(e) => updateField('story', e.target.value)}
-            rows={3}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
+            rows={6}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37] [&::-webkit-scrollbar]:hidden resize-y"
             placeholder="The inspiration behind this piece..."
           />
         </div>

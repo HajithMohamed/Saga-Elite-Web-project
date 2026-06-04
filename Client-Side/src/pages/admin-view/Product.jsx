@@ -621,11 +621,21 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
       role="dialog"
       aria-modal="true"
       aria-labelledby="category-manager-title"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="mb-8 rounded-3xl border border-white/10 bg-[#111111] p-5 md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-black/60 backdrop-blur-sm p-6"
+      onClick={onClose}
     >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        className="category-modal-scroll w-full max-w-5xl max-h-[85vh] overflow-y-scroll rounded-3xl border border-[#D4AF37]/15 bg-[#0B0B0B] p-6 md:p-8 shadow-2xl shadow-black/50"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
       <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
@@ -890,6 +900,7 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
           </div>
         </div>
       </div>
+      </motion.div>
     </motion.div>
   );
 };
@@ -2061,20 +2072,20 @@ const Product = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
                         {product.artNo || 'N/A'}
                       </td>
-                      <td className="py-4 px-3 text-[14px] font-normal text-[#A0A0A0]">
+                      <td className="py-4 px-3 text-[14px] font-normal text-white/80">
                         {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
                       </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
                         {product.variants?.length || 0} variant{product.variants?.length === 1 ? '' : 's'}
                       </td>
                       <td className="py-4 px-3 text-[14px] font-normal text-white">
                         LKR {Number(product.basePrice || 0).toLocaleString()}
                       </td>
                       <td className="py-4 px-3 text-[14px] font-normal">
-                        <span className={`${stock === 0 ? 'text-rose-400 font-bold' : stock <= 5 ? 'text-amber-400 font-medium' : 'text-[#A0A0A0]'}`}>
+                        <span className={`${stock === 0 ? 'text-rose-400 font-bold' : stock <= 5 ? 'text-amber-400 font-medium' : 'text-white/80'}`}>
                           {stock} units
                         </span>
                       </td>
@@ -2083,7 +2094,7 @@ const Product = () => {
                           {product.isActive ? 'Active' : 'Draft'}
                         </span>
                       </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-[#707070]">
+                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
                         {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                       </td>
                       <td className="py-4 px-3 text-right pr-4">

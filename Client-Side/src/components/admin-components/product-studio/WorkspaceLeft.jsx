@@ -5,14 +5,14 @@ import { VariantStudio } from './VariantStudio';
 import { PricingInventorySection } from './PricingInventorySection';
 import { CategorySEOSection } from './CategorySEOSection';
 
-export const WorkspaceLeft = ({ categoryTree, drops }) => {
+export const WorkspaceLeft = ({ categoryTree, drops, activeTab }) => {
   return (
-    <div className="space-y-8 pb-32">
-      <OverviewSection drops={drops} />
-      <MediaStudio />
-      <VariantStudio />
-      <PricingInventorySection />
-      <CategorySEOSection categoryTree={categoryTree} />
+    <div className="pb-32">
+      {activeTab === 'basic-info' && <OverviewSection drops={drops} />}
+      {activeTab === 'media' && <MediaStudio />}
+      {activeTab === 'variants' && <VariantStudio />}
+      {activeTab === 'pricing' && <PricingInventorySection />}
+      {(activeTab === 'category' || activeTab === 'tags') && <CategorySEOSection categoryTree={categoryTree} />}
     </div>
   );
 };
