@@ -6,8 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
-  AnnouncementBar,
-  EditorialHeroSection,
+  HeroCarousel,
   HeroBackdropFX,
   LiveDropCountdownXL,
   ProductSlider,
@@ -138,12 +137,8 @@ const Home = () => {
         </div>
 
         <div className="relative z-10">
-          {/* 1. Announcement bar */}
-          <AnnouncementBar activeDrop={payload.activeDrop} />
-
-          {/* 2. Hero — cinematic */}
-          <EditorialHeroSection
-            slides={heroSlides}
+          {/* 1. Hero — cinematic */}
+          <HeroCarousel
             activeDrops={payload.activeDrops}
             nextDrop={nextDrop}
           />

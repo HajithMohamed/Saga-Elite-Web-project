@@ -68,155 +68,174 @@ export const InlineDropCountdown = ({ endDate }) => {
   );
 };
 
-// 🎬 EDITORIAL HERO SECTION (MAIN IMPACT ZONE)
-export const EditorialHeroSection = ({ slides = [], activeDrops = [], nextDrop = null }) => {
-  const [initialNow] = useState(() => Date.now());
+// 🎬 HERO CAROUSEL (COMPACT LUXURY GRID)
+export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Derive data
-  const liveDrop = activeDrops && activeDrops.length > 0 ? activeDrops[0] : null;
-  const upcomingDrop = nextDrop;
-  
-  // Use first active drop, or next drop, or first slide for the main banner
-  const primaryCampaign = liveDrop 
-    ? {
-        label: '🔴 LIVE DROP',
-        headline: liveDrop.name,
-        subheadline: liveDrop.description,
-        imageUrl: liveDrop.images?.[0]?.url || liveDrop.coverImageUrl || liveDrop.products?.[0]?.images?.[0]?.url || "https://images.unsplash.com/photo-1549439602-43ebca2327af?w=1920&q=80",
-        ctaText: 'SHOP THE DROP',
-        ctaLink: `/shopping/drop/${liveDrop.slug}`,
-      }
-    : upcomingDrop
-      ? {
-          label: '⚡ COMING SOON',
-          headline: upcomingDrop.name,
-          subheadline: upcomingDrop.description || 'Something rare is being prepared. Stay ready.',
-          imageUrl: upcomingDrop.images?.[0]?.url || upcomingDrop.coverImageUrl || upcomingDrop.products?.[0]?.images?.[0]?.url || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1920&q=80",
-          ctaText: 'VIEW DROPS',
-          ctaLink: '/shopping/drops',
-        }
-      : slides.length > 0
-        ? {
-            label: slides[0].label || 'Exclusive',
-            headline: slides[0].headline,
-            subheadline: slides[0].subheadline,
-            imageUrl: slides[0].imageUrl || "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&q=80",
-            ctaText: slides[0].ctaText || 'SHOP NOW',
-            ctaLink: slides[0].ctaLink || '/shopping/product-list',
-          }
-        : {
-            label: 'SAGA ELITE',
-            headline: 'LUXURY ESSENTIALS',
-            subheadline: 'Curated fashion for the elite.',
-            imageUrl: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=1920&q=80",
-            ctaText: 'EXPLORE',
-            ctaLink: '/shopping/product-list',
-          };
+  // Auto-advance logic for the carousel
+  useEffect(() => {
+    if (!activeDrops || activeDrops.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % activeDrops.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [activeDrops]);
+
+  const liveDrop = activeDrops && activeDrops.length > 0 ? activeDrops[currentSlide] : null;
 
   return (
-    <section className="relative w-full min-h-[70vh] bg-[#050505] overflow-hidden flex flex-col lg:flex-row border-b border-[#1f1f1f]">
-      {/* LEFT: PRIMARY CAMPAIGN (Spans 8 cols conceptually, taking up ~65% width) */}
-      <div className="relative flex-1 lg:w-[65%] min-h-[50vh] lg:min-h-[70vh] group overflow-hidden bg-[#111]">
-        {/* Parallax Image */}
-        <motion.div 
-          className="absolute inset-0 w-full h-full transform transition-transform duration-[2s] ease-[0.22,1,0.36,1] group-hover:scale-105"
-        >
-          <img 
-            src={primaryCampaign.imageUrl} 
-            alt={primaryCampaign.headline}
-            className="w-full h-full object-cover opacity-60 md:opacity-70"
-            loading="eager"
-          />
-        </motion.div>
+    <section className="w-full bg-[#050505] border-b border-[#1f1f1f]">
+      {/* Container: 70vh desktop, 65vh tablet, auto mobile */}
+      <div className="w-full h-auto md:h-[65vh] lg:h-[70vh] flex flex-col lg:flex-row">
         
-        {/* Grain overlay & Gradients */}
-        <div className="absolute inset-0 bg-grain opacity-30 mix-blend-overlay pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#050505]/60 to-transparent pointer-events-none" />
-
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12 lg:p-16 max-w-3xl z-10">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }}
-            className="font-mono text-[10px] md:text-[11px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
-          >
-            {primaryCampaign.label}
-          </motion.p>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-            className="font-display text-5xl md:text-6xl lg:text-7xl xl:text-[80px] leading-[0.9] text-[#FAF7F2] uppercase tracking-tighter mb-4 drop-shadow-lg"
-          >
-            {primaryCampaign.headline.split('\n').map((line, i) => (
-              <React.Fragment key={i}>{line}<br /></React.Fragment>
-            ))}
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="font-sans text-sm md:text-base text-[#FAF7F2]/70 max-w-lg leading-relaxed mb-8"
-          >
-            {primaryCampaign.subheadline}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-            className="flex flex-wrap gap-4"
-          >
-            <Link to={primaryCampaign.ctaLink} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
-              <span className="relative z-10">{primaryCampaign.ctaText}</span>
-              <div className="absolute inset-0 bg-[#ffe088] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
-            </Link>
-            <Link to="/shopping/product-list" className="inline-flex items-center justify-center border border-[#FAF7F2]/30 text-[#FAF7F2] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold hover:border-[#f2ca50] hover:text-[#f2ca50] transition-colors duration-300">
-              EXPLORE ALL
-            </Link>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* RIGHT: STACKED UTILITY CARDS (Spans 4 cols conceptually, taking up ~35% width) */}
-      <div className="relative lg:w-[35%] flex flex-col bg-[#0a0a0a] border-l border-[#1f1f1f]">
-        
-        {/* 1. Live Drop Card */}
-        {liveDrop && (
-          <Link to={`/shopping/drop/${liveDrop.slug}`} className="flex-1 min-h-[160px] group relative overflow-hidden border-b border-[#1f1f1f] bg-[#0c0c0c] hover:bg-[#111] transition-colors p-8 flex flex-col justify-center">
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Flame className="w-24 h-24 text-[#f2ca50]" />
-             </div>
-             <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577]">Live Now</span>
+        {/* LEFT SECTION (75%) */}
+        <div className="relative w-full lg:w-[75%] h-[60vh] md:h-full bg-[#111] overflow-hidden">
+          <AnimatePresence mode="wait">
+            {liveDrop ? (
+              <motion.div
+                key={liveDrop._id || currentSlide}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full h-full grid grid-cols-1 md:grid-cols-[65%_35%] relative"
+              >
+                {/* Image Area (65%) */}
+                <div className="w-full h-full relative overflow-hidden bg-[#0a0a0a]">
+                  <img
+                    src={liveDrop.images?.[0]?.url || liveDrop.coverImageUrl || "https://images.unsplash.com/photo-1549439602-43ebca2327af?w=1920&q=80"}
+                    alt={liveDrop.name}
+                    className="w-full h-full object-contain object-center opacity-80"
+                  />
+                  <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none" />
+                  {/* Fade out on right for content blending */}
+                  <div className="hidden md:block absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#050505] to-transparent pointer-events-none" />
+                  <div className="md:hidden absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none" />
                 </div>
-                <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">{liveDrop.name}</h3>
-                <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1">Shop Collection</span>
-             </div>
-          </Link>
-        )}
 
-        {/* 2. Upcoming Drop Card */}
-        {upcomingDrop && (
-          <Link to="/shopping/drops" className="flex-1 min-h-[160px] group relative overflow-hidden border-b border-[#1f1f1f] bg-[#080808] hover:bg-[#0c0c0c] transition-colors p-8 flex flex-col justify-center">
-             <div className="relative z-10">
-                <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-2 block">Coming Soon</span>
-                <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">{upcomingDrop.name}</h3>
-                <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#d0c5af] border-b border-[#d0c5af]/30 pb-1">View Details</span>
-             </div>
-          </Link>
-        )}
+                {/* Content Area (35%) */}
+                <div className="absolute inset-0 md:relative flex flex-col justify-end md:justify-center p-8 md:p-12 lg:p-16 z-10 bg-gradient-to-t md:bg-gradient-to-l from-[#050505] via-[#050505]/90 to-transparent md:bg-[#050505]">
+                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                    LIVE DROP
+                  </span>
+                  
+                  <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md">
+                    {liveDrop.name}
+                  </h1>
+                  
+                  <p className="font-sans text-sm md:text-base text-[#d0c5af] leading-relaxed mb-8 max-w-sm line-clamp-3">
+                    {liveDrop.description}
+                  </p>
 
-        {/* 3. VIP Access Card */}
-        <Link to="/auth/register" className="flex-1 min-h-[160px] group relative overflow-hidden bg-[#0a0a0a] hover:bg-[#111] transition-colors p-8 flex flex-col justify-center">
-           <div className="absolute bottom-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
+                  <div className="flex flex-col gap-4">
+                    <Link to={`/shopping/drop/${liveDrop.slug}`} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
+                      <span className="relative z-10">SHOP THE DROP</span>
+                      <div className="absolute inset-0 bg-[#FAF7F2] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+                    </Link>
+                    
+                    {liveDrop.endDate && (
+                      <div className="flex flex-col justify-center border border-[#1f1f1f] bg-[#080808] px-6 py-4">
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#8c8577]">Ends In</span>
+                        <div className="-mt-2">
+                           <InlineDropCountdown endDate={liveDrop.endDate} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0a]">
+                <span className="font-mono text-xs text-[#8c8577] uppercase tracking-widest mb-4">No Active Drops</span>
+                <Link to="/shopping/product-list" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1">Explore Collections</Link>
+              </div>
+            )}
+          </AnimatePresence>
+          
+          {/* Slide Indicators */}
+          {activeDrops && activeDrops.length > 1 && (
+            <div className="absolute bottom-6 left-8 flex gap-2 z-20">
+              {activeDrops.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSlide(i)}
+                  className={`h-1 transition-all duration-300 ${i === currentSlide ? 'w-8 bg-[#f2ca50]' : 'w-2 bg-[#FAF7F2]/30 hover:bg-[#FAF7F2]/50'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT SECTION (25%) */}
+        <div className="w-full lg:w-[25%] flex flex-col h-auto md:h-full border-t lg:border-t-0 lg:border-l border-[#1f1f1f]">
+          
+          {/* Top Card: Upcoming Drop (50% height) */}
+          <div className="flex-1 min-h-[250px] border-b border-[#1f1f1f] relative overflow-hidden group bg-[#080808] hover:bg-[#0c0c0c] transition-colors p-8 flex flex-col justify-center">
+            {nextDrop ? (
+              <>
+                {/* Background Thumbnail */}
+                <div className="absolute inset-0 z-0">
+                  <img 
+                    src={nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1920&q=80"} 
+                    alt={nextDrop.name}
+                    className="w-full h-full object-cover opacity-20 group-hover:opacity-30 group-hover:scale-105 transition-all duration-[2s]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/90 to-transparent" />
+                </div>
+                
+                <div className="relative z-10 flex flex-col h-full justify-end">
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Upcoming Drop</span>
+                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-2 leading-none drop-shadow-md">{nextDrop.name}</h3>
+                  <div className="flex flex-col gap-1 mb-4">
+                    <p className="font-mono text-[10px] text-[#d0c5af] tracking-[0.1em]">
+                      {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                    <div className="scale-75 origin-left -mt-2">
+                      <InlineDropCountdown endDate={nextDrop.releaseDate} />
+                    </div>
+                  </div>
+                  <div>
+                    <Link to="/shopping/drops" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50] transition-colors">
+                      Explore Details
+                    </Link>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                  <Sparkles className="w-32 h-32 text-[#FAF7F2]" />
+                </div>
+                <div className="relative z-10">
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Coming Soon</span>
+                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-4 leading-none">A New Chapter<br/>is forming.</h3>
+                  <Link to="/shopping/product-list" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50] transition-colors">
+                    Explore Collections
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Bottom Card: VIP Access (50% height) */}
+          <div className="flex-1 min-h-[250px] relative overflow-hidden group bg-[#050505] hover:bg-[#0a0a0a] transition-colors p-8 flex flex-col justify-center">
+            <div className="absolute bottom-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
               <Diamond className="w-32 h-32 text-[#FAF7F2]" />
-           </div>
-           <div className="relative z-10">
-              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-2 block">Saga Elite</span>
-              <h3 className="font-display text-2xl md:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors">VIP Access</h3>
-              <span className="inline-block mt-3 font-mono text-[9px] uppercase tracking-[0.2em] text-[#d0c5af] border-b border-[#d0c5af]/30 pb-1">Unlock Privileges</span>
-           </div>
-        </Link>
+            </div>
+            <div className="relative z-10">
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Saga Elite</span>
+              <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-2 leading-none">VIP Access</h3>
+              <p className="font-sans text-xs text-[#99907c] mb-6 max-w-[200px]">
+                Early access benefits, exclusive member drops, and private events.
+              </p>
+              <Link to="/auth/register" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#FAF7F2] border-b border-[#FAF7F2]/30 pb-1 hover:border-[#FAF7F2] transition-colors">
+                Unlock Privileges
+              </Link>
+            </div>
+          </div>
 
+        </div>
       </div>
     </section>
   );
@@ -841,97 +860,7 @@ export const NewsletterSection = () => {
   );
 };
 
-/* ──────────────────────────────────────────────────────────────────────────
-   ANNOUNCEMENT BAR — thin animated marquee at top of homepage.
-   When a drop is live, it shows the live drop + countdown.
-   Otherwise it cycles through static hype messages.
-   ────────────────────────────────────────────────────────────────────────── */
-const ANNOUNCEMENT_MESSAGES = [
-  "🚀 LATEST DROP LIVE NOW",
-  "🎁 EVERY ORDER UNLOCKS A MYSTERY REWARD",
-  "⚡ LIMITED STOCK · RARE FIT FOREVER",
-  "🔥 FREE DELIVERY OVER LKR 10,000",
-  "💎 MEMBERS GET EARLY DROP ACCESS",
-  "LIMITED TO 1 PIECE PER MEMBER",
-  "SRI LANKA'S MOST EXCLUSIVE STREETWEAR",
-  "NEW CHAPTER DROPS EVERY MONTH",
-  "ISLANDWIDE DELIVERY IN 2-4 DAYS",
-  "MEMBERS SEE DROPS 24H EARLY",
-];
 
-export const AnnouncementBar = ({ activeDrop = null }) => {
-  const [timeLeft, setTimeLeft] = useState(() =>
-    activeDrop?.endDate ? getRemainingTime(activeDrop.endDate) : null
-  );
-
-  useEffect(() => {
-    if (!activeDrop?.endDate) return undefined;
-    const iv = setInterval(
-      () => setTimeLeft(getRemainingTime(activeDrop.endDate)),
-      1000
-    );
-    return () => clearInterval(iv);
-  }, [activeDrop?.endDate]);
-
-  // Drop-aware mode: show live drop with countdown.
-  if (activeDrop && timeLeft && (timeLeft.total ?? 1) > 0) {
-    const d = timeLeft.days ?? timeLeft.d ?? 0;
-    const h = timeLeft.hh ?? timeLeft.h ?? "00";
-    const m = timeLeft.mm ?? timeLeft.m ?? "00";
-    const s = timeLeft.ss ?? timeLeft.s ?? "00";
-    return (
-      <Link
-        to={`/shopping/drop/${activeDrop.slug}`}
-        className="block w-full bg-[#0a0a0a] border-b border-[#f2ca50]/40 relative overflow-hidden group"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-[#f2ca50]/0 via-[#f2ca50]/15 to-[#f2ca50]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[2000ms] ease-out pointer-events-none" />
-        <div className="relative z-10 max-w-[1440px] mx-auto px-6 py-2 flex items-center justify-center gap-3 md:gap-6 font-mono text-[10px] md:text-[11px] tracking-[0.28em] uppercase">
-          <span className="flex items-center gap-2 text-[#f2ca50] font-bold">
-            <span className="w-2 h-2 rounded-full bg-[#f2ca50] animate-pulse shadow-[0_0_8px_#f2ca50]" />
-            LIVE NOW · {activeDrop.name}
-          </span>
-          <span className="hidden md:inline text-[#574500]">|</span>
-          <span className="text-[#e5e2e1] tabular-nums">
-            ENDS IN {d > 0 ? `${d}D ` : ""}
-            <span className="text-[#f2ca50]">{String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}</span>
-          </span>
-          <span className="hidden md:inline text-[#f2ca50] underline underline-offset-4 font-bold">
-            SHOP DROP →
-          </span>
-        </div>
-      </Link>
-    );
-  }
-
-  // Marquee mode: infinite scroll of hype messages.
-  const messages = [...ANNOUNCEMENT_MESSAGES, ...ANNOUNCEMENT_MESSAGES];
-  return (
-    <div className="w-full bg-[#0a0a0a] border-b border-[#1a1a1a] py-2 overflow-hidden relative">
-      <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
-      <MotionDiv
-        className="flex gap-12 whitespace-nowrap"
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-      >
-        {messages.map((msg, i) => (
-          <span
-            key={i}
-            className="font-mono text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-[#d0c5af] flex items-center gap-3"
-            style={
-              /DROP|MEMBER|MYSTERY|LIMITED|EXCLUSIVE/.test(msg)
-                ? { textShadow: "0 0 12px rgba(242,202,80,0.35)" }
-                : undefined
-            }
-          >
-            {msg}
-            <span className="text-[#574500]">·</span>
-          </span>
-        ))}
-      </MotionDiv>
-    </div>
-  );
-};
 
 /* ──────────────────────────────────────────────────────────────────────────
    HERO BACKDROP FX — Three.js floating gold particles behind the hero.
