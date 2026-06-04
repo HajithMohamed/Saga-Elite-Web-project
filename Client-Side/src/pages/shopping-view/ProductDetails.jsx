@@ -166,31 +166,7 @@ const ProductDetails = () => {
   const heroGlowX = useTransform(heroPointerX, [0, 1], ["30%", "70%"]);
   const heroGlowY = useTransform(heroPointerY, [0, 1], ["30%", "70%"]);
   
-  const activeColorHex = useMemo(() => {
-    if (selectedVariantSku && product?.variants) {
-      const v = product.variants.find(v => v.sku === selectedVariantSku);
-      if (v?.colorCode) return v.colorCode;
-    }
-    const colorMap = {
-      black: "10,10,10", white: "245,245,245", red: "127,29,29",
-      crimson: "127,29,29", green: "20,83,45", olive: "63,74,60",
-      gold: "212,175,55", beige: "245,245,220", sand: "245,245,220"
-    };
-    if (selectedColor && colorMap[selectedColor.toLowerCase()]) {
-      return colorMap[selectedColor.toLowerCase()];
-    }
-    return "242,202,80"; // default gold RGB
-  }, [selectedColor, selectedVariantSku, product?.variants]);
-
-  const hexToRgbStr = (hex) => {
-    if (hex.includes(",")) return hex; // Already RGB string
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}` : "242,202,80";
-  };
-
-  const dynamicRgb = hexToRgbStr(activeColorHex);
-  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(${dynamicRgb}, 0.25), transparent 65%)`;
-
+  const heroGlowBackground = useMotionTemplate`radial-gradient(circle at ${heroGlowX} ${heroGlowY}, rgba(242, 202, 80, 0.25), transparent 65%)`;
 
   const handleHeroPointerMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -720,30 +696,11 @@ const ProductDetails = () => {
                   <button
                     key={img._id || i}
                     onClick={() => setActiveImageIndex(i)}
-                    style={i === activeImageIndex ? { borderColor: `rgba(${dynamicRgb}, 0.8)`, boxShadow: `0 0 15px rgba(${dynamicRgb}, 0.2)` } : {}}
                     className={`relative shrink-0 w-16 h-24 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                      i === activeImageIndex ? "scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                      i === activeImageIndex ? "scale-105 border-[#f2ca50] shadow-[0_0_15px_rgba(242,202,80,0.2)]" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={img.url} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
-                  </button>
-                ))}
-              </div>
-            )}
-            {/* Distinct colour swatches (show all product colours) */}
-            {distinctColors.length > 0 && (
-              <div className="mt-4 flex items-center gap-3">
-                {distinctColors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleDistinctColorClick(color);
-                    }}
-                    className="inline-flex"
-                    aria-pressed={String(selectedColor) === String(color)}
-                  >
-                    <ColorSwatch color={color} size={28} selected={selectedColor === color} />
                   </button>
                 ))}
               </div>
@@ -811,7 +768,6 @@ const ProductDetails = () => {
                       onSizeChange={handleSizeChange}
                       onColorChange={handleColorChange}
                       errors={variantErrors}
-                      activeColorRgb={dynamicRgb}
                     />
                   </>
                 ) : (
@@ -861,9 +817,8 @@ const ProductDetails = () => {
                     !selectedVariant ||
                     selectedVariant.stock === 0
                   }
-                  style={{ borderColor: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, color: cartAddedPulse ? `rgb(${dynamicRgb})` : undefined, backgroundColor: cartAddedPulse ? `rgba(${dynamicRgb}, 0.1)` : undefined }}
                   className={`flex h-14 flex-1 items-center justify-center rounded-full border text-sm font-bold tracking-[0.18em] uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    cartAddedPulse ? "" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
+                    cartAddedPulse ? "border-[#f2ca50] text-[#f2ca50] bg-[#f2ca50]/10" : "border-[#4d4635] text-[#e5e2e1] hover:bg-[#131313] hover:border-[#99907c]"
                   }`}
                 >
                   {cartAddedPulse ? (
@@ -884,8 +839,7 @@ const ProductDetails = () => {
                     !selectedVariant ||
                     selectedVariant.stock === 0
                   }
-                  style={{ backgroundColor: `rgb(${dynamicRgb})`, boxShadow: `0 4px 14px 0 rgba(${dynamicRgb}, 0.39)` }}
-                  className="flex h-14 flex-1 items-center justify-center rounded-full text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#f2ca50] shadow-[0_4px_14px_rgba(242,202,80,0.39)] flex h-14 flex-1 items-center justify-center rounded-full text-[#0a0a0a] font-bold text-sm tracking-[0.18em] uppercase transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Buy Now
                 </motion.button>
@@ -926,10 +880,9 @@ const ProductDetails = () => {
                     key={tab.id}
                     type="button"
                     onClick={() => setProductTab(tab.id)}
-                    style={productTab === tab.id ? { backgroundColor: `rgba(${dynamicRgb}, 0.1)`, color: `rgb(${dynamicRgb})`, border: `1px solid rgba(${dynamicRgb}, 0.5)` } : {}}
                     className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
                       productTab === tab.id
-                        ? "font-bold"
+                        ? "bg-[#f2ca50]/10 text-[#f2ca50] border-[#f2ca50]/50 font-bold border"
                         : "text-gray-400 hover:text-white border border-transparent"
                     }`}
                   >
