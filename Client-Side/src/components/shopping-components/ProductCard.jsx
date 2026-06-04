@@ -114,6 +114,9 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     ? imageByColor.get(previewColor.toLowerCase()) || primaryImage
     : primaryImage;
 
+  const [imgLoaded, setImgLoaded] = useState(false);
+  useEffect(() => { setImgLoaded(false); }, [displayImage]);
+
   // Sizes with aggregated stock (across colors) — for the hover preview strip.
   const sizesWithStock = useMemo(() => {
     const map = new Map();
@@ -241,30 +244,41 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       <Link
         to={productHref}
         className={cn(
-          "relative w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]",
-          tall ? "aspect-square" : "aspect-[3/4]"
+          "relative w-full overflow-hidden bg-[#111] block rounded-2xl border border-white/5 transition-all duration-500 group-hover:border-[#D4AF37]/30 group-hover:shadow-[0_8px_30px_rgb(212,175,55,0.15)]",
+          tall ? "aspect-square" : "aspect-[3/4] md:aspect-[4/5]"
         )}
       >
-        {/* Primary / color-swap image — keying on src triggers a clean opacity fade */}
+        {/* Skeleton Loader */}
+        {!imgLoaded && (
+          <div className="absolute inset-0 bg-[#1a1a1a] animate-pulse flex items-center justify-center">
+             <div className="w-8 h-8 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+          </div>
+        )}
+
+        {/* Primary / color-swap image */}
         <img
           key={displayImage}
           src={displayImage}
           alt={product?.name || "Piece"}
           loading="lazy"
-          width={220}
-          height={293}
-          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.05] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+          onLoad={() => setImgLoaded(true)}
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder.jpg";
+            setImgLoaded(true);
+          }}
+          className={cn(
+            "object-cover object-center w-full h-full transition-all duration-700 ease-[0.25,0.46,0.45,0.94] group-hover:scale-105",
+            imgLoaded ? "opacity-100" : "opacity-0"
+          )}
         />
-        {/* Alt image — fades in on hover ONLY when no swatch is active */}
+        {/* Alt image */}
         {secondaryImage && !activeColor ? (
           <img
             src={secondaryImage}
             alt=""
             aria-hidden="true"
             loading="lazy"
-            width={220}
-            height={293}
-            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-700"
           />
         ) : null}
 
@@ -411,18 +425,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       </Link>
 
       {/* Metadata */}
-      <Link to={productHref} className="block transition-colors p-2 rounded-sm mt-1">
+      <Link to={productHref} className="block transition-all duration-500 p-2 mt-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:-translate-y-2 md:group-hover:translate-y-0">
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col flex-1">
-            <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-tight leading-snug line-clamp-2">
+            <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-widest leading-snug line-clamp-1">
               {product?.name || "Untitled piece"}
             </h3>
-            <p className="text-[#D4AF37]/80 text-[10px] mt-1 uppercase tracking-widest font-medium">
-              {product?.category?.name || "Collection"}
+            <p className="text-[#99907c] text-[10px] mt-1 uppercase tracking-widest font-medium">
+              {product?.category?.name || product?.category || "Collection"}
             </p>
           </div>
           <div className="flex flex-col items-end shrink-0">
-            <p className="text-[#D4AF37] font-mono text-sm tracking-wider font-semibold tabular-nums">
+            <p className="text-[#f2ca50] font-mono text-sm tracking-wider font-semibold tabular-nums">
               {formatLKR(price)}
             </p>
             {discountPct > 0 && basePrice > 0 && (
