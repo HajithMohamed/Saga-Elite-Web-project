@@ -36,7 +36,6 @@ import VariantSelectors, {
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
-import { ColorSwatch } from "@/components/ui/editorial";
 
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
@@ -365,21 +364,6 @@ const ProductDetails = () => {
     return allImages;
   }, [product?.images, selectedColor]);
 
-  const distinctColors = useMemo(() => {
-    const variants = Array.isArray(product?.variants) ? product.variants : [];
-    const seen = new Set();
-    const out = [];
-    for (const v of variants) {
-      const c = String(v?.color || "").trim();
-      if (!c) continue;
-      const key = c.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(c);
-    }
-    return out;
-  }, [product?.variants]);
-
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
@@ -455,18 +439,6 @@ const ProductDetails = () => {
     setSelectedVariantSku(matchedVariant?.sku || "");
     setVariantErrors((current) => ({ ...current, color: "" }));
     // Reset gallery to first image of the new color
-    setActiveImageIndex(0);
-  };
-
-  const handleDistinctColorClick = (color) => {
-    // When clicking a distinct color from the product overview, try to preserve size
-    let matchedVariant = null;
-    if (selectedSize) matchedVariant = getVariantBySelection(product, selectedSize, color);
-    if (!matchedVariant) {
-      matchedVariant = (product.variants || []).find((v) => String(v?.color || "") === String(color));
-    }
-    setSelectedColor(color);
-    setSelectedVariantSku(matchedVariant?.sku || "");
     setActiveImageIndex(0);
   };
 
