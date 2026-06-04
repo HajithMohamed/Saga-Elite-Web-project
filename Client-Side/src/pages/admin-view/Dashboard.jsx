@@ -131,7 +131,7 @@ const quickLinks = [
 ];
 
 const Card = ({ children, className = "" }) => (
-  <div className={`rounded-2xl border border-white/10 bg-[#101010] p-5 ${className}`}>
+  <div className={`rounded-2xl border border-white/10 bg-[#101010] p-6 ${className}`}>
     {children}
   </div>
 );
@@ -152,22 +152,24 @@ const KpiTile = ({ label, value, formatter, hint, icon, tone = "text-[#D4AF37]" 
   return (
     <motion.div
       variants={itemVariants}
-      className="rounded-2xl border border-white/10 bg-[#101010] p-4"
+      className="rounded-2xl border border-white/10 bg-[#101010] p-6 flex flex-col justify-center"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-400">{label}</p>
-          <p className="mt-2 truncate text-2xl font-semibold text-white">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-white/[0.04] p-1.5">
+            <Icon className={`h-4 w-4 ${tone}`} />
+          </div>
+          <p className="text-sm font-medium text-gray-400">{label}</p>
+        </div>
+        <div>
+          <p className="truncate text-3xl font-semibold text-white">
             {typeof value === "number" && formatter ? (
               <AnimatedNumber value={value} formatter={formatter} />
             ) : (
               value
             )}
           </p>
-          {hint ? <p className="mt-1 truncate text-xs text-gray-500">{hint}</p> : null}
-        </div>
-        <div className="rounded-xl bg-white/[0.04] p-2">
-          <Icon className={`h-5 w-5 ${tone}`} />
+          {hint ? <p className="mt-1.5 truncate text-sm text-gray-500">{hint}</p> : null}
         </div>
       </div>
     </motion.div>
@@ -182,7 +184,7 @@ const OrderStatusPill = ({ label, value }) => (
 );
 
 const EmptyBlock = ({ children }) => (
-  <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-5 text-sm text-gray-400">
+  <div className="rounded-xl border border-white/10 bg-black/25 px-6 py-6 text-sm text-gray-400">
     {children}
   </div>
 );
@@ -336,7 +338,7 @@ const Dashboard = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:gap-6"
         >
           {topStrip.map((item) => (
             <KpiTile key={item.label} {...item} />
@@ -357,7 +359,7 @@ const Dashboard = () => {
               action={
                 <Link
                   to="/admin/order"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-[#D4AF37] hover:text-white"
+                  className="inline-flex items-center gap-2 justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
                 >
                   Open orders
                   <ArrowRight className="h-4 w-4" />
@@ -409,7 +411,7 @@ const Dashboard = () => {
                 eyebrow="Drop Status"
                 title={activeDrop ? activeDrop.name : "No active drop"}
                 action={
-                  <Link to="/admin/drop" className="text-sm font-medium text-[#D4AF37] hover:text-white">
+                  <Link to="/admin/drop" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
                     Manage
                   </Link>
                 }
@@ -452,7 +454,7 @@ const Dashboard = () => {
                 action={
                   <Link
                     to="/admin/payments/pending"
-                    className="text-sm font-medium text-[#D4AF37] hover:text-white"
+                    className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
                   >
                     Verify
                   </Link>
@@ -554,7 +556,7 @@ const Dashboard = () => {
             eyebrow="Product Health"
             title="Best seller, stock risk, and top drop"
             action={
-              <Link to="/admin/product" className="text-sm font-medium text-[#D4AF37] hover:text-white">
+              <Link to="/admin/product" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
                 Manage catalog
               </Link>
             }
@@ -615,7 +617,7 @@ const Dashboard = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6"
         >
           {visibleQuickLinks.map((item) => {
             const Icon = item.icon;
