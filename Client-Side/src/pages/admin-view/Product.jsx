@@ -44,6 +44,7 @@ import {
   AlertCircle,
   Download,
   Loader2,
+  MoreVertical,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { SearchFilterBar, FilterSelect } from "@/components/admin-components/_shared/SearchFilterBar";
@@ -635,271 +636,270 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
         onClick={(e) => e.stopPropagation()}
         className="category-modal-scroll w-full max-w-5xl max-h-[85vh] overflow-y-scroll rounded-3xl border border-[#D4AF37]/15 bg-[#0B0B0B] p-6 md:p-8 shadow-2xl shadow-black/50"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        data-lenis-prevent="true"
       >
-      <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
-          <h3 id="category-manager-title" className="mt-2 text-xl font-semibold text-white">Category management</h3>
-          <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onRefreshCategories()}
-            className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
-          >
-            Refresh tree
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/25 hover:text-white"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {CATEGORY_ROOT_TAGS.map((tag) => {
-          const isActive = normalizeText(activeTag) === normalizeText(tag);
-          const rootNode = findCategoryNode(categoryTree, tag);
-
-          return (
+        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
+            <h3 id="category-manager-title" className="mt-2 text-xl font-semibold text-white">Category management</h3>
+            <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <button
-              key={tag}
               type="button"
-              onClick={() => switchActiveTag(tag)}
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition ${
-                isActive
-                  ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
-                  : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
-              }`}
+              onClick={() => onRefreshCategories()}
+              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
             >
-              {tag}
-              <span className="rounded-full border border-current/20 px-2 py-0.5 text-[9px] tracking-[0.12em]">
-                {rootNode?.children?.length || 0}
-              </span>
+              Refresh tree
             </button>
-          );
-        })}
-      </div>
-
-      {activeRootNode ? (
-        <div className="mb-4 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#f2ca50]">
-          Active tag: <span className="font-semibold">{activeRootNode.name}</span>
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
-          {error}
-        </div>
-      ) : null}
-
-      {visibleCategoryRows.length > CATEGORY_MANAGER_PAGE_SIZE ? (
-        <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-              Showing {pageStart + 1}-{pageEnd} of {visibleCategoryRows.length} categories
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={activePage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Previous category page"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              {[...Array(totalPages)].map((_, index) => {
-                const pageNumber = index + 1;
-                const isActivePage = activePage === pageNumber;
-
-                return (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    onClick={() => setCurrentPage(pageNumber)}
-                    className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.2em] transition ${
-                      isActivePage
-                        ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
-                        : "border-white/10 bg-black/40 text-white/65 hover:border-white/20 hover:text-white"
-                    }`}
-                  >
-                    {pageNumber}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                disabled={activePage === totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Next category page"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/25 hover:text-white"
+            >
+              Close
+            </button>
           </div>
         </div>
-      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-3">
-          {pagedCategoryRows.map((category) => (
-            <div key={category._id} className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between" style={{ marginLeft: `${Math.min(category.level, 3) * 10}px` }}>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-white">{category.name}</p>
-                  <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
-                    {category.isActive ? "Active" : "Inactive"}
-                  </span>
-                  {category.children?.length ? (
-                    <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
-                      {category.children.length} children
+        <div className="mb-4 flex flex-wrap gap-2">
+          {CATEGORY_ROOT_TAGS.map((tag) => {
+            const isActive = normalizeText(activeTag) === normalizeText(tag);
+            const rootNode = findCategoryNode(categoryTree, tag);
+
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => switchActiveTag(tag)}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition ${isActive
+                    ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                    : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
+                  }`}
+              >
+                {tag}
+                <span className="rounded-full border border-current/20 px-2 py-0.5 text-[9px] tracking-[0.12em]">
+                  {rootNode?.children?.length || 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeRootNode ? (
+          <div className="mb-4 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#f2ca50]">
+            Active tag: <span className="font-semibold">{activeRootNode.name}</span>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
+            {error}
+          </div>
+        ) : null}
+
+        {visibleCategoryRows.length > CATEGORY_MANAGER_PAGE_SIZE ? (
+          <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+                Showing {pageStart + 1}-{pageEnd} of {visibleCategoryRows.length} categories
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={activePage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous category page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNumber = index + 1;
+                  const isActivePage = activePage === pageNumber;
+
+                  return (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.2em] transition ${isActivePage
+                          ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                          : "border-white/10 bg-black/40 text-white/65 hover:border-white/20 hover:text-white"
+                        }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={activePage === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next category page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-3">
+            {pagedCategoryRows.map((category) => (
+              <div key={category._id} className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between" style={{ marginLeft: `${Math.min(category.level, 3) * 10}px` }}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-white">{category.name}</p>
+                    <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
+                      {category.isActive ? "Active" : "Inactive"}
                     </span>
-                  ) : null}
+                    {category.children?.length ? (
+                      <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
+                        {category.children.length} children
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{category.breadcrumb}</p>
+                  <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
                 </div>
-                <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{category.breadcrumb}</p>
-                <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(category)}
+                    className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(category)}
+                    className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => startEdit(category)}
-                  className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(category)}
-                  className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
-                >
-                  Delete
-                </button>
+            {activeRootNode && visibleCategoryRows.length === 0 ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+                No subcategories exist under {activeRootNode.name} yet.
               </div>
-            </div>
-          ))}
-
-          {activeRootNode && visibleCategoryRows.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
-              No subcategories exist under {activeRootNode.name} yet.
-            </div>
-          ) : null}
-          {!activeRootNode ? (
-            <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
-              No categories loaded yet.
-            </div>
-          ) : null}
-        </div>
-
-        <div className="rounded-2xl border border-white/5 bg-black/20 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-[#d0c5af]">{editingId ? "Edit category" : "Create category"}</p>
-              <h4 className="mt-1 text-base font-semibold text-white">{editingId ? "Update taxonomy node" : "New taxonomy node"}</h4>
-            </div>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-full border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
-            >
-              New
-            </button>
+            ) : null}
+            {!activeRootNode ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+                No categories loaded yet.
+              </div>
+            ) : null}
           </div>
 
-          <div className="space-y-4">
-            <label className="block">
-              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Name</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                placeholder="Ladies / Clothing / Dresses"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Slug</span>
-              <input
-                value={slug}
-                onChange={(event) => setSlug(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                placeholder="dresses"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Parent category</span>
-              <select
-                value={parentCategory}
-                onChange={(event) => setParentCategory(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-              >
-                <option value="" disabled>
-                  Select a parent inside {activeRootNode?.name || activeTag}
-                </option>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Sort order</span>
-              <input
-                type="number"
-                value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                placeholder="e.g. 10"
-              />
-            </label>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
-                <span>Active</span>
-                <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
-                <span>Featured</span>
-                <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white sm:col-span-2">
-                <span>Show on home</span>
-                <input type="checkbox" checked={showOnHome} onChange={(event) => setShowOnHome(event.target.checked)} />
-              </label>
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={loading}
-                className="rounded-full bg-[#D4AF37] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "Saving..." : editingId ? "Update category" : "Create category"}
-              </button>
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[#d0c5af]">{editingId ? "Edit category" : "Create category"}</p>
+                <h4 className="mt-1 text-base font-semibold text-white">{editingId ? "Update taxonomy node" : "New taxonomy node"}</h4>
+              </div>
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-full border border-white/10 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/25 hover:text-white"
+                className="rounded-full border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
               >
-                Reset
+                New
               </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Name</span>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="Ladies / Clothing / Dresses"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Slug</span>
+                <input
+                  value={slug}
+                  onChange={(event) => setSlug(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="dresses"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Parent category</span>
+                <select
+                  value={parentCategory}
+                  onChange={(event) => setParentCategory(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                >
+                  <option value="" disabled>
+                    Select a parent inside {activeRootNode?.name || activeTag}
+                  </option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Sort order</span>
+                <input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(event) => setSortOrder(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="e.g. 10"
+                />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                  <span>Active</span>
+                  <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                  <span>Featured</span>
+                  <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white sm:col-span-2">
+                  <span>Show on home</span>
+                  <input type="checkbox" checked={showOnHome} onChange={(event) => setShowOnHome(event.target.checked)} />
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="rounded-full bg-[#D4AF37] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Saving..." : editingId ? "Update category" : "Create category"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-full border border-white/10 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/25 hover:text-white"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </motion.div>
     </motion.div>
   );
@@ -1821,464 +1821,486 @@ const Product = () => {
 
   return (
     <Fragment>
-    <AdminPage
-      eyebrow="Catalog management"
-      title="Product Ledger"
-      description="Manage products, variants, stock, visibility, and gallery assets."
-      actions={
-        <>
-          <button 
-            onClick={handleExport}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5"
-          >
-            <Download className="h-4 w-4" /> Export
-          </button>
-          <PrimaryButton onClick={openNewProductForm}>
-            <Plus className="h-4 w-4" /> Create Product
-          </PrimaryButton>
-        </>
-      }
-    >
-    <motion.div
-      variants={pageVariants}
-      initial="hidden"
-      animate="visible"
-      className="w-full flex-1 flex flex-col max-w-full overflow-x-hidden"
-    >
-      <div className="w-full">
-        <ToastFlash show={showProductSaved} message="Product saved" />
-      </div>
-
-      <div className="w-full pb-12 pt-6 scroll-smooth">
-        {isLoading ? (
-          <SkeletonGrid count={6} />
-        ) : (
-        <>
-        <SearchFilterBar 
-          searchValue={searchQuery} 
-          onSearchChange={handleSearchFilterChange} 
-          searchPlaceholder="Search the collection…"
-          className="mb-8 justify-between"
-        >
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Status Dropdown */}
-            <FilterSelect
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              options={[
-                { value: "all", label: "Status: All" },
-                { value: "true", label: "Status: Active" },
-                { value: "false", label: "Status: Inactive" },
-                { value: "low_stock", label: "Status: Low Stock" }
-              ]}
-              className="min-w-[150px]"
-            />
-
-            {/* Category Dropdown */}
-            <FilterSelect
-              value={categoryFilter}
-              onChange={handleCategoryFilterChange}
-              options={[
-                { value: "", label: "Category: All" },
-                ...collectFilterCategoryOptions(categoryTree)
-              ]}
-              className="min-w-[170px]"
-            />
-
-            {/* Drop Dropdown */}
-            <FilterSelect
-              value={dropFilter}
-              onChange={handleDropFilterChange}
-              options={[
-                { value: "", label: "Drop: All" },
-                ...drops.map(d => ({ value: d._id, label: `Drop: ${d.name}` }))
-              ]}
-              className="min-w-[160px]"
-            />
-
-            {/* Sort Dropdown */}
-            <FilterSelect
-              value={sortFilter}
-              onChange={handleSortFilterChange}
-              options={[
-                { value: "", label: "Sort By: Newest" },
-                { value: "basePrice", label: "Price: Low to High" },
-                { value: "-basePrice", label: "Price: High to Low" },
-                { value: "name", label: "Name: A-Z" },
-                { value: "-name", label: "Name: Z-A" }
-              ]}
-              className="min-w-[160px]"
-            />
-
-            {/* Manage Categories inline toggle */}
+      <AdminPage
+        eyebrow="Catalog management"
+        title="Product Ledger"
+        description="Manage products, variants, stock, visibility, and gallery assets."
+        actions={
+          <>
             <button
-              type="button"
-              onClick={() => setCategoryManagerOpen((state) => !state)}
-              aria-expanded={categoryManagerOpen}
-              aria-controls="category-manager-panel"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-transparent px-4 text-[13px] font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+              onClick={handleExport}
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5"
             >
-              <Settings className="h-4 w-4" />
-              Taxonomy
+              <Download className="h-4 w-4" /> Export
             </button>
-
-            {/* Reset Filters button */}
-            {(statusFilter !== "all" || categoryFilter !== "" || dropFilter !== "" || sortFilter !== "" || searchQuery !== "") && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4"
-              >
-                Reset Filters
-              </button>
-            )}
+            <PrimaryButton onClick={openNewProductForm}>
+              <Plus className="h-4 w-4" /> Create Product
+            </PrimaryButton>
+          </>
+        }
+      >
+        <motion.div
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full flex-1 flex flex-col max-w-full overflow-x-hidden"
+        >
+          <div className="w-full">
+            <ToastFlash show={showProductSaved} message="Product saved" />
           </div>
-        </SearchFilterBar>
 
-        <AnimatePresence>
-          {categoryManagerOpen ? (
-            <CategoryManagerPanel
-              categoryTree={categoryTree}
-              onRefreshCategories={loadCategoryTree}
-              onClose={() => setCategoryManagerOpen(false)}
-            />
-          ) : null}
-        </AnimatePresence>
+          <div className="w-full pb-12 pt-6 scroll-smooth">
+            {isLoading ? (
+              <SkeletonGrid count={6} />
+            ) : (
+              <>
+                <SearchFilterBar
+                  searchValue={searchQuery}
+                  onSearchChange={handleSearchFilterChange}
+                  searchPlaceholder="Search the collection…"
+                  className="mb-8 justify-between"
+                >
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {/* Status Dropdown */}
+                    <FilterSelect
+                      value={statusFilter}
+                      onChange={handleStatusFilterChange}
+                      options={[
+                        { value: "all", label: "Status: All" },
+                        { value: "true", label: "Status: Active" },
+                        { value: "false", label: "Status: Inactive" },
+                        { value: "low_stock", label: "Status: Low Stock" }
+                      ]}
+                      className="min-w-[150px]"
+                    />
 
-        {/* Inline Bulk Actions Bar */}
-        <AnimatePresence>
-          {bulk.count > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-white" data-testid="admin-bulk-count">
-                    {bulk.count}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]">selected</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {bulkActions.map((action) => (
+                    {/* Category Dropdown */}
+                    <FilterSelect
+                      value={categoryFilter}
+                      onChange={handleCategoryFilterChange}
+                      options={[
+                        { value: "", label: "Category: All" },
+                        ...collectFilterCategoryOptions(categoryTree)
+                      ]}
+                      className="min-w-[170px]"
+                    />
+
+                    {/* Drop Dropdown */}
+                    <FilterSelect
+                      value={dropFilter}
+                      onChange={handleDropFilterChange}
+                      options={[
+                        { value: "", label: "Drop: All" },
+                        ...drops.map(d => ({ value: d._id, label: `Drop: ${d.name}` }))
+                      ]}
+                      className="min-w-[160px]"
+                    />
+
+                    {/* Sort Dropdown */}
+                    <FilterSelect
+                      value={sortFilter}
+                      onChange={handleSortFilterChange}
+                      options={[
+                        { value: "", label: "Sort By: Newest" },
+                        { value: "basePrice", label: "Price: Low to High" },
+                        { value: "-basePrice", label: "Price: High to Low" },
+                        { value: "name", label: "Name: A-Z" },
+                        { value: "-name", label: "Name: Z-A" }
+                      ]}
+                      className="min-w-[160px]"
+                    />
+
+                    {/* Manage Categories inline toggle */}
                     <button
-                      key={action.label}
                       type="button"
-                      disabled={bulkPending}
-                      onClick={() => runBulkAction(action)}
-                      data-testid={`admin-bulk-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      className={`rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${
-                        action.variant === "destructive"
-                          ? "border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
-                          : "border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
-                      }`}
+                      onClick={() => setCategoryManagerOpen((state) => !state)}
+                      aria-expanded={categoryManagerOpen}
+                      aria-controls="category-manager-panel"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-transparent px-4 text-[13px] font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
                     >
-                      {bulkPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        action.label
-                      )}
+                      <Settings className="h-4 w-4" />
+                      Taxonomy
                     </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={bulk.clear}
-                    disabled={bulkPending}
-                    className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition hover:border-white/20 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* Native Data Table Layout */}
-        <div className="w-full max-w-full overflow-x-auto rounded-[20px] border border-[#D4AF37]/12 bg-[#090909]">
-          <table className="min-w-full border-collapse text-left text-[14px]">
-            <thead className="sticky top-0 z-10 bg-[#0B0B0B]">
-              <tr className="border-b border-[#D4AF37]/12 bg-[#111] text-[12px] uppercase tracking-wider text-[#A0A0A0] font-semibold">
-                <th className="py-4 pl-4 pr-3 w-10">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all products on this page"
-                    checked={bulk.isAllSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = bulk.isSomeSelected;
-                    }}
-                    onChange={bulk.toggleAll}
-                    className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
-                    data-testid="admin-bulk-select-all"
-                  />
-                </th>
-                <th className="py-4 px-3 min-w-[220px]">Product</th>
-                <th className="py-4 px-3 w-[120px]">Art No.</th>
-                <th className="py-4 px-3 min-w-[160px]">Category</th>
-                <th className="py-4 px-3 w-[100px]">Variants</th>
-                <th className="py-4 px-3 w-[120px]">Price</th>
-                <th className="py-4 px-3 w-[100px]">Stock</th>
-                <th className="py-4 px-3 w-[125px]">Status</th>
-                <th className="py-4 px-3 w-[120px]">Updated</th>
-                <th className="py-4 px-3 text-right pr-4 w-[110px]">Actions</th>
-              </tr>
-            </thead>
-            <motion.tbody
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {productList.map((product) => {
-                const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
-                const isSelected = bulk.isSelected(product._id);
-                return (
-                  <Fragment key={product._id}>
-                    <motion.tr
-                      variants={itemVariants}
-                      whileHover={{ backgroundColor: "#101010" }}
-                      transition={{ duration: 0.2 }}
-                      className={`border-b border-[#D4AF37]/12 transition-colors hover:bg-[#101010] even:bg-[#050505] odd:bg-[#0B0B0B] ${
-                        isSelected ? "bg-[#D4AF37]/10" : ""
-                      }`}
+                    {/* Reset Filters button */}
+                    {(statusFilter !== "all" || categoryFilter !== "" || dropFilter !== "" || sortFilter !== "" || searchQuery !== "") && (
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
+                  </div>
+                </SearchFilterBar>
+
+                <AnimatePresence>
+                  {categoryManagerOpen ? (
+                    <CategoryManagerPanel
+                      categoryTree={categoryTree}
+                      onRefreshCategories={loadCategoryTree}
+                      onClose={() => setCategoryManagerOpen(false)}
+                    />
+                  ) : null}
+                </AnimatePresence>
+
+                {/* Inline Bulk Actions Bar */}
+                <AnimatePresence>
+                  {bulk.count > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mb-4"
                     >
-                      <td className="py-4 pl-4 pr-3">
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${product.name}`}
-                          checked={isSelected}
-                          onChange={() => bulk.toggle(product._id)}
-                          className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
-                          data-testid="admin-bulk-row-select"
-                        />
-                      </td>
-                      <td className="py-4 px-3">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#101010] shrink-0 overflow-hidden border border-[#D4AF37]/12 flex items-center justify-center rounded-lg">
-                            {product.images && product.images.length > 0 ? (
-                              <img className="w-full h-full object-cover" src={product.images[0].url} alt={product.name} />
-                            ) : (
-                              <Package className="w-5 h-5 text-white/30" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <span 
-                              onClick={() => beginEdit(product)}
-                              className="block text-[14px] font-normal text-white truncate hover:text-[#D4AF37] cursor-pointer transition-colors"
-                            >
-                              {product.name}
-                            </span>
-                          </div>
+                      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white" data-testid="admin-bulk-count">
+                            {bulk.count}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]">selected</span>
                         </div>
-                      </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
-                        {product.artNo || 'N/A'}
-                      </td>
-                      <td className="py-4 px-3 text-[14px] font-normal text-white/80">
-                        {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" / ") || 'Uncategorized'}
-                      </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
-                        {product.variants?.length || 0} variant{product.variants?.length === 1 ? '' : 's'}
-                      </td>
-                      <td className="py-4 px-3 text-[14px] font-normal text-white">
-                        LKR {Number(product.basePrice || 0).toLocaleString()}
-                      </td>
-                      <td className="py-4 px-3 text-[14px] font-normal">
-                        <span className={`${stock === 0 ? 'text-rose-400 font-bold' : stock <= 5 ? 'text-amber-400 font-medium' : 'text-white/80'}`}>
-                          {stock} units
-                        </span>
-                      </td>
-                      <td className="py-4 px-3">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${product.isActive ? 'border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-[#707070]/20 bg-black/40 text-[#707070]'}`}>
-                          {product.isActive ? 'Active' : 'Draft'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-3 text-[12px] font-normal text-white/70">
-                        {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                      </td>
-                      <td className="py-4 px-3 text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button 
-                            type="button" 
-                            onClick={() => openProductGallery(product)} 
-                            className="hover:text-[#D4AF37] hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg" 
-                            title="View images"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button 
-                            type="button" 
-                            onClick={() => beginEdit(product)} 
-                            className="hover:text-[#D4AF37] hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg" 
-                            title="Edit product"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {bulkActions.map((action) => (
+                            <button
+                              key={action.label}
+                              type="button"
+                              disabled={bulkPending}
+                              onClick={() => runBulkAction(action)}
+                              data-testid={`admin-bulk-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+                              className={`rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${action.variant === "destructive"
+                                  ? "border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                                  : "border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                                }`}
+                            >
+                              {bulkPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                action.label
+                              )}
+                            </button>
+                          ))}
                           <button
                             type="button"
-                            onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
-                            className="hover:text-rose-400 hover:bg-white/5 transition-all text-white/60 p-2 rounded-lg"
-                            title="Delete product"
+                            onClick={bulk.clear}
+                            disabled={bulkPending}
+                            className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition hover:border-white/20 hover:text-white"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Cancel
                           </button>
                         </div>
-                      </td>
-                    </motion.tr>
-                    {deleteConfirmSlug === product.slug && (
-                      <tr className="border-b border-white/5 bg-rose-500/[0.02]">
-                        <td colSpan={10} className="py-3 px-6">
-                          <ConfirmInline
-                            show={true}
-                            message="Delete this product permanently?"
-                            onCancel={() => setDeleteConfirmSlug(null)}
-                            onConfirm={() => {
-                              const slug = product.slug;
-                              setDeleteConfirmSlug(null);
-                              dispatch(deleteProduct(slug)).then(() => fetchProducts());
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Native Data Table Layout */}
+                <div className="w-full max-w-full overflow-visible rounded-3xl border border-[#D4AF37]/10 bg-[#0B0B0B]/80 backdrop-blur-xl">
+                  <table className="min-w-full border-collapse text-left">
+                    <thead className="sticky top-0 z-10 bg-[#050505]/95 backdrop-blur-md rounded-t-3xl">
+                      <tr className="border-b border-white/5 text-[11px] uppercase tracking-[0.15em] text-[#A8A8A8] font-bold">
+                        <th className="py-5 pl-6 pr-3 w-12 rounded-tl-3xl">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all products on this page"
+                            checked={bulk.isAllSelected}
+                            ref={(el) => {
+                              if (el) el.indeterminate = bulk.isSomeSelected;
                             }}
+                            onChange={bulk.toggleAll}
+                            className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-60 transition hover:opacity-100"
+                            data-testid="admin-bulk-select-all"
                           />
-                        </td>
+                        </th>
+                        <th className="py-5 px-4 min-w-[320px]">Product</th>
+                        <th className="py-5 px-4 w-[180px]">Inventory</th>
+                        <th className="py-5 px-4 w-[150px]">Status</th>
+                        <th className="py-5 px-4 w-[150px]">Updated</th>
+                        <th className="py-5 pr-6 pl-4 text-right w-[80px] rounded-tr-3xl">Actions</th>
                       </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </motion.tbody>
-          </table>
+                    </thead>
+                    <motion.tbody
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="divide-y divide-white/5"
+                    >
+                      {productList.map((product) => {
+                        const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+                        const isSelected = bulk.isSelected(product._id);
+                        
+                        const isHealthy = stock > 10;
+                        const isLowStock = stock > 0 && stock <= 10;
+                        const isOutOfStock = stock === 0;
 
-          {productList.length === 0 && (
-            <div className="py-20 text-center border-t border-white/10 text-white/40 font-sans">
-              <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No products found in the ledger.</p>
-            </div>
-          )}
-        </div>
+                        return (
+                          <Fragment key={product._id}>
+                            <motion.tr
+                              variants={itemVariants}
+                              className={`group transition-all duration-300 hover:bg-[#101010] ${
+                                isSelected ? "bg-[#D4AF37]/[0.04]" : "bg-transparent"
+                              }`}
+                            >
+                              <td className="py-5 pl-6 pr-3 align-middle">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${product.name}`}
+                                  checked={isSelected}
+                                  onChange={() => bulk.toggle(product._id)}
+                                  className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-30 transition group-hover:opacity-100 checked:opacity-100"
+                                  data-testid="admin-bulk-row-select"
+                                />
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex items-center gap-5">
+                                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-[#151515] flex items-center justify-center shadow-lg">
+                                    {product.images && product.images.length > 0 ? (
+                                      <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.images[0].url} alt={product.name} />
+                                    ) : (
+                                      <Package className="h-6 w-6 text-white/20" />
+                                    )}
+                                  </div>
+                                  <div className="flex min-w-0 flex-col justify-center">
+                                    <span
+                                      onClick={() => beginEdit(product)}
+                                      className="block truncate text-[15px] font-semibold tracking-tight text-white transition-colors hover:text-[#D4AF37] cursor-pointer"
+                                    >
+                                      {product.name}
+                                    </span>
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className="text-[11px] font-medium tracking-wider text-[#A8A8A8]">
+                                        SKU: {product.artNo || 'N/A'}
+                                      </span>
+                                    </div>
+                                    <span className="mt-1 truncate text-[12px] text-[#707070]">
+                                      {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" > ") || 'Uncategorized'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex w-full max-w-[120px] flex-col gap-1.5">
+                                  <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider">
+                                    <span className="text-[#A8A8A8]">Stock</span>
+                                    <span className={isHealthy ? "text-[#3D8B5C]" : isLowStock ? "text-[#D4AF37]" : "text-[#C85C5C]"}>
+                                      {stock}
+                                    </span>
+                                  </div>
+                                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-700 ${
+                                        isHealthy ? "bg-[#3D8B5C]" : isLowStock ? "bg-[#D4AF37]" : "bg-[#C85C5C]"
+                                      }`}
+                                      style={{ width: `${Math.min(100, (stock / 50) * 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                    {isHealthy ? "Healthy" : isLowStock ? "Low Stock" : "Critical"}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${
+                                  product.isActive
+                                    ? 'border-[#D4AF37]/20 bg-[#D4AF37]/[0.12] text-[#D4AF37]'
+                                    : 'border-white/10 bg-white/5 text-[#707070]'
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${product.isActive ? 'bg-[#D4AF37] shadow-[#D4AF37]/50' : 'bg-[#707070]'}`} />
+                                  {product.isActive ? 'Published' : 'Draft'}
+                                </span>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex flex-col">
+                                  <span className="text-[13px] text-white/90">
+                                    {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                  </span>
+                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                    {product.updatedAt ? new Date(product.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-5 pr-6 pl-4 align-middle text-right">
+                                <div className="relative inline-block text-left group/menu z-10">
+                                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/5 hover:text-white">
+                                    <MoreVertical className="h-5 w-5" />
+                                  </button>
+                                  <div className="invisible absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl border border-white/10 bg-[#151515] p-1.5 opacity-0 shadow-2xl transition-all duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:mt-1">
+                                    <button
+                                      onClick={() => openProductGallery(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                    >
+                                      <Eye className="h-4 w-4" /> View Images
+                                    </button>
+                                    <button
+                                      onClick={() => beginEdit(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/10"
+                                    >
+                                      <Edit2 className="h-4 w-4" /> Edit Product
+                                    </button>
+                                    <div className="my-1 mx-2 h-px bg-white/5" />
+                                    <button
+                                      onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#C85C5C] transition-colors hover:bg-[#C85C5C]/10 hover:text-red-400"
+                                    >
+                                      <Trash2 className="h-4 w-4" /> Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </motion.tr>
+                            {deleteConfirmSlug === product.slug && (
+                              <tr className="border-b border-white/5 bg-rose-500/[0.02]">
+                                <td colSpan={6} className="px-6 py-4">
+                                  <ConfirmInline
+                                    show={true}
+                                    message="Delete this product permanently?"
+                                    onCancel={() => setDeleteConfirmSlug(null)}
+                                    onConfirm={() => {
+                                      const slug = product.slug;
+                                      setDeleteConfirmSlug(null);
+                                      dispatch(deleteProduct(slug)).then(() => fetchProducts());
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </motion.tbody>
+                  </table>
 
-        {/* Boxed Style Pagination */}
-        {productList.length > 0 && pagination.totalPages > 1 && (
-          <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-white/10 bg-black/40 rounded-2xl p-4 gap-4">
-            <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
-              Showing {productList.length} products
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+                  {productList.length === 0 && (
+                    <div className="py-20 text-center border-t border-white/10 text-white/40 font-sans">
+                      <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                      <p>No products found in the ledger.</p>
+                    </div>
+                  )}
+                </div>
 
-              {[...Array(pagination.totalPages)].map((_, i) => {
-                const pageNum = i + 1;
-                const isCurrent = currentPage === pageNum;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
-                      isCurrent
-                        ? 'bg-white text-black border-transparent font-bold'
-                        : 'border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
+                {/* Boxed Style Pagination */}
+                {productList.length > 0 && pagination.totalPages > 1 && (
+                  <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-white/10 bg-black/40 rounded-2xl p-4 gap-4">
+                    <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
+                      Showing {productList.length} products
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
 
-              <button
-                disabled={currentPage === pagination.totalPages}
-                onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+                      {[...Array(pagination.totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        const isCurrent = currentPage === pageNum;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${isCurrent
+                                ? 'bg-white text-black border-transparent font-bold'
+                                : 'border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        disabled={currentPage === pagination.totalPages}
+                        onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        )}
-        </>
-        )}
-      </div>
-      {isGalleryOpen ? (
-        <ImageGalleryModal
-          title={galleryTitle}
-          images={galleryImages}
-          onClose={closeGallery}
-          onImagesUpdate={handleGalleryImagesUpdate}
-        />
-      ) : null}
-    </motion.div>
-    </AdminPage>
-    <AnimatePresence mode="wait">
-      {showForm ? (
-        <ProductStudio 
-          initialData={formData} 
-          initialImages={productImages}
-          isDraftMode={!selectedProductSlug}
-          categoryTree={categoryTree} 
-          drops={drops}
-          onBack={resetForm}
-          onSaveDraft={() => handleSubmit(formData, productImages)}
-          onSubmit={handleSubmit}
-        />
-      ) : null}
-    </AnimatePresence>
-
-    {/* Bulk Actions confirmation dialog */}
-    <AnimatePresence>
-      {bulkPendingAction && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          onClick={() => setBulkPendingAction(null)}
-        >
-          <motion.div
-            initial={{ scale: 0.95, y: 10 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.95, y: 10 }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-black p-6 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10">
-                <AlertCircle className="h-5 w-5 text-rose-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-white">
-                  {bulkPendingAction.confirm.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-gray-400">
-                  {bulkPendingAction.confirm.body}
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setBulkPendingAction(null)}
-                className="rounded-full border border-gray-700 px-5 py-2 text-xs font-bold uppercase tracking-widest text-gray-300 hover:bg-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmBulkPending}
-                className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold uppercase tracking-widest text-rose-200 hover:bg-rose-500/30"
-              >
-                {bulkPendingAction.confirm.confirmLabel || "Confirm"}
-              </button>
-            </div>
-          </motion.div>
+          {isGalleryOpen ? (
+            <ImageGalleryModal
+              title={galleryTitle}
+              images={galleryImages}
+              onClose={closeGallery}
+              onImagesUpdate={handleGalleryImagesUpdate}
+            />
+          ) : null}
         </motion.div>
-      )}
-    </AnimatePresence>
+      </AdminPage>
+      <AnimatePresence mode="wait">
+        {showForm ? (
+          <ProductStudio
+            initialData={formData}
+            initialImages={productImages}
+            isDraftMode={!selectedProductSlug}
+            categoryTree={categoryTree}
+            drops={drops}
+            onBack={resetForm}
+            onSaveDraft={() => handleSubmit(formData, productImages)}
+            onSubmit={handleSubmit}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {/* Bulk Actions confirmation dialog */}
+      <AnimatePresence>
+        {bulkPendingAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            onClick={() => setBulkPendingAction(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-black p-6 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10">
+                  <AlertCircle className="h-5 w-5 text-rose-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white">
+                    {bulkPendingAction.confirm.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    {bulkPendingAction.confirm.body}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBulkPendingAction(null)}
+                  className="rounded-full border border-gray-700 px-5 py-2 text-xs font-bold uppercase tracking-widest text-gray-300 hover:bg-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmBulkPending}
+                  className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold uppercase tracking-widest text-rose-200 hover:bg-rose-500/30"
+                >
+                  {bulkPendingAction.confirm.confirmLabel || "Confirm"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Fragment>
   );
 };
