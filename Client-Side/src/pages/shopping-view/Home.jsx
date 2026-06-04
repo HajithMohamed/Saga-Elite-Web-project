@@ -9,6 +9,7 @@ import {
   AnnouncementBar,
   HeroCarousel,
   HeroBackdropFX,
+  SeasonalEventBanner,
   LiveDropCountdownXL,
   ProductSlider,
   OffersSlider,
@@ -146,6 +147,19 @@ const Home = () => {
             slides={heroSlides}
             activeDrops={payload.activeDrops}
             nextDrop={nextDrop}
+          />
+
+          {/* 2.5 Seasonal Event Banner */}
+          <SeasonalEventBanner 
+            title="AWURUDU EVENT"
+            targetDate={new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString()} // 3 days from now
+            benefits={[
+              "Up to 25% Off",
+              "Mystery Gift Rewards",
+              "Free Delivery Above Rs. 7,500"
+            ]}
+            ctaText="Shop Event"
+            ctaLink="/shopping/drops"
           />
 
           {/* 3. Collection selector — Asymmetric */}

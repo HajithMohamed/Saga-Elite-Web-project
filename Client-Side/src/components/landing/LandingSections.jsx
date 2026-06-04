@@ -156,7 +156,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
     if (paused || displaySlides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % displaySlides.length);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(timer);
   }, [displaySlides.length, paused]);
 
@@ -166,7 +166,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
       ref={sectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="relative h-[58vh] md:h-[62vh] lg:h-[68vh] max-h-[700px] w-full overflow-hidden bg-[#050505]"
+      className="relative h-[60vh] md:h-[80vh] lg:h-[100vh] min-h-[600px] w-full overflow-hidden bg-[#050505]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -179,7 +179,7 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: [0.19, 1, 0.22, 1] }}
+              transition={{ duration: 2.5, ease: "easeInOut" }}
               className="absolute inset-0"
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
@@ -193,9 +193,9 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
                 }}
               >
                 {slide.imageUrl ? (
-                  <div className="w-full h-full bg-black">
+                  <div className="w-full h-full bg-[#050505]">
                     <img src={slide.imageUrl} alt={slide.headline} 
-                         className="w-full h-full object-contain md:object-cover"
+                         className="w-full h-full object-cover md:object-center object-top"
                          loading="eager"
                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                          srcSet={`${slide.imageUrl}?w=640 640w, ${slide.imageUrl}?w=1280 1280w, ${slide.imageUrl}?w=1920 1920w`}
@@ -205,14 +205,14 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
                   <div className="w-full h-full" style={{ background: slide.fallback }} />
                 )}
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent pointer-events-none" />
               <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full overflow-hidden flex justify-center mix-blend-overlay">
                 <span className="font-display text-[20vw] font-black text-[#ffffff] opacity-[0.03] leading-none whitespace-nowrap" style={{ transform: `translate(${mouseOffset.x * -0.5}px, ${mouseOffset.y * -0.5}px)` }}>RARE</span>
               </div>
               
-              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-end pb-16 md:pb-24`}>
-                <div className="bg-[#0a0a0a]/50 backdrop-blur-xl border border-white/10 p-6 md:p-10 max-w-2xl text-left rounded-sm shadow-2xl">
+              <div className={`${sectionContainer} h-full relative z-10 flex flex-col justify-end pb-16 md:pb-24 items-start`}>
+                <div className="max-w-3xl text-left">
                   <motion.p
                     initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
                     className="font-sans text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-4"
@@ -284,6 +284,82 @@ export const HeroCarousel = ({ slides = [], activeDrops = [], nextDrop = null })
           />
         ))}
       </div>
+    </section>
+  );
+};
+
+// 🎇 SEASONAL EVENT BANNER (PREMIUM COUNTDOWN & BENEFITS)
+export const SeasonalEventBanner = ({ targetDate, title, benefits = [], ctaText, ctaLink }) => {
+  const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(targetDate));
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(getRemainingTime(targetDate)), 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <section className="relative w-full bg-[#d7d5d2] overflow-hidden py-16 md:py-24">
+       {/* Fake concrete background layer */}
+       <div className="absolute inset-0 opacity-40 mix-blend-multiply pointer-events-none bg-grain" />
+
+       <div className="relative z-10 max-w-[1200px] mx-auto px-4 lg:px-8">
+          
+          <div className="text-center mb-10">
+             <h2 className="font-display text-4xl md:text-[56px] text-[#1f1e1d] uppercase tracking-wide leading-none">
+                {title} ENDS IN
+             </h2>
+          </div>
+
+          {/* Geometric Countdown */}
+          <div className="flex justify-center flex-wrap gap-3 md:gap-5 mb-14">
+            {[['Days', timeLeft.d ?? timeLeft.days], ['Hours', timeLeft.hh ?? timeLeft.h], ['Minutes', timeLeft.mm ?? timeLeft.m], ['Seconds', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
+              <div key={label} className="flex flex-col items-center">
+                <div className="relative flex w-[80px] h-[80px] md:w-[130px] md:h-[130px] lg:w-[150px] lg:h-[150px] shadow-2xl overflow-hidden mb-4 rounded-sm">
+                   {/* Left Copper */}
+                   <div className="w-1/2 h-full bg-gradient-to-br from-[#d4a373] to-[#b07049]" />
+                   {/* Right Concrete */}
+                   <div className="w-1/2 h-full bg-gradient-to-br from-[#dfdbd8] to-[#b3b1ad]" />
+                   {/* Midline indent */}
+                   <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -ml-[1px] bg-[#1a1a1a]/10 shadow-[inset_1px_0_2px_rgba(0,0,0,0.1)]" />
+                   {/* Horizontal line indent */}
+                   <div className="absolute top-1/2 left-0 right-0 h-[2px] -mt-[1px] bg-[#1a1a1a]/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" />
+
+                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="font-display text-5xl md:text-6xl lg:text-[80px] font-medium text-[#222]">
+                        {value !== undefined ? value.toString().padStart(2, '0') : '00'}
+                      </span>
+                   </div>
+                </div>
+                <span className="font-sans text-[15px] md:text-lg lg:text-[22px] text-[#222] font-medium">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Floating Benefit Bar */}
+          <div className="bg-[#faf7f2] rounded-xl p-4 md:p-6 lg:p-8 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)]">
+             <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 w-full xl:w-auto">
+               <h3 className="font-display text-2xl md:text-3xl text-[#111] whitespace-nowrap mb-2 xl:mb-0">
+                 🎉 {title}
+               </h3>
+               <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 font-sans text-[13px] md:text-[15px] text-[#222]">
+                 {benefits.map((b, i) => (
+                   <span key={i} className="flex items-center gap-2 font-medium">
+                     <span className="text-black font-bold">✓</span> {b}
+                   </span>
+                 ))}
+               </div>
+             </div>
+
+             {ctaText && (
+               <Link to={ctaLink || "#"} className="shrink-0 w-full xl:w-auto">
+                 <button className="w-full xl:w-auto bg-[#2b2a2a] text-[#ffffff] px-8 py-4 font-sans text-sm md:text-base font-medium rounded-lg hover:bg-black transition-colors whitespace-nowrap">
+                   [{ctaText}]
+                 </button>
+               </Link>
+             )}
+          </div>
+
+       </div>
     </section>
   );
 };
