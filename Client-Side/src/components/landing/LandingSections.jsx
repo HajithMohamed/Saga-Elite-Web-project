@@ -506,16 +506,26 @@ export const TrustBar = () => {
 
 // 🎪 EDITORIAL OFFERS SHOWCASE (MODERN CAMPAIGN SECTION)
 export const EditorialOffersShowcase = ({ offers = [] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   // Extract offers that actually have products
   const validOffers = useMemo(() => offers.filter(o => o.products && o.products.length > 0), [offers]);
   
+  // Auto-advance logic
+  useEffect(() => {
+    if (validOffers.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % validOffers.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [validOffers]);
+
   if (validOffers.length === 0) return null;
 
-  // We only display the primary (featured) offer in this minimalist luxury block
-  const featuredOffer = validOffers[0];
+  const currentOffer = validOffers[currentIndex];
 
   return (
-    <section className="bg-[#050505] w-full py-8 md:py-12">
+    <section className="bg-[#050505] w-full py-8 md:py-12 relative">
       <div className={`${sectionContainer} flex flex-col items-center justify-center`}>
         {/* Header section */}
         <div className="mb-8 md:mb-10 text-center">
@@ -523,8 +533,34 @@ export const EditorialOffersShowcase = ({ offers = [] }) => {
            <p className="font-sans text-xs md:text-sm tracking-[0.2em] uppercase text-[#F5F5F5] font-light">Limited Edition Releases & Curated Drops</p>
         </div>
 
-        {/* Central Block */}
-        <FeaturedCampaignCard offer={featuredOffer} />
+        {/* Central Block Slider */}
+        <div className="w-full relative overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentOffer._id || currentIndex}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="w-full"
+            >
+              <FeaturedCampaignCard offer={currentOffer} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Slide Indicators */}
+        {validOffers.length > 1 && (
+          <div className="flex gap-2 mt-8">
+            {validOffers.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentIndex(i)}
+                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-8 bg-[#C4A760]' : 'w-2 bg-[#FAF7F2]/30 hover:bg-[#FAF7F2]/50'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
