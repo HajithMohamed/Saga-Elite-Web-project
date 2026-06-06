@@ -14,58 +14,8 @@ import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL } from "@/lib/api";
-
-const emptyForm = {
-  name: "",
-  drop: "global",
-  isActive: true,
-  probability: 100,
-  condition: "always",
-  minOrderValue: 0,
-  rarity: "common",
-  description: "",
-  internalNotes: "",
-  imageUrl: "",
-};
-
-const RARITY_TIERS = [
-  {
-    key: "common",
-    label: "Common",
-    description: "Stickers, low-value tokens",
-    border: "border-gray-500/40",
-    glow: "shadow-[0_0_24px_rgba(156,163,175,0.18)]",
-    text: "text-gray-300",
-    chip: "bg-gray-500/10 text-gray-300 border-gray-500/30",
-  },
-  {
-    key: "rare",
-    label: "Rare",
-    description: "Wristbands, branded merch",
-    border: "border-sky-400/40",
-    glow: "shadow-[0_0_24px_rgba(56,189,248,0.22)]",
-    text: "text-sky-300",
-    chip: "bg-sky-500/10 text-sky-300 border-sky-500/30",
-  },
-  {
-    key: "epic",
-    label: "Epic",
-    description: "Metallic cards, premium items",
-    border: "border-violet-400/40",
-    glow: "shadow-[0_0_28px_rgba(167,139,250,0.28)]",
-    text: "text-violet-300",
-    chip: "bg-violet-500/10 text-violet-300 border-violet-500/30",
-  },
-  {
-    key: "legendary",
-    label: "Legendary",
-    description: "Ultra-limited collectibles",
-    border: "border-[#f2ca50]/60",
-    glow: "shadow-[0_0_36px_rgba(242,202,80,0.35)]",
-    text: "text-[#f2ca50]",
-    chip: "bg-[#f2ca50]/10 text-[#f2ca50] border-[#f2ca50]/40",
-  },
-];
+import CreateCollectibleModal, { RARITY_TIERS } from "@/components/admin-components/CreateCollectibleModal";
+import GiftOrdersDrawer from "@/components/admin-components/GiftOrdersDrawer";
 
 const rarityTier = (key) =>
   RARITY_TIERS.find((tier) => tier.key === key) || RARITY_TIERS[0];
@@ -85,7 +35,8 @@ const GiftManager = () => {
   const [selectedGift, setSelectedGift] = useState(null);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [analytics, setAnalytics] = useState(null);
 
   const fetchDrops = useCallback(async () => {
@@ -141,30 +92,14 @@ const GiftManager = () => {
     });
   }, [gifts, search]);
 
-  const resetForm = () => {
-    setForm(emptyForm);
-    setEditingGift(null);
-  };
-
   const openCreate = () => {
     setEditingGift(null);
-    setForm(emptyForm);
+    setIsModalOpen(true);
   };
 
   const openEdit = (gift) => {
     setEditingGift(gift);
-    setForm({
-      name: gift.name || "",
-      drop: gift.drop?._id || gift.drop || "global",
-      isActive: gift.isActive !== false,
-      probability: gift.probability ?? 100,
-      condition: gift.condition || "always",
-      minOrderValue: gift.minOrderValue || 0,
-      rarity: gift.rarity || "common",
-      description: gift.description || "",
-      internalNotes: gift.internalNotes || "",
-      imageUrl: gift.imageUrl || "",
-    });
+    setIsModalOpen(true);
   };
 
   const loadGiftOrders = useCallback(async (gift) => {
@@ -173,6 +108,7 @@ const GiftManager = () => {
     try {
       const res = await axios.get(`${API_V1_URL}/gifts/${gift._id}/orders`, { withCredentials: true });
       setSelectedGift(res.data?.data?.gift || gift);
+      setIsDrawerOpen(true);
       setSelectedOrders(res.data?.data?.orders || []);
     } catch (error) {
       toast({
@@ -186,8 +122,7 @@ const GiftManager = () => {
     }
   }, [toast]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (form) => {
     if (!form.name.trim()) {
       toast({ title: "Validation error", description: "Collectible name is required.", variant: "destructive" });
       return;
@@ -214,7 +149,7 @@ const GiftManager = () => {
         variant: "success",
       });
 
-      resetForm();
+      setIsModalOpen(false);
       fetchGifts();
     } catch (error) {
       toast({
@@ -452,190 +387,25 @@ const GiftManager = () => {
           )}
         </AdminPanel>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-          <AdminPanel title={selectedGift ? `${selectedGift.name} orders` : "Collectible orders"} description="Orders that received the currently selected collectible.">
-            {!selectedGift ? (
-              <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-gray-500">
-                Select a collectible to inspect its orders.
-              </div>
-            ) : ordersLoading ? (
-              <div className="flex min-h-[220px] items-center justify-center text-gray-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-              </div>
-            ) : selectedOrders.length === 0 ? (
-              <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-white/10 text-sm text-gray-500">
-                No orders have received this collectible yet.
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-2xl border border-white/10">
-                <div className="grid grid-cols-[1fr_.9fr_.8fr_.7fr] gap-4 border-b border-white/10 bg-white/[0.02] px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-                  <span>Order</span>
-                  <span>Customer</span>
-                  <span>Status</span>
-                  <span>Revealed</span>
-                </div>
-                <div className="divide-y divide-white/10">
-                  {selectedOrders.map((order) => (
-                    <div key={order._id} className="grid grid-cols-[1fr_.9fr_.8fr_.7fr] gap-4 px-4 py-4 text-sm text-white">
-                      <span className="font-mono text-xs text-gray-300">{String(order._id).slice(-10)}</span>
-                      <span className="text-gray-300">{order.user?.email || order.guest?.email || order.guestEmail || "Unknown"}</span>
-                      <span className="text-gray-300">{order.status}</span>
-                      <span className="text-gray-300">{order.gift?.revealed ? "Yes" : "No"}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </AdminPanel>
-
-          <AdminPanel title={editingGift ? "Edit collectible" : "Create collectible"} description="Assign a drop or leave it global. Rarity drives the visual tier.">
-            <form className="grid gap-4" onSubmit={handleSubmit}>
-              <label className="grid gap-2 text-sm text-gray-300">
-                Name
-                <input
-                  value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-2 text-sm text-gray-300">
-                  Scope
-                  <select
-                    value={form.drop}
-                    onChange={(event) => setForm((current) => ({ ...current, drop: event.target.value }))}
-                    className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                  >
-                    <option value="global">Global</option>
-                    {drops.map((drop) => (
-                      <option key={drop._id} value={drop._id}>{drop.name}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm text-gray-300">
-                  Condition
-                  <select
-                    value={form.condition}
-                    onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value }))}
-                    className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                  >
-                    <option value="always">Always</option>
-                    <option value="min_order_value">Minimum order value</option>
-                    <option value="per_drop">Per drop</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="grid gap-2 text-sm text-gray-300">
-                <span>Rarity tier</span>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                  {RARITY_TIERS.map((tier) => {
-                    const isActive = form.rarity === tier.key;
-                    return (
-                      <button
-                        key={tier.key}
-                        type="button"
-                        onClick={() => setForm((current) => ({ ...current, rarity: tier.key }))}
-                        className={`flex flex-col items-start gap-1 rounded-2xl border px-3 py-3 text-left transition ${
-                          isActive
-                            ? `${tier.border} bg-black/60 ${tier.glow}`
-                            : "border-white/10 bg-black/40 hover:border-white/20"
-                        }`}
-                      >
-                        <span
-                          className={`font-mono text-[10px] uppercase tracking-[0.24em] ${
-                            isActive ? tier.text : "text-gray-400"
-                          }`}
-                        >
-                          {tier.label}
-                        </span>
-                        <span className="text-[10px] leading-tight text-gray-500">
-                          {tier.description}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <label className="grid gap-2 text-sm text-gray-300">
-                Minimum order value
-                <input
-                  type="number"
-                  min="0"
-                  value={form.minOrderValue}
-                  onChange={(event) => setForm((current) => ({ ...current, minOrderValue: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm text-gray-300">
-                Selection weight (%)
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={form.probability}
-                  onChange={(event) => setForm((current) => ({ ...current, probability: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm text-gray-300">
-                Description shown after delivery
-                <textarea
-                  rows="3"
-                  value={form.description}
-                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm text-gray-300">
-                Internal notes
-                <textarea
-                  rows="3"
-                  value={form.internalNotes}
-                  onChange={(event) => setForm((current) => ({ ...current, internalNotes: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm text-gray-300">
-                Image URL
-                <input
-                  value={form.imageUrl}
-                  onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
-                  className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none focus:border-[#D4AF37]/40"
-                />
-              </label>
-
-              <label className="flex items-center gap-3 text-sm text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
-                  className="h-4 w-4 rounded border-white/20 bg-black/40"
-                />
-                Active
-              </label>
-
-              <div className="flex flex-wrap gap-3 pt-2">
-                <PrimaryButton type="submit" disabled={saving}>{saving ? "Saving..." : editingGift ? "Update collectible" : "Create collectible"}</PrimaryButton>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-full border border-white/10 px-5 py-3 text-sm text-gray-300 transition hover:border-white/20 hover:text-white"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </AdminPanel>
         </div>
-        </div>
+        
+        {/* Drawers and Modals */}
+        <CreateCollectibleModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          initialData={editingGift}
+          drops={drops}
+          onSubmit={handleSubmit}
+          saving={saving}
+        />
+        
+        <GiftOrdersDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          gift={selectedGift}
+          orders={selectedOrders}
+          loading={ordersLoading}
+        />
 
       </AdminPage>
     </motion.div>
