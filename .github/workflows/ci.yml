@@ -124,7 +124,7 @@ jobs:
         run: npm ci --include=dev || npm install --include=dev
 
       - name: Verify Playwright CLI
-        run: npx --no-install playwright --version
+        run: npm exec --yes --package=@playwright/test -- playwright --version
 
       - name: Install Server-side dependencies
         working-directory: ./Server-side
@@ -135,10 +135,13 @@ jobs:
         run: npm ci || npm install
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npm exec --yes --package=@playwright/test -- playwright install --with-deps chromium
 
       - name: Prepare e2e env file
         run: cp e2e/.env.test.example e2e/.env.test
+
+      - name: Verify Playwright before test run
+        run: npm run test:e2e -- --version
 
       - name: Run Playwright suite
         env:
