@@ -120,8 +120,11 @@ jobs:
           node-version: 20.x
           cache: npm
 
-      - name: Install root dependencies (Playwright)
-        run: npm ci || npm install
+      - name: Install root dependencies (including Playwright)
+        run: npm ci --include=dev || npm install --include=dev
+
+      - name: Verify Playwright CLI
+        run: npx --no-install playwright --version
 
       - name: Install Server-side dependencies
         working-directory: ./Server-side
