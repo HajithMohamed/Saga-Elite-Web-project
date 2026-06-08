@@ -90,10 +90,7 @@ const seedFixtures = async (mongoose) => {
 };
 
 module.exports = async () => {
-  const mongoose = require(path.resolve(
-    __dirname,
-    "../Server-side/node_modules/mongoose"
-  ));
+  const mongoose = require("mongoose");
 
   console.log("[e2e setup] connecting to", TEST_DB_URI);
   await mongoose.connect(TEST_DB_URI);

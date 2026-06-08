@@ -14,10 +14,7 @@ module.exports = async () => {
     return;
   }
 
-  const mongoose = require(path.resolve(
-    __dirname,
-    "../Server-side/node_modules/mongoose"
-  ));
+  const mongoose = require("mongoose");
   await mongoose.connect(TEST_DB_URI);
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
