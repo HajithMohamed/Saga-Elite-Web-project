@@ -17,10 +17,7 @@ let SmartAlert;
 
 test.describe("A3 — Low-stock alert + sidebar badge", () => {
   test.beforeAll(async () => {
-    mongoose = require(path.resolve(
-      __dirname,
-      "../../Server-side/node_modules/mongoose"
-    ));
+    mongoose = require("mongoose");
     Product = require(path.resolve(
       __dirname,
       "../../Server-side/Models/Product.js"
