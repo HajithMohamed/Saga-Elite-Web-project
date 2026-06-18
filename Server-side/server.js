@@ -68,9 +68,14 @@ const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const guestRoutes = require("./Routes/guestRoutes");
 const guestTrackingMiddleware = require("./Middlewares/guest-tracking-middleware");
 const { initGuestPromoJob } = require("./Utils/guest-promo-job");
+const customerRoutes = require("./Routes/customerRoutes");
+const eventRoutes = require("./Routes/eventRoutes");
+const { identifyCustomer } = require("./Middlewares/customer-middleware");
 const { initCartAbandonmentJob } = require("./Utils/cart-abandonment-job");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 const ManualPayment = require("./Models/ManualPayment");
+const Customer = require("./Models/Customer");
+const { CustomerEvent } = require("./Models/CustomerEvent");
 
 app.use(
   helmet({
@@ -81,6 +86,7 @@ app.use(
 app.use(cookieParser());
 app.use(configureCors());
 app.use(guestTrackingMiddleware);
+app.use(identifyCustomer);
 app.use(compression());
 app.use(
   "/Uploads",
@@ -153,6 +159,8 @@ app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
 app.use("/api/v1/admin/recommendations", recommendationsRoutes);
 app.use("/api/v1/admin/alerts", smartAlertsRoutes);
+app.use("/api/v1/customer", customerRoutes);
+app.use("/api/v1/events", eventRoutes);
 
 app.use(globalErrorController);
 
@@ -251,6 +259,15 @@ const runDeferredStartupTasks = async () => {
     await ManualPayment.syncIndexes();
   } catch (err) {
     logger.error("ManualPayment.syncIndexes failed", {
+      error: err?.message || String(err),
+    });
+  }
+
+  try {
+    await Customer.syncIndexes();
+    await CustomerEvent.syncIndexes();
+  } catch (err) {
+    logger.error("Customer/CustomerEvent.syncIndexes failed", {
       error: err?.message || String(err),
     });
   }

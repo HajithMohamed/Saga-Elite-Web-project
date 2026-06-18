@@ -20,6 +20,7 @@ const {
 const logger = require("../Utils/logger");
 const { recordLoginAttempt } = require("../Utils/login-activity-service");
 const { ensureWelcomeReward } = require("../Utils/reward-service");
+const { migrateGuestToUser } = require("../Services/migration-service");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -279,6 +280,15 @@ const otpVerify = catchAsync(async(req, res, next)=>{
             error: err?.message,
         })
     );
+
+    try {
+        await migrateGuestToUser(req.guestToken, user);
+    } catch (err) {
+        logger.warn("Guest migration on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
 
     await trySendAuthWhatsApp(
         user,
@@ -744,6 +754,15 @@ const registerGuest = catchAsync(async (req, res, next) => {
     if (guest) {
         guest.isRegistered = true;
         await guest.save();
+    }
+
+    try {
+        await migrateGuestToUser(req.guestToken, newUser);
+    } catch (err) {
+        logger.warn("Guest migration on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
     }
 
     const registrationBody = `

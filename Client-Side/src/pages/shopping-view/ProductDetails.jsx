@@ -44,6 +44,7 @@ const FALLBACK_DROP_NAME = "Independent Release";
 
 import usePageMeta from "@/hooks/use-page-meta";
 import useRecentlyViewed from "@/hooks/use-recently-viewed";
+import useTracker from "@/hooks/useTracker";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -124,10 +125,14 @@ const ProductDetails = () => {
   const [cartAddedPulse, setCartAddedPulse] = useState(false);
 
   const { push: pushRecentlyViewed } = useRecentlyViewed();
+  const { trackView } = useTracker();
 
   useEffect(() => {
-    if (product?._id && product?.slug) pushRecentlyViewed(product);
-  }, [product?._id, product?.slug, pushRecentlyViewed]);
+    if (product?._id && product?.slug) {
+      pushRecentlyViewed(product);
+      trackView(product._id, selectedVariant?._id);
+    }
+  }, [product?._id, product?.slug, selectedVariant?._id, pushRecentlyViewed, trackView]);
 
   useLiveProductUpdates(
     (payload = {}) => String(product?._id || "") === String(payload.productId || "")
