@@ -8,6 +8,7 @@ import { useGuestId } from "./hooks/use-guest-id";
 import useTracker from "./hooks/useTracker";
 import AppLoader from "@/components/ui/AppLoader";
 import RegisterPromptModal from "./components/common-components/RegisterPromptModal";
+import ScrollToTop from "./components/common-components/ScrollToTop";
 
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
@@ -173,6 +174,7 @@ function App() {
     <div>
       <SocketBridge />
       <RouteMetaManager />
+      <ScrollToTop />
       <RegisterPromptModal guestToken={guestToken} isAuthenticated={isAuthenticated} />
 
       <ErrorBoundary>

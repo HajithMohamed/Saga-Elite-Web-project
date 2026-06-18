@@ -4,10 +4,15 @@ import { Facebook, Instagram, Youtube, ArrowRight, CheckCircle2, ChevronDown, Lo
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import useShopAbout from "@/hooks/use-shop-about";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 
 const MainFooter = () => {
   const location = useLocation();
   const isAdminView = location.pathname.startsWith("/admin");
+  const { open: openAuthDrawer } = useAuthDrawer();
 
   // Pull editable shop content from siteConfig — falls back to literal copy
   // when keys are unset, so the page never breaks during partial migrations.
@@ -33,12 +38,18 @@ const MainFooter = () => {
 
   if (isAdminView) return null;
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if(email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
-      setEmail("");
+      try {
+        await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
+        setSubscribed(true);
+        setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
+        setEmail("");
+        toast({ title: "Welcome to the Elite List.", variant: "success" });
+      } catch (error) {
+        toast({ title: "Subscription failed", description: error?.response?.data?.message || "Please try again", variant: "destructive" });
+      }
     }
   };
 
@@ -96,16 +107,29 @@ const MainFooter = () => {
               Unlock early access, rare drops, mystery rewards, and exclusive releases.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <Link to={isAuthenticated ? "/shopping/account" : "/auth/login"}>
-                <motion.button 
-                  whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
-                >
-                  <span className="relative z-10">{isAuthenticated ? "ENTER ELITE PORTAL" : "🔥 JOIN THE ELITE"}</span>
-                  <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
-                </motion.button>
-              </Link>
+              {isAuthenticated ? (
+                <Link to="/shopping/account">
+                  <motion.button 
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">ENTER ELITE PORTAL</span>
+                    <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
+                  </motion.button>
+                </Link>
+              ) : (
+                <div onClick={() => openAuthDrawer('register')}>
+                  <motion.button 
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">🔥 JOIN THE ELITE</span>
+                    <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
+                  </motion.button>
+                </div>
+              )}
               <Link to="/shopping/drops">
                 <motion.button 
                   whileHover={{ color: "#ffffff", borderColor: "#ffffff" }}
@@ -294,12 +318,12 @@ const MainFooter = () => {
                     <li>⭐ Save Wishlist</li>
                   </ul>
                   <div className="flex flex-col gap-2">
-                    <Link to="/auth/login" className="text-center w-full bg-white text-black py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-colors">
+                    <button onClick={() => openAuthDrawer('login')} className="text-center w-full bg-white text-black py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-colors">
                       Login
-                    </Link>
-                    <Link to="/auth/register" className="text-center w-full bg-transparent border border-white/20 text-white py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-white/10 transition-colors">
+                    </button>
+                    <button onClick={() => openAuthDrawer('register')} className="text-center w-full bg-transparent border border-white/20 text-white py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-white/10 transition-colors">
                       Join Elite
-                    </Link>
+                    </button>
                   </div>
                 </div>
               )}

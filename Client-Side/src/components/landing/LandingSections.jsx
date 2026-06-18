@@ -33,6 +33,8 @@ import { getRemainingTime } from "@/utils/time";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
 import { toast } from "@/hooks/use-toast";
+import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
+import { useSelector } from "react-redux";
 
 const MotionDiv = motion.div;
 const seededRandom = (seed) => {
@@ -71,6 +73,8 @@ export const InlineDropCountdown = ({ endDate }) => {
 // 🎬 HERO CAROUSEL (COMPACT LUXURY GRID)
 export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { open: openAuthDrawer } = useAuthDrawer();
+  const { isAuthenticated } = useSelector((state) => state.auth || { isAuthenticated: false });
 
   // Auto-advance logic for the carousel
   useEffect(() => {
@@ -229,9 +233,9 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
               <p className="font-sans text-xs text-[#99907c] mb-6 max-w-[200px]">
                 Early access benefits, exclusive member drops, and private events.
               </p>
-              <Link to="/auth/register" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#FAF7F2] border-b border-[#FAF7F2]/30 pb-1 hover:border-[#FAF7F2] transition-colors">
+              <button onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')} className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#FAF7F2] border-b border-[#FAF7F2]/30 pb-1 hover:border-[#FAF7F2] transition-colors">
                 Unlock Privileges
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -1630,7 +1634,11 @@ export const Testimonials = () => {
 /* ──────────────────────────────────────────────────────────────────────────
    VIP MEMBERSHIP — full-bleed gradient CTA.
    ────────────────────────────────────────────────────────────────────────── */
-export const VipMembership = () => (
+export const VipMembership = () => {
+  const { open: openAuthDrawer } = useAuthDrawer();
+  const { isAuthenticated } = useSelector((state) => state.auth || { isAuthenticated: false });
+
+  return (
   <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
     {/* Layered glow */}
     <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
@@ -1671,14 +1679,15 @@ export const VipMembership = () => (
         ))}
       </div>
 
-      <Link
-        to="/auth/register"
+      <button
+        onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')}
         className="inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group"
         style={{ boxShadow: "0 0 32px rgba(242,202,80,0.25)" }}
       >
         Claim Elite Access
         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-      </Link>
+      </button>
     </div>
   </section>
-);
+  );
+};

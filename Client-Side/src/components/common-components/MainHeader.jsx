@@ -505,7 +505,7 @@ const MainHeader = () => {
                <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
                   <Link to="/about">Brand Story</Link>
                   <Link to="/contact">Reach Out</Link>
-                  <Link to="/faq">Track Order</Link>
+                  <Link to="/shopping/order-tracking">Track Order</Link>
                </div>
             </div>
           </MotionAside>
