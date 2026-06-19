@@ -1,8 +1,10 @@
 import React from 'react';
 import { useProductForm } from './ProductFormContext';
+import { FormField } from '@/components/admin-components/_form/FormField';
+import { LuxuryInput } from '@/components/admin-components/_form/inputs';
 
 export const PricingInventorySection = () => {
-  const { formData, updateField } = useProductForm();
+  const { formData, updateField, validationErrors } = useProductForm();
 
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md">
@@ -10,36 +12,31 @@ export const PricingInventorySection = () => {
       
       <div className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Base Price (LKR) *</label>
-            <input 
-              type="number" 
+          <FormField label="Base Price (LKR)" required error={validationErrors.basePrice}>
+            <LuxuryInput
+              type="number"
               value={formData.basePrice}
               onChange={(e) => updateField('basePrice', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
               placeholder="0.00"
+              error={!!validationErrors.basePrice}
             />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Cost Price (LKR)</label>
-            <input 
-              type="number" 
+          </FormField>
+          <FormField label="Cost Price (LKR)">
+            <LuxuryInput
+              type="number"
               value={formData.costPrice}
               onChange={(e) => updateField('costPrice', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
               placeholder="0.00"
             />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Discount (%)</label>
-            <input 
-              type="number" 
+          </FormField>
+          <FormField label="Discount (%)" helper="0 if no discount.">
+            <LuxuryInput
+              type="number"
               value={formData.discountPercent}
               onChange={(e) => updateField('discountPercent', e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white transition-colors focus:border-[#D4AF37] focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
               placeholder="0"
             />
-          </div>
+          </FormField>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

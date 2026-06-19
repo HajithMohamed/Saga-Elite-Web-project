@@ -194,14 +194,14 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
         exit="hidden"
       >
       <motion.div
-        className="max-w-7xl w-full overflow-hidden rounded-2xl bg-surface text-on-surface shadow-2xl"
+        className="max-w-7xl w-full flex flex-col max-h-[90vh] overflow-hidden rounded-2xl bg-surface text-on-surface shadow-2xl"
         variants={modalCardVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-5 bg-surface-container-low">
+        <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-5 bg-surface-container-low shrink-0">
           <div>
             <h2 className="text-xl font-bold">{title}</h2>
             <p className="text-sm text-on-surface-variant">{localImages.length} image(s) available</p>
@@ -215,7 +215,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto" data-lenis-prevent="true">
           {error && (
             <div className="rounded-2xl border border-red-600 bg-red-600/10 p-3 text-sm text-red-200">
               {error}
@@ -266,7 +266,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                   <img
                     src={image.url}
                     alt={`${title} ${index + 1}`}
-                    className="h-48 w-full object-cover"
+                    className="h-56 w-full object-contain bg-[#0a0a0a]"
                   />
                   {image.isPrimary && (
                     <span className="absolute left-3 top-3 rounded-full bg-saga-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-black">

@@ -15,7 +15,14 @@ export const WorkspaceNav = ({ activeTab, onTabChange }) => {
 
   const handleTabSelect = (id) => {
     onTabChange(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (id === 'tags') {
+      setTimeout(() => {
+        const el = document.getElementById('tags-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (

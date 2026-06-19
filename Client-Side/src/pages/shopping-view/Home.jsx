@@ -129,7 +129,7 @@ const Home = () => {
   }
 
   return (
-    <ReactLenis root options={{ lerp: 0.08, smoothWheel: true }}>
+    <>
       <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
         {/* Ambient Three.js particle backdrop */}
         <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
@@ -203,7 +203,7 @@ const Home = () => {
           <CinematicFooter />
         </div>
       </div>
-    </ReactLenis>
+    </>
   );
 };
 

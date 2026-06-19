@@ -28,7 +28,30 @@ import {
   RefreshCcw,
   ArrowRight,
   Check,
+  Waves, 
+  RotateCw, 
+  Palette, 
+  DropletOff, 
+  Wind, 
+  Sun, 
+  Thermometer, 
+  Ban, 
+  CloudSun, 
+  Sparkles
 } from "lucide-react";
+
+const CARE_INSTRUCTION_OPTIONS = [
+  { id: 'wash-cold', label: 'Machine wash cold (30°C)', icon: Waves },
+  { id: 'wash-inside-out', label: 'Turn garment inside out before washing', icon: RotateCw },
+  { id: 'similar-colors', label: 'Wash with similar colors', icon: Palette },
+  { id: 'no-bleach', label: 'Do not use bleach', icon: DropletOff },
+  { id: 'no-tumble-dry', label: 'Do not tumble dry on high heat', icon: Wind },
+  { id: 'hang-dry', label: 'Hang dry for best fabric longevity', icon: Sun },
+  { id: 'iron-low', label: 'Iron on low to medium heat if needed', icon: Thermometer },
+  { id: 'no-iron-print', label: 'Do not iron directly on printed labels or graphics', icon: Ban },
+  { id: 'no-sunlight', label: 'Avoid prolonged direct sunlight when drying', icon: CloudSun },
+  { id: 'dry-clean', label: 'Dry clean recommended', icon: Sparkles }
+];
 import StarRating from "@/components/Review/StarRating";
 import ReviewCard, { ReviewCardSkeleton } from "@/components/Review/ReviewCard";
 import VariantSelectors, {
@@ -1035,14 +1058,23 @@ const ProductDetails = () => {
                   </div>
                 ) : null}
                 {productTab === "care" ? (
-                  <div className="space-y-2 text-gray-300">
-                    <p className="text-white se-label tracking-widest text-xs mb-4">Care Instructions</p>
-                    {(product.careInstructions || "Machine wash cold (30°C recommended)\nWash with similar colors\nTurn garment inside out before washing\nDo not use bleach\nDo not tumble dry on high heat\nIron on low to medium heat if needed\nDo not iron directly on printed labels or graphics\nHang dry for best fabric longevity\nAvoid prolonged direct sunlight when drying")
-                      .split('\n')
-                      .filter(line => line.trim())
-                      .map((line, i) => (
-                        <p key={i} className="text-sm leading-relaxed">{line.trim()}</p>
-                      ))}
+                  <div className="space-y-4 text-gray-300">
+                    <p className="text-white se-label tracking-widest text-xs mb-2">Care Instructions</p>
+                    <div className="grid gap-3">
+                      {(product.careInstructions || "Machine wash cold (30°C recommended)\nWash with similar colors\nTurn garment inside out before washing\nDo not use bleach\nDo not tumble dry on high heat\nIron on low to medium heat if needed\nDo not iron directly on printed labels or graphics\nHang dry for best fabric longevity\nAvoid prolonged direct sunlight when drying")
+                        .split('\n')
+                        .filter(line => line.trim())
+                        .map((line, i) => {
+                          const matchedOption = CARE_INSTRUCTION_OPTIONS.find(o => o.label === line.trim());
+                          const IconComp = matchedOption ? matchedOption.icon : Check;
+                          return (
+                            <div key={i} className="flex items-start gap-3">
+                              <IconComp className="w-5 h-5 text-[#D4AF37] shrink-0 mt-0.5" />
+                              <p className="text-sm leading-relaxed">{line.trim()}</p>
+                            </div>
+                          );
+                        })}
+                    </div>
                   </div>
                 ) : null}
                 {productTab === "reviews" ? (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Fragment } from "react";
+import React, { useEffect, useState, useCallback, Fragment, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,43 +8,28 @@ import {
   deleteProduct,
   bulkUpdateProducts,
 } from "@/store/admin/product-slice";
-import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 import useBulkSelection from "@/hooks/use-bulk-selection";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
-import ImageUpload from "@/components/admin-components/ImageUpload";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
-import { compressImageFile } from "@/lib/image-compression";
 import {
-  Search,
   Settings,
-  Bell,
   Plus,
   Trash2,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Edit2,
-  Trash,
   Package,
   Eye,
-  Info,
-  DollarSign,
-  Layers,
-  Image as ImageIcon,
-  Tag as TagIcon,
-  Sparkles,
-  FolderTree,
-  GripVertical,
-  Check,
-  X as XIcon,
-  AlertCircle,
+  Copy,
   Download,
   Loader2,
   MoreVertical,
+  AlertCircle,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { SearchFilterBar, FilterSelect } from "@/components/admin-components/_shared/SearchFilterBar";
@@ -56,124 +41,20 @@ import {
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
-import {
-  AdminFormShell,
-  StickyActionBar,
-  FormSection,
-  FormField,
-  LuxuryInput,
-  LuxuryTextarea,
-  LuxurySelect,
-  StatusPill,
-  RightRailPanel,
-  RailToggleRow,
-  LivePreviewCard,
-  FormTabs,
-  ProgressBar,
-} from "@/components/admin-components/_form";
 import { ProductStudio } from "@/components/admin-components/product-studio";
+import {
+  initialProductForm,
+  defaultVariant,
+  PRODUCT_DRAFT_KEY,
+  validateProductFormData,
+  computeVariantStockSummary,
+} from "@/components/admin-components/product-studio/ProductFormContext";
 
-// Helper components for visual consistency
-const PulseDot = ({ active }) => (
-  <span className={`w-2 h-2 ${active ? 'bg-saga-primary animate-pulse' : 'bg-outline-variant'} shrink-0`} />
-);
+const normalizeText = (value = "") => String(value).trim().toLowerCase();
 
-const ToggleSwitch = ({ checked, onChange, activeColor = "bg-primary-container", activeThumb = "bg-on-primary-container" }) => (
-  <div onClick={onChange} className={`w-10 h-5 ${checked ? activeColor : 'bg-surface-variant'} relative cursor-pointer transition-colors duration-300`}>
-    <div className={`absolute top-0 w-5 h-5 transition-transform duration-300 ${checked ? `right-0 ${activeThumb}` : 'left-0 bg-outline-variant'}`} />
-  </div>
-);
-
-const defaultVariant = {
-  sku: "",
-  size: "",
-  color: "",
-  colorCode: "",
-  stock: "",
-  priceAdjustment: "",
-};
-
-const initialProductForm = {
-  name: "",
-  artNo: "",
-  description: "",
-  story: "",
-  fabric: "",
-  gsm: "",
-  fitType: "",
-  careInstructions: "",
-  sizeGuide: "",
-  brand: "Sovereign Elite",
-  category: "",
-  categoryId: "",
-  subCategory: "",
-  categoryPath: "",
-  drop: "",
-  basePrice: "",
-  discountPercent: "0",
-  costPrice: "",
-  maxPerUser: "",
-  lowStockThreshold: "",
-  isFeatured: false,
-  isActive: true,
-  isLimited: false,
-  tags: [],
-  variants: [defaultVariant],
-};
-
-const SIZE_OPTIONS = [
-  "XS", "S", "M", "L", "XL", "XXL", "3XL", "FREE",
-  "36", "38", "40", "42", "44", "46", "48", "50",
-];
-
-const COLOR_OPTIONS = [
-  { name: "Black", hex: "#000000" },
-  { name: "White", hex: "#FFFFFF" },
-  { name: "Navy", hex: "#1B2A4A" },
-  { name: "Charcoal", hex: "#36454F" },
-  { name: "Olive", hex: "#556B2F" },
-  { name: "Cream", hex: "#FFFDD0" },
-  { name: "Sand", hex: "#C2B280" },
-  { name: "Burgundy", hex: "#800020" },
-  { name: "Forest Green", hex: "#228B22" },
-  { name: "Tan", hex: "#D2B48C" },
-  { name: "Grey", hex: "#808080" },
-  { name: "Red", hex: "#B22222" },
-  { name: "Royal Blue", hex: "#4169E1" },
-  { name: "Camel", hex: "#C19A6B" },
-  { name: "Sage", hex: "#B2AC88" },
-  { name: "Rust", hex: "#B7410E" },
-  { name: "Gold", hex: "#D4AF37" },
-  { name: "Pink", hex: "#FFB6C1" },
-  { name: "Lavender", hex: "#E6E6FA" },
-];
-
-const generateSku = (artNo, size, color) => {
-  if (!artNo) return "";
-  const parts = [artNo.trim().toUpperCase()];
-  if (size) parts.push(size.toUpperCase().replace(/\s+/g, ""));
-  if (color) parts.push(color.toUpperCase().replace(/\s+/g, "").slice(0, 3));
-  return parts.join("-");
-};
-
-const isHexColor = (value) => /^#[0-9A-F]{6}$/i.test(String(value || ""));
-
-const getVariantColorCode = (variant) => {
-  if (isHexColor(variant.colorCode)) return variant.colorCode;
-  const preset = COLOR_OPTIONS.find(
-    (color) => color.name.toLowerCase() === String(variant.color || "").toLowerCase()
-  );
-  return preset?.hex || "#000000";
-};
-
-const normalizeColorKey = (value = "") => String(value || "").trim().toLowerCase();
-
-const getImageForVariantColor = (images = [], color = "") => {
-  const colorKey = normalizeColorKey(color);
-  if (!colorKey) return null;
-  return (
-    images.find((image) => normalizeColorKey(image?.colorTag) === colorKey) || null
-  );
+const getErrorMessage = (error, fallback = "Request failed") => {
+  if (typeof error === "string") return error;
+  return error?.response?.data?.message || error?.message || error?.error || fallback;
 };
 
 const revokeBlobUrl = (url) => {
@@ -181,10 +62,6 @@ const revokeBlobUrl = (url) => {
     URL.revokeObjectURL(url);
   }
 };
-
-// Draft key for the wizard's auto-save. Only used when creating a NEW product
-// (editing an existing one always loads server state, never a stale draft).
-const PRODUCT_DRAFT_KEY = "saga.admin.product.draft";
 
 const loadProductDraft = () => {
   try {
@@ -206,19 +83,6 @@ const clearProductDraft = () => {
   }
 };
 
-const PRODUCT_TAG_OPTIONS = [
-  "LIMITED",
-  "RARE",
-  "TRENDING",
-  "NEW DROP",
-  "BESTSELLER",
-];
-
-const getErrorMessage = (error, fallback = "Request failed") => {
-  if (typeof error === "string") return error;
-  return error?.response?.data?.message || error?.message || error?.error || fallback;
-};
-
 const rollbackCreatedProduct = async (product) => {
   const slug = product?.slug;
   if (!slug) return false;
@@ -234,58 +98,26 @@ const rollbackCreatedProduct = async (product) => {
   }
 };
 
-const CUSTOM_OPTION = "__custom__";
 const CATEGORY_ROOT_TAGS = ["Gents", "Ladies", "Unisex"];
 const CATEGORY_MANAGER_PAGE_SIZE = 6;
 
-const MATERIAL_OPTIONS = [
-  "Cotton",
-  "Organic Cotton",
-  "Linen",
-  "Linen Blend",
-  "Denim",
-  "Jersey",
-  "French Terry",
-  "Fleece",
-  "Twill",
-  "Wool",
-  "Silk",
-  "Rayon",
-  "Viscose",
-  "Polyester",
-  "Nylon",
-  "Spandex",
-  "Tencel",
-  "Bamboo",
-  "Leather",
-];
+const getProductLedgerMeta = (product) => {
+  const summary = computeVariantStockSummary(product.variants || []);
+  const colors = summary.colorBreakdown.map((c) => c.color).slice(0, 3);
+  const sizes = summary.sizeBreakdown.map((s) => s.size).slice(0, 4);
+  const lowThreshold = Number(product.lowStockThreshold) || 5;
+  const isLowStock = summary.totalStock > 0 && summary.totalStock <= lowThreshold;
+  const isOutOfStock = summary.totalStock === 0;
 
-const GSM_OPTIONS = ["120", "140", "160", "180", "200", "220", "240", "260", "280", "300", "320", "340", "360", "380", "400"];
-
-const buildSizeGuideTemplate = (title) => [
-  `${title} size guide`,
-  "",
-  "Size | Chest (cm) | Length (cm)",
-  "XS | 86-91 | 66",
-  "S | 91-96 | 68",
-  "M | 96-101 | 70",
-  "L | 101-106 | 72",
-  "XL | 106-111 | 74",
-  "XXL | 111-116 | 76",
-  "",
-  "Measurements are approximate and may vary by style.",
-].join("\n");
-
-const SIZE_GUIDE_PRESETS = [
-  { value: "Sri Lanka", label: "Sri Lanka", guide: buildSizeGuideTemplate("Sri Lanka") },
-  { value: "India", label: "India", guide: buildSizeGuideTemplate("India") },
-  { value: "United States", label: "United States", guide: buildSizeGuideTemplate("United States") },
-  { value: "United Kingdom", label: "United Kingdom", guide: buildSizeGuideTemplate("United Kingdom") },
-  { value: "European Union", label: "European Union", guide: buildSizeGuideTemplate("European Union") },
-  { value: "Australia", label: "Australia", guide: buildSizeGuideTemplate("Australia") },
-];
-
-const normalizeText = (value = "") => String(value).trim().toLowerCase();
+  return {
+    ...summary,
+    colors,
+    sizes,
+    isLowStock,
+    isOutOfStock,
+    hasDiscount: Number(product.discountPercent) > 0,
+  };
+};
 
 const normalizeCategorySegment = (value = "") =>
   String(value || "")
@@ -343,81 +175,6 @@ const findCategoryNode = (categories = [], value) => {
   return null;
 };
 
-const findCategoryPath = (categories = [], value, path = []) => {
-  const target = normalizeText(value);
-  if (!target) return [];
-
-  for (const category of categories) {
-    const nextPath = [...path, category];
-    if (
-      normalizeText(category._id) === target ||
-      normalizeText(category.name) === target ||
-      normalizeText(category.slug) === target
-    ) {
-      return nextPath;
-    }
-
-    const childPath = findCategoryPath(category.children || [], value, nextPath);
-    if (childPath.length) return childPath;
-  }
-
-  return [];
-};
-
-const findCategoryPathBySegments = (categories = [], rawPath = "") => {
-  const segments = String(rawPath || "")
-    .split(/\/|>|\|/)
-    .map((segment) => normalizeCategorySegment(segment))
-    .filter(Boolean);
-
-  if (!segments.length) return [];
-
-  const path = [];
-  let candidates = categories;
-
-  for (const segment of segments) {
-    const match = candidates.find(
-      (category) =>
-        normalizeCategorySegment(category.slug) === segment ||
-        normalizeCategorySegment(category.name) === segment ||
-        normalizeCategorySegment(category._id) === segment
-    );
-
-    if (!match) return [];
-
-    path.push(match);
-    candidates = match.children || [];
-  }
-
-  return path;
-};
-
-const buildCategoryPathValue = (path = []) =>
-  path
-    .map((category) => category.slug || normalizeCategorySegment(category.name))
-    .filter(Boolean)
-    .join("/");
-
-const collectSubcategoryOptions = (rootCategory) => {
-  if (!rootCategory) return [];
-
-  const walk = (nodes = [], path = []) =>
-    nodes.flatMap((node) => {
-      const nextPath = [...path, node];
-      return [
-        {
-          value: String(node._id),
-          label: nextPath.map((item) => item.name).join(" / "),
-          node,
-          path: [rootCategory, ...nextPath],
-        },
-        ...walk(node.children || [], nextPath),
-      ];
-    });
-
-  return walk(rootCategory.children || []);
-};
-
 const formatCategoryPathDisplay = (value = "") =>
   String(value || "")
     .split("/")
@@ -429,8 +186,6 @@ const formatCategoryPathDisplay = (value = "") =>
         .replace(/\b\w/g, (letter) => letter.toUpperCase())
     )
     .join(" / ");
-
-const findPresetByValue = (value, presets) => presets.find((preset) => preset.value === value) || null;
 
 const collectCategoryOptions = (categories = [], path = []) =>
   categories.flatMap((category) => [
@@ -834,6 +589,11 @@ const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) =>
                   className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
                   placeholder="dresses"
                 />
+                {(name || slug) && activeRootNode ? (
+                  <p className="mt-2 text-[11px] text-[#D4AF37]/80">
+                    Path preview: {activeRootNode.slug}/{normalizeCategorySegment(slug || name)}
+                  </p>
+                ) : null}
               </label>
 
               <label className="block">
@@ -919,24 +679,15 @@ const Product = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [productImages, setProductImages] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
-  const [uploadColorTag, setUploadColorTag] = useState("");
-  const [variantImageBusyIndex, setVariantImageBusyIndex] = useState(null);
   const [galleryTitle, setGalleryTitle] = useState("");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
   const [showProductSaved, setShowProductSaved] = useState(false);
-  const [activeFormTab, setActiveFormTab] = useState("basic");
   const [categoryTree, setCategoryTree] = useState([]);
-  const [activeSubcategories, setActiveSubcategories] = useState([]);
-  const [categorySelection, setCategorySelection] = useState("");
-  const [subCategorySelection, setSubCategorySelection] = useState("");
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
-  const [fabricSelection, setFabricSelection] = useState("");
-  const [gsmSelection, setGsmSelection] = useState("");
-  const [sizeGuideSelection, setSizeGuideSelection] = useState(CUSTOM_OPTION);
-  const [formSyncToken, setFormSyncToken] = useState(0);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [bulkPendingAction, setBulkPendingAction] = useState(null);
+  const [studioGalleryProduct, setStudioGalleryProduct] = useState(null);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -1052,6 +803,68 @@ const Product = () => {
     loadCategoryTree();
   }, [dispatch, fetchProducts, loadCategoryTree]);
 
+  useSocketEvent(
+    "product:created",
+    () => {
+      fetchProducts();
+      toast({
+        title: "Catalog updated",
+        description: "A new product was added.",
+        variant: "success",
+      });
+    },
+    [fetchProducts, toast]
+  );
+
+  useSocketEvent(
+    "product:deleted",
+    () => {
+      fetchProducts();
+      toast({
+        title: "Catalog updated",
+        description: "A product was removed.",
+        variant: "success",
+      });
+    },
+    [fetchProducts, toast]
+  );
+
+  const stockSnapshotRef = useRef(new Map());
+
+  useEffect(() => {
+    const next = new Map();
+    productList.forEach((product) => {
+      const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+      next.set(String(product._id), stock);
+    });
+    stockSnapshotRef.current = next;
+  }, [productList]);
+
+  useSocketEvent(
+    "product:updated",
+    (payload = {}) => {
+      const productId = String(payload.productId || payload._id || "");
+      if (!productId) return;
+
+      const variants = payload.changes?.variants || payload.variants;
+      if (!variants) return;
+
+      const prevStock = stockSnapshotRef.current.get(productId);
+      const newStock = variants.reduce((sum, v) => sum + Number(v.stock), 0);
+      if (prevStock === undefined || prevStock === newStock) return;
+
+      const product = productList.find((p) => String(p._id) === productId);
+      toast({
+        title: "Stock updated",
+        description: product
+          ? `${product.name}: ${prevStock} → ${newStock} units`
+          : `Inventory changed to ${newStock} units`,
+        variant: "success",
+      });
+    },
+    [productList, toast]
+  );
+
   // Bulk operations on the product list. Selection wipes when productList
   // identity changes (filter/page change), so stale IDs can't leak through.
   const bulk = useBulkSelection(productList);
@@ -1093,29 +906,30 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
-    setUploadColorTag("");
-    setVariantImageBusyIndex(null);
+    setStudioGalleryProduct(null);
     setIsSavingProduct(false);
-    setFormSyncToken((token) => token + 1);
-    setActiveFormTab("basic");
-    setCategorySelection("");
-    setSubCategorySelection("");
-    setFabricSelection("");
-    setGsmSelection("");
-    setSizeGuideSelection(CUSTOM_OPTION);
   };
 
   const openNewProductForm = () => {
     const draft = loadProductDraft();
-    setFormData(draft ? { ...initialProductForm, ...draft, artNo: "" } : initialProductForm);
+    setFormData(
+      draft
+        ? {
+            ...initialProductForm,
+            ...draft,
+            artNo: "",
+            variants: (draft.variants || [{ ...defaultVariant }]).map((v) => ({
+              ...v,
+              id: v.id || crypto.randomUUID(),
+            })),
+          }
+        : initialProductForm
+    );
     setSelectedProductSlug(null);
     setSelectedProductId(null);
     setProductImages([]);
-    setUploadColorTag("");
-    setVariantImageBusyIndex(null);
-    setActiveFormTab("basic");
+    setStudioGalleryProduct(null);
     setShowForm(true);
-    setFormSyncToken((token) => token + 1);
     if (draft) {
       toast({
         title: "Draft restored",
@@ -1123,20 +937,6 @@ const Product = () => {
       });
     }
   };
-
-  // Auto-save the form to localStorage every ~600ms while creating a NEW product.
-  // Editing an existing product never persists a draft (would clobber server state on next open).
-  useEffect(() => {
-    if (!showForm || selectedProductSlug) return undefined;
-    const id = setTimeout(() => {
-      try {
-        localStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(formData));
-      } catch {
-        /* quota or disabled — silent */
-      }
-    }, 600);
-    return () => clearTimeout(id);
-  }, [formData, showForm, selectedProductSlug]);
 
   const fetchProductImages = async (id) => {
     try {
@@ -1177,87 +977,6 @@ const Product = () => {
     });
   };
 
-  const syncFormSelections = useCallback(
-    (nextFormData) => {
-      let categoryPath = findCategoryPathBySegments(categoryTree, nextFormData.categoryPath);
-
-      if (!categoryPath.length && nextFormData.categoryId) {
-        categoryPath = findCategoryPath(categoryTree, nextFormData.categoryId);
-      }
-
-      if (!categoryPath.length && nextFormData.category) {
-        categoryPath = findCategoryPath(categoryTree, nextFormData.category);
-      }
-
-      if (categoryPath.length === 1 && nextFormData.subCategory) {
-        const childPath = findCategoryPath(categoryPath[0].children || [], nextFormData.subCategory);
-        if (childPath.length) {
-          categoryPath = [categoryPath[0], ...childPath];
-        }
-      }
-
-      const categoryNode = categoryPath[0] || null;
-      const selectedLeaf = categoryPath[categoryPath.length - 1] || null;
-      const firstSubcategory = categoryPath[1] || null;
-
-      if (categoryNode) {
-        const normalizedCategory = categoryNode.name || nextFormData.category || "";
-        const normalizedSubCategory = firstSubcategory?.name || nextFormData.subCategory || "";
-        const normalizedCategoryId = String(selectedLeaf?._id || categoryNode._id);
-        const normalizedCategoryPath = buildCategoryPathValue(categoryPath);
-        const options = collectSubcategoryOptions(categoryNode);
-
-        setCategorySelection(String(categoryNode._id));
-        setActiveSubcategories(options);
-        setSubCategorySelection(categoryPath.length > 1 ? String(selectedLeaf._id) : normalizedSubCategory ? CUSTOM_OPTION : "");
-
-        if (
-          nextFormData.category !== normalizedCategory ||
-          nextFormData.subCategory !== normalizedSubCategory ||
-          nextFormData.categoryId !== normalizedCategoryId ||
-          nextFormData.categoryPath !== normalizedCategoryPath
-        ) {
-          setFormData((prev) => ({
-            ...prev,
-            category: normalizedCategory,
-            subCategory: normalizedSubCategory,
-            categoryId: normalizedCategoryId,
-            categoryPath: normalizedCategoryPath,
-          }));
-        }
-      } else {
-        setCategorySelection(nextFormData.category ? CUSTOM_OPTION : "");
-        setActiveSubcategories([]);
-        setSubCategorySelection(nextFormData.subCategory ? CUSTOM_OPTION : "");
-      }
-
-      setFabricSelection(
-        nextFormData.fabric
-          ? MATERIAL_OPTIONS.includes(nextFormData.fabric)
-            ? nextFormData.fabric
-            : CUSTOM_OPTION
-          : ""
-      );
-      setGsmSelection(
-        nextFormData.gsm
-          ? GSM_OPTIONS.includes(String(nextFormData.gsm))
-            ? String(nextFormData.gsm)
-            : CUSTOM_OPTION
-          : ""
-      );
-
-      const matchedSizeGuide = findPresetByValue(nextFormData.sizeGuide, SIZE_GUIDE_PRESETS);
-      setSizeGuideSelection(matchedSizeGuide ? matchedSizeGuide.value : nextFormData.sizeGuide ? CUSTOM_OPTION : "");
-    },
-    [categoryTree]
-  );
-
-  useEffect(() => {
-    if (!showForm) return;
-    if (categoryTree.length === 0) return;
-    syncFormSelections(formData);
-  }, [showForm, categoryTree, formSyncToken, syncFormSelections]);
-
   const beginEdit = (product) => {
     setSelectedProductSlug(product.slug);
     setSelectedProductId(product._id);
@@ -1276,58 +995,74 @@ const Product = () => {
       categoryId: product.categoryId || "",
       subCategory: product.subCategory || "",
       categoryPath: product.categoryPath || "",
-      drop: product.drop?._id || "",
-      basePrice: product.basePrice || "",
+      drop: product.drop?._id || product.drop || "",
+      basePrice: product.basePrice || "0",
       discountPercent: product.discountPercent || "0",
-      costPrice: product.costPrice ?? "",
+      costPrice: product.costPrice ?? "0",
       maxPerUser: product.maxPerUser ?? "",
-      lowStockThreshold: product.lowStockThreshold ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "5",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
       tags: Array.isArray(product.tags) ? product.tags : [],
       variants: product.variants?.length
-        ? product.variants.map((v) => ({ ...v, colorCode: v.colorCode || "" }))
-        : [defaultVariant],
+        ? product.variants.map((v) => ({
+            ...v,
+            id: v.id || v._id || crypto.randomUUID(),
+            colorCode: v.colorCode || "",
+          }))
+        : [{ ...defaultVariant, id: crypto.randomUUID() }],
     });
-    setActiveFormTab("basic");
+    setStudioGalleryProduct(product);
     setShowForm(true);
-    setFormSyncToken((token) => token + 1);
     fetchProductImages(product._id);
   };
 
-  const toggleTag = (tag) => {
-    setFormData((prev) => {
-      const current = Array.isArray(prev.tags) ? prev.tags : [];
-      const next = current.includes(tag)
-        ? current.filter((t) => t !== tag)
-        : [...current, tag];
-      return { ...prev, tags: next };
+  const beginDuplicate = (product) => {
+    setSelectedProductSlug(null);
+    setSelectedProductId(null);
+    setFormData({
+      name: `${product.name || "Product"} (Copy)`,
+      artNo: "",
+      description: product.description || "",
+      story: product.story || "",
+      fabric: product.fabric || "",
+      gsm: product.gsm || "",
+      fitType: product.fitType || "",
+      careInstructions: product.careInstructions || "",
+      sizeGuide: product.sizeGuide || "",
+      brand: product.brand || "Sovereign Elite",
+      category: product.category || "",
+      categoryId: product.categoryId || "",
+      subCategory: product.subCategory || "",
+      categoryPath: product.categoryPath || "",
+      drop: product.drop?._id || product.drop || "",
+      basePrice: product.basePrice || "0",
+      discountPercent: product.discountPercent || "0",
+      costPrice: product.costPrice ?? "0",
+      maxPerUser: product.maxPerUser ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "5",
+      isFeatured: false,
+      isActive: false,
+      isLimited: product.isLimited || false,
+      tags: Array.isArray(product.tags) ? [...product.tags] : [],
+      variants: product.variants?.length
+        ? product.variants.map((v) => ({
+            ...v,
+            id: crypto.randomUUID(),
+            sku: "",
+            colorCode: v.colorCode || "",
+          }))
+        : [{ ...defaultVariant, id: crypto.randomUUID() }],
     });
+    setProductImages([]);
+    setStudioGalleryProduct(null);
+    setShowForm(true);
   };
 
-  const validateProductForm = (data = formData) => {
-    if (!data.name.trim()) return "Product name is required.";
-    if (!data.category?.trim() && !data.categoryId?.trim()) return "Category is required.";
-    if (data.basePrice === "" || data.basePrice === null || Number(data.basePrice) < 0) {
-      return "Base price must be 0 or greater.";
-    }
-    const validVariants = data.variants.filter(
-      (v) =>
-        v.size?.trim() &&
-        v.color?.trim() &&
-        v.stock !== "" &&
-        v.stock !== null &&
-        v.stock !== undefined
-    );
-    if (validVariants.length === 0) {
-      return "At least one variant with size, color, and stock is required.";
-    }
-    const partialCount = data.variants.length - validVariants.length;
-    if (partialCount > 0) {
-      return "Each variant needs size, color, and stock. Remove or complete partial rows.";
-    }
-    return null;
+  const openStudioGallery = async () => {
+    if (!studioGalleryProduct) return;
+    await openProductGallery(studioGalleryProduct);
   };
 
   const uploadProductImagesByColorTag = async (productId, imagesToUpload = []) => {
@@ -1368,12 +1103,15 @@ const Product = () => {
     return uploadedImages;
   };
 
-  const handleSubmit = async (studioFormData = formData, studioImages = productImages) => {
+  const handleSubmit = async (studioFormData = formData, studioImages = productImages, setValidationErrors) => {
     if (isSavingProduct) return;
 
-    const validationError = validateProductForm(studioFormData);
-    if (validationError) {
-      toast({ title: "Check the form", description: validationError, variant: "destructive" });
+    const { errors, firstError } = validateProductFormData(studioFormData);
+    if (firstError) {
+      if (typeof setValidationErrors === "function") {
+        setValidationErrors(errors);
+      }
+      toast({ title: "Check the form", description: firstError, variant: "destructive" });
       return;
     }
 
@@ -1456,340 +1194,6 @@ const Product = () => {
     return () => clearTimeout(t);
   }, [showProductSaved]);
 
-  const handleVariantChange = (index, field, value) => {
-    const updatedVariants = [...formData.variants];
-    const variant = { ...updatedVariants[index], [field]: value };
-
-    // Auto-set colorCode when color changes to a known preset
-    if (field === "color") {
-      const preset = COLOR_OPTIONS.find((c) => c.name.toLowerCase() === value.toLowerCase());
-      if (preset) variant.colorCode = preset.hex;
-    }
-
-    // Auto-generate SKU when size or color changes (only if sku was auto-generated or empty)
-    if (field === "size" || field === "color") {
-      const currentAuto = generateSku(formData.artNo, updatedVariants[index].size, updatedVariants[index].color);
-      if (!variant.sku || variant.sku === currentAuto) {
-        variant.sku = generateSku(formData.artNo, variant.size, variant.color);
-      }
-    }
-
-    updatedVariants[index] = variant;
-    setFormData({ ...formData, variants: updatedVariants });
-  };
-
-  const handleVariantColorPick = (index, hex) => {
-    const pickedHex = isHexColor(hex) ? hex : "#000000";
-    const preset = COLOR_OPTIONS.find(
-      (color) => color.hex.toLowerCase() === pickedHex.toLowerCase()
-    );
-    const updatedVariants = [...formData.variants];
-    const current = updatedVariants[index] || {};
-    const nextColor = preset?.name || current.color || "Custom";
-    const variant = {
-      ...current,
-      color: nextColor,
-      colorCode: pickedHex,
-    };
-
-    const currentAuto = generateSku(formData.artNo, current.size, current.color);
-    if (!variant.sku || variant.sku === currentAuto) {
-      variant.sku = generateSku(formData.artNo, variant.size, variant.color);
-    }
-
-    updatedVariants[index] = variant;
-    setFormData({ ...formData, variants: updatedVariants });
-  };
-
-  const addVariant = () => {
-    setFormData({ ...formData, variants: [...formData.variants, { ...defaultVariant }] });
-  };
-
-  const removeVariant = (index) => {
-    const updatedVariants = formData.variants.filter((_, i) => i !== index);
-    setFormData({ ...formData, variants: updatedVariants });
-  };
-
-  const handleVariantImageSelect = (index) => {
-    const variant = formData.variants[index];
-    const colorTag = String(variant?.color || "").trim();
-
-    if (!colorTag) {
-      toast({
-        title: "Add a colour first",
-        description: "Variant images are matched by the colour name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-
-    input.onchange = async (event) => {
-      const originalFile = event.target.files?.[0];
-      if (!originalFile) return;
-
-      setVariantImageBusyIndex(index);
-
-      try {
-        const file = await compressImageFile(originalFile);
-        if (!file) return;
-
-        const existingImage = getImageForVariantColor(productImages, colorTag);
-
-        if (!selectedProductId) {
-          const stagedImage = {
-            file,
-            url: URL.createObjectURL(file),
-            isUploaded: false,
-            label: `Variant: ${colorTag}`,
-            colorTag,
-          };
-
-          setProductImages((prev) => {
-            const existingIndex = prev.findIndex(
-              (img) => normalizeColorKey(img?.colorTag) === normalizeColorKey(colorTag)
-            );
-            if (existingIndex === -1) return [...prev, stagedImage];
-
-            const next = [...prev];
-            revokeBlobUrl(next[existingIndex]?.url);
-            next[existingIndex] = stagedImage;
-            return next;
-          });
-          setUploadColorTag(colorTag);
-          toast({
-            title: "Variant image staged",
-            description: `${colorTag} image will upload when the product is saved.`,
-            variant: "success",
-          });
-          return;
-        }
-
-        if (existingImage?._id) {
-          const fd = new FormData();
-          fd.append("image", file);
-
-          const res = await axios.patch(
-            `${API_BASE}/image/update-image/${existingImage._id}`,
-            fd,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
-              withCredentials: true,
-            }
-          );
-
-          if (res.data?.success) {
-            const updatedImage = {
-              ...res.data.image,
-              colorTag: res.data.image?.colorTag || existingImage.colorTag || colorTag,
-              isUploaded: true,
-            };
-            setProductImages((prev) =>
-              prev.map((img) => (img._id === existingImage._id ? updatedImage : img))
-            );
-            setUploadColorTag(colorTag);
-            toast({
-              title: "Variant image updated",
-              description: `${colorTag} image was replaced.`,
-              variant: "success",
-            });
-          }
-          return;
-        }
-
-        const fd = new FormData();
-        fd.append("refModel", "Product");
-        fd.append("refId", selectedProductId);
-        fd.append("type", "product");
-        fd.append("colorTag", colorTag);
-        fd.append("images", file);
-
-        const res = await axios.post(`${API_BASE}/image/upload-image`, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-          withCredentials: true,
-        });
-
-        if (res.data?.success) {
-          const uploaded = (res.data.images || []).map((image) => ({
-            ...image,
-            isUploaded: true,
-          }));
-          setProductImages((prev) => [...prev, ...uploaded]);
-          setUploadColorTag(colorTag);
-          toast({
-            title: "Variant image added",
-            description: `${colorTag} image is ready for storefront switching.`,
-            variant: "success",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Variant image failed",
-          description: getErrorMessage(error, "Could not save this variant image."),
-          variant: "destructive",
-        });
-      } finally {
-        setVariantImageBusyIndex(null);
-        input.value = "";
-      }
-    };
-
-    input.click();
-  };
-
-  const handleCategoryChange = (value) => {
-    setCategorySelection(value);
-
-    if (!value || value === CUSTOM_OPTION) {
-      setActiveSubcategories([]);
-      setSubCategorySelection("");
-      setFormData((prev) => ({
-        ...prev,
-        category: "",
-        categoryId: "",
-        subCategory: "",
-        categoryPath: "",
-      }));
-      return;
-    }
-
-    const selectedCategory = findCategoryNode(categoryTree, value);
-    if (!selectedCategory) {
-      setActiveSubcategories([]);
-      setSubCategorySelection("");
-      setFormData((prev) => ({
-        ...prev,
-        categoryId: value,
-        category: "",
-        subCategory: "",
-        categoryPath: "",
-      }));
-      return;
-    }
-
-    setActiveSubcategories(collectSubcategoryOptions(selectedCategory));
-    setSubCategorySelection("");
-    const rootPath = buildCategoryPathValue([selectedCategory]);
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedCategory.name || "",
-      categoryId: String(selectedCategory._id),
-      subCategory: "",
-      categoryPath: rootPath,
-    }));
-  };
-
-  const handleCategoryTextChange = (value) => {
-    setCategorySelection(CUSTOM_OPTION);
-    setSubCategorySelection("");
-    setActiveSubcategories([]);
-    setFormData((prev) => ({
-      ...prev,
-      category: value,
-      categoryId: "",
-      subCategory: "",
-      categoryPath: "",
-    }));
-  };
-
-  const handleSubCategoryChange = (value) => {
-    setSubCategorySelection(value);
-
-    if (!value || value === CUSTOM_OPTION) {
-      const rootCategory = findCategoryNode(categoryTree, categorySelection);
-      setFormData((prev) => ({
-        ...prev,
-        categoryId: rootCategory?._id ? String(rootCategory._id) : prev.categoryId,
-        subCategory: "",
-        categoryPath: rootCategory ? buildCategoryPathValue([rootCategory]) : prev.categoryPath,
-      }));
-      return;
-    }
-
-    const selectedOption = activeSubcategories.find((option) => option.value === value);
-    if (!selectedOption) {
-      setFormData((prev) => ({ ...prev, subCategory: value }));
-      return;
-    }
-
-    const selectedPath = selectedOption.path || [];
-    const selectedLeaf = selectedPath[selectedPath.length - 1];
-
-    setCategorySelection(String(selectedLeaf._id));
-    setActiveSubcategories(collectSubcategoryOptions(selectedLeaf));
-    setSubCategorySelection("");
-
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedLeaf?.name || prev.category,
-      categoryId: selectedLeaf?._id ? String(selectedLeaf._id) : prev.categoryId,
-      subCategory: "",
-      categoryPath: buildCategoryPathValue(selectedPath),
-    }));
-  };
-
-  const handleSubCategoryTextChange = (value) => {
-    setSubCategorySelection(CUSTOM_OPTION);
-    const rootCategory = findCategoryNode(categoryTree, categorySelection);
-    const rootPath = rootCategory ? buildCategoryPathValue([rootCategory]) : "";
-    const customPath = [rootPath, normalizeCategorySegment(value)].filter(Boolean).join("/");
-    setFormData((prev) => ({
-      ...prev,
-      categoryId: rootCategory?._id ? String(rootCategory._id) : prev.categoryId,
-      subCategory: value,
-      categoryPath: customPath,
-    }));
-  };
-
-  const handleFabricSelectionChange = (value) => {
-    setFabricSelection(value);
-    if (!value || value === CUSTOM_OPTION) {
-      setFormData((prev) => ({ ...prev, fabric: "" }));
-      return;
-    }
-    setFormData((prev) => ({ ...prev, fabric: value }));
-  };
-
-  const handleFabricTextChange = (value) => {
-    setFabricSelection(CUSTOM_OPTION);
-    setFormData((prev) => ({ ...prev, fabric: value }));
-  };
-
-  const handleGsmSelectionChange = (value) => {
-    setGsmSelection(value);
-    if (!value || value === CUSTOM_OPTION) {
-      setFormData((prev) => ({ ...prev, gsm: "" }));
-      return;
-    }
-    setFormData((prev) => ({ ...prev, gsm: value }));
-  };
-
-  const handleGsmTextChange = (value) => {
-    setGsmSelection(CUSTOM_OPTION);
-    setFormData((prev) => ({ ...prev, gsm: value }));
-  };
-
-  const handleSizeGuideSelectionChange = (value) => {
-    setSizeGuideSelection(value);
-    if (!value || value === CUSTOM_OPTION) return;
-    const preset = findPresetByValue(value, SIZE_GUIDE_PRESETS);
-    if (preset) {
-      setFormData((prev) => ({ ...prev, sizeGuide: preset.guide }));
-    }
-  };
-
-  const handleSizeGuideTextChange = (value) => {
-    setSizeGuideSelection(CUSTOM_OPTION);
-    setFormData((prev) => ({ ...prev, sizeGuide: value }));
-  };
-
-  // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
-  // ----- LEDGER LIST VIEW -----
-  // ----- ATELIER FORM (Luxury Control Panel with Tabs) -----
-  // ----- LEDGER LIST VIEW -----
   const bulkActions = [
     { label: "Activate", onClick: () => runBulkProductAction("activate") },
     { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
@@ -2027,12 +1431,13 @@ const Product = () => {
                       className="divide-y divide-white/5"
                     >
                       {productList.map((product) => {
-                        const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+                        const meta = getProductLedgerMeta(product);
+                        const stock = meta.totalStock;
                         const isSelected = bulk.isSelected(product._id);
-                        
+
                         const isHealthy = stock > 10;
-                        const isLowStock = stock > 0 && stock <= 10;
-                        const isOutOfStock = stock === 0;
+                        const isLowStock = meta.isLowStock || (stock > 0 && stock <= 10);
+                        const isOutOfStock = meta.isOutOfStock;
 
                         return (
                           <Fragment key={product._id}>
@@ -2076,6 +1481,43 @@ const Product = () => {
                                     <span className="mt-1 truncate text-[12px] text-[#707070]">
                                       {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" > ") || 'Uncategorized'}
                                     </span>
+                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                      {meta.variantCount > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.variantCount} variant{meta.variantCount === 1 ? '' : 's'}
+                                        </span>
+                                      )}
+                                      {meta.colors.length > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.colors.join(', ')}{meta.uniqueColors > meta.colors.length ? '…' : ''}
+                                        </span>
+                                      )}
+                                      {meta.sizes.length > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.sizes.join(', ')}{meta.uniqueSizes > meta.sizes.length ? '…' : ''}
+                                        </span>
+                                      )}
+                                      {product.isFeatured && (
+                                        <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#D4AF37]">
+                                          Featured
+                                        </span>
+                                      )}
+                                      {product.isLimited && (
+                                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-300">
+                                          Limited
+                                        </span>
+                                      )}
+                                      {meta.hasDiscount && (
+                                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                                          -{product.discountPercent}%
+                                        </span>
+                                      )}
+                                      {isLowStock && !isOutOfStock && (
+                                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                                          Low stock
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -2137,6 +1579,12 @@ const Product = () => {
                                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/10"
                                     >
                                       <Edit2 className="h-4 w-4" /> Edit Product
+                                    </button>
+                                    <button
+                                      onClick={() => beginDuplicate(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                    >
+                                      <Copy className="h-4 w-4" /> Duplicate
                                     </button>
                                     <div className="my-1 mx-2 h-px bg-white/5" />
                                     <button
@@ -2240,11 +1688,15 @@ const Product = () => {
             initialData={formData}
             initialImages={productImages}
             isDraftMode={!selectedProductSlug}
+            isEditing={!!selectedProductSlug}
+            productId={selectedProductId}
+            productSlug={selectedProductSlug}
             categoryTree={categoryTree}
             drops={drops}
             onBack={resetForm}
-            onSaveDraft={() => handleSubmit(formData, productImages)}
+            onSaveDraft={handleSubmit}
             onSubmit={handleSubmit}
+            onOpenGallery={openStudioGallery}
           />
         ) : null}
       </AnimatePresence>
