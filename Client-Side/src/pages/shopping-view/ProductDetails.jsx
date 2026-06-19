@@ -37,8 +37,10 @@ import {
   Thermometer, 
   Ban, 
   CloudSun, 
-  Sparkles
+  Sparkles,
+  Tag,
 } from "lucide-react";
+import { useProductOffers } from "@/hooks/use-product-offers";
 
 const CARE_INSTRUCTION_OPTIONS = [
   { id: 'wash-cold', label: 'Machine wash cold (30°C)', icon: Waves },
@@ -761,6 +763,8 @@ const ProductDetails = () => {
               )}
             </div>
 
+            <OfferPdpBanner product={product} />
+
             {uniqueColors.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-baseline justify-between mb-2">
@@ -1246,5 +1250,40 @@ const ProductDetails = () => {
     </div>
   );
 };
+
+function OfferPdpBanner({ product }) {
+  const { bestOffer } = useProductOffers(product);
+  if (!bestOffer) return null;
+
+  const now = Date.now();
+  const endsAt = bestOffer.endsAt ? new Date(bestOffer.endsAt) : null;
+  const timeLeft = endsAt ? endsAt.getTime() - now : null;
+  const isExpiring = timeLeft && timeLeft > 0 && timeLeft < 86400000;
+
+  const discountLabel = bestOffer.type === "fixed_amount"
+    ? `LKR ${Number(bestOffer.discountAmount).toLocaleString()} OFF`
+    : `${bestOffer.discountPercent}% OFF`;
+
+  return (
+    <div className="mb-4 rounded-lg border border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] p-3">
+      <div className="flex items-start gap-2">
+        <Tag className="h-4 w-4 shrink-0 text-[#D4AF37] mt-0.5" />
+        <div className="min-w-0">
+          <p className="se-label text-[11px] tracking-[0.15em] text-[#D4AF37] uppercase">
+            {bestOffer.badgeText || "Active Offer"}
+          </p>
+          <p className="text-sm text-[#e5e2e1] mt-0.5">
+            {discountLabel} — {bestOffer.description || bestOffer.name}
+          </p>
+          {isExpiring && (
+            <p className="se-label text-[10px] text-rose-400 mt-1 animate-pulse">
+              Ends in {Math.ceil(timeLeft / 3600000)}h {Math.ceil((timeLeft % 3600000) / 60000)}m
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default ProductDetails;

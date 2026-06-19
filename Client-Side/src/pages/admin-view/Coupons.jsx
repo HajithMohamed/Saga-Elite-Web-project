@@ -32,13 +32,16 @@ const ISSUED_FOR_OPTIONS = [
   { value: "manual", label: "Manual" },
   { value: "campaign", label: "Campaign" },
   { value: "vip", label: "VIP" },
+  { value: "vip_tier", label: "VIP Tier" },
   { value: "review_reward", label: "Review reward" },
   { value: "referral", label: "Referral" },
   { value: "birthday", label: "Birthday" },
   { value: "first_order", label: "First order" },
   { value: "cart_recovery", label: "Cart recovery" },
   { value: "drop_launch", label: "Drop launch" },
-  { value: "mystery_reward", label: "Mystery reward" },
+  { value: "welcome", label: "Welcome" },
+  { value: "loyalty", label: "Loyalty" },
+  { value: "flash_sale", label: "Flash Sale" },
 ];
 
 const initialForm = {
@@ -48,7 +51,21 @@ const initialForm = {
   discountValue: 10,
   minOrderValue: 0,
   maxUses: "",
+  perUserLimit: "",
+  maxDiscountAmount: "",
+  firstOrderOnly: false,
+  stackable: false,
+  autoApply: false,
   applicableCategories: [],
+  applicableProducts: [],
+  eligibleMemberships: [],
+  maxDailyUses: "",
+  userGroups: [],
+  requiredProducts: [],
+  requiredCategories: [],
+  excludedProducts: [],
+  excludedCategories: [],
+  stackablePriority: 0,
   startsAt: "",
   endsAt: "",
   isActive: true,
@@ -129,7 +146,27 @@ const AdminCoupons = () => {
       discountValue: coupon.discountValue ?? 0,
       minOrderValue: coupon.minOrderValue ?? 0,
       maxUses: coupon.maxUses == null ? "" : coupon.maxUses,
+      perUserLimit: coupon.perUserLimit ?? "",
+      maxDiscountAmount: coupon.maxDiscountAmount ?? "",
+      firstOrderOnly: !!coupon.firstOrderOnly,
+      stackable: !!coupon.stackable,
+      autoApply: !!coupon.autoApply,
       applicableCategories: coupon.applicableCategories || [],
+      applicableProducts: (coupon.applicableProducts || []).map((p) =>
+        typeof p === "string" ? p : p._id
+      ),
+      eligibleMemberships: coupon.eligibleMemberships || [],
+      maxDailyUses: coupon.maxDailyUses ?? "",
+      userGroups: coupon.userGroups || [],
+      requiredProducts: (coupon.requiredProducts || []).map((p) =>
+        typeof p === "string" ? p : p._id
+      ),
+      requiredCategories: coupon.requiredCategories || [],
+      excludedProducts: (coupon.excludedProducts || []).map((p) =>
+        typeof p === "string" ? p : p._id
+      ),
+      excludedCategories: coupon.excludedCategories || [],
+      stackablePriority: coupon.stackablePriority ?? 0,
       startsAt: coupon.startsAt
         ? new Date(coupon.startsAt).toISOString().slice(0, 16)
         : "",
@@ -170,7 +207,30 @@ const AdminCoupons = () => {
         formData.maxUses === "" || formData.maxUses === null
           ? null
           : Number(formData.maxUses),
+      perUserLimit:
+        formData.perUserLimit === "" || formData.perUserLimit === null
+          ? null
+          : Number(formData.perUserLimit),
+      maxDiscountAmount:
+        formData.maxDiscountAmount === "" || formData.maxDiscountAmount === null
+          ? null
+          : Number(formData.maxDiscountAmount),
+      firstOrderOnly: !!formData.firstOrderOnly,
+      stackable: !!formData.stackable,
+      autoApply: !!formData.autoApply,
       applicableCategories: formData.applicableCategories,
+      applicableProducts: formData.applicableProducts,
+      eligibleMemberships: formData.eligibleMemberships,
+      maxDailyUses:
+        formData.maxDailyUses === "" || formData.maxDailyUses === null
+          ? null
+          : Number(formData.maxDailyUses),
+      userGroups: formData.userGroups,
+      requiredProducts: formData.requiredProducts,
+      requiredCategories: formData.requiredCategories,
+      excludedProducts: formData.excludedProducts,
+      excludedCategories: formData.excludedCategories,
+      stackablePriority: Number(formData.stackablePriority) || 0,
       startsAt: formData.startsAt
         ? new Date(formData.startsAt).toISOString()
         : null,
@@ -611,6 +671,209 @@ const AdminCoupons = () => {
               </button>
             );
           })}
+        </div>
+      </FormSection>
+
+      <FormSection
+        number="05"
+        title="Usage & Stacking Limits"
+        description="Per-user caps, maximum discount cap, daily limits, and stacking behaviour."
+      >
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <FormField
+            label="Per-User Limit"
+            optional
+            helper="How many times one user can redeem."
+          >
+            <LuxuryInput
+              type="number"
+              min="1"
+              value={formData.perUserLimit}
+              onChange={(e) =>
+                setFormData({ ...formData, perUserLimit: e.target.value })
+              }
+              placeholder="Unlimited"
+            />
+          </FormField>
+
+          <FormField
+            label="Max Discount (LKR)"
+            optional
+            helper="Cap the discount amount for percent coupons."
+          >
+            <LuxuryInput
+              type="number"
+              min="0"
+              value={formData.maxDiscountAmount}
+              onChange={(e) =>
+                setFormData({ ...formData, maxDiscountAmount: e.target.value })
+              }
+              placeholder="No cap"
+            />
+          </FormField>
+
+          <FormField
+            label="Max Daily Uses"
+            optional
+            helper="Limit redemptions per day."
+          >
+            <LuxuryInput
+              type="number"
+              min="1"
+              value={formData.maxDailyUses}
+              onChange={(e) =>
+                setFormData({ ...formData, maxDailyUses: e.target.value })
+              }
+              placeholder="Unlimited"
+            />
+          </FormField>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <RailToggleRow
+            label="First Order Only"
+            helper="Only new customers can redeem."
+            checked={formData.firstOrderOnly}
+            onChange={(v) => setFormData({ ...formData, firstOrderOnly: v })}
+          />
+          <RailToggleRow
+            label="Stackable"
+            helper="Can combine with other coupons/offers."
+            checked={formData.stackable}
+            onChange={(v) => setFormData({ ...formData, stackable: v })}
+          />
+          <RailToggleRow
+            label="Auto-Apply"
+            helper="Applied automatically at checkout."
+            checked={formData.autoApply}
+            onChange={(v) => setFormData({ ...formData, autoApply: v })}
+          />
+        </div>
+
+        {formData.stackable && (
+          <div className="mt-4 max-w-xs">
+            <FormField
+              label="Stacking Priority"
+              optional
+              helper="Higher = applied first (0 = default)."
+            >
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.stackablePriority}
+                onChange={(e) =>
+                  setFormData({ ...formData, stackablePriority: Number(e.target.value) })
+                }
+              />
+            </FormField>
+          </div>
+        )}
+      </FormSection>
+
+      <FormSection
+        number="06"
+        title="Eligibility Rules"
+        description="Membership tiers, product-level requirements, and exclusions."
+      >
+        <div className="space-y-5">
+          <FormField
+            label="Eligible Memberships"
+            optional
+            helper="Restrict to specific membership tiers."
+          >
+            <div className="flex flex-wrap gap-2">
+              {["standard", "elite", "rare", "legend", "vip"].map((tier) => {
+                const active = formData.eligibleMemberships.includes(tier);
+                return (
+                  <button
+                    key={tier}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        eligibleMemberships: active
+                          ? prev.eligibleMemberships.filter((t) => t !== tier)
+                          : [...prev.eligibleMemberships, tier],
+                      }))
+                    }
+                    className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
+                      active
+                        ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
+                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {tier}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+
+          <FormField
+            label="Required Categories"
+            optional
+            helper="Cart must contain items from these categories."
+          >
+            <div className="flex flex-wrap gap-2">
+              {["Ladies", "Gents", "Unisex"].map((cat) => {
+                const active = formData.requiredCategories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        requiredCategories: active
+                          ? prev.requiredCategories.filter((c) => c !== cat)
+                          : [...prev.requiredCategories, cat],
+                      }))
+                    }
+                    className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
+                      active
+                        ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
+                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+
+          <FormField
+            label="Excluded Categories"
+            optional
+            helper="Items from these categories do not count toward the discount."
+          >
+            <div className="flex flex-wrap gap-2">
+              {["Ladies", "Gents", "Unisex"].map((cat) => {
+                const active = formData.excludedCategories.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        excludedCategories: active
+                          ? prev.excludedCategories.filter((c) => c !== cat)
+                          : [...prev.excludedCategories, cat],
+                      }))
+                    }
+                    className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
+                      active
+                        ? "border-rose-500/40 bg-rose-500/[0.10] text-rose-400"
+                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
         </div>
       </FormSection>
     </AdminFormShell>

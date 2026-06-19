@@ -25,8 +25,6 @@ const activityEntrySchema = new mongoose.Schema({
 const customerSchema = new mongoose.Schema({
   email: {
     type: String,
-    unique: true,
-    sparse: true,
     lowercase: true,
     trim: true,
   },
@@ -113,6 +111,13 @@ const customerSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
+customerSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $exists: true, $ne: null } },
+  }
+);
 customerSchema.index({ email: 1, type: 1 });
 customerSchema.index({ guestToken: 1, type: 1 });
 customerSchema.index({ lastSessionAt: -1 });

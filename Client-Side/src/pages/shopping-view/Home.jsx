@@ -11,7 +11,6 @@ import {
   LiveDropCountdownXL,
   ProductSlider,
   SeasonalCampaignSlider,
-  MysteryGiftSpline,
   WhyChooseSaga,
   TrendingFitsMarquee,
   CommunityFeed,
@@ -177,10 +176,7 @@ const Home = () => {
           {/* 8. Brand Manifesto */}
           <BrandManifesto />
 
-          {/* 9. Mystery gift */}
-          <MysteryGiftSpline />
-
-          {/* 10. Why Saga Elite */}
+          {/* 9. Why Saga Elite */}
           <WhyChooseSaga />
 
           {/* 11. Trending fits */}

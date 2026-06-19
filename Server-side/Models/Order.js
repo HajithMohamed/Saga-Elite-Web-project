@@ -185,17 +185,6 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
-    gift: {
-      giftId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Gift",
-        default: null,
-      },
-      revealed: {
-        type: Boolean,
-        default: false,
-      },
-    },
     notes: {
       type: String,
       trim: true,

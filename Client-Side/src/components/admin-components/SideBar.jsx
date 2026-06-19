@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
-  Gift,
   ShoppingBag,
   ShoppingCart,
   Star,
@@ -42,7 +41,7 @@ import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
-  Store: ["Products", "Drops", "Mystery Collectibles"],
+   Store: ["Products", "Drops"],
   Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Content: [
@@ -284,12 +283,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
       permission: "drops",
-    },
-    {
-      label: "Mystery Collectibles",
-      path: "/admin/gifts",
-      icon: <Gift className="h-5 w-5" />,
-      permission: "products",
     },
 
     // Sales

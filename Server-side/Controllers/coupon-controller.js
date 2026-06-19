@@ -29,6 +29,13 @@ const CREATE_FIELDS = [
   "autoApply",
   "isPersonalized",
   "eligibleMemberships",
+  "maxDailyUses",
+  "userGroups",
+  "requiredProducts",
+  "requiredCategories",
+  "excludedProducts",
+  "excludedCategories",
+  "stackablePriority",
 ];
 
 const UPDATE_FIELDS = CREATE_FIELDS.filter((f) => f !== "code"); // code is immutable post-create

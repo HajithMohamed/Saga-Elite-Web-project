@@ -16,7 +16,7 @@ const SOURCE_LABELS = {
   birthday: "Birthday reward",
   referral: "Referral reward",
   drop_launch: "Drop launch reward",
-  mystery_reward: "Mystery reward",
+
   manual: "Member reward",
 };
 

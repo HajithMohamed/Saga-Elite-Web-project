@@ -15,8 +15,8 @@ const SUB_ROLE_VALUES = ["order_manager", "product_manager", "marketing_manager"
 const USER_TAG_VALUES = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
 const USER_MEMBERSHIP_VALUES = ["standard", "elite", "rare", "legend", "vip"];
 const REVIEW_CATEGORIES = ["uncategorized", "fit", "quality", "delivery", "style", "value"];
-const OFFER_TYPES = ["clearance", "tier-discount", "mystery-box", "aging_stock", "new_product", "seasonal", "flash"];
-const COUPON_ISSUED_FOR_VALUES = ["review_reward", "vip", "campaign", "manual", "referral", "birthday", "first_order", "cart_recovery", "drop_launch", "mystery_reward"];
+const OFFER_TYPES = ["clearance", "tier-discount", "aging_stock", "new_product", "seasonal", "flash", "percentage_discount", "fixed_amount", "category_discount", "product_discount", "buy_x_get_y", "cart_value", "seasonal_campaign"];
+const COUPON_ISSUED_FOR_VALUES = ["review_reward", "vip", "vip_tier", "campaign", "manual", "referral", "birthday", "first_order", "cart_recovery", "drop_launch", "welcome", "loyalty", "flash_sale"];
 
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -1479,11 +1479,49 @@ const validateOfferCreate = createValidationMiddleware((req) => {
       "discountPercent",
       { min: 0, max: 100 }
     );
-  } else if (type !== "mystery-box") {
-    fail("discountPercent is required for this offer type");
   }
 
-  if (req.body.products !== undefined) {
+  if (Object.prototype.hasOwnProperty.call(req.body, "discountAmount")) {
+    validated.discountAmount = sanitizeNumber(
+      req.body.discountAmount,
+      "discountAmount",
+      { min: 0 }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "minCartValue")) {
+    validated.minCartValue = sanitizeNumber(
+      req.body.minCartValue,
+      "minCartValue",
+      { min: 0 }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "triggerProduct")) {
+    validated.triggerProduct = sanitizeObjectId(req.body.triggerProduct, "triggerProduct");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "rewardProduct")) {
+    validated.rewardProduct = sanitizeObjectId(req.body.rewardProduct, "rewardProduct");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "rewardQuantity")) {
+    validated.rewardQuantity = sanitizeNumber(
+      req.body.rewardQuantity,
+      "rewardQuantity",
+      { min: 1, integer: true }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "triggerQuantity")) {
+    validated.triggerQuantity = sanitizeNumber(
+      req.body.triggerQuantity,
+      "triggerQuantity",
+      { min: 1, integer: true }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "products")) {
     if (!Array.isArray(req.body.products)) {
       fail("products must be an array");
     }
@@ -1493,7 +1531,7 @@ const validateOfferCreate = createValidationMiddleware((req) => {
     );
   }
 
-  if (req.body.applicableCategories !== undefined) {
+  if (Object.prototype.hasOwnProperty.call(req.body, "applicableCategories")) {
     if (!Array.isArray(req.body.applicableCategories)) {
       fail("applicableCategories must be an array");
     }
@@ -1501,6 +1539,54 @@ const validateOfferCreate = createValidationMiddleware((req) => {
     validated.applicableCategories = req.body.applicableCategories
       .map((category) => sanitizeOptionalPlainText(category, "applicableCategories[]", { maxLength: 120 }))
       .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedProducts")) {
+    if (!Array.isArray(req.body.excludedProducts)) {
+      fail("excludedProducts must be an array");
+    }
+
+    validated.excludedProducts = req.body.excludedProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `excludedProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedCategories")) {
+    if (!Array.isArray(req.body.excludedCategories)) {
+      fail("excludedCategories must be an array");
+    }
+
+    validated.excludedCategories = req.body.excludedCategories
+      .map((category) => sanitizeOptionalPlainText(category, "excludedCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxApplicationsPerUser")) {
+    validated.maxApplicationsPerUser = sanitizeNumber(
+      req.body.maxApplicationsPerUser,
+      "maxApplicationsPerUser",
+      { min: 1, integer: true }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxApplicationsTotal")) {
+    validated.maxApplicationsTotal = sanitizeNumber(
+      req.body.maxApplicationsTotal,
+      "maxApplicationsTotal",
+      { min: 1, integer: true }
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "bannerImage")) {
+    validated.bannerImage = sanitizeOptionalPlainText(req.body.bannerImage, "bannerImage", { maxLength: 2000 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "themeColor")) {
+    validated.themeColor = sanitizeOptionalPlainText(req.body.themeColor, "themeColor", { maxLength: 20 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "campaignLandingPage")) {
+    validated.campaignLandingPage = sanitizeOptionalPlainText(req.body.campaignLandingPage, "campaignLandingPage", { maxLength: 200 });
   }
 
   if (validated.startsAt && validated.endsAt && validated.endsAt < validated.startsAt) {
@@ -1595,8 +1681,66 @@ const validateOfferUpdate = createValidationMiddleware((req) => {
     );
   }
 
-  if (Object.prototype.hasOwnProperty.call(req.body, "type") && updates.type !== "mystery-box" && !Object.prototype.hasOwnProperty.call(req.body, "discountPercent")) {
-    // Allow the controller/model to preserve an existing discountPercent on update.
+  if (Object.prototype.hasOwnProperty.call(req.body, "discountAmount")) {
+    updates.discountAmount = sanitizeNumber(req.body.discountAmount, "discountAmount", { min: 0 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "minCartValue")) {
+    updates.minCartValue = sanitizeNumber(req.body.minCartValue, "minCartValue", { min: 0 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "triggerProduct")) {
+    updates.triggerProduct = sanitizeObjectId(req.body.triggerProduct, "triggerProduct");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "rewardProduct")) {
+    updates.rewardProduct = sanitizeObjectId(req.body.rewardProduct, "rewardProduct");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "rewardQuantity")) {
+    updates.rewardQuantity = sanitizeNumber(req.body.rewardQuantity, "rewardQuantity", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "triggerQuantity")) {
+    updates.triggerQuantity = sanitizeNumber(req.body.triggerQuantity, "triggerQuantity", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedProducts")) {
+    if (!Array.isArray(req.body.excludedProducts)) {
+      fail("excludedProducts must be an array");
+    }
+    updates.excludedProducts = req.body.excludedProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `excludedProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedCategories")) {
+    if (!Array.isArray(req.body.excludedCategories)) {
+      fail("excludedCategories must be an array");
+    }
+    updates.excludedCategories = req.body.excludedCategories
+      .map((category) => sanitizeOptionalPlainText(category, "excludedCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxApplicationsPerUser")) {
+    updates.maxApplicationsPerUser = sanitizeNumber(req.body.maxApplicationsPerUser, "maxApplicationsPerUser", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxApplicationsTotal")) {
+    updates.maxApplicationsTotal = sanitizeNumber(req.body.maxApplicationsTotal, "maxApplicationsTotal", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "bannerImage")) {
+    updates.bannerImage = sanitizeOptionalPlainText(req.body.bannerImage, "bannerImage", { maxLength: 2000 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "themeColor")) {
+    updates.themeColor = sanitizeOptionalPlainText(req.body.themeColor, "themeColor", { maxLength: 20 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "campaignLandingPage")) {
+    updates.campaignLandingPage = sanitizeOptionalPlainText(req.body.campaignLandingPage, "campaignLandingPage", { maxLength: 200 });
   }
 
   if (updates.startsAt && updates.endsAt && updates.endsAt < updates.startsAt) {
@@ -1685,6 +1829,59 @@ const validateCouponCreate = createValidationMiddleware((req) => {
     validated.eligibleMemberships = req.body.eligibleMemberships
       .map((membership) => sanitizeEnum(membership, USER_MEMBERSHIP_VALUES, "eligibleMemberships[]", { required: true }))
       .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxDailyUses")) {
+    validated.maxDailyUses = sanitizeNumber(req.body.maxDailyUses, "maxDailyUses", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "userGroups")) {
+    if (!Array.isArray(req.body.userGroups)) {
+      fail("userGroups must be an array");
+    }
+    validated.userGroups = req.body.userGroups
+      .map((g) => sanitizeOptionalPlainText(g, "userGroups[]", { maxLength: 60 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "requiredProducts")) {
+    if (!Array.isArray(req.body.requiredProducts)) {
+      fail("requiredProducts must be an array");
+    }
+    validated.requiredProducts = req.body.requiredProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `requiredProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "requiredCategories")) {
+    if (!Array.isArray(req.body.requiredCategories)) {
+      fail("requiredCategories must be an array");
+    }
+    validated.requiredCategories = req.body.requiredCategories
+      .map((category) => sanitizeOptionalPlainText(category, "requiredCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedProducts")) {
+    if (!Array.isArray(req.body.excludedProducts)) {
+      fail("excludedProducts must be an array");
+    }
+    validated.excludedProducts = req.body.excludedProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `excludedProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedCategories")) {
+    if (!Array.isArray(req.body.excludedCategories)) {
+      fail("excludedCategories must be an array");
+    }
+    validated.excludedCategories = req.body.excludedCategories
+      .map((category) => sanitizeOptionalPlainText(category, "excludedCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "stackablePriority")) {
+    validated.stackablePriority = sanitizeNumber(req.body.stackablePriority, "stackablePriority", { min: 0, integer: true });
   }
 
   if (validated.startsAt && validated.endsAt && validated.endsAt < validated.startsAt) {
@@ -1801,6 +1998,59 @@ const validateCouponUpdate = createValidationMiddleware((req) => {
     updates.eligibleMemberships = req.body.eligibleMemberships
       .map((membership) => sanitizeEnum(membership, USER_MEMBERSHIP_VALUES, "eligibleMemberships[]", { required: true }))
       .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "maxDailyUses")) {
+    updates.maxDailyUses = sanitizeNumber(req.body.maxDailyUses, "maxDailyUses", { min: 1, integer: true });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "userGroups")) {
+    if (!Array.isArray(req.body.userGroups)) {
+      fail("userGroups must be an array");
+    }
+    updates.userGroups = req.body.userGroups
+      .map((g) => sanitizeOptionalPlainText(g, "userGroups[]", { maxLength: 60 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "requiredProducts")) {
+    if (!Array.isArray(req.body.requiredProducts)) {
+      fail("requiredProducts must be an array");
+    }
+    updates.requiredProducts = req.body.requiredProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `requiredProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "requiredCategories")) {
+    if (!Array.isArray(req.body.requiredCategories)) {
+      fail("requiredCategories must be an array");
+    }
+    updates.requiredCategories = req.body.requiredCategories
+      .map((category) => sanitizeOptionalPlainText(category, "requiredCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedProducts")) {
+    if (!Array.isArray(req.body.excludedProducts)) {
+      fail("excludedProducts must be an array");
+    }
+    updates.excludedProducts = req.body.excludedProducts.map((productId, index) =>
+      sanitizeObjectId(productId, `excludedProducts[${index}]`)
+    );
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "excludedCategories")) {
+    if (!Array.isArray(req.body.excludedCategories)) {
+      fail("excludedCategories must be an array");
+    }
+    updates.excludedCategories = req.body.excludedCategories
+      .map((category) => sanitizeOptionalPlainText(category, "excludedCategories[]", { maxLength: 120 }))
+      .filter(Boolean);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "stackablePriority")) {
+    updates.stackablePriority = sanitizeNumber(req.body.stackablePriority, "stackablePriority", { min: 0, integer: true });
   }
 
   if (updates.discountType === "percent" && Object.prototype.hasOwnProperty.call(updates, "discountValue") && updates.discountValue > 100) {

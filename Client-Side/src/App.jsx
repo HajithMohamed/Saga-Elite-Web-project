@@ -42,7 +42,6 @@ const AdminSeoSettings = lazy(() => import("./pages/admin-view/SeoSettings"));
 const AdminCommunity = lazy(() => import("./pages/admin-view/CommunityPage"));
 const AdminShipping = lazy(() => import("./pages/admin-view/ShippingPage"));
 const AdminOrders = lazy(() => import("./pages/admin-view/Orders"));
-const GiftManager = lazy(() => import("./pages/admin-view/GiftManager"));
 const AdminProduct = lazy(() => import("./pages/admin-view/Product"));
 const AdminDrops = lazy(() => import("./pages/admin-view/Drops"));
 const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
@@ -251,7 +250,6 @@ function App() {
             <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
             <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
-            <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
             <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
             <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />

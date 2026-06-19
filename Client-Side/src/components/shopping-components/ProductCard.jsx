@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Heart, ShoppingBag, X } from "lucide-react";
+import { Eye, Heart, ShoppingBag, X, Tag } from "lucide-react";
+import { useProductOffers } from "@/hooks/use-product-offers";
 import {
   addToCartAction,
   addToWishlistAction,
@@ -161,6 +162,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const isNew = isNewProduct(product);
   const isRare = Boolean(product?.isRare);
 
+  const { bestOffer } = useProductOffers(product);
+
   // Stacked badges — up to 2 visible, top-left.
   const badges = [];
   if (isSoldOut) badges.push({ key: "sold", label: "SOLD OUT", tone: "dead" });
@@ -179,6 +182,12 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   if (isMostWished) badges.push({ key: "wish", label: "MOST WISHED", tone: "goldOutline" });
   if (showDealBadge && discountPct > 0)
     badges.push({ key: "deal", label: `${discountPct}% OFF`, tone: "bone" });
+  if (bestOffer && !isSoldOut && !badges.some((b) => b.key === "deal"))
+    badges.push({
+      key: "offer",
+      label: bestOffer.badgeText || bestOffer.name || "OFFER",
+      tone: "gold",
+    });
   const visibleBadges = badges.slice(0, 2);
 
   // Drop ending soon (< 24h, > 0).

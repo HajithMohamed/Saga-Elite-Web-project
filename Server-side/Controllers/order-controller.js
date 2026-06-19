@@ -3,7 +3,6 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
-const Gift = require("../Models/Gift");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
@@ -120,56 +119,7 @@ const addressMatchesOrder = (a, b) =>
     String(a?.postalCode || "").trim().toLowerCase() ===
     String(b?.postalCode || "").trim().toLowerCase();
 
-const pickWeightedGift = (gifts = []) => {
-    const weighted = gifts
-        .map((gift) => ({
-            gift,
-            weight: Math.max(0, Number(gift.probability ?? 100)),
-        }))
-        .filter((entry) => entry.weight > 0);
 
-    if (!weighted.length) return null;
-
-    const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
-    let cursor = Math.random() * totalWeight;
-
-    for (const entry of weighted) {
-        cursor -= entry.weight;
-        if (cursor <= 0) return entry.gift;
-    }
-
-    return weighted[weighted.length - 1].gift;
-};
-
-const giftMatchesOrder = (gift, { subtotal, hasDrop }) => {
-    if (!gift?.isActive) return false;
-    if (gift.condition === "min_order_value") {
-        return subtotal >= Number(gift.minOrderValue || 0);
-    }
-    if (gift.condition === "per_drop") {
-        return hasDrop && Boolean(gift.drop);
-    }
-    return true;
-};
-
-const selectMysteryGift = async ({ dropId, subtotal, session }) => {
-    const scopes = [];
-    if (dropId) scopes.push({ drop: dropId });
-    scopes.push({ drop: null });
-
-    for (const scope of scopes) {
-        const query = Gift.find({ isActive: true, ...scope });
-        if (session) query.session(session);
-        const gifts = await query;
-        const eligible = gifts.filter((gift) =>
-            giftMatchesOrder(gift, { subtotal, hasDrop: Boolean(dropId) })
-        );
-        const selected = pickWeightedGift(eligible);
-        if (selected) return selected;
-    }
-
-    return null;
-};
 
 const createOrder = catchAsync(async (req, res, next) => {
     const {
@@ -339,18 +289,6 @@ const createOrder = catchAsync(async (req, res, next) => {
             }
         }
 
-        const dropId = req.body.dropId || null;
-        let selectedGift = null;
-
-        // Surprise gifts are a registered-user perk only.
-        if (user) {
-            selectedGift = await selectMysteryGift({
-                dropId,
-                subtotal: merchandiseSubtotal,
-                session,
-            });
-        }
-
         // ✅ Single, complete orderPayload declaration (duplicate removed)
         const orderPayload = {
             user: user ? user._id : undefined,
@@ -382,13 +320,6 @@ const createOrder = catchAsync(async (req, res, next) => {
                     ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
                     : undefined,
         };
-
-        if (selectedGift) {
-            orderPayload.gift = {
-                giftId: selectedGift._id,
-                revealed: false,
-            };
-        }
 
         const [orderDocument] = await Order.create([orderPayload], { session });
 
@@ -923,13 +854,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             filter: { role: { $in: ADMIN_ROLES } },
         });
     } else if (status === "delivered") {
-        order.gift = order.gift || { giftId: null, revealed: false };
-        const hasGift = Boolean(order.gift.giftId);
-        if (hasGift && !order.gift.revealed) {
-            order.gift.revealed = true;
-            await order.save({ validateModifiedOnly: true });
-        }
-
         const productIds = (order.items || [])
             .map((it) => it?.product)
             .filter(Boolean);
@@ -989,8 +913,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
         }
 
         const deliveredOrder = await Order.findById(order._id)
-            .populate("user", "email")
-            .populate("gift.giftId");
+            .populate("user", "email");
 
         const line0 = order.items?.[0];
         const productSlug =
@@ -1012,8 +935,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             ? customer.email.split("@")[0]
             : "there";
         const itemCount = Array.isArray(order.items) ? order.items.length : 0;
-        const giftDescription =
-            deliveredOrder?.gift?.giftId?.description || "your surprise gift";
 
         if (customer?._id) {
             await createNotification({
@@ -1025,23 +946,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
                 entityType: "Order",
                 meta: { orderId: order._id, reviewUrl, status: "delivered" },
             });
-
-            if (hasGift) {
-                await createNotification({
-                    userId: customer._id,
-                    type: "order",
-                    title: "Your surprise gift is revealed",
-                    message: `Your Saga Elite surprise gift has been revealed! Open your package and discover ${giftDescription}.`,
-                    entityRef: order._id,
-                    entityType: "Order",
-                    meta: {
-                        orderId: order._id,
-                        status: "delivered",
-                        giftId: deliveredOrder?.gift?.giftId?._id || null,
-                        revealed: true,
-                    },
-                });
-            }
         }
 
         if (customer?.email) {
@@ -1065,24 +969,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             }).catch((err) =>
                 logger.error("[review-notify] Email failed", { error: err.message })
             );
-
-            if (hasGift) {
-                sendEmail({
-                    email: customer.email,
-                    subject: "Your Saga Elite surprise gift has been revealed",
-                    html: buildEmailTemplate(
-                        "Your surprise gift is revealed",
-                        `<p>Hi ${greeting},</p>
-             <p>Your Saga Elite surprise gift has been revealed! Open your package and discover <strong>${escapeHtml(
-                            giftDescription
-                        )}</strong>.</p>
-             <p>We hope the gift adds something special to your order.</p>
-             <p>Thank you for shopping with Saga Elite.</p>`
-                    ),
-                }).catch((err) =>
-                    logger.error("[gift-notify] Email failed", { error: err.message })
-                );
-            }
         }
 
         const phone = cleanPhoneNumber(

@@ -131,25 +131,28 @@ const ensureCustomerRecord = async ({ userId, guestToken, email } = {}) => {
   }
 
   if (guestToken) {
-    let customer = await Customer.findOne({ guestToken });
-    if (customer) return customer;
-
     const guest = await Guest.findOne({ guestToken });
 
-    customer = await Customer.create({
-      guestToken,
-      type: "guest",
-      guestId: guest?._id || null,
-      email: guest?.email || email || null,
-      name: guest?.name || null,
-      firstSeenAt: guest?.createdAt || new Date(),
-      lastSessionAt: new Date(),
-      preferences: {
-        promoOptIn: guest?.preferences?.promoOptIn ?? true,
-        newsletterOptIn: false,
+    const customer = await Customer.findOneAndUpdate(
+      { guestToken },
+      {
+        $setOnInsert: {
+          guestToken,
+          type: "guest",
+          guestId: guest?._id || null,
+          email: guest?.email || email || null,
+          name: guest?.name || null,
+          firstSeenAt: guest?.createdAt || new Date(),
+          lastSessionAt: new Date(),
+          preferences: {
+            promoOptIn: guest?.preferences?.promoOptIn ?? true,
+            newsletterOptIn: false,
+          },
+          activityLog: (guest?.activityLog || []).slice(-200),
+        },
       },
-      activityLog: (guest?.activityLog || []).slice(-200),
-    });
+      { upsert: true, new: true }
+    );
 
     return customer;
   }
@@ -160,7 +163,27 @@ const ensureCustomerRecord = async ({ userId, guestToken, email } = {}) => {
 const getOrCreateCustomer = async (req) => {
   const userId = req.user?.id || req.user?._id;
   const guestToken = req.guestToken;
-  return ensureCustomerRecord({ userId, guestToken });
+
+  try {
+    return await ensureCustomerRecord({ userId, guestToken });
+  } catch (err) {
+    // E11000 = duplicate key race (two concurrent requests create the same
+    // customer). Fall back to a read — the winning insert is already there.
+    if (err.code === 11000) {
+      logger.warn("[migration] E11000 in getOrCreateCustomer, retrying with read", {
+        error: err.message,
+      });
+      if (userId) {
+        const existing = await Customer.findOne({ userId });
+        if (existing) return existing;
+      }
+      if (guestToken) {
+        const existing = await Customer.findOne({ guestToken });
+        if (existing) return existing;
+      }
+    }
+    throw err;
+  }
 };
 
 module.exports = {

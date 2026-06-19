@@ -32,13 +32,19 @@ import {
 } from "@/components/admin-components/_form";
 
 const OFFER_TYPES = [
+  { value: "percentage_discount", label: "Percentage Discount" },
+  { value: "fixed_amount", label: "Fixed Amount Off" },
+  { value: "category_discount", label: "Category Discount" },
+  { value: "product_discount", label: "Product Discount" },
+  { value: "buy_x_get_y", label: "Buy X Get Y" },
+  { value: "cart_value", label: "Cart Value Discount" },
+  { value: "seasonal_campaign", label: "Seasonal Campaign" },
   { value: "flash", label: "Flash Sale" },
   { value: "seasonal", label: "Seasonal" },
   { value: "clearance", label: "Clearance" },
   { value: "aging_stock", label: "Aging Stock" },
   { value: "new_product", label: "New Product Launch" },
   { value: "tier-discount", label: "Tier Discount" },
-  { value: "mystery-box", label: "Mystery Box" },
 ];
 
 const MIN_HEALTHY_MARGIN = 15;
@@ -47,10 +53,23 @@ const initialForm = {
   name: "",
   badgeText: "",
   description: "",
-  type: "flash",
+  type: "percentage_discount",
   discountPercent: 10,
+  discountAmount: "",
+  minCartValue: "",
+  triggerProduct: "",
+  rewardProduct: "",
+  rewardQuantity: 1,
+  triggerQuantity: 1,
   productIds: [],
   applicableCategories: [],
+  excludedProducts: [],
+  excludedCategories: [],
+  maxApplicationsPerUser: "",
+  maxApplicationsTotal: "",
+  bannerImage: "",
+  themeColor: "",
+  campaignLandingPage: "",
   startsAt: "",
   endsAt: "",
   showOnHomepage: true,
@@ -191,12 +210,25 @@ const AdminOffers = () => {
       name: offer.name || "",
       badgeText: offer.badgeText || "",
       description: offer.description || "",
-      type: offer.type || "flash",
+      type: offer.type || "percentage_discount",
       discountPercent: offer.discountPercent ?? 10,
+      discountAmount: offer.discountAmount ?? "",
+      minCartValue: offer.minCartValue ?? "",
+      triggerProduct: offer.triggerProduct ?? "",
+      rewardProduct: offer.rewardProduct ?? "",
+      rewardQuantity: offer.rewardQuantity ?? 1,
+      triggerQuantity: offer.triggerQuantity ?? 1,
       productIds: (offer.products || []).map((p) =>
         typeof p === "string" ? p : p._id
       ),
       applicableCategories: offer.applicableCategories || [],
+      excludedProducts: offer.excludedProducts || [],
+      excludedCategories: offer.excludedCategories || [],
+      maxApplicationsPerUser: offer.maxApplicationsPerUser ?? "",
+      maxApplicationsTotal: offer.maxApplicationsTotal ?? "",
+      bannerImage: offer.bannerImage ?? "",
+      themeColor: offer.themeColor ?? "",
+      campaignLandingPage: offer.campaignLandingPage ?? "",
       startsAt: offer.startsAt
         ? new Date(offer.startsAt).toISOString().slice(0, 16)
         : "",
@@ -233,9 +265,22 @@ const AdminOffers = () => {
       badgeText: formData.badgeText,
       description: formData.description,
       type: formData.type,
-      discountPercent: Number(formData.discountPercent) || 0,
+      discountPercent: formData.type === "fixed_amount" ? undefined : (Number(formData.discountPercent) || 0),
+      discountAmount: formData.type === "fixed_amount" ? (Number(formData.discountAmount) || 0) : undefined,
+      minCartValue: formData.minCartValue ? Number(formData.minCartValue) : undefined,
+      triggerProduct: formData.type === "buy_x_get_y" && formData.triggerProduct ? formData.triggerProduct : undefined,
+      rewardProduct: formData.type === "buy_x_get_y" && formData.rewardProduct ? formData.rewardProduct : undefined,
+      rewardQuantity: formData.type === "buy_x_get_y" ? (Number(formData.rewardQuantity) || 1) : undefined,
+      triggerQuantity: formData.type === "buy_x_get_y" ? (Number(formData.triggerQuantity) || 1) : undefined,
       products: formData.productIds,
       applicableCategories: formData.applicableCategories,
+      excludedProducts: formData.excludedProducts,
+      excludedCategories: formData.excludedCategories,
+      maxApplicationsPerUser: formData.maxApplicationsPerUser ? Number(formData.maxApplicationsPerUser) : undefined,
+      maxApplicationsTotal: formData.maxApplicationsTotal ? Number(formData.maxApplicationsTotal) : undefined,
+      bannerImage: formData.bannerImage || undefined,
+      themeColor: formData.themeColor || undefined,
+      campaignLandingPage: formData.campaignLandingPage || undefined,
       startsAt: formData.startsAt
         ? new Date(formData.startsAt).toISOString()
         : null,
@@ -328,7 +373,7 @@ const AdminOffers = () => {
 
   const completedCount = [
     formData.name?.trim().length >= 3,
-    Number(formData.discountPercent) > 0,
+    formData.type === "fixed_amount" ? (Number(formData.discountAmount) > 0) : (Number(formData.discountPercent) > 0),
     formData.productIds.length > 0 || formData.applicableCategories.length > 0,
     formData.description?.trim().length > 0,
     Boolean(formData.startsAt) || Boolean(formData.endsAt),
@@ -372,7 +417,7 @@ const AdminOffers = () => {
             <Calendar className="h-3 w-3 text-[#D4AF37]" />
             {formatDate(offer.startsAt)} → {formatDate(offer.endsAt)}
           </span>
-          <span className="text-[#D4AF37]">{offer.discountPercent || 0}% OFF</span>
+          <span className="text-[#D4AF37]">{offer.type === "fixed_amount" ? `LKR ${offer.discountAmount || 0} OFF` : `${offer.discountPercent || 0}% OFF`}</span>
           <span>{(offer.products || []).length} products</span>
           {(offer.applicableCategories || []).length > 0 ? (
             <span>{offer.applicableCategories.join(" / ")}</span>
@@ -412,9 +457,13 @@ const AdminOffers = () => {
           eyebrow={editingId ? "Offer · Editing" : "Offer · New Promotion"}
           title={formData.name?.trim() || (editingId ? "Untitled offer" : "New Offer")}
           subtitle={
-            formData.discountPercent
-              ? `${formData.discountPercent}% off · ${OFFER_TYPES.find((o) => o.value === formData.type)?.label || ""}`
-              : "Set a discount to continue"
+            formData.type === "fixed_amount"
+              ? formData.discountAmount
+                ? `LKR ${formData.discountAmount} off · ${OFFER_TYPES.find((o) => o.value === formData.type)?.label || ""}`
+                : "Set a discount amount to continue"
+              : formData.discountPercent
+                ? `${formData.discountPercent}% off · ${OFFER_TYPES.find((o) => o.value === formData.type)?.label || ""}`
+                : "Set a discount to continue"
           }
           onCancel={resetForm}
           onPublish={handleSubmitOffer}
@@ -435,9 +484,15 @@ const AdminOffers = () => {
               </h4>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <StatusPill status={computedStatus} size="sm" />
-                <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37]">
-                  {formData.discountPercent}% off
-                </span>
+                {formData.type === "fixed_amount" ? (
+                  <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37]">
+                    LKR {formData.discountAmount || 0} off
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37]">
+                    {formData.discountPercent}% off
+                  </span>
+                )}
                 {formData.badgeText ? (
                   <span className="rounded-full border border-rose-400/30 bg-rose-400/[0.10] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-rose-300">
                     {formData.badgeText}
@@ -635,8 +690,160 @@ const AdminOffers = () => {
         </div>
       </FormSection>
 
+      {formData.type === "fixed_amount" ? (
+        <FormSection
+          number="03"
+          title="Fixed Amount Discount"
+          description="Set a flat amount off instead of a percentage."
+        >
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField label="Discount Amount (LKR)" required>
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.discountAmount}
+                onChange={(e) =>
+                  setFormData({ ...formData, discountAmount: e.target.value })
+                }
+                placeholder="e.g. 500"
+              />
+            </FormField>
+            <FormField label="Min Cart Value (LKR)" optional helper="Leave empty for no minimum.">
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.minCartValue}
+                onChange={(e) =>
+                  setFormData({ ...formData, minCartValue: e.target.value })
+                }
+                placeholder="e.g. 2500"
+              />
+            </FormField>
+          </div>
+        </FormSection>
+      ) : null}
+
+      {formData.type === "cart_value" ? (
+        <FormSection
+          number="03"
+          title="Cart Value Discount"
+          description="Discount kicks in when the cart reaches a minimum value."
+        >
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField label="Min Cart Value (LKR)" required>
+              <LuxuryInput
+                type="number"
+                min="0"
+                value={formData.minCartValue}
+                onChange={(e) =>
+                  setFormData({ ...formData, minCartValue: e.target.value })
+                }
+                placeholder="e.g. 5000"
+              />
+            </FormField>
+            <FormField label="Discount %" required>
+              <LuxuryInput
+                type="number"
+                min="0"
+                max="100"
+                value={formData.discountPercent}
+                onChange={(e) =>
+                  setFormData({ ...formData, discountPercent: Number(e.target.value) })
+                }
+              />
+            </FormField>
+          </div>
+        </FormSection>
+      ) : null}
+
+      {formData.type === "buy_x_get_y" ? (
+        <FormSection
+          number="03"
+          title="Buy X Get Y"
+          description="Free / discounted reward product when customer buys a trigger product."
+        >
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <FormField label="Trigger Product" required helper="Product the customer must purchase.">
+              <LuxurySelect
+                value={formData.triggerProduct}
+                onChange={(e) => setFormData({ ...formData, triggerProduct: e.target.value })}
+              >
+                <option value="">Select trigger product</option>
+                {productList.map((p) => (
+                  <option key={p._id} value={p._id}>{p.name}</option>
+                ))}
+              </LuxurySelect>
+            </FormField>
+            <FormField label="Trigger Quantity" optional helper="How many to buy (default: 1).">
+              <LuxuryInput
+                type="number"
+                min="1"
+                value={formData.triggerQuantity}
+                onChange={(e) => setFormData({ ...formData, triggerQuantity: Number(e.target.value) })}
+              />
+            </FormField>
+            <FormField label="Reward Product" required helper="Product the customer receives.">
+              <LuxurySelect
+                value={formData.rewardProduct}
+                onChange={(e) => setFormData({ ...formData, rewardProduct: e.target.value })}
+              >
+                <option value="">Select reward product</option>
+                {productList.map((p) => (
+                  <option key={p._id} value={p._id}>{p.name}</option>
+                ))}
+              </LuxurySelect>
+            </FormField>
+            <FormField label="Reward Quantity" optional helper="How many they get (default: 1).">
+              <LuxuryInput
+                type="number"
+                min="1"
+                value={formData.rewardQuantity}
+                onChange={(e) => setFormData({ ...formData, rewardQuantity: Number(e.target.value) })}
+              />
+            </FormField>
+          </div>
+        </FormSection>
+      ) : null}
+
+      {formData.type === "seasonal_campaign" ? (
+        <FormSection
+          number="03"
+          title="Campaign Assets"
+          description="Visual branding for the campaign landing page."
+        >
+          <div className="grid grid-cols-1 gap-5">
+            <FormField label="Banner Image URL" optional helper="Full URL to the campaign hero banner.">
+              <LuxuryInput
+                type="text"
+                value={formData.bannerImage}
+                onChange={(e) => setFormData({ ...formData, bannerImage: e.target.value })}
+                placeholder="https://..."
+              />
+            </FormField>
+            <div className="grid grid-cols-2 gap-5">
+              <FormField label="Theme Color" optional helper="Hex colour code (e.g. #D4AF37).">
+                <LuxuryInput
+                  type="text"
+                  value={formData.themeColor}
+                  onChange={(e) => setFormData({ ...formData, themeColor: e.target.value })}
+                  placeholder="#D4AF37"
+                />
+              </FormField>
+              <FormField label="Campaign Page" optional helper="Custom route slug for the landing page.">
+                <LuxuryInput
+                  type="text"
+                  value={formData.campaignLandingPage}
+                  onChange={(e) => setFormData({ ...formData, campaignLandingPage: e.target.value })}
+                  placeholder="/campaign/avurudu"
+                />
+              </FormField>
+            </div>
+          </div>
+        </FormSection>
+      ) : null}
+
       <FormSection
-        number="03"
+        number={["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "04" : "03"}
         title="Schedule"
         description="When this offer is active. Leave both empty to run indefinitely."
       >
@@ -663,7 +870,7 @@ const AdminOffers = () => {
       </FormSection>
 
       <FormSection
-        number="04"
+        number={["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "05" : "04"}
         title="Targeting"
         description="Pick the products or categories this offer applies to. Either is enough."
         action={

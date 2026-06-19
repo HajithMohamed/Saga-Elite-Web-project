@@ -104,6 +104,7 @@ const couponSchema = new mongoose.Schema(
       enum: [
         "review_reward",
         "vip",
+        "vip_tier",
         "campaign",
         "manual",
         "referral",
@@ -111,9 +112,45 @@ const couponSchema = new mongoose.Schema(
         "first_order",
         "cart_recovery",
         "drop_launch",
-        "mystery_reward",
+        "welcome",
+        "loyalty",
+        "flash_sale",
       ],
       default: "manual",
+    },
+    maxDailyUses: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
+    userGroups: {
+      type: [String],
+      default: [],
+    },
+    requiredProducts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+    requiredCategories: {
+      type: [String],
+      default: [],
+    },
+    excludedProducts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+    excludedCategories: {
+      type: [String],
+      default: [],
+    },
+    stackablePriority: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

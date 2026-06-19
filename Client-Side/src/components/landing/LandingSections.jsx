@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +9,6 @@ import {
   Lock,
   MessageCircle,
   Truck,
-  Box,
   Gift,
   Sparkles,
   Mail,
@@ -42,8 +41,6 @@ const seededRandom = (seed) => {
   return value - Math.floor(value);
 };
 
-// Spline runtime is heavy (~200KB). Lazy-load only when a scene URL is provided.
-const Spline = React.lazy(() => import("@splinetool/react-spline"));
 
 const sectionContainer = "max-w-[1440px] mx-auto px-6";
 
@@ -388,64 +385,7 @@ export const IdentityCategoryGrid = ({ categories = [] }) => {
   );
 };
 
-// 🎁 MYSTERY GIFT SIGNATURE SECTION
-export const MysteryGiftSection = () => {
-  const [isOpen, setIsOpen] = useState(false);
 
-  return (
-    <section className="bg-[#0a0a0a] border-y border-[#1f1f1f] py-12 relative overflow-hidden">
-      {/* Background radial gradient */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#d4af37]/5 blur-[100px] rounded-full pointer-events-none" />
-      
-      <div className={`${sectionContainer} flex flex-col md:flex-row items-center gap-12 relative z-10`}>
-        <div className="flex-1 md:pr-12 text-center md:text-left">
-          <h2 className="font-display text-[40px] md:text-[56px] leading-[1.1] text-[#e5e2e1] uppercase">
-            The Saga <br/> Mystery Box
-          </h2>
-          <p className="font-body text-[#d0c5af] text-base lg:text-lg mt-6 max-w-md mx-auto md:mx-0">
-             Every order over LKR 10,000 unlocks a surprise reward. It could be an unreleased drop, a rare accessory, or a discount code for the future.
-          </p>
-          <div className="mt-8 flex flex-col gap-4 max-w-sm mx-auto md:mx-0">
-             <div className="flex items-center gap-4 border border-[#2a2a2a] bg-[#131313] p-4">
-                <Gift className="text-[#f2ca50]" />
-                <span className="font-mono text-[11px] text-[#e5e2e1] tracking-widest uppercase">Guaranteed on eligible orders</span>
-             </div>
-          </div>
-        </div>
-
-        <div className="flex-1 relative flex justify-center items-center h-[400px] w-full">
-           <motion.div 
-              whileHover={!isOpen ? { scale: 1.05, rotate: [0, -2, 2, -2, 0] } : {}}
-              transition={{ duration: 0.5 }}
-              onClick={() => setIsOpen(true)}
-              className="cursor-pointer relative z-20"
-           >
-              <div className="relative">
-                <Box className={`w-40 h-40 ${isOpen ? 'text-[#393939]' : 'text-[#f2ca50]'} transition-colors duration-1000`} strokeWidth={1} />
-                
-                <AnimatePresence>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ scale: 0, y: 20, opacity: 0 }}
-                      animate={{ scale: 1, y: -40, opacity: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f2ca50] text-[#0e0e0e] font-display text-2xl px-6 py-3 whitespace-nowrap shadow-[0_0_30px_#f2ca50]"
-                    >
-                      <Sparkles className="inline mr-2 w-5 h-5 mb-1" />
-                      UNLOCKED
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-           </motion.div>
-
-           {/* Particle ring */}
-           <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full border border-[#f2ca50]/20 pointer-events-none transition-all duration-1000 ${isOpen ? 'scale-150 opacity-0' : 'animate-[spin_10s_linear_infinite]'}`} />
-        </div>
-      </div>
-    </section>
-  );
-};
 
 
 // 🔥 FEATURED DROPS / TRENDING (Horizontal Scroll)
@@ -492,7 +432,7 @@ export const TrustBar = () => {
   const items = [
     { icon: Truck, text: "ISLANDWIDE DELIVERY" },
     { icon: Lock, text: "SECURE CHECKOUT" },
-    { icon: Gift, text: "MYSTERY REWARDS" },
+    { icon: Gift, text: "EXCLUSIVE PERKS" },
   ];
   return (
     <section className="bg-[#0b0b0b] border-y border-[#1f1f1f] py-4">
@@ -774,20 +714,7 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
   );
 };
 
-// 🎁 MYSTERY GIFT STRIP
-export const MysteryGiftStrip = () => {
-  return (
-    <section className="border-y border-[#2a2a2a] bg-[#0a0a0a] py-6 relative overflow-hidden group cursor-pointer">
-      <div className="absolute inset-0 bg-gradient-to-r from-[#f2ca50]/0 via-[#f2ca50]/10 to-[#f2ca50]/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-      <div className="max-w-[1440px] mx-auto px-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center md:text-left">
-        <Gift className="w-6 h-6 text-[#f2ca50] animate-pulse" />
-        <p className="font-mono text-[11px] tracking-[0.2em] text-[#FAF7F2] uppercase">
-          Spend LKR 15,000+ to unlock a <span className="text-[#f2ca50] font-bold">Mystery Reward</span> at checkout.
-        </p>
-      </div>
-    </section>
-  );
-};
+
 
 // 🎯 RECOMMENDATIONS SECTION
 export const RecommendationsSection = ({ title = "Recommended For You", products = [] }) => {
@@ -1132,104 +1059,7 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
   );
 };
 
-/* ──────────────────────────────────────────────────────────────────────────
-   MYSTERY GIFT — Spline 3D box (when sceneUrl is provided), with a pure-CSS
-   fallback that always works. The fallback is a glowing rotating box icon.
-   ────────────────────────────────────────────────────────────────────────── */
-const MysteryFallbackBox = () => {
-  const [opened, setOpened] = useState(false);
-  return (
-    <div className="relative h-[360px] w-full flex items-center justify-center">
-      <motion.div
-        className="absolute w-[280px] h-[280px] rounded-full border border-[#f2ca50]/20"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-      />
-      <motion.div
-        className="absolute w-[200px] h-[200px] rounded-full border border-[#a855f7]/25"
-        animate={{ rotate: -360 }}
-        transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-      />
-      <div className="absolute w-[400px] h-[400px] bg-[#f2ca50]/8 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute w-[300px] h-[300px] bg-[#a855f7]/10 blur-[80px] rounded-full pointer-events-none translate-x-12 -translate-y-8" />
 
-      <motion.button
-        type="button"
-        onClick={() => setOpened((v) => !v)}
-        whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10 group"
-      >
-        <Box
-          className={`w-40 h-40 transition-colors duration-700 ${
-            opened ? "text-[#a855f7]" : "text-[#f2ca50]"
-          }`}
-          strokeWidth={1}
-          style={{
-            filter: opened
-              ? "drop-shadow(0 0 24px rgba(168, 85, 247, 0.6))"
-              : "drop-shadow(0 0 18px rgba(242, 202, 80, 0.4))",
-          }}
-        />
-        <AnimatePresence>
-          {opened && (
-            <motion.div
-              initial={{ scale: 0, y: 20, opacity: 0 }}
-              animate={{ scale: 1, y: -50, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 220, damping: 18 }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f2ca50] text-[#0a0a0a] font-display text-2xl px-6 py-3 whitespace-nowrap shadow-[0_0_30px_#f2ca50] flex items-center gap-2"
-            >
-              <Sparkles className="w-5 h-5" />
-              UNLOCKED
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-    </div>
-  );
-};
-
-export const MysteryGiftSpline = ({ sceneUrl = null }) => (
-  <section className="relative bg-[#0a0a0a] border-y border-[#1a1a1a] py-16 md:py-24 overflow-hidden">
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] bg-[#a855f7]/5 blur-[120px] rounded-full pointer-events-none" />
-
-    <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-      <div className="text-center md:text-left">
-        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#a855f7] mb-3">
-          Signature Feature
-        </p>
-        <h2 className="font-display text-[40px] md:text-[60px] leading-none text-[#FAF7F2] uppercase mb-6">
-          Every order <br />
-          <span className="text-[#f2ca50]">unlocks a reward.</span>
-        </h2>
-        <p className="font-sans text-base text-[#d0c5af] leading-relaxed max-w-md mx-auto md:mx-0 mb-8">
-          Could be an unreleased piece. Could be a discount code for the next drop.
-          Could be access to a closed community channel. You won't know until your
-          parcel lands.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto md:mx-0">
-          <div className="flex items-center gap-3 border border-[#4d4635] bg-[#131313] px-4 py-3">
-            <Gift className="w-4 h-4 text-[#f2ca50] shrink-0" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#e5e2e1]">
-              Guaranteed on every order
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative h-[400px] md:h-[480px] w-full">
-        {sceneUrl ? (
-          <Suspense fallback={<MysteryFallbackBox />}>
-            <Spline scene={sceneUrl} />
-          </Suspense>
-        ) : (
-          <MysteryFallbackBox />
-        )}
-      </div>
-    </div>
-  </section>
-);
 
 /* ──────────────────────────────────────────────────────────────────────────
    WHY CHOOSE SAGA — 5 feature cards with cursor-following tilt + glow.
@@ -1247,7 +1077,7 @@ const TILT_FEATURES = [
   },
   {
     icon: Gift,
-    title: "Mystery Rewards",
+    title: "Exclusive Perks",
     desc: "Every order ships with an unannounced extra.",
   },
   {
@@ -1656,7 +1486,7 @@ export const VipMembership = () => {
         Become <span className="text-[#f2ca50]">Elite</span>
       </h2>
       <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
-        Get early drop access, members-only mystery rewards, and a private channel
+        Get early drop access, members-only rewards, and a private channel
         where the next chapter previews 48 hours before anyone else.
       </p>
 
