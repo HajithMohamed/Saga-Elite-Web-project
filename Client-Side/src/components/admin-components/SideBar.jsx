@@ -578,7 +578,11 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar" data-lenis-prevent="true">
+        <nav
+          className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
+          data-lenis-prevent="true"
+          data-testid="admin-sidebar-nav"
+        >
           {renderGroups.map((group, groupIdx) => {
             const isExpanded = group.section ? expandedSections[group.section] : true;
             return (

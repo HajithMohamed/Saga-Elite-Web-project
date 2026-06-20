@@ -86,7 +86,7 @@ export const getAllProducts = createAsyncThunk(
       const query = new URLSearchParams();
       query.set("page", page);
       query.set("limit", limit);
-      if (isActive !== undefined && isActive !== "all") query.set("isActive", isActive);
+      if (isActive !== undefined) query.set("isActive", isActive);
       if (search) query.set("search", search);
       if (sort) query.set("sort", sort);
       if (brand) query.set("brand", brand);

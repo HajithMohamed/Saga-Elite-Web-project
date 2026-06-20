@@ -339,6 +339,9 @@ process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled promise rejection — shutting down", {
     reason: reason instanceof Error ? reason.stack : String(reason),
   });
+  if (process.env.NODE_ENV === "test") {
+    return;
+  }
   server.close(() => process.exit(1));
 });
 

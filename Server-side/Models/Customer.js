@@ -39,23 +39,14 @@ const customerSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    sparse: true,
-    unique: true,
-    index: true,
   },
   guestId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Guest",
-    sparse: true,
-    unique: true,
-    index: true,
   },
 
   guestToken: {
     type: String,
-    unique: true,
-    sparse: true,
-    index: true,
   },
 
   name: { type: String, trim: true },
@@ -118,6 +109,27 @@ customerSchema.index(
     partialFilterExpression: { email: { $type: "string" } },
   }
 );
+customerSchema.index(
+  { guestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { guestId: { $type: "objectId" } },
+  }
+);
+customerSchema.index(
+  { userId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { userId: { $type: "objectId" } },
+  }
+);
+customerSchema.index(
+  { guestToken: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { guestToken: { $type: "string" } },
+  }
+);
 customerSchema.index({ email: 1, type: 1 });
 customerSchema.index({ guestToken: 1, type: 1 });
 customerSchema.index({ lastSessionAt: -1 });
@@ -126,6 +138,10 @@ customerSchema.index({ customerLifetimeValue: -1 });
 customerSchema.index({ createdAt: -1 });
 
 customerSchema.pre("save", function () {
+  if (this.email == null) this.email = undefined;
+  if (this.guestId == null) this.guestId = undefined;
+  if (this.userId == null) this.userId = undefined;
+  if (this.guestToken == null) this.guestToken = undefined;
   if (Array.isArray(this.activityLog) && this.activityLog.length > 200) {
     this.activityLog = this.activityLog.slice(-200);
   }

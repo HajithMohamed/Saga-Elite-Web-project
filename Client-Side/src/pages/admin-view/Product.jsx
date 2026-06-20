@@ -703,7 +703,7 @@ const Product = () => {
       getAllProducts({
         page: currentPage,
         limit: LIMIT,
-        isActive: statusFilter === "all" || statusFilter === "low_stock" ? undefined : statusFilter,
+        isActive: statusFilter === "low_stock" ? undefined : statusFilter,
         search: searchQuery,
         maxStock: statusFilter === "low_stock" ? 5 : undefined,
         category: categoryFilter || undefined,
@@ -1357,6 +1357,7 @@ const Product = () => {
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden mb-4"
+                      data-testid="admin-bulk-action-bar"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -1744,6 +1745,7 @@ const Product = () => {
                 <button
                   type="button"
                   onClick={confirmBulkPending}
+                  data-testid="admin-bulk-confirm"
                   className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold uppercase tracking-widest text-rose-200 hover:bg-rose-500/30"
                 >
                   {bulkPendingAction.confirm.confirmLabel || "Confirm"}

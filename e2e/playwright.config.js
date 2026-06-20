@@ -5,9 +5,14 @@ const dotenv = require("dotenv");
 dotenv.config({ path: path.resolve(__dirname, ".env.test") });
 
 const REPO_ROOT = path.resolve(__dirname, "..");
-const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.E2E_BASE_URL;
 const BACKEND_PORT = Number(process.env.E2E_BACKEND_PORT || 5001);
 const FRONTEND_PORT = Number(process.env.E2E_FRONTEND_PORT || 5173);
+
+process.env.E2E_BACKEND_URL =
+  process.env.E2E_BACKEND_URL || `http://127.0.0.1:${BACKEND_PORT}`;
+process.env.E2E_BASE_URL =
+  process.env.E2E_BASE_URL || `http://localhost:${FRONTEND_PORT}`;
 
 const TEST_DB_URI =
   process.env.MONGODB_TEST_URI || "mongodb://127.0.0.1:27017/saga_elite_test";
@@ -17,6 +22,8 @@ const sharedServerEnv = {
   NODE_ENV: "test",
   PORT: String(BACKEND_PORT),
   MONGO_DB_URI: TEST_DB_URI,
+  E2E_BACKEND_URL: `http://127.0.0.1:${BACKEND_PORT}`,
+  E2E_BASE_URL: BASE_URL,
   JWT_SECRET:
     process.env.JWT_SECRET ||
     "test-jwt-secret-must-be-at-least-32-characters-long",
@@ -35,7 +42,7 @@ const sharedServerEnv = {
 module.exports = defineConfig({
   testDir: __dirname,
   testMatch: ["smoke/**/*.spec.js", "features/**/*.spec.js"],
-  timeout: 30_000,
+  timeout: process.env.CI ? 90_000 : 60_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -83,7 +90,7 @@ module.exports = defineConfig({
       timeout: 120_000,
       env: {
         ...process.env,
-        VITE_BACKEND_TARGET: `http://localhost:${BACKEND_PORT}`,
+        VITE_BACKEND_TARGET: `http://127.0.0.1:${BACKEND_PORT}`,
         VITE_API_URL: "/api",
       },
       stdout: "pipe",

@@ -134,35 +134,51 @@ const ensureCustomerRecord = async ({ userId, guestToken, email } = {}) => {
     const guest = await Guest.findOne({ guestToken });
 
     const customerEmail = guest?.email || email;
-    const customer = await Customer.findOneAndUpdate(
-      { guestToken },
-      {
-        $setOnInsert: {
-          guestToken,
-          type: "guest",
-          guestId: guest?._id || null,
-          ...(customerEmail ? { email: customerEmail } : {}),
-          name: guest?.name || null,
-          firstSeenAt: guest?.createdAt || new Date(),
-          lastSessionAt: new Date(),
-          preferences: {
-            promoOptIn: guest?.preferences?.promoOptIn ?? true,
-            newsletterOptIn: false,
-          },
-          activityLog: (guest?.activityLog || []).slice(-200),
-        },
+    const insertDoc = {
+      guestToken,
+      type: "guest",
+      name: guest?.name || null,
+      firstSeenAt: guest?.createdAt || new Date(),
+      lastSessionAt: new Date(),
+      preferences: {
+        promoOptIn: guest?.preferences?.promoOptIn ?? true,
+        newsletterOptIn: false,
       },
-      { upsert: true, new: true }
-    );
+      activityLog: (guest?.activityLog || []).slice(-200),
+    };
+    if (guest?._id) {
+      insertDoc.guestId = guest._id;
+    }
+    if (customerEmail) {
+      insertDoc.email = customerEmail;
+    }
 
-    return customer;
+    try {
+      const customer = await Customer.findOneAndUpdate(
+        { guestToken },
+        { $setOnInsert: insertDoc },
+        { upsert: true, new: true }
+      );
+
+      return customer;
+    } catch (err) {
+      if (err.code === 11000) {
+        const existing = await Customer.findOne({ guestToken });
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
   return null;
 };
 
 const getOrCreateCustomer = async (req) => {
-  const userId = req.user?.id || req.user?._id;
+  const userId =
+    req.userInfo?._id ||
+    req.userInfo?.id ||
+    req.user?._id ||
+    req.user?.id;
   const guestToken = req.guestToken;
 
   try {

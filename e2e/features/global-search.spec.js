@@ -6,7 +6,6 @@ test.describe("A1 — Global admin search", () => {
     loginAs,
   }) => {
     await loginAs("super_admin");
-    await page.goto("/admin/dashboard");
 
     const input = page.getByTestId("admin-global-search-input");
     await expect(input).toBeVisible();
@@ -26,7 +25,6 @@ test.describe("A1 — Global admin search", () => {
 
   test("query under 2 chars shows no dropdown", async ({ page, loginAs }) => {
     await loginAs("super_admin");
-    await page.goto("/admin/dashboard");
 
     const input = page.getByTestId("admin-global-search-input");
     await input.fill("a");
@@ -40,7 +38,6 @@ test.describe("A1 — Global admin search", () => {
     loginAs,
   }) => {
     await loginAs("super_admin");
-    await page.goto("/admin/dashboard");
 
     await page.getByTestId("admin-global-search-input").fill("e2e");
     const firstProduct = page
@@ -59,9 +56,7 @@ test.describe("A1 — Global admin search", () => {
 
     // Drive backend directly to verify per-bucket permission filtering.
     // page.request inherits the cookie set by loginAs on the browser context.
-    const response = await page.request.get(
-      `${process.env.E2E_BACKEND_URL || "http://localhost:5001"}/api/v1/admin/search?q=sample`
-    );
+    const response = await page.request.get("/api/v1/admin/search?q=sample");
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
     // marketing_manager perms: notifications, viewAnalytics, sendCampaigns
