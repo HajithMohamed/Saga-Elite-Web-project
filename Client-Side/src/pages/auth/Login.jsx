@@ -1,18 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { loginUserAction, googleSignInAction } from "@/store/auth-slice";
+import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import {
+  loginUserAction,
+  googleSignInAction,
+  facebookSignInAction,
+} from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
-import { Btn, Eyebrow, FieldError, Hairline } from "@/components/ui/editorial";
+import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
+import usePageMeta from "@/hooks/use-page-meta";
+import LuxuryInput from "@/components/auth-components/LuxuryInput";
+import {
+  AUTH_PRIMARY_BTN,
+  Btn,
+  Eyebrow,
+  Hairline,
+} from "@/components/ui/editorial";
+import { motion } from "framer-motion";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+  console.warn(
+    "[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled."
+  );
+}
+
 const describeAuthError = (err) => {
-  // Thunk rejectWithValue may pass through a string (the unwrapped server msg)
-  if (typeof err === "string") return { title: "Login failed", description: err };
+  if (typeof err === "string")
+    return { title: "Login failed", description: err };
 
   const status = err?.response?.status;
   const serverMsg = err?.response?.data?.message;
@@ -28,13 +48,15 @@ const describeAuthError = (err) => {
   if (status === 401) {
     return {
       title: "Wrong details",
-      description: serverMsg || "Email or password didn't match. Try again.",
+      description:
+        serverMsg || "Email or password didn't match. Try again.",
     };
   }
   if (status === 403) {
     return {
       title: "Account not verified",
-      description: serverMsg || "Verify your email before signing in.",
+      description:
+        serverMsg || "Verify your email before signing in.",
     };
   }
   if (status === 429) {
@@ -46,7 +68,8 @@ const describeAuthError = (err) => {
   if (status >= 500) {
     return {
       title: `Server error · ${status}`,
-      description: serverMsg || "The atelier had an issue. Try again shortly.",
+      description:
+        serverMsg || "The atelier had an issue. Try again shortly.",
     };
   }
   if (status) {
@@ -61,9 +84,6 @@ const describeAuthError = (err) => {
   };
 };
 
-// Login does NOT enforce password complexity client-side — older accounts may
-// have passwords that don't match current complexity rules. Just require non-empty
-// fields and a well-formed email; let the backend verify the credentials.
 const validateLogin = (data, touched = {}) => {
   const errs = {};
   if (touched.email && !data.email) {
@@ -79,7 +99,9 @@ const validateLogin = (data, touched = {}) => {
 
 const resolveDestination = (user) => {
   const role = String(user?.role || "").toLowerCase();
-  if (role === "admin" || role === "super_admin" || role === "superadmin") {
+  if (
+    ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
+  ) {
     return "/admin/dashboard";
   }
   return "/shopping/home";
@@ -87,28 +109,39 @@ const resolveDestination = (user) => {
 
 const resolveUserFromPayload = (payload) => {
   if (!payload) return null;
-  // Accept multiple backend shapes:
-  //   { success: true, data: { user } }
-  //   { success: true, data: user }
-  //   { user: {...} }
-  //   { token, user }
-  return payload.data?.user || (payload.data && typeof payload.data === "object" ? payload.data : null) || payload.user || null;
+  return (
+    payload.data?.user ||
+    (payload.data && typeof payload.data === "object"
+      ? payload.data
+      : null) ||
+    payload.user ||
+    null
+  );
 };
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // If already authenticated when landing here, bounce away
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, user } = useSelector(
+    (state) => state.auth
+  );
+
   useEffect(() => {
-    if (isAuthenticated) navigate(resolveDestination(user), { replace: true });
+    if (isAuthenticated)
+      navigate(resolveDestination(user), { replace: true });
   }, [isAuthenticated, user, navigate]);
+
+  usePageMeta({ title: "Sign In" });
 
   useEffect(() => {
     setErrors(validateLogin(formData, touched));
@@ -118,27 +151,29 @@ const Login = () => {
     e.preventDefault();
     const allTouched = { email: true, password: true };
     setTouched(allTouched);
+
     const fresh = validateLogin(formData, allTouched);
     setErrors(fresh);
     if (Object.keys(fresh).length > 0) return;
+
     setIsLoading(true);
     try {
-      const response = await dispatch(loginUserAction(formData)).unwrap();
-      // Diagnostic: log full response so the shape is visible during debugging
-      // eslint-disable-next-line no-console
+      const response = await dispatch(
+        loginUserAction(formData)
+      ).unwrap();
+
       console.info("[login] response", response);
 
       const u = resolveUserFromPayload(response);
+
       toast({
         title: "Welcome back",
         description: response?.message || "Signed in.",
         variant: "success",
       });
 
-      // Explicit redirect — don't rely on CheckAuth race
       navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[login] error", err);
       const { title, description } = describeAuthError(err);
       toast({ title, description, variant: "destructive" });
@@ -150,22 +185,30 @@ const Login = () => {
   const handleGoogleSuccess = async ({ access_token }) => {
     setIsLoading(true);
     try {
-      const response = await dispatch(googleSignInAction({ accessToken: access_token })).unwrap();
-      // eslint-disable-next-line no-console
+      const response = await dispatch(
+        googleSignInAction({ accessToken: access_token })
+      ).unwrap();
+
       console.info("[google sign-in] response", response);
+
       const u = resolveUserFromPayload(response);
+
       toast({
         title: "Welcome back",
         description: response?.message || "Signed in.",
         variant: "success",
       });
+
       navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[google sign-in] error", err);
       const { title, description } = describeAuthError(err);
+
       toast({
-        title: title === "Login failed" ? "Google sign-in failed" : title,
+        title:
+          title === "Login failed"
+            ? "Google sign-in failed"
+            : title,
         description,
         variant: "destructive",
       });
@@ -174,146 +217,188 @@ const Login = () => {
     }
   };
 
-  const handleGoogleError = () =>
+  const handleGoogleError = () => {
     toast({
       title: "Google sign-in failed",
-      description: "Could not open Google sign-in.",
+      description:
+        "Please try again or use email and password.",
       variant: "destructive",
     });
+  };
+
+  const handleFacebookSuccess = async ({ access_token }) => {
+    setIsLoading(true);
+    try {
+      const response = await dispatch(
+        facebookSignInAction({ accessToken: access_token })
+      ).unwrap();
+
+      const u = resolveUserFromPayload(response);
+
+      toast({
+        title: "Welcome back",
+        description: response?.message || "Signed in.",
+        variant: "success",
+      });
+
+      navigate(resolveDestination(u), { replace: true });
+    } catch (err) {
+      console.error("[facebook sign-in] error", err);
+      const { title, description } = describeAuthError(err);
+      toast({
+        title: title === "Login failed" ? "Facebook sign-in failed" : title,
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookError = () => {
+    toast({
+      title: "Facebook sign-in failed",
+      description: "Please try again or use email and password.",
+      variant: "destructive",
+    });
+  };
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">Welcome back</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Sign in.
-      </h1>
-      <p className="mt-5 se-body text-sm text-[#99907c]">
-        New to the atelier?{" "}
-        <Link
-          to="/auth/register"
-          className="text-[#f2ca50] underline-offset-4 hover:underline"
-        >
-          Become a member
-        </Link>
-        .
-      </p>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <Eyebrow tone="gold" size="md">Welcome Back</Eyebrow>
+        <h1 className="mt-3 se-serif text-[#e5e2e1] leading-[1.05] text-3xl sm:text-4xl md:text-5xl">
+          Continue your<br />elite experience.
+        </h1>
+        <p className="mt-4 se-body text-sm text-[#d0c5af] leading-relaxed max-w-sm">
+          Sign in to unlock exclusive collections, order updates, and early drop access.
+        </p>
+      </motion.div>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
-        <div>
-          <Eyebrow tone="muted" size="xs">Email</Eyebrow>
-          <input
+      {/* Form */}
+      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <LuxuryInput
+            id="email"
             type="email"
+            label="Email Address"
             autoComplete="email"
             value={formData.email}
-            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-            placeholder="your.name@email.com"
-            aria-invalid={Boolean(touched.email && errors.email)}
-            className={`mt-2 w-full bg-transparent border-b py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-              touched.email && errors.email
-                ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                : "border-[#4d4635] focus:border-[#f2ca50]"
-            }`}
+            error={touched.email ? errors.email : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, email: e.target.value }));
+              setTouched((p) => ({ ...p, email: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, email: true }))}
           />
-          <FieldError>{touched.email ? errors.email : null}</FieldError>
-        </div>
+        </motion.div>
 
-        <div>
-          <div className="flex items-baseline justify-between">
-            <Eyebrow tone="muted" size="xs">Password</Eyebrow>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <LuxuryInput
+            id="password"
+            type="password"
+            label="Your Private Key"
+            autoComplete="current-password"
+            value={formData.password}
+            error={touched.password ? errors.password : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, password: e.target.value }));
+              setTouched((p) => ({ ...p, password: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, password: true }))}
+          />
+          <div className="flex items-center justify-end mt-1">
             <Link
               to="/auth/forgot-password"
-              className="se-label text-[9px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088]"
+              className="se-label text-[9px] uppercase tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
             >
-              Forgotten?
+              Forgot password?
             </Link>
           </div>
-          <div className="relative mt-2">
-            <input
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
-              onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-              placeholder="••••••••••"
-              aria-invalid={Boolean(touched.password && errors.password)}
-              className={`w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors ${
-                touched.password && errors.password
-                  ? "border-[#ffb4ab] focus:border-[#ffb4ab]"
-                  : "border-[#4d4635] focus:border-[#f2ca50]"
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.password ? errors.password : null}</FieldError>
-        </div>
+        </motion.div>
 
-        <Btn
-          variant="default"
-          size="lg"
-          className="w-full"
-          iconRight={ArrowRight}
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing in" : "Sign in"}
-        </Btn>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Btn
+            variant="default"
+            className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
+            iconRight={isLoading ? undefined : ArrowRight}
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? "Entering Your Elite Space..." : "Enter the elite"}
+          </Btn>
+        </motion.div>
       </form>
 
-      <div className="mt-10 flex items-center gap-5">
-        <Hairline />
-        <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">or</span>
-        <Hairline />
-      </div>
+      {/* Trust Badge */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25 }}
+        className="mt-5 flex items-center justify-center gap-2 text-xs text-[#99907c]"
+      >
+        <ShieldCheck size={14} className="text-[#f2ca50]" />
+        <span>Secure & Encrypted Authentication</span>
+      </motion.div>
 
-      <div className="mt-6">
-        {GOOGLE_ENABLED ? (
-          <GoogleAuthButton
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            disabled={isLoading}
-            label="Continue with Google"
-          />
-        ) : (
-          <button
-            type="button"
-            disabled
-            title="Set VITE_GOOGLE_CLIENT_ID in your .env.local to enable Google sign-in"
-            className="w-full h-12 bg-white/95 border border-[#dadce0] rounded-sm flex items-center justify-center gap-3 text-[#5f6368] cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.06)] opacity-70"
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#9aa0a6" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-            </svg>
-            <span className="text-sm font-medium" style={{ fontFamily: 'Geist, "Roboto", sans-serif' }}>
-              Google sign-in unavailable
+      {/* Social Auth Divider */}
+      {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <div className="my-6 flex items-center gap-4">
+            <Hairline tone="soft" />
+            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500] whitespace-nowrap">
+              Or continue with
             </span>
-          </button>
-        )}
-      </div>
+            <Hairline tone="soft" />
+          </div>
+          <div className="space-y-3">
+            {GOOGLE_ENABLED && (
+              <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  label="Continue with Google"
+                />
+              </div>
+            )}
+            {FACEBOOK_ENABLED && (
+              <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+                <FacebookAuthButton
+                  onSuccess={handleFacebookSuccess}
+                  onError={handleFacebookError}
+                  label="Continue with Facebook"
+                />
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
-      <p className="mt-12 se-body text-xs text-[#574500] leading-relaxed">
-        By signing in you accept our{" "}
-        <Link to="/legal/terms-and-conditions" className="text-[#99907c] hover:text-[#f2ca50]">
-          terms
-        </Link>{" "}
-        and{" "}
-        <Link to="/legal/privacy-policy" className="text-[#99907c] hover:text-[#f2ca50]">
-          privacy practice
+      {/* Switch to Register */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.35 }}
+        className="mt-8 se-body text-sm text-[#99907c] text-center"
+      >
+        Not an elite member yet?{" "}
+        <Link
+          to="/auth/register"
+          className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+        >
+          Join the brand experience
         </Link>
-        .
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 };
 

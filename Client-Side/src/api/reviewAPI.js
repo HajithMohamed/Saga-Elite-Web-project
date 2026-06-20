@@ -1,9 +1,28 @@
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
-export const fetchProductReviewsApi = ({ productId, rating, sort, page, limit }) =>
+export const fetchProductReviewsApi = ({
+  productId,
+  rating,
+  sort,
+  page,
+  limit,
+  withPhotos,
+  verifiedOnly,
+  category,
+  q,
+}) =>
   axios.get(`${API_BASE}/reviews/product/${productId}`, {
-    params: { rating, sort, page, limit },
+    params: {
+      rating: rating ?? undefined,
+      sort,
+      page,
+      limit,
+      withPhotos: withPhotos ? "true" : undefined,
+      verifiedOnly: verifiedOnly ? "true" : undefined,
+      category: category || undefined,
+      q: q?.trim() ? q.trim() : undefined,
+    },
   });
 
 export const fetchUserReviewsApi = () =>
@@ -29,20 +48,57 @@ export const voteReviewHelpfulApi = (reviewId) =>
 export const deleteReviewApi = (reviewId) =>
   axios.delete(`${API_BASE}/reviews/${reviewId}`, { withCredentials: true });
 
-export const fetchAdminReviewsApi = ({ status, page, limit, search }) =>
+export const fetchAdminReviewsApi = ({ status, page, limit, search, category }) =>
   axios.get(`${API_BASE}/admin/reviews`, {
     withCredentials: true,
-    params: { status, page, limit, search },
+    params: { status, page, limit, search, category: category || undefined },
   });
 
-export const moderateReviewApi = (reviewId, payload) =>
-  axios.put(`${API_BASE}/admin/reviews/${reviewId}`, payload, {
-    withCredentials: true,
-    headers: { "Content-Type": "application/json" },
-  });
+export const categorizeReviewApi = (reviewId, category) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/${reviewId}/category`,
+    { category },
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 
 export const flagReviewApi = (reviewId, reason) =>
   axios.post(`${API_BASE}/reviews/${reviewId}/flag`, { reason }, {
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
+
+export const replyToReviewApi = (reviewId, brandReply) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/${reviewId}/reply`,
+    { brandReply },
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+export const featureReviewApi = (reviewId, isFeatured) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/${reviewId}/feature`,
+    typeof isFeatured === "boolean" ? { isFeatured } : {},
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+export const fetchReviewAnalyticsApi = () =>
+  axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });
+
+export const bulkModerateReviewsApi = ({ ids, action, category }) =>
+  axios.patch(
+    `${API_BASE}/admin/reviews/bulk`,
+    { ids, action, category },
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    }
+  );

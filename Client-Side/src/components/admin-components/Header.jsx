@@ -1,10 +1,11 @@
 import React from 'react'
-import { Search, LogOut, Menu, User } from 'lucide-react'
+import { LogOut, Menu, User } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, Link } from 'react-router-dom'
 import { logoutUserAction } from '@/store/auth-slice'
 import { toast } from '@/hooks/use-toast'
 import NotificationsDropdown from '@/components/common-components/NotificationsDropdown'
+import GlobalSearchDropdown from '@/components/admin-components/GlobalSearchDropdown'
 
 const Header = ({ onMenuToggle }) => {
   const dispatch = useDispatch()
@@ -23,7 +24,7 @@ const Header = ({ onMenuToggle }) => {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-800 bg-black/80 px-8 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-[#4d4635] bg-black/80 px-4 md:px-6 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-6">
         <button
           type="button"
@@ -33,21 +34,16 @@ const Header = ({ onMenuToggle }) => {
         >
           <Menu className="h-6 w-6 cursor-pointer" />
         </button>
-        <div className="relative group max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-hover:text-[#D4AF37] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search analysis, orders, products..."
-            className="h-10 w-full rounded-full border border-gray-800 bg-gray-900 pl-10 pr-4 text-xs font-medium text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/20 outline-none transition-all"
-          />
+        <div className="w-full max-w-sm">
+          <GlobalSearchDropdown />
         </div>
       </div>
       
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
         <NotificationsDropdown />
 
-        <div className="flex items-center gap-4 border-l border-gray-800 pl-6 ml-2">
-          <Link to="/admin/account" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+        <div className="flex items-center gap-3 border-l border-[#4d4635] pl-4 ml-1">
+          <Link to="/admin/account" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="flex flex-col items-end">
               <span className="text-sm font-bold tracking-wide text-white font-sans uppercase">Admin Profile</span>
               <span className="text-[10px] uppercase font-medium tracking-widest text-[#D4AF37]">System Controller</span>

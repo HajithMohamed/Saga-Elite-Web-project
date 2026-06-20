@@ -92,7 +92,7 @@ export function Reveal({ children, delay = 0, y = 24, className = "", as = "div"
       className={className}
       initial={{ opacity: 0, y: reduced ? 0 : y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: reduced ? 0.2 : 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
@@ -281,7 +281,7 @@ export function Btn({
     icon: "h-10 w-10 p-0 text-[11px]",
   };
   const variants = {
-    default: "bg-[#f2ca50] text-[#1b1c1c] hover:bg-[#ffe088] border border-[#e9c349]",
+    default: "bg-[#f2ca50] text-[#3c2f00] hover:bg-[#ffe088] border border-[#e9c349]",
     outline: "bg-transparent text-[#e5e2e1] border border-[#4d4635] hover:bg-[#1c1b1b] hover:border-[#99907c]",
     ghost: "bg-transparent text-[#d0c5af] hover:bg-[#1c1b1b] hover:text-[#e5e2e1] border border-transparent",
     secondary: "bg-[#2a2a2a] text-[#e5e2e1] border border-[#353534] hover:bg-[#353534]",
@@ -297,11 +297,11 @@ export function Btn({
     className
   );
   return (
-    <button type={type} className={cls} {...rest}>
+    <motion.button type={type} className={cls} whileTap={{ scale: 0.95 }} {...rest}>
       {Icon && <Icon size={14} strokeWidth={1.5} />}
       <span>{children}</span>
       {IconR && <IconR size={14} strokeWidth={1.5} />}
-    </button>
+    </motion.button>
   );
 }
 
@@ -320,7 +320,8 @@ export function Img({
   const [err, setErr] = useState(false);
   return (
     <figure className={cn("relative", className)}>
-      <div
+      <motion.div
+        whileHover="hover"
         className={cn(
           "relative w-full overflow-hidden",
           frame && "border border-[#4d4635]"
@@ -328,13 +329,15 @@ export function Img({
         style={{ aspectRatio: ratio }}
       >
         {!err && src ? (
-          <img
+          <motion.img
             src={src}
             alt={alt}
             onError={() => setErr(true)}
+            variants={{ hover: { scale: 1.05 } }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
             className={cn(
               "w-full h-full object-cover",
-              hoverFade && "transition-[filter] duration-[600ms] hover:grayscale"
+              hoverFade && "transition-[filter] duration-[600ms] group-hover:grayscale"
             )}
             loading="lazy"
           />
@@ -343,7 +346,7 @@ export function Img({
             <span className="se-label text-[10px] tracking-[0.3em]">image pending</span>
           </div>
         )}
-      </div>
+      </motion.div>
       {caption && (
         <figcaption className="mt-2 se-label text-[10px] tracking-[0.3em] text-[#d0c5af]">
           {caption}
@@ -992,8 +995,8 @@ export function FilterPills({
             className={cn(
               "relative h-10 px-5 se-label text-[10px] tracking-[0.18em] transition-colors se-focus",
               active
-                ? "bg-[#f2ca50] text-[#1b1c1c]"
-                : "bg-[#0a0a0a] text-[#d0c5af] hover:text-[#e5e2e1] hover:bg-[#131313]"
+                ? "bg-[#f2ca50] text-[#3c2f00]"
+                : "bg-[#1c1b1b] text-[#d0c5af] hover:text-[#e5e2e1] hover:bg-[#2a2a2a]"
             )}
           >
             {active && (
@@ -1065,3 +1068,54 @@ export function Disclosure({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Input — Dark luxury specific input
+// ─────────────────────────────────────────────────────────────────────────────
+export function Input({ className = "", error, ...props }) {
+  return (
+    <input
+      className={cn(
+        "bg-transparent border-b border-[#4d4635] text-[#e5e2e1] placeholder:text-[#99907c] focus:border-[#f2ca50] focus:ring-0 w-full outline-none py-2 se-body transition-colors",
+        error && "border-b border-[#ffb4ab] text-[#ffb4ab]",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SeFade — Staggered child animation
+// ─────────────────────────────────────────────────────────────────────────────
+export function SeFade({ children, y = 20, className = "" }) {
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }
+      }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SeDivider — Specific layout divider
+// ─────────────────────────────────────────────────────────────────────────────
+export function SeDivider({ className = "" }) {
+  return <div className={cn("h-px w-full bg-[#4d4635]", className)} />;
+}
+
+// Aliases for redesign brief compatibility
+export const SePullQuote = PullQuote;
+export const SeMarquee = Marquee;
+
+// Standardized auth styles (used by auth pages)
+export const AUTH_INPUT =
+  "w-full bg-transparent border-b border-[#4d4635] focus:border-[#f2ca50] py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors duration-200";
+
+export const AUTH_PRIMARY_BTN =
+  "w-full h-12 bg-[#f2ca50] hover:bg-[#ffe088] text-[#1b1c1c] se-label text-[11px] tracking-[0.28em] transition-colors disabled:opacity-50 disabled:pointer-events-none";

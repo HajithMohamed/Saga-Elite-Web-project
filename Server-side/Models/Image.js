@@ -39,6 +39,7 @@ const imageSchema = new mongoose.Schema(
         "review",
         "logo",
         "system",
+        "social-ugc",
         "other",
       ],
       default: "product",
@@ -46,6 +47,12 @@ const imageSchema = new mongoose.Schema(
     },
 
     label: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    colorTag: {
       type: String,
       trim: true,
       default: "",
@@ -93,11 +100,18 @@ const imageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   { timestamps: true },
 );
 
 // Compound index for fast image retrieval
 imageSchema.index({ refId: 1, refModel: 1, order: 1 });
+// Color-tagged image retrieval (variant image gallery switching)
+imageSchema.index({ refId: 1, refModel: 1, colorTag: 1, order: 1 });
 
 module.exports = mongoose.model("Image", imageSchema);

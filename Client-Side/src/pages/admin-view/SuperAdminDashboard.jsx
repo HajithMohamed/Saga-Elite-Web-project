@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, Download, DollarSign, TrendingUp, TrendingDown, Package, Loader2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAdmins, fetchActivityLogs } from "../../store/admin/super-admin-slice";
+import { fetchAdmins, fetchActivityLogs, deleteAdmin } from "../../store/admin/super-admin-slice";
 import AdminTable from "./AdminTable";
 import ActivityLogTable from "./ActivityLogTable";
 import CreateAdminModal from "./CreateAdminModal";
+import EditAdminModal from "./EditAdminModal";
+import { toast } from "@/hooks/use-toast";
 import { AdminPage, AdminPanel } from "@/components/admin-components/AdminUI";
+import { API_V1_URL } from "@/lib/api";
+import { fetchDashboardStats } from "@/store/order-slice";
 import {
   pageVariants,
   containerVariants,
@@ -14,38 +19,130 @@ import {
 } from "@/components/admin-components/_shared/animations";
 import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNumber";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
 
 const TAB = { ADMINS: "admins", LOGS: "logs" };
+const isSuperAdminRole = (role) => role === "super_admin" || role === "superadmin";
+const formatLkr = (value = 0) =>
+  `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
+
+const formatPercent = (value = 0) => {
+  const amount = Number.isFinite(value) ? value : 0;
+  const sign = amount > 0 ? "+" : "";
+  return `${sign}${amount.toFixed(1)}%`;
+};
 
 const SuperAdminDashboard = () => {
   const dispatch = useDispatch();
   const { admins, adminsLoading, adminsError, activityLogs } =
     useSelector((s) => s.superAdmin);
+  const { dashboardStats } = useSelector((s) => s.order);
   const currentUser = useSelector((s) => s.auth?.user);
 
   const [tab, setTab] = useState(TAB.ADMINS);
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [search, setSearch] = useState("");
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget?._id) return;
+    try {
+      await dispatch(deleteAdmin(deleteTarget._id)).unwrap();
+      toast({
+        title: "Admin removed",
+        description: `${deleteTarget.email} no longer has access.`,
+        variant: "success",
+      });
+      setDeleteTarget(null);
+      // Refresh logs so the audit trail catches up immediately.
+      dispatch(fetchActivityLogs({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: typeof err === "string" ? err : err?.message || "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchAdmins());
     dispatch(fetchActivityLogs({ page: 1, limit: 100 }));
   }, [dispatch]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setStatsLoading(true);
+    dispatch(fetchDashboardStats())
+      .unwrap()
+      .catch(() => {
+        // Keep the page usable if analytics fail to load.
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+
   const activeAdmins = admins.filter(
-    (a) => a.isActive && a.role !== "super_admin"
+    (a) => a.isActive && !isSuperAdminRole(a.role)
   );
   const inactiveAdmins = admins.filter(
-    (a) => !a.isActive && a.role !== "super_admin"
+    (a) => !a.isActive && !isSuperAdminRole(a.role)
   );
 
   const filteredAdmins = admins.filter(
     (a) =>
       a.name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.email?.toLowerCase().includes(search.toLowerCase())
+      a.email?.toLowerCase().includes(search.toLowerCase()) ||
+      a.role?.toLowerCase().includes(search.toLowerCase()) ||
+      a.subRole?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalAdmins = admins.filter((a) => a.role !== "super_admin").length;
+  const totalAdmins = admins.filter((a) => !isSuperAdminRole(a.role)).length;
+  const overview = dashboardStats?.overview || {};
+  const salesTrend = Array.isArray(dashboardStats?.salesTrend) ? dashboardStats.salesTrend : [];
+  const latestMonth = salesTrend[salesTrend.length - 1] || null;
+  const previousMonth = salesTrend[salesTrend.length - 2] || null;
+  const latestRevenue = Number(latestMonth?.revenue || 0);
+  const previousRevenue = Number(previousMonth?.revenue || 0);
+  const revenueChange = previousRevenue > 0
+    ? ((latestRevenue - previousRevenue) / previousRevenue) * 100
+    : latestRevenue > 0
+      ? 100
+      : 0;
+  const mostSoldDrop = dashboardStats?.topDrops?.[0] || dashboardStats?.highlights?.topDrop || null;
+
+  const handleExportCustomers = async () => {
+    setExporting(true);
+    try {
+      const response = await axios.get(`${API_V1_URL}/admin/users/export`, {
+        withCredentials: true,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "customers-export.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Customer export failed", error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <motion.div
@@ -59,8 +156,16 @@ const SuperAdminDashboard = () => {
         title="Super admin console"
         description="Manage admin access and monitor privileged operations."
         actions={
-          <div className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#D4AF37]">
-            {currentUser?.name || currentUser?.email}
+          <div className="flex flex-wrap items-center gap-3">
+            <PrimaryButton type="button" onClick={() => void handleExportCustomers()}>
+              <span className="inline-flex items-center gap-2">
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Export Customers (CSV)
+              </span>
+            </PrimaryButton>
+            <div className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#D4AF37]">
+              {currentUser?.name || currentUser?.email}
+            </div>
           </div>
         }
       >
@@ -156,7 +261,12 @@ const SuperAdminDashboard = () => {
                 <div className="py-10 text-center text-sm text-red-400">{adminsError}</div>
               ) : null}
               {!adminsLoading && !adminsError ? (
-                <AdminTable admins={filteredAdmins} currentUserId={currentUser?._id} />
+                <AdminTable
+                  admins={filteredAdmins}
+                  currentUserId={currentUser?._id}
+                  onEdit={(admin) => setEditTarget(admin)}
+                  onDelete={(admin) => setDeleteTarget(admin)}
+                />
               ) : null}
             </>
           ) : (
@@ -164,7 +274,106 @@ const SuperAdminDashboard = () => {
           )}
         </AdminPanel>
 
+          <motion.div
+            className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-4"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {[
+              {
+                label: "Lifetime Revenue",
+                value: formatLkr(overview.totalRevenue),
+                hint: statsLoading ? "Loading analytics…" : "Total revenue across completed and active orders",
+                icon: DollarSign,
+              },
+              {
+                label: "Month Change",
+                value: `${formatPercent(revenueChange)}`,
+                hint: latestMonth && previousMonth ? `${latestMonth.label} vs ${previousMonth.label}` : "Requires two months of order data",
+                icon: revenueChange >= 0 ? TrendingUp : TrendingDown,
+              },
+              {
+                label: "Most Sold Drop",
+                value: mostSoldDrop?.name || "No data",
+                hint: mostSoldDrop?.soldUnits ? `${mostSoldDrop.soldUnits} units sold` : "Derived from order analytics",
+                icon: Package,
+              },
+              {
+                label: "Average Order Value",
+                value: formatLkr(overview.averageOrderValue),
+                hint: statsLoading ? "Loading analytics…" : "Revenue divided by non-cancelled orders",
+                icon: DollarSign,
+              },
+            ].map((card) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={card.label}
+                  variants={itemVariants}
+                  whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
+                  transition={{ duration: 0.2 }}
+                  className="admin-stat-card rounded-[28px] border border-white/10 bg-white/[0.03] p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="admin-stat-label">{card.label}</p>
+                      <p className="mt-2 text-xl font-semibold text-white break-words">{card.value}</p>
+                      {card.hint ? <p className="admin-stat-hint mt-1 text-xs text-gray-500">{card.hint}</p> : null}
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+                      <Icon className="h-5 w-5 text-[#D4AF37]" />
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
         <CreateAdminModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} />
+        <EditAdminModal
+          admin={editTarget}
+          isOpen={Boolean(editTarget)}
+          onClose={() => setEditTarget(null)}
+        />
+
+        {deleteTarget ? (
+          <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-[1.5rem] border border-rose-400/30 bg-[#0b0b0b] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-rose-300">
+                Delete admin
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                Remove {deleteTarget.name || deleteTarget.email}?
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-gray-400">
+                This permanently deletes <span className="font-mono text-rose-200">{deleteTarget.email}</span> and revokes all access. The action is logged but cannot be undone from the admin panel.
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="rounded-full border border-white/10 px-5 py-2 text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:border-white/20"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="rounded-full bg-rose-400 px-5 py-2 text-sm font-black uppercase tracking-[0.22em] text-black transition hover:bg-rose-300"
+                >
+                  Yes, delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </AdminPage>
     </motion.div>
   );

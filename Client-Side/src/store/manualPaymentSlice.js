@@ -1,12 +1,19 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import {
   fetchManualPaymentById as fetchManualPaymentByIdApi,
+  fetchManualPaymentMethodSummary as fetchManualPaymentMethodSummaryApi,
   fetchMyManualPaymentStatus as fetchMyManualPaymentStatusApi,
   fetchPendingManualPayments as fetchPendingManualPaymentsApi,
+  fetchMyPendingManualPayments as fetchMyPendingManualPaymentsApi,
+  fetchGuestPendingManualPayments as fetchGuestPendingManualPaymentsApi,
   generateManualPaymentReference as generateManualPaymentReferenceApi,
+  lookupManualPayment as lookupManualPaymentApi,
+  sendManualPaymentLink as sendManualPaymentLinkApi,
   submitManualPaymentProof as submitManualPaymentProofApi,
+  submitManualPaymentReceipt as submitManualPaymentReceiptApi,
   verifyManualPayment as verifyManualPaymentApi,
 } from "@/api/manualPaymentAPI";
+import { submitSampleCardPayment as submitSampleCardPaymentApi } from "@/api/cardPaymentAPI";
 
 const MANUAL_PAYMENT_STORAGE_KEY = "saga_manual_payment_context";
 /** Plain reference fallback (master spec) when reading outside Redux */
@@ -74,6 +81,10 @@ const initialState = {
   isFetching: false,
   isAdminLoading: false,
   isVerifying: false,
+  methodSummary: { byMethod: [], totals: { count: 0, totalAmount: 0 } },
+  isSummaryLoading: false,
+  pendingForCurrentVisitor: [],
+  isLoadingPending: false,
   error: null,
 };
 
@@ -93,22 +104,76 @@ export const generateManualPaymentReference = createAsyncThunk(
 
 export const submitManualPaymentProof = createAsyncThunk(
   "manualPayment/submitProof",
-  async ({ referenceNumber, proofUrl }, thunkAPI) => {
+  async ({ referenceNumber, proofUrl, email }, thunkAPI) => {
     try {
-      return await submitManualPaymentProofApi({ referenceNumber, proofUrl });
+      return await submitManualPaymentProofApi({ referenceNumber, proofUrl, email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit proof"));
     }
   },
 );
 
+export const submitSampleCardPayment = createAsyncThunk(
+  "manualPayment/submitSampleCard",
+  async ({ orderId, cardholderName, cardNumber, expiryMonth, expiryYear, cvv, email }, thunkAPI) => {
+    try {
+      return await submitSampleCardPaymentApi({
+        orderId,
+        cardholderName,
+        cardNumber,
+        expiryMonth,
+        expiryYear,
+        cvv,
+        email,
+      });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit card payment"));
+    }
+  },
+);
+
+export const submitManualPaymentReceipt = createAsyncThunk(
+  "manualPayment/submitReceipt",
+  async ({ referenceNumber, file, email }, thunkAPI) => {
+    try {
+      return await submitManualPaymentReceiptApi({ referenceNumber, file, email });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to submit receipt"));
+    }
+  },
+);
+
 export const fetchMyManualPaymentStatus = createAsyncThunk(
   "manualPayment/fetchMyStatus",
-  async (referenceNumber, thunkAPI) => {
+  async (arg, thunkAPI) => {
+    const { referenceNumber, email } =
+      typeof arg === "string" ? { referenceNumber: arg } : arg || {};
     try {
-      return await fetchMyManualPaymentStatusApi(referenceNumber);
+      return await fetchMyManualPaymentStatusApi(referenceNumber, { email });
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to fetch payment status"));
+    }
+  },
+);
+
+export const sendManualPaymentLink = createAsyncThunk(
+  "manualPayment/sendLink",
+  async ({ slug, email }, thunkAPI) => {
+    try {
+      return await sendManualPaymentLinkApi({ slug, email });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to send payment link"));
+    }
+  },
+);
+
+export const lookupManualPayment = createAsyncThunk(
+  "manualPayment/lookup",
+  async ({ email, identifier }, thunkAPI) => {
+    try {
+      return await lookupManualPaymentApi({ email, identifier });
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Could not find a matching payment"));
     }
   },
 );
@@ -131,6 +196,39 @@ export const fetchManualPaymentById = createAsyncThunk(
       return await fetchManualPaymentByIdApi(paymentId);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load payment details"));
+    }
+  },
+);
+
+export const fetchManualPaymentMethodSummary = createAsyncThunk(
+  "manualPayment/fetchMethodSummary",
+  async (params = {}, thunkAPI) => {
+    try {
+      return await fetchManualPaymentMethodSummaryApi(params);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load payment summary"));
+    }
+  },
+);
+
+export const fetchMyPendingManualPayments = createAsyncThunk(
+  "manualPayment/fetchMyPending",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchMyPendingManualPaymentsApi();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load pending payments"));
+    }
+  },
+);
+
+export const fetchGuestPendingManualPayments = createAsyncThunk(
+  "manualPayment/fetchGuestPending",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchGuestPendingManualPaymentsApi();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error, "Failed to load pending payments"));
     }
   },
 );
@@ -163,6 +261,14 @@ const manualPaymentSlice = createSlice({
     },
     storeManualPaymentContext: (state, action) => {
       state.paymentContext = action.payload || null;
+      persistManualPayment(state);
+    },
+    setManualPaymentEmail: (state, action) => {
+      const email = (action.payload || "").trim().toLowerCase();
+      state.paymentContext = {
+        ...(state.paymentContext || {}),
+        email: email || null,
+      };
       persistManualPayment(state);
     },
   },
@@ -229,6 +335,63 @@ const manualPaymentSlice = createSlice({
         persistManualPayment(state);
       })
       .addCase(submitManualPaymentProof.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(submitManualPaymentReceipt.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(submitManualPaymentReceipt.fulfilled, (state, action) => {
+        state.isSubmitting = false;
+        state.currentPayment = action.payload?.data || state.currentPayment;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+        };
+        persistManualPayment(state);
+      })
+      .addCase(submitManualPaymentReceipt.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(submitSampleCardPayment.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(submitSampleCardPayment.fulfilled, (state, action) => {
+        state.isSubmitting = false;
+        state.currentPayment = action.payload?.data || state.currentPayment;
+        state.lastGeneratedReference =
+          action.payload?.data?.referenceNumber || state.lastGeneratedReference;
+        state.paymentContext = {
+          orderId:
+            action.payload?.data?.orderId?._id ||
+            action.payload?.data?.orderId ||
+            state.paymentContext?.orderId ||
+            null,
+          amount: action.payload?.data?.amount || state.paymentContext?.amount || null,
+          slug: action.payload?.data?.slug || state.paymentContext?.slug || null,
+          referenceNumber:
+            action.payload?.data?.referenceNumber ||
+            state.lastGeneratedReference ||
+            null,
+          paymentType: "card",
+        };
+        persistManualPayment(state);
+      })
+      .addCase(submitSampleCardPayment.rejected, (state, action) => {
         state.isSubmitting = false;
         state.error = action.payload || action.error.message;
       })
@@ -331,11 +494,48 @@ const manualPaymentSlice = createSlice({
       .addCase(verifyManualPayment.rejected, (state, action) => {
         state.isVerifying = false;
         state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchManualPaymentMethodSummary.pending, (state) => {
+        state.isSummaryLoading = true;
+      })
+      .addCase(fetchManualPaymentMethodSummary.fulfilled, (state, action) => {
+        state.isSummaryLoading = false;
+        state.methodSummary = action.payload?.data || initialState.methodSummary;
+      })
+      .addCase(fetchManualPaymentMethodSummary.rejected, (state, action) => {
+        state.isSummaryLoading = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchMyPendingManualPayments.pending, (state) => {
+        state.isLoadingPending = true;
+      })
+      .addCase(fetchMyPendingManualPayments.fulfilled, (state, action) => {
+        state.isLoadingPending = false;
+        state.pendingForCurrentVisitor = action.payload?.data?.payments || [];
+      })
+      .addCase(fetchMyPendingManualPayments.rejected, (state, action) => {
+        state.isLoadingPending = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(fetchGuestPendingManualPayments.pending, (state) => {
+        state.isLoadingPending = true;
+      })
+      .addCase(fetchGuestPendingManualPayments.fulfilled, (state, action) => {
+        state.isLoadingPending = false;
+        state.pendingForCurrentVisitor = action.payload?.data?.payments || [];
+      })
+      .addCase(fetchGuestPendingManualPayments.rejected, (state, action) => {
+        state.isLoadingPending = false;
+        state.error = action.payload || action.error.message;
       });
   },
 });
 
-export const { clearCurrentPayment, resetManualPaymentError, storeManualPaymentContext } =
-  manualPaymentSlice.actions;
+export const {
+  clearCurrentPayment,
+  resetManualPaymentError,
+  storeManualPaymentContext,
+  setManualPaymentEmail,
+} = manualPaymentSlice.actions;
 
 export default manualPaymentSlice.reducer;

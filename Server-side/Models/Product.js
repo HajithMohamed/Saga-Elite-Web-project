@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
+const {
+  assignVariantSkus,
+  generateProductArtNo,
+  normalizeArtNo,
+} = require("../Utils/product-identity");
 
 /* ===============================
    Variant Schema
@@ -27,6 +32,12 @@ const variantSchema = new mongoose.Schema(
       maxlength: 30,
     },
 
+    colorCode: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+    },
+
     stock: {
       type: Number,
       required: true,
@@ -51,6 +62,7 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 200,
+      index: true,
     },
 
     slug: {
@@ -73,6 +85,42 @@ const productSchema = new mongoose.Schema(
       maxlength: 2000,
     },
 
+    story: {
+      type: String,
+      trim: true,
+      maxlength: 3000,
+    },
+
+    fabric: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+
+    gsm: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    fitType: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    careInstructions: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+
+    sizeGuide: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
     brand: {
       type: String,
       required: true,
@@ -82,14 +130,64 @@ const productSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Unisex", "Boys", "Girls"],
       required: true,
+      trim: true,
+    },
+
+    subCategory: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+    },
+
+    categoryPath: {
+      type: String,
+      trim: true,
+      description: "E.g., Ladies > Dresses > Midi",
+    },
+
+    // Optional reference to the dynamic Category collection. This is added
+    // for a phased migration: existing `category` (string) remains in place
+    // until backfill/cutover is completed.
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
+    },
+
+    tags: [{
+      type: String,
+      trim: true,
+    }],
+
+    arrivedAt: {
+      type: Date,
+      default: Date.now,
+    },
+
+    relatedProductIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }],
+    trendScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isDeal: {
+      type: Boolean,
+      default: false,
+    },
+    dealEndsAt: {
+      type: Date,
+      default: null,
     },
 
     drop: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Drop",
-      required: true,
+      default: null,
       index: true,
     },
 
@@ -98,12 +196,29 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    originalPrice: {
+      type: Number,
+      min: 0,
+    },
+    salePrice: {
+      type: Number,
+      min: 0,
+    },
 
     discountPercent: {
       type: Number,
       default: 0,
       min: 0,
       max: 100,
+    },
+    costPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastSoldAt: {
+      type: Date,
+      default: null,
     },
 
     variants: [variantSchema],
@@ -119,6 +234,16 @@ const productSchema = new mongoose.Schema(
     },
 
     wishCount: {
+      type: Number,
+      default: 0,
+    },
+
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+
+    cartAddCount: {
       type: Number,
       default: 0,
     },
@@ -156,6 +281,12 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    lowStockThreshold: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
@@ -164,12 +295,37 @@ const productSchema = new mongoose.Schema(
    Index Optimization
 =================================*/
 productSchema.index({ drop: 1, isActive: 1 });
+productSchema.index({ 
+  name: "text", 
+  category: "text", 
+  subCategory: "text",
+  tags: "text", 
+  brand: "text",
+  categoryPath: "text" 
+}, {
+  weights: {
+    name: 10,
+    category: 5,
+    subCategory: 4,
+    tags: 5,
+    brand: 3,
+    categoryPath: 2
+  },
+  name: "productSearchIndex"
+});
 
 /* ===============================
    Slug Generation & Stock Calc
 =================================*/
+productSchema.pre("validate", function () {
+  this.artNo = normalizeArtNo(this.artNo) || generateProductArtNo();
+  if (this.variants && this.variants.length > 0) {
+    assignVariantSkus(this.variants, this.artNo);
+  }
+});
+
 productSchema.pre("save", function () {
-  if (this.isNew || this.isModified("name")) {
+  if (this.isNew || this.isModified("name") || this.isModified("artNo")) {
     this.slug = slugify(`${this.name}-${this.artNo}`, {
       lower: true,
       strict: true,
@@ -181,7 +337,34 @@ productSchema.pre("save", function () {
       0
     );
   }
+  if (typeof this.originalPrice !== "number") {
+    this.originalPrice = this.basePrice;
+  }
+  if (typeof this.salePrice !== "number") {
+    this.salePrice = Math.max(0, Math.round(this.basePrice * (100 - (this.discountPercent || 0)) / 100));
+  }
   
+});
+
+
+/* ===============================
+   Virtuals
+=================================*/
+productSchema.virtual("profitMarginPercent").get(function () {
+  if (!this.costPrice || this.costPrice === 0) return null;
+  const effectivePrice = this.salePrice || this.basePrice;
+  return Math.round(((effectivePrice - this.costPrice) / effectivePrice) * 100);
+});
+
+productSchema.methods.marginAfterDiscount = function (discountPercent) {
+  const discountedPrice = Math.round(this.basePrice * (1 - discountPercent / 100));
+  if (!this.costPrice || this.costPrice === 0) return null;
+  return Math.round(((discountedPrice - this.costPrice) / discountedPrice) * 100);
+};
+
+productSchema.virtual("agingDays").get(function () {
+  const ref = this.lastSoldAt || this.createdAt;
+  return Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24));
 });
 
 /* ===============================

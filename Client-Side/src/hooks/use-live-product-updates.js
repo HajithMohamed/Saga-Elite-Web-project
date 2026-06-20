@@ -5,6 +5,9 @@ import { connectSocket } from "@/lib/socket";
 import { toast } from "@/hooks/use-toast";
 import { receiveLiveProductUpdate } from "@/store/live-product-slice";
 
+let lastToastTime = 0;
+const TOAST_COOLDOWN_MS = 10000;
+
 export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
   const dispatch = useDispatch();
   const relevanceRef = useRef(isRelevantUpdate);
@@ -25,10 +28,15 @@ export const useLiveProductUpdates = (isRelevantUpdate, dependencies = []) => {
       }
 
       dispatch(receiveLiveProductUpdate(payload));
-      toast({
-        title: "Price updated live",
-        description: "This product pricing changed just now.",
-      });
+      
+      const now = Date.now();
+      if (now - lastToastTime >= TOAST_COOLDOWN_MS) {
+        lastToastTime = now;
+        toast({
+          title: "Stock updated live",
+          description: "A product you're viewing had its stock or price updated.",
+        });
+      }
     };
 
     socket.on("product:updated", handleProductUpdated);

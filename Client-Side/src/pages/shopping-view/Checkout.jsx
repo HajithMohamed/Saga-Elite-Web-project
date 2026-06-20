@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
@@ -14,18 +15,46 @@ import {
 } from "@/store/manualPaymentSlice";
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
+import usePageMeta from "@/hooks/use-page-meta";
 import VariantSelectors, {
   getColorsForSize,
   getProductSizes,
   getVariantBySelection,
 } from "@/components/shopping-components/VariantSelectors";
-import { Loader2, Minus, Plus, Trash2, CreditCard, Building2, AlertCircle, UploadCloud } from "lucide-react";
-import { motion } from "framer-motion";
-import { compressImageFile } from "@/lib/image-compression";
+import {
+  Eyebrow,
+  resolveColor,
+  ColorSwatch,
+  SizeChip,
+} from "@/components/ui/editorial";
+import {
+  Loader2,
+  Minus,
+  Plus,
+  Trash2,
+  CreditCard,
+  Building2,
+  AlertCircle,
+  UploadCloud,
+  Lock,
+  Gift,
+  Check,
+  ShieldCheck,
+  Truck,
+  ChevronDown,
+  Copy,
+  Clock,
+  Package,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+
 const BUY_NOW_STORAGE_KEY = "saga_buy_now_checkout";
-const MANUAL_BANK_DETAILS = {
+const CHECKOUT_PERSIST_KEY = "saga_checkout_form_state";
+const FREE_SHIPPING_THRESHOLD = 20000;
+
+const DEFAULT_MANUAL_BANK_DETAILS = {
   bankName: "Sampath Bank",
   branch: "Hatton",
   accountName: "N.Gayathree",
@@ -34,36 +63,105 @@ const MANUAL_BANK_DETAILS = {
   deadline: "Pay within 24 hours to confirm your order.",
 };
 
-const buildManualPaymentPath = (paymentSlug) =>
-  paymentSlug
-    ? `/shopping/manual-payment/${encodeURIComponent(paymentSlug)}`
-    : "/shopping/manual-payment";
+const SRI_LANKA_DISTRICTS = [
+  "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
+  "Galle", "Gampaha", "Hambantota", "Jaffna", "Kalutara",
+  "Kandy", "Kegalle", "Kilinochchi", "Kurunegala", "Mannar",
+  "Matale", "Matara", "Monaragala", "Mullaitivu", "Nuwara Eliya",
+  "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
+];
 
-const getErrorMessage = (error, fallback) =>
-  typeof error === "string" ? error : error?.message || fallback;
+const FAST_DISTRICTS = ["Colombo", "Gampaha", "Kalutara"];
 
-const getDiscountedUnitPrice = (product = {}, variant = {}) => {
-  const basePrice =
-    Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
+const DELIVERY_METHODS = [
+  {
+    id: "standard",
+    label: "Standard Delivery",
+    eta: "3-5 Business Days",
+    fastEta: "1-2 Business Days", // For fast districts
+    price: 450,
+    icon: Truck,
+    desc: "Carefully packaged and tracked.",
+  },
+  {
+    id: "express",
+    label: "Express VIP",
+    eta: "Next Business Day",
+    fastEta: "Same/Next Day",
+    price: 1200,
+    icon: Package,
+    desc: "Priority dispatch. Signature packaging.",
+  },
+  {
+    id: "pickup",
+    label: "Atelier Pickup",
+    eta: "Ready in 2 Hours",
+    fastEta: "Ready in 2 Hours",
+    price: 0,
+    icon: Building2,
+    desc: "Collect from our flagship store.",
+  },
+];
 
-  return Math.round(
-    basePrice * (1 - Number(product?.discountPercent || 0) / 100)
-  );
+const PAYMENT_METHODS = [
+  {
+    id: "card",
+    label: "Card Payment",
+    sublabel: "Visa · Mastercard",
+    description: "Secure checkout on our demo gateway (PayHere wires in post-hosting).",
+    badge: "Demo mode",
+    icon: CreditCard,
+  },
+  {
+    id: "manual_bank_transfer",
+    label: "Manual Bank Transfer",
+    sublabel: "Sampath / Commercial / BoC",
+    description: "We'll generate a payment reference for your transfer.",
+    badge: "Recommended",
+    icon: Building2,
+  },
+];
+
+const useCheckoutPersistence = (initialValue) => {
+  const [val, setVal] = useState(() => {
+    if (typeof window === "undefined") return initialValue;
+    try {
+      const stored = window.localStorage.getItem(CHECKOUT_PERSIST_KEY);
+      return stored ? JSON.parse(stored) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(CHECKOUT_PERSIST_KEY, JSON.stringify(val));
+  }, [val]);
+
+  const clearPersisted = () => {
+    window.localStorage.removeItem(CHECKOUT_PERSIST_KEY);
+  };
+
+  return [val, setVal, clearPersisted];
 };
 
-const normalizeBuyNowItem = (item) => {
-  if (!item?.product || !item?.variant) {
-    return null;
-  }
+const getDiscountedUnitPrice = (product = {}, variant = {}) => {
+  const base =
+    Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
+  return Math.round(base * (1 - Number(product?.discountPercent || 0) / 100));
+};
 
-  const variant = normalizeCheckoutVariant(item.variant);
+const getVariantId = (v = {}) => v?.id || v?._id || "";
+
+const normalizeBuyNowItem = (item) => {
+  if (!item?.product || !item?.variant) return null;
+
   const quantity = Math.max(1, Number(item.quantity) || 1);
-  const unitPrice = getDiscountedUnitPrice(item.product, variant);
+  const unitPrice = getDiscountedUnitPrice(item.product, item.variant);
 
   return {
-    id: `buynow-${item.product.id || item.product._id}-${variant.sku}`,
+    id: `buynow-${item.product.id || item.product._id}-${item.variant.sku}`,
     product: item.product,
-    variant,
+    variant: item.variant,
     quantity,
     unitPrice,
     subTotal: unitPrice * quantity,
@@ -72,7 +170,6 @@ const normalizeBuyNowItem = (item) => {
 
 const loadPersistedBuyNowItem = () => {
   if (typeof window === "undefined") return null;
-
   try {
     const raw = window.sessionStorage.getItem(BUY_NOW_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -83,125 +180,158 @@ const loadPersistedBuyNowItem = () => {
 
 const persistBuyNowItem = (item) => {
   if (typeof window === "undefined") return;
-
   if (!item) {
     window.sessionStorage.removeItem(BUY_NOW_STORAGE_KEY);
     return;
   }
-
   window.sessionStorage.setItem(BUY_NOW_STORAGE_KEY, JSON.stringify(item));
 };
 
-const getVariantId = (variant = {}) => variant?.id || variant?._id || "";
+const fieldBaseClass =
+  "h-12 w-full rounded-xl border bg-[#0a0a0a] px-4 text-sm text-[#e5e2e1] placeholder-[#574500] transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
 
-const normalizeCheckoutVariant = (variant = {}) => ({
-  id: getVariantId(variant),
-  sku: variant?.sku || "",
-  size: variant?.size || "",
-  color: variant?.color || "",
-  stock: Number(variant?.stock ?? 0),
-  priceAdjustment: Number(variant?.priceAdjustment || 0),
-});
+const Field = ({
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  placeholder,
+  className,
+  ...rest
+}) => (
+  <div className={cn("space-y-2", className)}>
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+      {label}
+    </label>
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={cn(
+        fieldBaseClass,
+        error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[var(--accent)]"
+      )}
+      {...rest}
+    />
+    {error && <p className="text-xs text-rose-400">{error}</p>}
+  </div>
+);
 
-const buildCheckoutItem = (item, variantOverride) => {
-  const variant = normalizeCheckoutVariant(variantOverride || item?.variant);
-  const quantity = Math.max(1, Number(item?.quantity) || 1);
-  const unitPrice = getDiscountedUnitPrice(item?.product, variant);
-
-  return {
-    ...item,
-    variant,
-    quantity,
-    unitPrice,
-    subTotal: unitPrice * quantity,
-  };
-};
-
-const buildBuyNowPersistencePayload = (item) => {
-  if (!item?.product || !item?.variant?.sku) {
-    return null;
-  }
-
-  return {
-    product: item.product,
-    variant: item.variant,
-    quantity: item.quantity,
-  };
-};
-
-const getCheckoutItemErrors = (item) => {
-  const errors = {};
-  const sizes = getProductSizes(item?.product);
-  const colors = getColorsForSize(item?.product, item?.variant?.size);
-
-  if (sizes.length > 0 && !item?.variant?.size) {
-    errors.size = "Please choose a size.";
-  }
-
-  if (colors.length > 0 && !item?.variant?.color) {
-    errors.color = "Please choose a color.";
-  }
-
-  if ((sizes.length > 0 || colors.length > 0) && !item?.variant?.sku) {
-    errors.color = errors.color || "Please choose an available variant.";
-  }
-
-  return errors;
-};
+const SelectField = ({
+  label,
+  value,
+  onChange,
+  options = [],
+  error,
+  placeholder = "Select",
+  disabled = false,
+  className,
+}) => (
+  <div className={cn("space-y-2", className)}>
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+      {label}
+    </label>
+    <div className="relative">
+      <select
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={cn(
+          fieldBaseClass,
+          "appearance-none pr-10",
+          disabled && "cursor-not-allowed opacity-70",
+          error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[var(--accent)]"
+        )}
+      >
+        {!value && <option value="">{placeholder}</option>}
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="bg-[#0a0a0a]">
+            {opt}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#99907c]" />
+    </div>
+    {error && <p className="text-xs text-rose-400">{error}</p>}
+  </div>
+);
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const { items, totalPrice, isLoading: cartIsLoading } = useSelector(
-    (state) => state.cart.cart
-  );
+  const { isAuthenticated } = useSelector((s) => s.auth);
+  const { items, totalPrice } = useSelector((s) => s.cart.cart);
 
-  const [formData, setFormData] = useState({
-    shippingAddress: "",
-    contactNumber: "",
-    paymentMethod: "manual_bank_transfer",
+  const [formData, setFormData, clearPersisted] = useCheckoutPersistence({
+    fullName: "",
+    email: "",
+    phone: "",
+    country: "Sri Lanka",
+    addressLine: "",
+    city: "",
+    district: "",
+    postalCode: "",
+    deliveryMode: "standard",
     notes: "",
-    guestEmail: "",
+    paymentMethod: "manual_bank_transfer",
+    termsAccepted: false,
+    couponCode: "",
   });
 
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    cardholderName: "",
-  });
-
-  const [receiptFile, setReceiptFile] = useState(null);
-  const [receiptPreview, setReceiptPreview] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [formError, setFormError] = useState(null);
-  const fileInputRef = useRef(null);
-
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [currentStep, setCurrentStep] = useState("contact"); // contact, address, payment
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
-  
-  const [showGuestDialog, setShowGuestDialog] = useState(false);
-  const [guestCheckInfo, setGuestCheckInfo] = useState(null);
-  const [isProcessingSelection, setIsProcessingSelection] = useState(false);
-  const [variantErrorsByItem, setVariantErrorsByItem] = useState({});
-  const [variantUpdateItemId, setVariantUpdateItemId] = useState(null);
+  const [couponExpanded, setCouponExpanded] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [rewardSuggestions, setRewardSuggestions] = useState([]);
 
-  const locationState = useMemo(() => location.state || {}, [location.key]);
-  const cartStateItems = useMemo(
-    () => (Array.isArray(locationState.cartItems) ? locationState.cartItems : null),
-    [locationState],
+  // Saved addresses (Fix #4) — for both guests and registered users
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [useNewAddress, setUseNewAddress] = useState(true);
+
+  // Guest OTP for manual bank transfer (Fix #3)
+  const [otpModal, setOtpModal] = useState({
+    open: false,
+    sending: false,
+    sent: false,
+    code: "",
+    verifying: false,
+  });
+  const [guestVerified, setGuestVerified] = useState(false);
+
+  const checkoutSteps = [
+    { id: "contact", label: "Contact", num: 1 },
+    { id: "address", label: "Delivery", num: 2 },
+    { id: "payment", label: "Payment", num: 3 },
+  ];
+
+  const formatLKR = (value = 0) =>
+    `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
+      maximumFractionDigits: 0,
+    })}`;
+
+  const itemCount = checkoutItems.reduce(
+    (sum, item) => sum + (Number(item?.quantity) || 0),
+    0
   );
-  const routedBuyNowItem = useMemo(
-    () => normalizeBuyNowItem(locationState.buyNowItem),
-    [locationState],
-  );
+
+  const cartStateItems = Array.isArray(location.state?.cartItems)
+    ? location.state.cartItems
+    : null;
 
   useEffect(() => {
+    const routedBuyNowItem = normalizeBuyNowItem(location.state?.buyNowItem);
     const persistedBuyNowItem = normalizeBuyNowItem(loadPersistedBuyNowItem());
 
     if (routedBuyNowItem) {
@@ -218,7 +348,7 @@ const Checkout = () => {
       setIsBuyNow(false);
       setCheckoutItems(cartStateItems);
       setCheckoutTotal(
-        location.state.cartTotal ||
+        location.state?.cartTotal ||
           cartStateItems.reduce(
             (sum, item) => sum + item.unitPrice * item.quantity,
             0
@@ -241,1125 +371,1195 @@ const Checkout = () => {
     setIsBuyNow(false);
     setHasInitializedSource(true);
     dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, routedBuyNowItem]);
+  }, [cartStateItems, dispatch, location.state]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;
-
     setCheckoutItems(items);
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
+  // Saved addresses fetch (Fix #4)
   useEffect(() => {
-    setCheckoutTotal(
-      checkoutItems.reduce(
-        (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
-        0
-      )
-    );
-
-    if (isBuyNow) {
-      persistBuyNowItem(buildBuyNowPersistencePayload(checkoutItems[0]));
-    }
-  }, [checkoutItems, isBuyNow]);
-
-  // ---------------- CART ACTIONS ----------------
-  const handleQuantityChange = async (item, quantity) => {
-    if (isBuyNow) return;
-    try {
-      if (quantity < 1) return;
-
-      await dispatch(
-        updateCartItemAction({
-          itemId: item.id,
-          quantity,
+    if (isAuthenticated) {
+      axiosInstance
+        .get("/user/addresses")
+        .then((res) => {
+          const list = res.data?.data?.addresses || [];
+          setSavedAddresses(list);
+          if (list.length > 0) setUseNewAddress(false);
         })
-      ).unwrap();
-    } catch (err) {
+        .catch(() => setSavedAddresses([]));
+    }
+  }, [isAuthenticated]);
+
+  const fetchGuestAddresses = (email) => {
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
+    axiosInstance
+      .get("/guest/addresses", { params: { email } })
+      .then((res) => {
+        const list = res.data?.data?.addresses || [];
+        setSavedAddresses(list);
+        if (list.length > 0) setUseNewAddress(false);
+      })
+      .catch(() => setSavedAddresses([]));
+  };
+
+  const applySavedAddress = (addr) => {
+    if (!addr) return;
+    setFormData((prev) => ({
+      ...prev,
+      addressLine: addr.street || "",
+      city: addr.city || "",
+      postalCode: addr.postalCode || "",
+      country: addr.country || "Sri Lanka",
+      district: prev.district, // district isn't on saved address; user picks
+    }));
+  };
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE}/site-config/bank_details`)
+      .then((res) =>
+        setBankDetails({
+          ...DEFAULT_MANUAL_BANK_DETAILS,
+          ...(res.data?.data || {}),
+        })
+      )
+      .catch(() => setBankDetails(DEFAULT_MANUAL_BANK_DETAILS));
+  }, []);
+
+  // Theme Accent Color Logic
+  const primaryColorName = checkoutItems[0]?.variant?.color;
+  const themeColor = primaryColorName ? resolveColor(primaryColorName) : "#f2ca50";
+  
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", themeColor);
+    return () => {
+      document.documentElement.style.removeProperty("--accent");
+    };
+  }, [themeColor]);
+
+  // Delivery Pricing Logic
+  const isFastDistrict = FAST_DISTRICTS.includes(formData.district);
+  const selectedDelivery = DELIVERY_METHODS.find(m => m.id === formData.deliveryMode) || DELIVERY_METHODS[0];
+  const isFreeShippingQualify = checkoutTotal >= FREE_SHIPPING_THRESHOLD;
+  
+  const shippingFee = formData.deliveryMode === "pickup" 
+    ? 0 
+    : formData.deliveryMode === "standard" && isFreeShippingQualify 
+      ? 0 
+      : selectedDelivery.price;
+
+  const couponDiscount = Math.min(
+    checkoutTotal,
+    Math.max(0, Number(appliedCoupon?.discount || 0))
+  );
+  const finalTotal = Math.max(0, checkoutTotal - couponDiscount) + shippingFee;
+  const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - checkoutTotal);
+  const shippingProgress = Math.min(100, (checkoutTotal / FREE_SHIPPING_THRESHOLD) * 100);
+
+  const displayBankDetails = bankDetails || DEFAULT_MANUAL_BANK_DETAILS;
+  const whatsAppLink = displayBankDetails.whatsapp
+    ? `https://wa.me/${displayBankDetails.whatsapp.replace(/\D/g, "")}`
+    : "#";
+
+  const checkoutProductIds = useMemo(
+    () =>
+      checkoutItems
+        .map((item) => item.product?.id || item.product?._id)
+        .filter(Boolean),
+    [checkoutItems]
+  );
+  const checkoutProductKey = checkoutProductIds.join("|");
+
+  useEffect(() => {
+    setAppliedCoupon(null);
+  }, [checkoutTotal, checkoutProductKey]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRewardSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    axiosInstance
+      .get("/coupons/my-rewards")
+      .then((res) => {
+        if (cancelled) return;
+        const rewards = res.data?.data?.rewards || [];
+        setRewardSuggestions(
+          rewards.filter((reward) => reward.status === "available").slice(0, 3)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setRewardSuggestions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const applyCouponCode = async (codeToApply = couponInput) => {
+    const code = String(codeToApply || "").trim().toUpperCase();
+    if (!code) {
+      toast({ title: "Enter a reward code", variant: "destructive" });
+      return;
+    }
+    if (checkoutTotal <= 0) {
+      toast({ title: "Add items before applying a reward", variant: "destructive" });
+      return;
+    }
+
+    setCouponApplying(true);
+    try {
+      const res = await axiosInstance.post("/coupons/validate", {
+        code,
+        subtotal: checkoutTotal,
+        productIds: checkoutProductIds,
+      });
+      const data = res.data?.data;
+      setAppliedCoupon(data);
+      setCouponInput(data?.code || code);
+      setFormData((prev) => ({ ...prev, couponCode: data?.code || code }));
       toast({
-        title: "Update failed",
-        description: getErrorMessage(err, "Unable to update quantity."),
+        title: "Reward applied",
+        description: `You saved ${formatLKR(data?.discount || 0)}.`,
+        variant: "success",
+      });
+    } catch (err) {
+      setAppliedCoupon(null);
+      toast({
+        title: "Reward not applied",
+        description: err?.response?.data?.message || err?.message || "Check the code and try again.",
         variant: "destructive",
       });
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setFormData((prev) => ({ ...prev, couponCode: "" }));
+  };
+
+  const handlePhoneChange = (e) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 10) val = val.substring(0, 10);
+    if (val.length > 3 && val.length <= 6) val = `${val.slice(0,3)} ${val.slice(3)}`;
+    else if (val.length > 6) val = `${val.slice(0,3)} ${val.slice(3,6)} ${val.slice(6)}`;
+    setFormData((prev) => ({ ...prev, phone: val }));
+    setErrors((prev) => ({ ...prev, phone: undefined }));
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, email: val }));
+    setErrors((prev) => ({ ...prev, email: undefined }));
+    // Email change invalidates any prior OTP verification.
+    setGuestVerified(false);
+    // Simple typo suggestion
+    if (val.includes("@gmai.com") || val.includes("@gmail.co") || val.includes("@gnail.com")) {
+      setErrors((prev) => ({ ...prev, emailHint: "Did you mean @gmail.com?" }));
+    } else {
+      setErrors((prev) => ({ ...prev, emailHint: undefined }));
+    }
+  };
+
+  // ── OTP modal handlers (Fix #3) ──
+  const sendGuestOtp = async () => {
+    setOtpModal((m) => ({ ...m, sending: true }));
+    try {
+      await axiosInstance.post("/guest/otp/send", {
+        email: formData.email,
+        phone: formData.phone,
+        name: formData.fullName,
+      });
+      setOtpModal((m) => ({ ...m, sending: false, sent: true }));
+      toast({ title: "OTP sent", description: "Check your email and WhatsApp." });
+    } catch (err) {
+      setOtpModal((m) => ({ ...m, sending: false }));
+      toast({
+        title: "Could not send OTP",
+        description: err.response?.data?.message || err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const verifyGuestOtp = async () => {
+    if (!/^\d{4}$/.test(otpModal.code.trim())) {
+      toast({ title: "Enter the 4-digit code", variant: "destructive" });
+      return;
+    }
+    setOtpModal((m) => ({ ...m, verifying: true }));
+    try {
+      await axiosInstance.post("/guest/otp/verify", {
+        email: formData.email,
+        otp: otpModal.code.trim(),
+      });
+      setGuestVerified(true);
+      setOtpModal({ open: false, sending: false, sent: false, code: "", verifying: false });
+      toast({ title: "Verified", description: "Placing your order…", variant: "success" });
+      // Re-trigger submit now that we're verified.
+      setTimeout(() => {
+        document
+          .querySelector("form")
+          ?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      }, 50);
+    } catch (err) {
+      setOtpModal((m) => ({ ...m, verifying: false }));
+      toast({
+        title: "Verification failed",
+        description: err.response?.data?.message || err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateField = (key) => (eventOrValue) => {
+    const value =
+      eventOrValue?.target !== undefined
+        ? eventOrValue.target.type === "checkbox"
+          ? eventOrValue.target.checked
+          : eventOrValue.target.value
+        : eventOrValue;
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+  };
+
+  const validateStep = (step) => {
+    const next = {};
+    if (step === "contact" || step === "all") {
+      if (!formData.fullName.trim()) next.fullName = "Required";
+      if (!formData.email.trim() || !/^\S+@\S+\.\S+$/.test(formData.email))
+        next.email = "Enter a valid email";
+      if (!formData.phone.trim() || formData.phone.length < 11) next.phone = "Valid phone required";
+    }
+    if ((step === "address" || step === "all") && formData.deliveryMode !== "pickup") {
+      if (!formData.addressLine.trim()) next.addressLine = "Required";
+      if (!formData.city.trim()) next.city = "Required";
+      if (!formData.district) next.district = "Choose a district";
+      if (!formData.postalCode.trim()) next.postalCode = "Required";
+    }
+    if (step === "payment" || step === "all") {
+      if (!formData.termsAccepted) next.termsAccepted = "Please accept the terms";
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const proceedToStep = (step) => {
+    if (currentStep === "contact" && validateStep("contact")) setCurrentStep("address");
+    else if (currentStep === "address" && validateStep("address")) setCurrentStep("payment");
+    else if (step) setCurrentStep(step); // allow backward nav without validation
+  };
+
+  const handleQuantity = async (item, newQuantity) => {
+    if (isBuyNow || newQuantity < 1) return;
+    try {
+      await dispatch(updateCartItemAction({ itemId: item.id, quantity: newQuantity })).unwrap();
+      dispatch(fetchCartAction());
+    } catch (err) {
+      toast({ title: "Update failed", variant: "destructive" });
     }
   };
 
   const handleRemove = async (itemId) => {
-    if (isBuyNow) return;
+    if (isBuyNow) {
+      setCheckoutItems([]);
+      return;
+    }
     try {
       await dispatch(removeFromCartAction(itemId)).unwrap();
-
-      toast({
-        title: "Removed",
-        description: "Item removed from cart.",
-        variant: "success",
-      });
+      dispatch(fetchCartAction());
     } catch (err) {
-      toast({
-        title: "Remove failed",
-        description: getErrorMessage(err, "Unable to remove item."),
-        variant: "destructive",
-      });
+      toast({ title: "Remove failed", variant: "destructive" });
     }
   };
 
-  const updateCheckoutItemLocally = (itemId, updater) => {
-    setCheckoutItems((currentItems) =>
-      currentItems.map((entry) => {
-        if (entry.id !== itemId) {
-          return entry;
-        }
-
-        const nextItem = updater(entry);
-        return buildCheckoutItem(nextItem, nextItem.variant);
-      })
-    );
-  };
-
-  const validateCheckoutItems = (itemsToValidate = checkoutItems) => {
-    const nextErrors = {};
-
-    itemsToValidate.forEach((item) => {
-      const itemErrors = getCheckoutItemErrors(item);
-      if (Object.keys(itemErrors).length > 0) {
-        nextErrors[item.id] = itemErrors;
-      }
-    });
-
-    setVariantErrorsByItem(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const syncCartVariant = async (item, nextVariant) => {
-    if (isBuyNow || !nextVariant?.sku) {
-      return;
-    }
-
-    setVariantUpdateItemId(item.id);
-
-    try {
-      await dispatch(
-        updateCartItemAction({
-          itemId: item.id,
-          quantity: item.quantity,
-          variantId: getVariantId(nextVariant),
-        })
-      ).unwrap();
-    } catch (err) {
-      toast({
-        title: "Variant update failed",
-        description: getErrorMessage(err, "Unable to update size or color."),
-        variant: "destructive",
-      });
-
-      updateCheckoutItemLocally(item.id, () => buildCheckoutItem(item, item.variant));
-    } finally {
-      setVariantUpdateItemId(null);
-    }
-  };
-
-  const applyVariantSelection = async (item, nextSize, nextColor) => {
-    const resolvedVariant = nextSize && nextColor
-      ? getVariantBySelection(item.product, nextSize, nextColor)
-      : null;
-
-    updateCheckoutItemLocally(item.id, (currentItem) => ({
-      ...currentItem,
-      variant: resolvedVariant
-        ? normalizeCheckoutVariant(resolvedVariant)
-        : {
-            sku: "",
-            size: nextSize || "",
-            color: nextColor || "",
-            stock: 0,
-            priceAdjustment: 0,
-            id: "",
-          },
-    }));
-
-    setVariantErrorsByItem((current) => ({
-      ...current,
-      [item.id]: {},
-    }));
-    setFormError(null);
-
-    if (resolvedVariant) {
-      await syncCartVariant(item, normalizeCheckoutVariant(resolvedVariant));
-    }
-  };
-
-  const handleSizeSelection = async (item, size) => {
-    const nextColors = getColorsForSize(item.product, size);
-    const preservedColor = nextColors.includes(item.variant?.color)
-      ? item.variant.color
-      : "";
-    const nextColor =
-      preservedColor || (nextColors.length === 1 ? nextColors[0] : "");
-
-    await applyVariantSelection(item, size, nextColor);
-  };
-
-  const handleColorSelection = async (item, color) => {
-    await applyVariantSelection(item, item.variant?.size, color);
-  };
-
-  // ---------------- FORM HANDLING ----------------
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCardChange = (e) => {
-    let { name, value } = e.target;
-    
-    // Auto-format card number with spaces every 4 digits
-    if (name === "cardNumber") {
-      value = value.replace(/\D/g, '').substring(0, 16);
-      value = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-    }
-    
-    // Auto-format expiry date MM/YY
-    if (name === "expiryDate") {
-      value = value.replace(/\D/g, '').substring(0, 4);
-      if (value.length >= 3) {
-        value = `${value.substring(0, 2)}/${value.substring(2, 4)}`;
-      }
-    }
-    
-    if (name === "cvv") {
-      value = value.replace(/\D/g, '').substring(0, 4);
-    }
-
-    setCardDetails((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-
-  const checkoutTotalAmount = checkoutItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0
-  );
-  const submitButtonLabel =
-    formData.paymentMethod === "manual_bank_transfer"
-      ? "Place Order & Get Reference"
-      : "Complete Purchase";
-
-  const handleFileChange = async (e) => {
-    const originalFile = e.target.files?.[0];
-    const file = await compressImageFile(originalFile);
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setFormError("File size must be less than 5MB");
-        return;
-      }
-      setReceiptFile(file);
-      setReceiptPreview(URL.createObjectURL(file));
-      setFormError(null);
-    }
-  };
-
-  const uploadReceipt = async () => {
-    if (!receiptFile) return "";
-    const fd = new FormData();
-    fd.append("receipt", receiptFile);
-    try {
-      const res = await axios.post(`${API_BASE}/image/upload-receipt`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
-      return res.data?.data?.url || "";
-    } catch (err) {
-      throw new Error(getErrorMessage(err?.response?.data, "Failed to upload receipt"));
-    }
-  };
-
-  const handleGuestChoice = async (choice) => {
-    setIsProcessingSelection(true);
-    setShowGuestDialog(false);
-    
-    if (choice === 'register') {
-      try {
-        await dispatch(registerGuestAction(formData.guestEmail)).unwrap();
-        toast({
-          title: "Account Created",
-          description: "Temporary password sent to your email. You are now logged in.",
-          variant: "success"
-        });
-        // After registration, proceed as authenticated user
-        await proceedWithOrder();
-      } catch (err) {
-        toast({
-          title: "Registration failed",
-          description: getErrorMessage(err, "Could not create account."),
-          variant: "destructive"
-        });
-        setIsProcessingSelection(false);
-      }
-    } else {
-      // Proceed as one-time guest
-      await proceedWithOrder();
-    }
-  };
-
-  // ---------------- ORDER SUBMIT ----------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!checkoutItems.length) {
-      setFormError("Your cart is empty.");
+    if (checkoutItems.length === 0) {
+      toast({ title: "Your bag is empty", variant: "destructive" });
       return;
     }
-
-    if (!validateCheckoutItems()) {
-      setFormError("Please choose a valid size and color for each item.");
-      return;
-    }
-
-    if (!isAuthenticated && !formData.guestEmail) {
-      setFormError("Email address is required for guest checkout.");
-      return;
-    }
-
-    if (!formData.shippingAddress || !formData.contactNumber) {
-      setFormError("Shipping address and contact number are required.");
-      return;
-    }
-
-    if (formData.paymentMethod === "manual" && !receiptFile) {
-      setFormError("Please upload a receipt for manual payment.");
-      return;
-    }
-
-    if (formData.paymentMethod === "card") {
-      const { cardNumber, expiryDate, cvv, cardholderName } = cardDetails;
-      if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-        setFormError("All card details are required.");
-        return;
-      }
-      const rawCardNum = cardNumber.replace(/\s+/g, "");
-      if (!/^\d{16}$/.test(rawCardNum)) {
-        setFormError("Invalid card number. It must be 16 digits.");
-        return;
-      }
-      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
-        setFormError("Invalid expiry date format. Use MM/YY.");
-        return;
-      }
-      const [expMonth, expYear] = expiryDate.split("/");
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = parseInt(now.getFullYear().toString().slice(-2), 10);
-      const expM = parseInt(expMonth, 10);
-      const expY = parseInt(expYear, 10);
-      if (expY < currentYear || (expY === currentYear && expM < currentMonth)) {
-        setFormError("Card has expired.");
-        return;
-      }
-      if (!/^\d{3,4}$/.test(cvv)) {
-        setFormError("Invalid CVV format.");
-        return;
-      }
-    }
-
-    setFormError(null);
-
-    // Client-side validation
-    if (!checkoutItems || checkoutItems.length === 0) {
-      setFormError("Your cart is empty. Please add items before checkout.");
-      return;
-    }
-    if (!formData.shippingAddress.trim()) {
-      setFormError("Shipping address is required.");
-      return;
-    }
-    if (!formData.contactNumber.trim()) {
-      setFormError("Contact number is required.");
-      return;
-    }
-    if (!["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"].includes(formData.paymentMethod)) {
-      setFormError("Please select a valid payment method.");
-      return;
-    }
-
-    setIsUploading(true);
-
-    // If not authenticated, check guest status
-    if (!isAuthenticated) {
-      try {
-        const guestRes = await dispatch(checkGuestAction(formData.guestEmail)).unwrap();
-        if (guestRes.data.existsAsUser) {
-          toast({
-            title: "Account exists",
-            description: "An account with this email already exists. Please log in.",
-            variant: "destructive",
-          });
-          navigate("/auth/login", { state: { email: formData.guestEmail } });
-          setIsUploading(false);
-          return;
-        }
-
-        // Show dialog asking to register OR proceed as guest
-        setGuestCheckInfo(guestRes.data);
-        setShowGuestDialog(true);
-        setIsUploading(false);
-        return;
-      } catch (err) {
-        console.error("Guest check failed", err);
-      }
-    }
-
-    await proceedWithOrder();
-  };
-
-  const proceedWithOrder = async () => {
-    setIsUploading(true);
-    try {
-      if (!validateCheckoutItems()) {
-        setFormError("Please choose a valid size and color for each item.");
-        return;
-      }
-
-      let uploadedUrl = "";
-      if (["manual", "manual_bank_transfer"].includes(formData.paymentMethod)) {
-        uploadedUrl = await uploadReceipt();
-        if (formData.paymentMethod === "manual" && !uploadedUrl) {
-          setFormError("Receipt upload failed. Please try again.");
-          return;
-        }
-      }
-
-      // Simulate online gateway processing if needed
-      if (["payhere", "gpay", "card", "lankapay"].includes(formData.paymentMethod)) {
-        toast({
-          title: `Processing via ${formData.paymentMethod.toUpperCase()}`,
-          description: "Redirecting to gateway environment...",
-        });
-        await new Promise(resolve => setTimeout(resolve, 1500)); // simulated latency
-      }
-
-      const payload = {
-        items: checkoutItems.map((item) => ({
-          productId: item.product.id || item.product._id,
-          variantSku: item.variant.sku,
-          size: item.variant.size,
-          color: item.variant.color,
-          quantity: item.quantity,
-        })),
-        checkoutMode: isBuyNow ? "buyNow" : "cart",
-        shippingAddress: formData.shippingAddress,
-        contactNumber: formData.contactNumber,
-        paymentMethod: formData.paymentMethod,
-        paymentProofUrl:
-          ["manual", "manual_bank_transfer"].includes(formData.paymentMethod)
-            ? uploadedUrl
-            : "",
-        notes: formData.notes,
-        guestEmail: !isAuthenticated ? formData.guestEmail : undefined,
-      };
-
-      const resultAction = await dispatch(createOrder(payload)).unwrap();
-      const createdOrder = resultAction?.data || {};
-      const createdOrderId = resultAction?.orderId || createdOrder._id || `TEM-${Math.floor(Math.random() * 100000)}`;
-      const resolvedTotal = createdOrder.totalAmount || checkoutTotal || checkoutTotalAmount || totalAmount;
-      if (!isBuyNow) {
-        dispatch(fetchCartAction());
-      }
-
+    if (!validateStep("all")) {
       toast({
-        title: "Order placed",
-        description: "Your order was successfully submitted.",
-        variant: "success",
+        title: "Check your details",
+        description: "Some required fields need attention.",
+        variant: "destructive",
       });
+      // Find first error step
+      if (errors.fullName || errors.email || errors.phone) setCurrentStep("contact");
+      else if (errors.addressLine || errors.city || errors.district) setCurrentStep("address");
+      return;
+    }
+
+    const shippingAddress =
+      formData.deliveryMode === "pickup"
+        ? `STORE PICKUP — ${formData.fullName}`
+        : [
+            formData.fullName,
+            formData.addressLine,
+            `${formData.city}, ${formData.district} ${formData.postalCode}`.trim(),
+            formData.country,
+          ]
+            .filter(Boolean)
+            .join("\n");
+
+    const orderItems = checkoutItems
+      .map((item) => {
+        const productId = item.product?.id || item.product?._id;
+        const variantSku = item.variant?.sku;
+        if (!productId || !variantSku) return null;
+        return {
+          productId,
+          variantSku,
+          size: item.variant?.size || undefined,
+          color: item.variant?.color || undefined,
+          quantity: Math.max(1, Number(item.quantity) || 1),
+        };
+      })
+      .filter(Boolean);
+
+    if (orderItems.length === 0) {
+      toast({
+        title: "Cart items unavailable",
+        description: "We couldn't read product/variant info for this order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Guest + bank transfer requires OTP verification (Fix #3).
+    if (
+      !isAuthenticated &&
+      formData.paymentMethod === "manual_bank_transfer" &&
+      !guestVerified
+    ) {
+      setOtpModal({ open: true, sending: false, sent: false, code: "", verifying: false });
+      return;
+    }
+
+    // Structured address payload for persistence (Fix #4). Pickup mode skips it.
+    const structuredAddress =
+      formData.deliveryMode === "pickup"
+        ? null
+        : {
+            label: formData.district || undefined,
+            street: formData.addressLine,
+            city: formData.city,
+            postalCode: formData.postalCode,
+            country: formData.country || "Sri Lanka",
+          };
+
+    setIsSubmitting(true);
+    try {
+      const response = await dispatch(
+        createOrder({
+          items: orderItems,
+          checkoutMode: isBuyNow ? "buyNow" : "cart",
+          shippingAddress,
+          structuredAddress,
+          contactNumber: formData.phone,
+          paymentMethod: formData.paymentMethod,
+          notes: `Delivery Mode: ${formData.deliveryMode}\n${formData.notes}`,
+          guestEmail: formData.email,
+          couponCode: appliedCoupon?.code || undefined,
+        })
+      ).unwrap();
+
+      const newOrderId = response?.orderId || response?.data?._id;
+      const totalAmount = finalTotal;
+      const manualPaymentSlug = response?.manualPayment?.slug || null;
+      const manualPaymentRef = response?.manualPayment?.referenceNumber || null;
+      const guestEmailReturned = response?.guestEmail || formData.email || null;
 
       persistBuyNowItem(null);
+      clearPersisted();
 
-      if (formData.paymentMethod === "manual_bank_transfer") {
-        const paymentReferenceResponse = await dispatch(
-          generateManualPaymentReference({
-            orderId: createdOrderId,
-            amount: resolvedTotal,
-          })
-        ).unwrap();
+      const isCardPayment = formData.paymentMethod === "card";
 
-        const manualPaymentData = paymentReferenceResponse?.data || {};
-        const manualReference =
-          paymentReferenceResponse?.referenceNumber ||
-          manualPaymentData.referenceNumber ||
-          manualPaymentData.manualPayment?.referenceNumber ||
-          createdOrder.referenceNumber;
-        const manualAmount =
-          paymentReferenceResponse?.amount ||
-          manualPaymentData.amount ||
-          resolvedTotal;
-        const manualOrderId =
-          paymentReferenceResponse?.orderId ||
-          manualPaymentData.orderId ||
-          createdOrderId;
+      // Card sample flow goes to the dedicated demo gateway page keyed on
+      // orderId (no manualPayment slug yet — that record is created when the
+      // customer submits the card form). Bank transfers keep their existing
+      // slug-based manual-payment route.
+      const target = isCardPayment
+        ? `/shopping/card-payment/${encodeURIComponent(newOrderId)}`
+        : manualPaymentSlug
+          ? `/shopping/manual-payment/${encodeURIComponent(manualPaymentSlug)}`
+          : "/shopping/manual-payment";
 
-        dispatch(
-          storeManualPaymentContext({
-            orderId: manualOrderId,
-            amount: manualAmount,
-            slug:
-              paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug ||
-              null,
-            referenceNumber: manualReference,
-          })
-        );
-
-        navigate(
-          buildManualPaymentPath(
-            paymentReferenceResponse?.slug ||
-              manualPaymentData.slug ||
-              manualPaymentData.manualPayment?.slug
-          ),
-          {
-            state: {
-              orderId: manualOrderId,
-              amount: manualAmount,
-              slug:
-                paymentReferenceResponse?.slug ||
-                manualPaymentData.slug ||
-                manualPaymentData.manualPayment?.slug ||
-                null,
-              referenceNumber: manualReference,
-            },
+      navigate(
+        guestEmailReturned
+          ? `${target}?email=${encodeURIComponent(guestEmailReturned)}`
+          : target,
+        {
+          state: {
+            orderId: newOrderId,
+            amount: totalAmount,
+            referenceNumber: manualPaymentRef,
+            slug: manualPaymentSlug,
           },
-        );
-        return;
-      }
-
-      navigate("/shopping/checkout-success", {
-        state: {
-          orderId: createdOrderId,
-          totalAmount: resolvedTotal,
-          referenceNumber: createdOrder.referenceNumber,
-          paymentMethod: formData.paymentMethod,
-        },
-      });
+        }
+      );
     } catch (err) {
       toast({
         title: "Checkout failed",
-        description: getErrorMessage(err, "Try again later."),
+        description: typeof err === "string" ? err : err?.message || "Try again later.",
         variant: "destructive",
       });
-      setFormError(getErrorMessage(err, "Checkout failed"));
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // ---------------- LOADING ----------------
-  if ((!hasInitializedSource || cartIsLoading) && !checkoutItems.length) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
-      </div>
-    );
-  }
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied to clipboard", variant: "success" });
+  };
 
-  // ---------------- EMPTY CART ----------------
-  if (!checkoutItems.length) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-on-surface">
-        <h1 className="text-3xl font-bold">Your cart is empty</h1>
-        <p className="mt-2 text-muted-foreground">
-          Add products before checkout
-        </p>
-        <Link
-          to="/shopping/product-list"
-          className="mt-6 rounded-full bg-[#D4AF37] px-6 py-3 font-bold text-black"
-        >
-          Start Shopping
-        </Link>
-      </div>
-    );
-  }
+  const getStepNumber = (id) => checkoutSteps.find(s => s.id === id).num;
+  const currentStepNum = getStepNumber(currentStep);
 
   return (
-    <div className="min-h-screen bg-background py-12 font-sans text-on-surface md:py-20">
-      <div className="mx-auto grid max-w-screen-2xl items-start gap-16 px-6 md:px-12 lg:grid-cols-[3fr_2fr]">
-
-        {/* LEFT: FORM (Shipping & Payment) */}
-        <div className="space-y-12 lg:space-y-16">
-          <section>
-            <h1 className="text-4xl font-extrabold tracking-tight mb-4 text-[#D4AF37]">Checkout</h1>
-            <p className="text-muted-foreground">
-              Review your items and complete your purchase.
-            </p>
-          </section>
-
-          <form onSubmit={handleSubmit} className="space-y-12">
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">00</span>
-                <h2 className="text-xl font-bold tracking-tight">Review Items</h2>
-              </div>
-
-              <div className="space-y-5">
-                {checkoutItems.map((item) => {
-                  const itemErrors = variantErrorsByItem[item.id] || {};
-                  const isVariantUpdating = variantUpdateItemId === item.id;
-
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-[28px] border border-border bg-surface-container-low p-5 shadow-[0_16px_50px_rgba(0,0,0,0.12)] dark:bg-[#0c0c0c] dark:shadow-[0_16px_50px_rgba(0,0,0,0.35)]"
-                    >
-                      <div className="flex flex-col gap-5 md:flex-row">
-                        <div className="h-32 w-full overflow-hidden rounded-[24px] border border-border bg-muted/30 md:h-36 md:w-28 md:flex-shrink-0 dark:bg-black/30">
-                          <img
-                            src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
-                            className="h-full w-full object-cover"
-                            alt={item.product.name}
-                          />
-                        </div>
-
-                        <div className="flex-1 space-y-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="text-lg font-semibold tracking-tight">{item.product.name}</p>
-                              <p className="mt-1 text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                                Unit LKR {item.unitPrice}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#f1d27a]">
-                                Qty {item.quantity}
-                              </span>
-                              {!isBuyNow ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemove(item.id)}
-                                  disabled={isVariantUpdating || isUploading}
-                                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-red-300 transition-colors hover:bg-red-500/15"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <VariantSelectors
-                            product={item.product}
-                            selectedSize={item.variant?.size}
-                            selectedColor={item.variant?.color}
-                            onSizeChange={(size) => handleSizeSelection(item, size)}
-                            onColorChange={(color) => handleColorSelection(item, color)}
-                            errors={itemErrors}
-                            disabled={isVariantUpdating || isUploading}
-                          />
-
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            {!isBuyNow ? (
-                              <div className="inline-flex items-center rounded-full border border-border bg-muted/40 p-1 dark:bg-black/30">
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                                  disabled={item.quantity <= 1 || isVariantUpdating || isUploading}
-                                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-on-surface disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </button>
-                                <span className="flex h-11 min-w-12 items-center justify-center text-sm font-semibold">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                                  disabled={item.quantity >= (item.variant?.stock || 1) || isVariantUpdating || isUploading}
-                                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-on-surface disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                Buy now quantity: {item.quantity}
-                              </p>
-                            )}
-
-                            <div className="text-right">
-                              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                                Variant stock
-                              </p>
-                              <p className="text-sm font-semibold">
-                                {item.variant?.stock ?? 0} available
-                              </p>
-                              {isVariantUpdating ? (
-                                <p className="mt-1 text-xs text-[#D4AF37]">Updating selection...</p>
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </section>
-            
-            {/* Guest Email (only for non-authenticated users) */}
+    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e2e1] pb-32 md:pb-12">
+      {/* Checkout header */}
+      <header className="sticky top-0 z-40 border-b border-[#1c1b1b] bg-[#0a0a0a]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 md:px-8">
+          <Link to="/shopping/home" className="flex flex-col leading-none">
+            <span className="se-serif text-2xl tracking-[0.18em] text-[#e5e2e1]">
+              SAGA ELITE
+            </span>
+            <span className="se-label mt-1 text-[9px] tracking-[0.32em] text-[#99907c]">
+              Rare Fit Forever
+            </span>
+          </Link>
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4">
             {!isAuthenticated && (
-              <section className="space-y-8">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">01</span>
-                  <h2 className="text-xl font-bold tracking-tight">Contact Information</h2>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <div className="relative">
-                    <input
-                      id="checkout-guest-email"
-                      type="email"
-                      name="guestEmail"
-                      value={formData.guestEmail}
-                      onChange={handleChange}
-                      placeholder=" "
-                      className={cn(
-                        "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                        "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                        "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                      )}
-                      required
-                    />
-                    <label
-                      htmlFor="checkout-guest-email"
-                      className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
-                    >
-                      Email Address
-                    </label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    We will send your order confirmation and tracking details to this email.
-                  </p>
-                </div>
-              </section>
+              <span className="se-label text-[9px] tracking-[0.28em] text-[var(--accent)] hidden sm:inline-flex items-center gap-1">
+                <Check size={12}/> Fast Guest Checkout
+              </span>
             )}
+            <div className="flex items-center gap-2 rounded-full border border-[var(--accent)]/30 bg-[#0d0d0d] px-4 py-2">
+              <Lock className="h-3.5 w-3.5 text-[var(--accent)]" />
+              <span className="se-label text-[9px] tracking-[0.28em] text-[#d0c5af]">
+                <span className="hidden sm:inline">Secure Checkout · </span>SSL
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-[1280px] px-4 pt-8 md:px-8">
+        
+        {/* Progress stepper */}
+        <nav aria-label="Checkout progress" className="mb-10 mt-2">
+          <ol className="flex items-center justify-between gap-2 sm:gap-4 max-w-2xl mx-auto">
+            {checkoutSteps.map((step, index) => {
+              const isComplete = step.num < currentStepNum;
+              const isActive = step.id === currentStep;
+              const labelTone = isActive
+                ? "text-[var(--accent)]"
+                : isComplete
+                ? "text-[#d0c5af]"
+                : "text-[#574500]";
+              const circleTone = isComplete
+                ? "border-[var(--accent)] bg-[var(--accent)] text-[#0a0a0a]"
+                : isActive
+                ? "border-[var(--accent)] bg-transparent text-[var(--accent)] shadow-[0_0_24px_var(--accent-glow,rgba(242,202,80,0.45))]"
+                : "border-[#4d4635] bg-transparent text-[#574500]";
+              return (
+                <React.Fragment key={step.id}>
+                  <li className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => isComplete && proceedToStep(step.id)}
+                      disabled={!isComplete && !isActive}
+                      className={cn(
+                        "relative flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                        circleTone,
+                        isComplete && "cursor-pointer hover:bg-[var(--accent)] hover:text-[#0a0a0a]"
+                      )}
+                    >
+                      {isComplete ? (
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      ) : (
+                        step.num
+                      )}
+                    </button>
+                    <span
+                      className={cn(
+                        "se-label hidden text-[10px] uppercase tracking-[0.28em] sm:inline",
+                        labelTone
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                  </li>
+                  {index < checkoutSteps.length - 1 && (
+                    <li
+                      aria-hidden
+                      className="relative h-px flex-1 overflow-hidden bg-[#1c1b1b]"
+                    >
+                      <motion.span
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[var(--accent)] to-[#ffffff]"
+                        initial={{ width: 0 }}
+                        animate={{ width: step.num < currentStepNum ? "100%" : "0%" }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                      />
+                    </li>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <form onSubmit={handleSubmit} className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+          
+          {/* Left column — checkout sections */}
+          <div className="space-y-6 lg:col-span-7">
             
-            {/* 01 Shipping Destination */}
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">02</span>
-                <h2 className="text-xl font-bold tracking-tight">Shipping Destination</h2>
+            {/* Step 1: Contact Information */}
+            <section className={cn("rounded-[2rem] border border-[#1c1b1b] bg-[#0d0d0d] p-7 md:p-9 transition-all duration-500", currentStep !== "contact" && "opacity-60 grayscale-[50%] pointer-events-none")}>
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">Step 01</p>
+                  <h2 className="se-serif mt-2 text-2xl text-[#e5e2e1] md:text-3xl">Contact details</h2>
+                </div>
+                {currentStepNum > 1 && (
+                  <button type="button" onClick={() => proceedToStep("contact")} className="text-[var(--accent)] text-sm underline se-body pointer-events-auto">Edit</button>
+                )}
               </div>
-              
-              <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2">
-                <div className="relative md:col-span-2">
-                  <input
-                    id="checkout-shipping-address"
-                    name="shippingAddress"
-                    value={formData.shippingAddress}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
-                  />
-                  <label
-                    htmlFor="checkout-shipping-address"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
-                  >
-                    Complete Address
-                  </label>
-                </div>
 
-                <div className="relative">
-                  <input
-                    id="checkout-contact-number"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
+              {currentStep === "contact" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="grid gap-5 sm:grid-cols-2">
+                  <Field
+                    label="Full name"
+                    value={formData.fullName}
+                    onChange={updateField("fullName")}
+                    error={errors.fullName}
+                    placeholder="Asanga Perera"
+                    className="sm:col-span-2"
                   />
-                  <label
-                    htmlFor="checkout-contact-number"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
-                  >
-                    Contact Number
-                  </label>
-                </div>
-
-                <div className="relative">
-                  <input
-                    id="checkout-notes"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className={cn(
-                      "peer w-full rounded-t-sm border-0 border-b border-border bg-muted/50 px-4 pb-2 pt-6 text-on-surface transition-all duration-300",
-                      "placeholder-transparent focus:border-[#D4AF37] focus:bg-muted focus:ring-0 focus:outline-none",
-                      "dark:bg-[#111] dark:focus:bg-[#1a1a1a]"
-                    )}
+                  <div className="space-y-1">
+                    <Field
+                      label="Email address"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleEmailChange}
+                      onBlur={() => !isAuthenticated && fetchGuestAddresses(formData.email)}
+                      error={errors.email}
+                      placeholder="you@example.com"
+                    />
+                    {errors.emailHint && <p className="text-[11px] text-[var(--accent)]">{errors.emailHint}</p>}
+                  </div>
+                  <Field
+                    label="Phone number"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    error={errors.phone}
+                    placeholder="07X XXX XXXX"
                   />
-                  <label
-                    htmlFor="checkout-notes"
-                    className="pointer-events-none absolute left-4 top-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-xs peer-focus:top-3 peer-focus:translate-y-0 peer-focus:text-[10px]"
-                  >
-                    Notes (Optional)
-                  </label>
-                </div>
-              </div>
+                  <div className="sm:col-span-2 mt-4">
+                    <button type="button" onClick={() => proceedToStep("address")} className="w-full h-12 bg-white text-black font-semibold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors">
+                      Continue to Delivery
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </section>
 
-            {/* 02 Payment Method */}
-            <section className="space-y-8">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4AF37]">03</span>
-                <h2 className="text-xl font-bold tracking-tight">Payment Method</h2>
-              </div>
-              
-              {/* Payment Choice */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {[
-                  { id: "manual_bank_transfer", label: "Bank Transfer", icon: <Building2 className="h-6 w-6" /> },
-                  { id: "card", label: "Card Payment", icon: <CreditCard className="h-6 w-6" /> },
-                ].map((method) => {
-                  const selected = formData.paymentMethod === method.id;
-                  return (
-                    <motion.button
-                      key={method.id}
-                      type="button"
-                      layout
-                      onClick={() =>
-                        setFormData((prev) => ({ ...prev, paymentMethod: method.id }))
-                      }
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between rounded-xl border-2 p-6 text-left transition-all",
-                        selected
-                          ? "border-[#D4AF37] bg-surface-container-low shadow-[0_0_24px_rgba(212,175,55,0.14)] dark:bg-[#0a0a0a]"
-                          : "border-transparent bg-muted/50 opacity-90 hover:opacity-100 dark:bg-[#111] dark:hover:bg-[#151515]"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        <span
-                          className={
-                            selected ? "text-[#D4AF37]" : "text-muted-foreground"
-                          }
-                        >
-                          {method.icon}
-                        </span>
-                        <span className="font-bold">{method.label}</span>
-                      </div>
-                      {selected ? (
-                        <div className="h-4 w-4 rounded-full border-4 border-[#D4AF37]" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/40" />
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              {/* Dynamic Payment Fields */}
-              <div className="space-y-8 rounded-xl border border-border bg-surface-container-low p-8 shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:border-[#222] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_rgba(0,0,0,0.8)]">
-                {formData.paymentMethod === "card" && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Cardholder Name</label>
-                      <input
-                        name="cardholderName"
-                        value={cardDetails.cardholderName}
-                        onChange={(e) => setCardDetails(prev => ({ ...prev, cardholderName: e.target.value }))}
-                        placeholder="John Doe"
-                        className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
-                      />
-                    </div>
-                    
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Card Number</label>
-                      <div className="relative">
-                        <input
-                          name="cardNumber"
-                          value={cardDetails.cardNumber}
-                          onChange={handleCardChange}
-                          placeholder="0000 0000 0000 0000"
-                          maxLength={19}
-                          className="w-full bg-[#111] border-0 border-b border-gray-800 p-4 pr-12 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm tracking-[0.2em]"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                          <CreditCard className="text-gray-500 w-5 h-5" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Expiry Date</label>
-                        <input
-                          name="expiryDate"
-                          value={cardDetails.expiryDate}
-                          onChange={handleCardChange}
-                          placeholder="MM/YY"
-                          maxLength={5}
-                          className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">CVC</label>
-                        <input
-                          name="cvv"
-                          value={cardDetails.cvv}
-                          onChange={handleCardChange}
-                          placeholder="123"
-                          maxLength={4}
-                          className="bg-[#111] border-0 border-b border-gray-800 p-4 focus:ring-0 focus:border-[#D4AF37] focus:bg-[#1a1a1a] transition-all duration-300 text-white placeholder:text-gray-600 rounded-t-sm"
-                        />
-                      </div>
-                    </div>
-                  </>
+            {/* Step 2: Delivery Information */}
+            <section className={cn("rounded-[2rem] border border-[#1c1b1b] bg-[#0d0d0d] p-7 md:p-9 transition-all duration-500", currentStep !== "address" && "opacity-60 grayscale-[50%] pointer-events-none")}>
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">Step 02</p>
+                  <h2 className="se-serif mt-2 text-2xl text-[#e5e2e1] md:text-3xl">Delivery</h2>
+                </div>
+                {currentStepNum > 2 && (
+                  <button type="button" onClick={() => proceedToStep("address")} className="text-[var(--accent)] text-sm underline se-body pointer-events-auto">Edit</button>
                 )}
+              </div>
 
-                {formData.paymentMethod === "manual_bank_transfer" && (
-                  <div className="space-y-6">
-                    <div className="bg-[#111] border border-gray-800 p-5 rounded-lg flex flex-col sm:flex-row justify-between gap-6 relative overflow-hidden">
-                       <div className="absolute top-0 right-0 bg-[#D4AF37]/10 w-32 h-32 blur-3xl rounded-full"></div>
-                       <div className="space-y-3 flex-1 relative z-10">
-                        <h4 className="font-bold text-[#D4AF37] text-lg">Bank Information</h4>
-                        <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
-                          <span className="text-gray-400">Bank:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.bankName}</span>
-                          
-                          <span className="text-gray-400">Branch:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.branch}</span>
-                          
-                          <span className="text-gray-400">Account Name:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.accountName}</span>
-                          
-                          <span className="text-gray-400">Account No:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono bg-black px-2 py-1 border border-gray-800 rounded">
-                              {MANUAL_BANK_DETAILS.accountNumber}
+              {currentStep === "address" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                  
+                  {/* Delivery Method Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    {DELIVERY_METHODS.map((method) => {
+                      const Icon = method.icon;
+                      const isActive = formData.deliveryMode === method.id;
+                      const displayEta = isFastDistrict ? method.fastEta : method.eta;
+                      return (
+                        <div
+                          key={method.id}
+                          onClick={() => updateField("deliveryMode")(method.id)}
+                          className={cn(
+                            "relative cursor-pointer rounded-xl border p-4 transition-all duration-300",
+                            isActive ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[#4d4635]/40 hover:border-[#99907c]"
+                          )}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <Icon className={cn("h-5 w-5", isActive ? "text-[var(--accent)]" : "text-[#99907c]")} />
+                            {isActive && <Check className="h-4 w-4 text-[var(--accent)]" />}
+                          </div>
+                          <p className="se-body text-sm font-semibold text-white">{method.label}</p>
+                          <p className="se-label text-[9px] tracking-widest text-[#99907c] mt-1">{displayEta}</p>
+                          <p className="se-mono text-sm text-white mt-2">
+                            {method.price === 0 ? "FREE" : (method.id === "standard" && isFreeShippingQualify ? <span className="text-[var(--accent)]">FREE</span> : formatLKR(method.price))}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {formData.deliveryMode !== "pickup" && savedAddresses.length > 0 && (
+                    <div className="mb-6 rounded-xl border border-[var(--accent)]/30 bg-[#0a0a0a] p-4">
+                      <p className="se-label text-[10px] tracking-[0.28em] text-[var(--accent)] mb-3">
+                        Saved addresses
+                      </p>
+                      <div className="space-y-2">
+                        {savedAddresses.map((addr, idx) => (
+                          <button
+                            key={addr._id || idx}
+                            type="button"
+                            onClick={() => {
+                              applySavedAddress(addr);
+                              setUseNewAddress(false);
+                            }}
+                            className={cn(
+                              "block w-full text-left rounded-lg border px-3 py-2 transition",
+                              !useNewAddress &&
+                                formData.addressLine === addr.street &&
+                                formData.postalCode === addr.postalCode
+                                ? "border-[var(--accent)] bg-[var(--accent)]/10"
+                                : "border-[#4d4635]/40 hover:border-[#99907c]"
+                            )}
+                          >
+                            <p className="se-body text-sm text-white">{addr.street}</p>
+                            <p className="text-xs text-[#99907c] mt-1">
+                              {addr.city}, {addr.postalCode} · {addr.country}
+                            </p>
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUseNewAddress(true);
+                            setFormData((prev) => ({
+                              ...prev,
+                              addressLine: "",
+                              city: "",
+                              postalCode: "",
+                            }));
+                          }}
+                          className={cn(
+                            "block w-full text-left rounded-lg border px-3 py-2 transition text-sm",
+                            useNewAddress
+                              ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+                              : "border-dashed border-[#4d4635]/40 text-[#99907c] hover:border-[#99907c]"
+                          )}
+                        >
+                          + Use a new address
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.deliveryMode !== "pickup" && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-5 sm:grid-cols-2 mb-6">
+                      <SelectField
+                        label="Country"
+                        value={formData.country}
+                        onChange={updateField("country")}
+                        options={["Sri Lanka"]}
+                        disabled
+                      />
+                      <Field
+                        label="City"
+                        value={formData.city}
+                        onChange={updateField("city")}
+                        error={errors.city}
+                        placeholder="Colombo"
+                      />
+                      <SelectField
+                        label="District"
+                        value={formData.district}
+                        onChange={updateField("district")}
+                        options={SRI_LANKA_DISTRICTS}
+                        placeholder="Choose a district"
+                        error={errors.district}
+                      />
+                      <Field
+                        label="Postal code"
+                        value={formData.postalCode}
+                        onChange={updateField("postalCode")}
+                        error={errors.postalCode}
+                        placeholder="00100"
+                      />
+                      <Field
+                        label="Address line"
+                        value={formData.addressLine}
+                        onChange={updateField("addressLine")}
+                        error={errors.addressLine}
+                        placeholder="No 12, Galle Road"
+                        className="sm:col-span-2"
+                      />
+                    </motion.div>
+                  )}
+
+                  <button type="button" onClick={() => proceedToStep("payment")} className="w-full h-12 bg-white text-black font-semibold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors">
+                    Continue to Payment
+                  </button>
+                </motion.div>
+              )}
+            </section>
+
+            {/* Step 3: Payment Information */}
+            <section className={cn("rounded-[2rem] border border-[#1c1b1b] bg-[#0d0d0d] p-7 md:p-9 transition-all duration-500", currentStep !== "payment" && "opacity-60 grayscale-[50%] pointer-events-none")}>
+              <div className="mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <p className="se-label text-[10px] tracking-[0.32em] text-[#574500]">Step 03</p>
+                  <h2 className="se-serif mt-2 text-2xl text-[#e5e2e1] md:text-3xl">Payment</h2>
+                </div>
+              </div>
+
+              {currentStep === "payment" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                  <div className="grid gap-4 sm:grid-cols-2 mb-8">
+                    {PAYMENT_METHODS.map((method) => {
+                      const Icon = method.icon;
+                      const isSelected = formData.paymentMethod === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => updateField("paymentMethod")(method.id)}
+                          className={cn(
+                            "group relative flex flex-col items-start gap-3 rounded-2xl border p-5 text-left transition-all",
+                            isSelected
+                              ? "border-[var(--accent)] bg-[#0a0a0a] shadow-[0_0_24px_var(--accent-glow,rgba(242,202,80,0.18))]"
+                              : "border-[#4d4635]/40 bg-[#0a0a0a] hover:border-[#99907c]"
+                          )}
+                        >
+                          <div className="flex w-full items-start justify-between">
+                            <div className={cn("flex h-10 w-10 items-center justify-center rounded-full border transition", isSelected ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[#4d4635]/40 bg-[#131313]")}>
+                              <Icon className={cn("h-5 w-5", isSelected ? "text-[var(--accent)]" : "text-[#99907c]")} />
+                            </div>
+                            <span className={cn("flex h-5 w-5 items-center justify-center rounded-full border transition", isSelected ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[#4d4635]/60")}>
+                              {isSelected && <Check className="h-3 w-3 text-[#0a0a0a]" strokeWidth={3} />}
                             </span>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(MANUAL_BANK_DETAILS.accountNumber);
-                                toast({ title: "Copied!", description: "Account number copied to clipboard." });
-                              }}
-                              className="text-xs bg-[#D4AF37]/20 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black px-2 py-1 rounded transition-colors"
-                            >
-                              Copy
+                          </div>
+                          <div>
+                            <p className="se-body text-sm font-medium text-[#e5e2e1]">{method.label}</p>
+                            <p className="se-label mt-1 text-[9px] uppercase tracking-[0.28em] text-[#574500]">{method.sublabel}</p>
+                            <p className="se-body mt-2 text-xs text-[#99907c]">{method.description}</p>
+                          </div>
+                          {method.badge && (
+                            <span className={cn("se-label rounded-full border px-3 py-1 text-[9px] tracking-[0.28em]", method.id === "card" ? "border-amber-500/30 bg-amber-500/5 text-amber-300" : "border-[#4d4635]/40 bg-[#131313] text-[#99907c]")}>
+                              {method.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {formData.paymentMethod === "manual_bank_transfer" && (
+                    <div className="mt-6 rounded-2xl border border-[#4d4635]/40 bg-[#0a0a0a] p-6 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent)]"></div>
+                      <div className="mb-5 flex items-center justify-between pl-3">
+                        <span className="se-label text-[10px] tracking-[0.32em] text-[var(--accent)]">Bank details</span>
+                        <span className="se-label text-[9px] tracking-[0.28em] text-[#574500]">Reference generated next step</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-3">
+                        <div>
+                          <p className="text-[#99907c] text-xs uppercase tracking-widest mb-1">Bank</p>
+                          <p className="text-white text-sm">{displayBankDetails.bankName} - {displayBankDetails.branch}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#99907c] text-xs uppercase tracking-widest mb-1">Account Name</p>
+                          <p className="text-white text-sm">{displayBankDetails.accountName}</p>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <p className="text-[#99907c] text-xs uppercase tracking-widest mb-1">Account Number</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <p className="se-instrument text-2xl text-[var(--accent)] tracking-widest">{displayBankDetails.accountNumber}</p>
+                            <button type="button" onClick={() => copyToClipboard(displayBankDetails.accountNumber)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-[#99907c] hover:text-white" title="Copy Account Number">
+                              <Copy size={16} />
                             </button>
                           </div>
-
-                          <span className="text-gray-400">WhatsApp:</span>
-                          <span className="font-medium">{MANUAL_BANK_DETAILS.whatsapp}</span>
-                        </div>
-                        <div className="rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/5 px-4 py-3 text-sm text-gray-300">
-                          <p className="font-semibold text-[#D4AF37]">
-                            You must place the order first to get your payment reference.
-                          </p>
-                          <p className="mt-1">
-                            Step 1: place the order. Step 2: we show your unique reference. Step 3: make the bank transfer using that reference in the memo.
-                          </p>
-                          <p className="mt-2 text-amber-200">{MANUAL_BANK_DETAILS.deadline}</p>
                         </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37] ml-1">Upload Receipt (Optional)</label>
-                      <div
-                        onClick={() => fileInputRef.current?.click()}
-                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}
-                        onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-[#D4AF37]', 'bg-[#1a1a1a]'); }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.currentTarget.classList.remove('border-[#D4AF37]', 'bg-[#1a1a1a]');
-                          const file = e.dataTransfer.files?.[0];
-                          if (file) handleFileChange({ target: { files: [file] } });
-                        }}
-                        className="w-full bg-[#111] border border-dashed border-gray-700 hover:border-[#D4AF37] p-8 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer rounded-lg relative overflow-hidden group"
-                      >
-                         <input
-                          type="file"
-                          ref={fileInputRef}
-                          className="hidden"
-                          accept="image/jpeg,image/png,application/pdf"
-                          onChange={handleFileChange}
-                        />
-                        {receiptPreview ? (
-                           <div className="flex flex-col items-center z-10 relative">
-                             {receiptFile?.type?.includes("image") ? (
-                               <img src={receiptPreview} className="max-h-40 rounded border border-gray-700 shadow-md" alt="Receipt preview" />
-                             ) : (
-                                <div className="h-24 w-full px-8 flex items-center justify-center bg-black border border-gray-800 rounded">
-                                  <UploadCloud className="w-8 h-8 text-[#D4AF37] mr-3" />
-                                  <span className="text-sm truncate w-32">{receiptFile?.name}</span>
-                                </div>
-                             )}
-                             <p className="text-xs text-[#D4AF37] mt-3 bg-black/80 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">Change File</p>
-                           </div>
-                        ) : (
-                          <>
-                            <UploadCloud className="w-8 h-8 text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors" />
-                            <div className="text-center text-sm text-gray-400">
-                              <span className="font-semibold text-white block">Click to upload</span> or drag and drop
-                              <p className="text-xs mt-1">JPG, PNG or PDF (Max 5MB)</p>
-                            </div>
-                          </>
-                        )}
+                  {formData.paymentMethod === "card" && (
+                    <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-5">
+                      <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent)]" />
+                      <div>
+                        <p className="se-body text-sm text-[#f0e8c8]">You'll be taken to our demo card gateway after placing the order.</p>
+                        <p className="se-body mt-1 text-xs text-[#99907c]">No real charge is made — our team will manually verify the sample transaction. The PayHere gateway activates once hosting is configured.</p>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </section>
+                  )}
 
-            {/* Error Message */}
-            {formError && (
-              <div className="p-4 bg-red-950/20 border border-red-900 border-l-4 border-l-red-500 flex items-center gap-3 rounded-r-lg">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                <p className="text-red-400 text-sm font-medium">{formError}</p>
-              </div>
-            )}
-
-            {/* Submit Action for Mobile */}
-            <div className="lg:hidden block pt-6">
-              <button
-                type="submit"
-                disabled={isUploading}
-                className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
-                  <>
-                    {submitButtonLabel} <span className="text-lg">→</span>
-                  </>
-                )}
-              </button>
-            </div>
-            
-          </form>
-        </div>
-
-        {/* RIGHT: ORDER SUMMARY (Sticky Sidebar) */}
-        <div className="w-full lg:sticky lg:top-32 hidden lg:block">
-          <div className="bg-[#0a0a0a] rounded-xl p-8 border border-[#222] shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
-            <h3 className="text-xl font-bold tracking-tight mb-8">Order Summary</h3>
-            
-            {/* Cart Items */}
-            <div className="space-y-6 mb-10 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {checkoutItems.map((item) => (
-                <div key={item.id} className="flex gap-4 items-center">
-                  <div className="w-20 h-24 bg-[#111] rounded-lg overflow-hidden flex-shrink-0 border border-gray-800">
-                    <img
-                      src={item.product.image || item.product.images?.[0]?.url || "/LOGO.png"}
-                      className="w-full h-full object-cover"
-                      alt={item.product.name}
+                  <label className="mt-8 flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.termsAccepted}
+                      onChange={updateField("termsAccepted")}
+                      className="mt-0.5 h-4 w-4 cursor-pointer rounded border border-[#4d4635] bg-[#0a0a0a] accent-[var(--accent)]"
                     />
+                    <span className="se-body text-sm text-[#d0c5af]">
+                      I have read and agree to the <Link to="/terms" className="text-[var(--accent)] underline underline-offset-4">Terms & Conditions</Link>.
+                    </span>
+                  </label>
+                  {errors.termsAccepted && <p className="mt-2 text-xs text-rose-400">{errors.termsAccepted}</p>}
+
+                  {/* Desktop Submit Button (Mobile is fixed at bottom) */}
+                  <div className="hidden lg:block mt-10">
+                    <button
+                      type="submit"
+                      disabled={checkoutItems.length === 0 || isSubmitting}
+                      className="w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm hover:bg-white transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                    >
+                      {isSubmitting ? <><Loader2 className="animate-spin h-5 w-5"/> Processing...</> : (
+                        <>Complete Order <span className="opacity-50">|</span> {formatLKR(finalTotal)}</>
+                      )}
+                    </button>
+                    <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                      <div className="flex flex-col items-center gap-2 text-[#99907c]"><Lock size={18}/> <span className="text-[10px] uppercase tracking-widest">Secure Checkout</span></div>
+                      <div className="flex flex-col items-center gap-2 text-[#99907c]"><Check size={18}/> <span className="text-[10px] uppercase tracking-widest">Quality Guarantee</span></div>
+                      <div className="flex flex-col items-center gap-2 text-[#99907c]"><ShieldCheck size={18}/> <span className="text-[10px] uppercase tracking-widest">Easy Exchange</span></div>
+                      <div className="flex flex-col items-center gap-2 text-[#99907c]"><Gift size={18}/> <span className="text-[10px] uppercase tracking-widest">Premium Packing</span></div>
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="font-bold text-sm leading-tight line-clamp-1">{item.product.name}</p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Qty: {item.quantity}
-                    </p>
-                    <p className="font-bold text-base mt-2 text-[#D4AF37]">LKR {item.unitPrice * item.quantity}</p>
+                </motion.div>
+              )}
+            </section>
+          </div>
+
+          {/* Right column — sticky order summary */}
+          <aside className="lg:col-span-5">
+            <div className="space-y-5 lg:sticky lg:top-28">
+              <div className="rounded-[2rem] border border-[var(--accent)]/30 bg-gradient-to-b from-[#131313] to-[#0d0d0d] p-7 shadow-[0_0_60px_var(--accent-glow,rgba(242,202,80,0.08))]">
+                
+                {/* Emotional Header */}
+                <div className="mb-6 text-center border-b border-[#1c1b1b] pb-6">
+                  <Clock className="w-5 h-5 mx-auto text-[var(--accent)] mb-3" />
+                  <p className="text-white se-serif text-lg">Your rare fit is almost yours</p>
+                  <p className="text-[#99907c] text-xs mt-1">Reserved for 15:00 minutes</p>
+                </div>
+
+                {checkoutItems.length === 0 ? (
+                  <p className="se-body py-6 text-center text-sm text-[#574500]">Your bag is empty.</p>
+                ) : (
+                  <ul className="mb-6 space-y-6">
+                    {checkoutItems.map((item) => (
+                      <li key={item.id} className="flex items-start gap-4">
+                        {/* Mini Gallery */}
+                        <div className="h-24 w-20 shrink-0 overflow-hidden rounded-xl bg-[#1c1b1b] border border-[#4d4635]">
+                          {item.product?.images?.[0]?.url ? (
+                            <img src={item.product.images[0].url} alt={item.product?.name || ""} className="h-full w-full object-cover" />
+                          ) : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="se-body truncate text-base text-[#e5e2e1]">{item.product?.name}</p>
+                          
+                          {/* Variant Preview: Color Circle + Size */}
+                          <div className="flex flex-wrap items-center gap-3 mt-2">
+                            {item.variant?.color && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: resolveColor(item.variant.color) }}/>
+                                <span className="text-xs text-[#99907c]">{item.variant.color}</span>
+                              </div>
+                            )}
+                            {item.variant?.size && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-[#99907c] bg-white/5 px-2 py-0.5 rounded border border-white/10">{item.variant.size}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Editable Cart Controls */}
+                          {!isBuyNow && (
+                            <div className="flex items-center gap-4 mt-3">
+                              <div className="flex items-center gap-3 border border-[#4d4635] rounded-full px-2 py-0.5">
+                                <button type="button" onClick={() => handleQuantity(item, item.quantity - 1)} className="text-[#99907c] hover:text-white"><Minus size={12}/></button>
+                                <span className="text-xs text-white w-4 text-center">{item.quantity}</span>
+                                <button type="button" onClick={() => handleQuantity(item, item.quantity + 1)} className="text-[#99907c] hover:text-white"><Plus size={12}/></button>
+                              </div>
+                              <button type="button" onClick={() => handleRemove(item.id)} className="text-rose-500/70 hover:text-rose-500 text-xs flex items-center gap-1"><Trash2 size={12}/> Remove</button>
+                            </div>
+                          )}
+                          {(item.variant?.stock > 0 && item.variant?.stock <= 5) && (
+                            <p className="text-rose-400 text-[10px] mt-2 uppercase tracking-widest">Only {item.variant.stock} left in size</p>
+                          )}
+                        </div>
+                        <span className="se-instrument shrink-0 text-base text-[#e5e2e1] pt-1">
+                          {formatLKR(item.unitPrice * item.quantity)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Shipping Progress */}
+                {!isFreeShippingQualify && (
+                  <div className="bg-[#1a1a1a] p-4 rounded-xl border border-[#333] mb-6">
+                    <p className="text-xs text-white text-center mb-2">You are <span className="text-[var(--accent)]">{formatLKR(amountToFreeShipping)}</span> away from FREE delivery</p>
+                    <div className="w-full bg-[#333] h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-[var(--accent)] h-full rounded-full transition-all duration-500" style={{ width: `${shippingProgress}%` }}></div>
+                    </div>
+                  </div>
+                )}
+                {isFreeShippingQualify && (
+                  <div className="bg-[var(--accent)]/10 border border-[var(--accent)] p-3 rounded-xl mb-6 text-center">
+                    <p className="text-xs text-[var(--accent)] uppercase tracking-widest font-semibold flex justify-center items-center gap-2"><Package size={14}/> Your order qualifies for Premium Packaging</p>
+                  </div>
+                )}
+
+                {/* Coupon Section */}
+                <div className="border-t border-[#1c1b1b] py-4">
+                  <button type="button" onClick={() => setCouponExpanded(!couponExpanded)} className="flex items-center justify-between w-full text-sm text-[#99907c] hover:text-white transition-colors">
+                    <span className="flex items-center gap-2"><Gift size={16}/> Member Rewards / Promo Code</span>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", couponExpanded && "rotate-180")}/>
+                  </button>
+                  <AnimatePresence>
+                    {couponExpanded && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="mt-4 space-y-3">
+                          {rewardSuggestions.length > 0 && (
+                            <div className="space-y-2 rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="se-label text-[9px] uppercase tracking-[0.26em] text-[var(--accent)]">Unlocked rewards</p>
+                                <Link to="/shopping/rewards" className="text-[10px] uppercase tracking-widest text-[#d0c5af] hover:text-white">View all</Link>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {rewardSuggestions.map((reward) => (
+                                  <button
+                                    key={reward.id}
+                                    type="button"
+                                    onClick={() => applyCouponCode(reward.code)}
+                                    disabled={couponApplying}
+                                    className="rounded-full border border-[#4d4635]/60 bg-[#0a0a0a] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e5e2e1] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                                  >
+                                    {reward.code}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                              placeholder="Enter code"
+                              className="h-11 flex-1 rounded-lg border border-[#333] bg-[#1a1a1a] px-3 text-sm uppercase tracking-wider text-white outline-none focus:border-[var(--accent)]"
+                            />
+                            {appliedCoupon ? (
+                              <button type="button" onClick={removeCoupon} className="rounded-lg bg-[#333] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#444]">
+                                Remove
+                              </button>
+                            ) : (
+                              <button type="button" onClick={() => applyCouponCode()} disabled={couponApplying} className="rounded-lg bg-[#333] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#444] disabled:opacity-50">
+                                {couponApplying ? "Checking" : "Apply"}
+                              </button>
+                            )}
+                          </div>
+                          {appliedCoupon ? (
+                            <p className="text-xs text-[var(--accent)]">
+                              {appliedCoupon.code} applied. You saved {formatLKR(appliedCoupon.discount)}.
+                            </p>
+                          ) : null}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="space-y-3 border-t border-[#1c1b1b] pt-5">
+                  <div className="flex justify-between se-body text-sm text-[#d0c5af]">
+                    <span>Subtotal</span>
+                    <span>{formatLKR(checkoutTotal)}</span>
+                  </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between se-body text-sm text-[var(--accent)]">
+                      <span>Reward discount</span>
+                      <span>-{formatLKR(couponDiscount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-start se-body text-sm text-[#99907c]">
+                    <span className="inline-flex items-center gap-2">
+                      <Truck className="h-3.5 w-3.5" />
+                      Delivery
+                    </span>
+                    <div className="text-right">
+                      {shippingFee === 0 ? (
+                        <span className="text-[var(--accent)]">Complimentary</span>
+                      ) : (
+                        <span>{formatLKR(shippingFee)}</span>
+                      )}
+                      {formData.deliveryMode !== 'pickup' && (
+                        <p className="text-[10px] mt-1 text-[#574500]">
+                          {isFastDistrict ? selectedDelivery.fastEta : selectedDelivery.eta}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
+
+                <div className="mt-5 flex items-end justify-between border-t border-[#1c1b1b] pt-5">
+                  <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c] pb-1">Total</span>
+                  <span className="se-instrument text-4xl text-[var(--accent)] leading-none">{formatLKR(finalTotal)}</span>
+                </div>
+
+                {/* Guest gift notice (Fix #7) */}
+                {!isAuthenticated && (
+                  <div className="mt-5 flex items-start gap-3 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4">
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
+                    <p className="text-xs text-[#d0c5af] leading-relaxed">
+                      <Link to="/auth/register" className="text-[var(--accent)] underline">
+                        Register
+                      </Link>{" "}
+                      to be eligible for surprise gifts with your order.
+                    </p>
+                  </div>
+                )}
+              </div>
+
             </div>
-
-            {/* Price Breakdown */}
-            <div className="space-y-4 pt-8 border-t border-gray-800">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Subtotal</span>
-                <span className="font-bold">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Shipping</span>
-                <span className="text-[#D4AF37] font-bold uppercase text-[10px] tracking-widest">Calculated per delivery</span>
-              </div>
-              
-              <div className="flex justify-between items-center pt-6 border-t border-gray-800">
-                <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-extrabold tracking-tighter text-[#D4AF37]">LKR {checkoutTotal || checkoutTotalAmount || totalAmount}</span>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <button
-               onClick={(e) => {
-                 // Trigger the form submit programmatically for the sticky button
-                 e.preventDefault();
-                 handleSubmit(e);
-               }}
-               disabled={isUploading}
-               className="w-full mt-10 bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-lg font-extrabold tracking-tight text-lg transition-all flex items-center justify-center gap-3 shadow-[0_0_15px_rgba(212,175,55,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-               {isUploading ? <Loader2 className="animate-spin w-6 h-6" /> : (
-                 <>
-                   {submitButtonLabel} <span className="text-xl">→</span>
-                 </>
-               )}
-            </button>
-            <p className="text-[10px] text-center text-gray-500 mt-6 uppercase tracking-widest leading-relaxed">
-              By completing your purchase you agree to our <br/> Terms of Service and Privacy Policy.
-            </p>
-          </div>
-        </div>
-
+          </aside>
+        </form>
       </div>
 
-      {/* Guest Checkout Dialog */}
-      {showGuestDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#111] border border-gray-800 p-8 rounded-2xl max-w-md w-full shadow-2xl space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-bold text-[#D4AF37]">
-                {guestCheckInfo?.existsAsGuest ? "Welcome Back!" : "Personalize Your Experience"}
-              </h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                {guestCheckInfo?.existsAsGuest 
-                  ? "We noticed you've shopped with us before. Would you like to create an account to track your orders and enjoy a faster checkout next time?"
-                  : "Would you like to register with us for a better experience, or proceed with a one-time guest purchase?"}
-              </p>
-            </div>
-
-            <div className="grid gap-4">
-              <button
-                onClick={() => handleGuestChoice('register')}
-                disabled={isProcessingSelection}
-                className="w-full bg-[#D4AF37] hover:bg-yellow-500 text-black py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-              >
-                {isProcessingSelection ? <Loader2 className="animate-spin w-5 h-5" /> : "Register & Continue"}
-              </button>
-              
-              <button
-                onClick={() => handleGuestChoice('guest')}
-                disabled={isProcessingSelection}
-                className="w-full bg-transparent border border-gray-700 hover:border-gray-500 text-white py-4 rounded-xl font-bold transition-all"
-              >
-                Continue as Guest
-              </button>
-            </div>
-            
-            <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest">
-              Registration generates a temporary password sent to your email.
-            </p>
-          </div>
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0a0a0a]/90 backdrop-blur-md border-t border-[#1c1b1b] lg:hidden z-50">
+        <div className="flex items-center justify-between mb-3 px-2">
+          <span className="text-[#99907c] text-xs">Total</span>
+          <span className="se-instrument text-2xl text-[var(--accent)]">{formatLKR(finalTotal)}</span>
         </div>
-      )}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={checkoutItems.length === 0 || isSubmitting || currentStep !== "payment"}
+          className="w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm hover:bg-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 rounded-xl shadow-[0_0_20px_var(--accent-glow,rgba(242,202,80,0.2))]"
+        >
+          {isSubmitting ? <><Loader2 className="animate-spin h-5 w-5"/> Processing...</> : "Complete Order"}
+        </button>
+        {currentStep !== "payment" && (
+           <p className="text-center text-[10px] text-rose-400 mt-2">Please complete all steps above first.</p>
+        )}
+      </div>
+
+      {/* OTP modal — guest manual bank transfer (Fix #3) */}
+      <AnimatePresence>
+        {otpModal.open && (
+          <motion.div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setOtpModal((m) => ({ ...m, open: false }))}
+          >
+            <motion.div
+              className="relative w-full max-w-md rounded-2xl border border-[var(--accent)]/30 bg-[#0d0d0d] p-7 shadow-2xl"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="se-label text-[10px] tracking-[0.32em] text-[var(--accent)]">
+                Verify your identity
+              </p>
+              <h3 className="se-serif text-2xl text-white mt-2">
+                Confirm it's really you
+              </h3>
+              <p className="text-sm text-[#99907c] mt-3 leading-relaxed">
+                Bank-transfer orders need OTP verification. We'll send a 4-digit code to{" "}
+                <span className="text-white">{formData.email}</span>
+                {formData.phone ? ` and your WhatsApp.` : "."}
+              </p>
+
+              {!otpModal.sent ? (
+                <button
+                  type="button"
+                  disabled={otpModal.sending}
+                  onClick={sendGuestOtp}
+                  className="mt-6 w-full h-12 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {otpModal.sending ? (
+                    <>
+                      <Loader2 className="animate-spin h-5 w-5" /> Sending…
+                    </>
+                  ) : (
+                    "Send OTP"
+                  )}
+                </button>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{4}"
+                    maxLength={4}
+                    value={otpModal.code}
+                    onChange={(e) =>
+                      setOtpModal((m) => ({
+                        ...m,
+                        code: e.target.value.replace(/\D/g, "").slice(0, 4),
+                      }))
+                    }
+                    placeholder="0000"
+                    className="w-full h-14 text-center text-2xl tracking-[0.5em] bg-[#0a0a0a] border border-[var(--accent)]/40 rounded-lg text-white outline-none focus:border-[var(--accent)]"
+                  />
+                  <button
+                    type="button"
+                    disabled={otpModal.verifying}
+                    onClick={verifyGuestOtp}
+                    className="w-full h-12 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {otpModal.verifying ? (
+                      <>
+                        <Loader2 className="animate-spin h-5 w-5" /> Verifying…
+                      </>
+                    ) : (
+                      "Verify & continue"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendGuestOtp}
+                    disabled={otpModal.sending}
+                    className="w-full text-xs text-[#99907c] hover:text-white transition"
+                  >
+                    Resend code
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setOtpModal((m) => ({ ...m, open: false }))}
+                className="mt-4 w-full text-xs text-[#574500] hover:text-[#99907c] transition"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

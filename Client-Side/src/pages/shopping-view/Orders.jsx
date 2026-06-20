@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, Package, ArrowRight } from "lucide-react";
+import { ChevronRight, Package, ArrowRight, Star } from "lucide-react";
 
 import { fetchUserOrders } from "@/store/order-slice";
+import { fetchMyPendingManualPayments } from "@/store/manualPaymentSlice";
 import StatusBadge from "@/components/common-components/StatusBadge";
+import { Upload } from "lucide-react";
 
 const formatCurrency = (amount = 0) =>
   Number(amount).toLocaleString("en-LK", {
@@ -52,11 +54,25 @@ const matchesFilter = (status, filterId) => {
 const Orders = () => {
   const dispatch = useDispatch();
   const { userOrders, isLoading } = useSelector((state) => state.order);
+  const pendingPayments = useSelector(
+    (state) => state.manualPayment?.pendingForCurrentVisitor ?? []
+  );
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     dispatch(fetchUserOrders());
+    dispatch(fetchMyPendingManualPayments());
   }, [dispatch]);
+
+  // Map orderId → manual payment slug for the "Upload receipt" CTA.
+  const slugByOrderId = useMemo(() => {
+    const map = new Map();
+    pendingPayments.forEach((p) => {
+      const orderId = p.order?._id || p.orderId;
+      if (orderId && p.slug) map.set(String(orderId), p.slug);
+    });
+    return map;
+  }, [pendingPayments]);
 
   const filteredOrders = useMemo(
     () =>
@@ -230,13 +246,69 @@ const Orders = () => {
                     </div>
                   </div>
 
-                  <Link
-                    to={`/shopping/order-tracking?orderId=${order._id}`}
-                    className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-[#D4AF37] hover:underline"
-                  >
-                    Track Order <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                    <Link
+                      to={`/shopping/order-tracking?orderId=${order._id}`}
+                      className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-[#D4AF37] hover:underline"
+                    >
+                      Track Order <ArrowRight className="h-4 w-4" />
+                    </Link>
+
+                    {(["pending_payment", "proof_submitted"].includes(
+                      String(order.status).toLowerCase()
+                    ) &&
+                      slugByOrderId.get(String(order._id))) && (
+                      <Link
+                        to={`/shopping/manual-payment/${slugByOrderId.get(String(order._id))}`}
+                        className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-black transition hover:bg-amber-400"
+                      >
+                        <Upload className="h-3.5 w-3.5" /> Upload receipt
+                      </Link>
+                    )}
+                  </div>
                 </div>
+
+                {String(order.status).toLowerCase() === "delivered" &&
+                order.items?.length ? (
+                  <div className="mt-5 border-t border-[#D4AF37]/10 pt-4">
+                    <p className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-[#D4AF37]">
+                      <Star className="h-3 w-3" /> Loved your purchase?
+                      Share a review
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(
+                        new Map(
+                          order.items
+                            .filter((item) => item.product?._id || item.product)
+                            .map((item) => {
+                              const id = String(
+                                item.product?._id || item.product
+                              );
+                              return [
+                                id,
+                                {
+                                  id,
+                                  name:
+                                    item.product?.name ||
+                                    item.productName ||
+                                    "Item",
+                                },
+                              ];
+                            })
+                        ).values()
+                      ).map((item) => (
+                        <Link
+                          key={item.id}
+                          to={`/product/${item.id}/reviews`}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/5 px-3 py-1.5 text-xs text-[#D4AF37] transition-colors hover:bg-[#D4AF37] hover:text-black"
+                        >
+                          <Star className="h-3 w-3" />
+                          Review {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </motion.div>
             ))}
           </div>

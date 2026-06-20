@@ -108,7 +108,7 @@ export default function HomeHero({
 
   return (
     <section
-      className="relative h-[640px] sm:h-[760px] lg:h-[860px] px-4 sm:px-6 md:px-8 pt-4 md:pt-8 pb-10 md:pb-16 overflow-hidden"
+      className="relative min-h-[100svh] w-full px-4 sm:px-6 md:px-8 pt-4 md:pt-8 pb-10 md:pb-16 overflow-hidden flex flex-col"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -165,9 +165,8 @@ export default function HomeHero({
         </AnimatePresence>
 
         {/* Editorial gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/35 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/70 via-[#0a0a0a]/10 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(242,202,80,0.08),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(242,202,80,0.05),transparent_60%)]" />
       </div>
 
       {/* Hairline frame draws after reveal */}
@@ -196,86 +195,38 @@ export default function HomeHero({
         transition={{ duration: 1, delay: D(0.3), ease: [0.65, 0, 0.35, 1] }}
       />
 
-      <div className="relative h-full flex flex-col justify-between">
-        {/* Top eyebrow strip */}
-        <Mdiv
-          className="flex items-start justify-between pt-4 px-4 md:pt-5 md:px-5"
-          initial={{ opacity: 0, y: -8 }}
-          animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.6, delay: D(0.1), ease: "easeOut" }}
+      <div className="relative h-full flex flex-col items-center justify-center text-center gap-6 z-10">
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="se-serif text-5xl md:text-7xl text-[#e5e2e1] drop-shadow-lg"
         >
-          <Eyebrow tone="muted" size="sm">{topLeft}</Eyebrow>
-          <Eyebrow tone="muted" size="sm">{topRight}</Eyebrow>
-        </Mdiv>
-
-        {/* Bottom lockup */}
-        <div className="pl-4 pb-4 md:pl-8 md:pb-8 max-w-3xl">
-          <Mdiv
-            initial={{ opacity: 0, y: 12 }}
-            animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-            transition={{ duration: 0.6, delay: D(0.35), ease: [0.22, 1, 0.36, 1] }}
+          Elevate Your Style
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="se-body text-[#d0c5af] text-sm tracking-widest uppercase"
+        >
+          Premium fashion, delivered across Sri Lanka
+        </motion.p>
+        <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+          <Btn
+            variant="default"
+            size="lg"
+            onClick={() => { window.location.href = '/shopping/product-list' }}
           >
-            <Eyebrow tone="gold" size="md">{eyebrow}</Eyebrow>
-          </Mdiv>
-
-          {/* Headline — line-by-line slide reveal */}
-          <h1
-            className="se-serif mt-4 md:mt-5 leading-[0.92] text-[#fafafa] text-[44px] sm:text-6xl md:text-7xl lg:text-[120px]"
-            style={{ fontWeight: 900, letterSpacing: "-0.02em" }}
+            Shop Now
+          </Btn>
+          <Btn
+            variant="outline"
+            size="lg"
+            onClick={() => { window.location.href = '/shopping/product-list' }}
           >
-            <span className="block overflow-hidden">
-              <motion.span
-                className="block"
-                initial={{ y: "110%" }}
-                animate={ready ? { y: "0%" } : { y: "110%" }}
-                transition={{ duration: 0.85, delay: D(0.5), ease: [0.22, 1, 0.36, 1] }}
-              >
-                {primaryHeadline}
-              </motion.span>
-            </span>
-            <span className="block overflow-hidden">
-              <motion.span
-                className="block"
-                initial={{ y: "110%" }}
-                animate={ready ? { y: "0%" } : { y: "110%" }}
-                transition={{ duration: 0.85, delay: D(0.65), ease: [0.22, 1, 0.36, 1] }}
-              >
-                {secondaryHeadline}
-              </motion.span>
-            </span>
-          </h1>
-
-          {/* Hairline accent */}
-          <motion.div
-            className="mt-5 md:mt-7 h-px bg-[#f2ca50] origin-left"
-            style={{ width: 80 }}
-            initial={{ scaleX: 0 }}
-            animate={ready ? { scaleX: 1 } : { scaleX: 0 }}
-            transition={{ duration: 0.7, delay: D(0.85), ease: [0.65, 0, 0.35, 1] }}
-          />
-
-          {/* Paragraph */}
-          <Mp
-            className="mt-5 md:mt-6 max-w-md se-body text-[#d0c5af]/90 text-sm md:text-base leading-relaxed"
-            initial={{ opacity: 0, y: 12 }}
-            animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-            transition={{ duration: 0.7, delay: D(1.0), ease: "easeOut" }}
-          >
-            {paragraph}
-          </Mp>
-
-          {/* CTAs */}
-          <Mdiv
-            className="mt-7 md:mt-8 flex items-center gap-3 md:gap-4 flex-wrap"
-            initial={{ opacity: 0, y: 12 }}
-            animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-            transition={{ duration: 0.7, delay: D(1.15), ease: "easeOut" }}
-          >
-            {primaryCta || (
-              <Btn variant="default" iconRight={ArrowRight}>Take a closer look</Btn>
-            )}
-            {secondaryCta || <Btn variant="outline">Read the chapter</Btn>}
-          </Mdiv>
+            View Collections
+          </Btn>
         </div>
       </div>
 

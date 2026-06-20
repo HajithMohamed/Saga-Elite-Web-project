@@ -1,13 +1,15 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const { requireAdmin: adminMiddleware } = require("../Middlewares/admin-middleware");
+const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const { imageUpload } = require("../Middlewares/multer-middleware");
 const {
   validateObjectIdParam,
   validateReviewCreate,
   validateReviewUpdate,
   validateReviewFlag,
-  validateReviewModeration,
+  validateReviewCategorize,
+  validateBulkReviewAction,
 } = require("../Middlewares/request-validation");
 const {
   createReview,
@@ -17,10 +19,15 @@ const {
   voteHelpful,
   deleteReview,
   getAllReviews,
-  moderateReview,
+  categorizeReview,
   uploadReviewImages,
   updateReview,
   flagReview,
+  getDropAnalytics,
+  replyToReview,
+  featureReview,
+  getReviewsAnalytics,
+  bulkModerateReviews,
 } = require("../Controllers/reviewController");
 
 const userRouter = express.Router();
@@ -36,7 +43,12 @@ userRouter.post("/:reviewId/flag", authMiddleware, validateObjectIdParam("review
 userRouter.patch("/:reviewId", authMiddleware, validateObjectIdParam("reviewId", "review id"), validateReviewUpdate, updateReview);
 userRouter.delete("/:reviewId", authMiddleware, validateObjectIdParam("reviewId", "review id"), deleteReview);
 
-adminRouter.get("/", authMiddleware, adminMiddleware, getAllReviews);
-adminRouter.put("/:reviewId", authMiddleware, adminMiddleware, validateObjectIdParam("reviewId", "review id"), validateReviewModeration, moderateReview);
+adminRouter.get("/", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getAllReviews);
+adminRouter.get("/analytics", authMiddleware, adminMiddleware, requirePermission("manageReviews"), getReviewsAnalytics);
+adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requirePermission("viewAnalytics"), validateObjectIdParam("dropId", "drop id"), getDropAnalytics);
+adminRouter.patch("/:reviewId/category", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewCategorize, adminLogMiddleware, categorizeReview);
+adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, replyToReview);
+adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, featureReview);
+adminRouter.patch("/bulk", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateBulkReviewAction, adminLogMiddleware, bulkModerateReviews);
 
 module.exports = { userRouter, adminRouter };

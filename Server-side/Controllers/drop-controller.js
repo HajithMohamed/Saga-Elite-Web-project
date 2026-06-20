@@ -6,8 +6,11 @@ const Drop = require("../Models/Drop");
 const mongoose = require("mongoose");
 const cloudinary = require("../Config/cloudinary-config");
 const filterObj = require("../Utils/filter-object");
-const validator = require("validator");
+const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
 const { broadcastNotification } = require("../Utils/notification-service");
+const { emitToAll } = require("../Utils/socket-service");
+const runInTransaction = require("../Utils/safe-transaction");
+
 
 
 /*
@@ -17,30 +20,33 @@ const { broadcastNotification } = require("../Utils/notification-service");
 */
 
 const createDrop = catchAsync(async (req, res, next) => {
-    const dropData = filterObj(req.body, "name", "description", "releaseDate", "endDate");
+    const dropData = filterObj(
+        req.body,
+        "name",
+        "description",
+        "headline",
+        "manifesto",
+        "cinematicMode",
+        "vipEarlyAccessHours",
+        "releaseDate",
+        "endDate",
+        "isPublished",
+        "isArchived"
+    );
 
     if (Object.keys(dropData).length === 0) {
         return next(new AppError("At least name and releaseDate are required", 400));
     }
 
-    // Validate dates
-    if (dropData.releaseDate && !validator.isISO8601(String(dropData.releaseDate))) {
-        return next(new AppError("Invalid releaseDate format", 400));
-    }
-    if (dropData.endDate && !validator.isISO8601(String(dropData.endDate))) {
-        return next(new AppError("Invalid endDate format", 400));
-    }
-
-    if (dropData.releaseDate && dropData.endDate) {
-        if (new Date(dropData.endDate) <= new Date(dropData.releaseDate)) {
-            return next(new AppError("endDate must be after releaseDate", 400));
-        }
+    // Date format already validated and converted to Date instances by validateDropCreate.
+    if (dropData.releaseDate && dropData.endDate && dropData.endDate <= dropData.releaseDate) {
+        return next(new AppError("endDate must be after releaseDate", 400));
     }
 
     const newDrop = await Drop.create({
         ...dropData,
-        isPublished: true,
-        isArchived: false,
+        isPublished: dropData.isPublished ?? true,
+        isArchived: dropData.isArchived ?? false,
     });
 
     await broadcastNotification({
@@ -62,7 +68,15 @@ const createDrop = catchAsync(async (req, res, next) => {
         entityRef: newDrop._id,
         entityType: "Drop",
         meta: { dropId: newDrop._id, dropSlug: newDrop.slug },
-        filter: { role: "admin" },
+        filter: { role: { $in: ADMIN_ROLES } },
+    });
+
+    // Real-time emit (Fix #4) so drops list pages refetch.
+    emitToAll("drop:created", {
+        dropId: newDrop._id,
+        slug: newDrop.slug,
+        name: newDrop.name,
+        releaseDate: newDrop.releaseDate,
     });
 
     res.status(201).json({
@@ -83,7 +97,7 @@ const getAllDrops = catchAsync(async (req, res, next) => {
     const filter = {};
 
     // Admin can see all; public sees only published & non-archived
-    if (!req.userInfo || req.userInfo.role !== "admin") { 
+    if (!req.userInfo || !isAdminRole(req.userInfo.role)) { 
         filter.isPublished = true;
         filter.isArchived = false;
     }
@@ -91,7 +105,11 @@ const getAllDrops = catchAsync(async (req, res, next) => {
     const drops = await Drop.find(filter)
         .sort({ releaseDate: -1 })
         .populate("images")
-        .populate("products");
+        .populate({
+            path: "products",
+            match: { isActive: true },
+            populate: { path: "images" },
+        });
 
     res.status(200).json({
         success: true,
@@ -115,7 +133,13 @@ const getSingleDrop = catchAsync(async (req, res, next) => {
         return next(new AppError("Drop slug is required", 400));
     }
 
-    const drop = await Drop.findOne({ slug: dropSlug }).populate("images");
+    const filter = { slug: dropSlug };
+    if (!req.userInfo || !isAdminRole(req.userInfo.role)) {
+        filter.isPublished = true;
+        filter.isArchived = false;
+    }
+
+    const drop = await Drop.findOne(filter).populate("images");
 
     if (!drop) {
         return next(new AppError("Drop not found", 404));
@@ -150,6 +174,10 @@ const updateDrop = catchAsync(async (req, res, next) => {
         req.body,
         "name",
         "description",
+        "headline",
+        "manifesto",
+        "cinematicMode",
+        "vipEarlyAccessHours",
         "releaseDate",
         "endDate",
         "isPublished",
@@ -160,26 +188,16 @@ const updateDrop = catchAsync(async (req, res, next) => {
         return next(new AppError("At least one field is required to update", 400));
     }
 
-    // Validate dates if provided
-    if (dropData.releaseDate && !validator.isISO8601(String(dropData.releaseDate))) {
-        return next(new AppError("Invalid releaseDate format", 400));
-    }
-    if (dropData.endDate && !validator.isISO8601(String(dropData.endDate))) {
-        return next(new AppError("Invalid endDate format", 400));
-    }
-
+    // Date format already validated and converted to Date instances by validateDropUpdate.
     const drop = await Drop.findOne({ slug: dropSlug });
 
     if (!drop) {
         return next(new AppError("Drop not found", 404));
     }
 
-    // Validate date ordering
-    const finalRelease = dropData.releaseDate
-        ? new Date(dropData.releaseDate)
-        : drop.releaseDate;
-    const finalEnd = dropData.endDate
-        ? new Date(dropData.endDate)
+    const finalRelease = dropData.releaseDate || drop.releaseDate;
+    const finalEnd = Object.prototype.hasOwnProperty.call(dropData, "endDate")
+        ? dropData.endDate
         : drop.endDate;
 
     if (finalRelease && finalEnd && finalEnd <= finalRelease) {
@@ -191,13 +209,10 @@ const updateDrop = catchAsync(async (req, res, next) => {
 
     const populatedDrop = await Drop.findById(drop._id).populate("images");
 
-    const io = req.app.get("io");
-    if (io) {
-        io.emit("drop:updated", {
-            dropId: populatedDrop._id,
-            drop: populatedDrop
-        });
-    }
+    emitToAll("drop:updated", {
+        dropId: populatedDrop._id,
+        drop: populatedDrop,
+    });
 
     res.status(200).json({
         success: true,
@@ -243,19 +258,14 @@ const deleteDrop = catchAsync(async (req, res, next) => {
         refModel: "Drop",
     });
 
-    const session = await mongoose.startSession();
-    try {
-        await session.withTransaction(async () => {
-            await Image.deleteMany({
-                refId: drop._id,
-                refModel: "Drop",
-            }).session(session);
+    await runInTransaction(async (session) => {
+        await Image.deleteMany({
+            refId: drop._id,
+            refModel: "Drop",
+        }).session(session);
 
-            await Drop.deleteOne({ _id: drop._id }).session(session);
-        });
-    } finally {
-        session.endSession();
-    }
+        await Drop.deleteOne({ _id: drop._id }).session(session);
+    });
 
     // Cloudinary cleanup (best-effort)
     if (dropImages.length > 0) {
@@ -299,13 +309,10 @@ const archiveDrop = catchAsync(async (req, res, next) => {
     }
     await drop.save();
 
-    const io = req.app.get("io");
-    if (io) {
-        io.emit("drop:updated", {
-            dropId: drop._id,
-            drop: drop
-        });
-    }
+    emitToAll("drop:updated", {
+        dropId: drop._id,
+        drop: drop,
+    });
 
     res.status(200).json({
         success: true,

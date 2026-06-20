@@ -17,7 +17,12 @@ export const getAllDrops = createAsyncThunk(
       });
       return response.data.drops;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -30,12 +35,28 @@ export const createDrop = createAsyncThunk(
       return rejectWithValue("Name and release date are required");
     }
     try {
-      const response = await axios.post(`${API_BASE}/drops/create-drop`, dropData, {
+      const payload = {
+        name: dropData.name,
+        description: dropData.description || undefined,
+        releaseDate: dropData.releaseDate,
+        endDate: dropData.endDate || undefined,
+        isPublished:
+          typeof dropData.isPublished === "boolean" ? dropData.isPublished : undefined,
+        isArchived:
+          typeof dropData.isArchived === "boolean" ? dropData.isArchived : undefined,
+      };
+      const response = await axios.post(`${API_BASE}/drops/create-drop`, payload, {
         withCredentials: true,
       });
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      // Always reject with a string so callers get a useful toast.
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to create drop";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -57,25 +78,35 @@ export const updateDrop = createAsyncThunk(
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
 
 export const archiveDrop = createAsyncThunk(
   "drop/archiveDrop",
-  async ({ slug, isArchived }, { rejectWithValue }) => {
+  async (slug, { rejectWithValue }) => {
     try {
       const response = await axios.patch(
         `${API_BASE}/drops/archive-drop/${slug}`,
-        { isArchived },
+        {},
         {
           withCredentials: true,
         }
       );
       return response.data.drop;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
     }
   }
 );
@@ -89,7 +120,49 @@ export const deleteDrop = createAsyncThunk(
       });
       return response.data.deletedDropSlug || slug;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Request failed";
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const bulkUpdateDrops = createAsyncThunk(
+  "drop/bulkUpdateDrops",
+  async ({ slugs, action }, { rejectWithValue }) => {
+    try {
+      const results = await Promise.allSettled(
+        slugs.map(async (slug) => {
+          if (action === "activate") {
+            return axios.patch(`${API_BASE}/drops/update-drop/${slug}`, { isPublished: true }, { withCredentials: true });
+          } else if (action === "deactivate") {
+            return axios.patch(`${API_BASE}/drops/update-drop/${slug}`, { isPublished: false }, { withCredentials: true });
+          } else if (action === "delete") {
+            return axios.delete(`${API_BASE}/drops/delete-drop/${slug}`, { withCredentials: true });
+          } else if (action === "archive") {
+            return axios.patch(`${API_BASE}/drops/archive-drop/${slug}`, {}, { withCredentials: true });
+          }
+          throw new Error("Unknown action");
+        })
+      );
+      
+      const succeeded = [];
+      const failed = [];
+      results.forEach((res, i) => {
+        if (res.status === "fulfilled") succeeded.push(slugs[i]);
+        else failed.push(slugs[i]);
+      });
+      
+      if (succeeded.length === 0 && failed.length > 0) {
+        return rejectWithValue("All bulk operations failed");
+      }
+      
+      return { succeeded, failed, action };
+    } catch (error) {
+      return rejectWithValue(error.message || "Bulk operation failed");
     }
   }
 );
@@ -160,6 +233,11 @@ const dropSlice = createSlice({
       })
       .addCase(deleteDrop.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(bulkUpdateDrops.fulfilled, (state, action) => {
+        // We typically rely on a subsequent getAllDrops fetch to refresh the UI
+        // But we can clear errors here
+        state.error = null;
       });
   },
 });

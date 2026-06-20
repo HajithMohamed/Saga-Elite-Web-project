@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   BellRing,
   Clock3,
   CreditCard,
+  Crown,
+  KeyRound,
   Mail,
   MapPin,
   RefreshCcw,
@@ -15,19 +17,99 @@ import {
   UserCheck,
   UserCog,
   Users,
+  Tag as TagIcon,
+  StickyNote,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   deleteAdminUser,
   fetchAdminUserDetail,
   fetchAdminUsers,
+  triggerAdminPasswordReset,
   updateAdminUserStatus,
+  bulkTagUsers,
 } from "@/store/admin/user-slice";
 import { toast } from "@/hooks/use-toast";
 import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
+import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
+import useBulkSelection from "@/hooks/use-bulk-selection";
+
+const BULK_USER_TAGS = ["vip", "high_spender", "drop_collector", "frequent_buyer", "refund_risk", "early_supporter"];
+
+const MEMBERSHIP_FILTER_TABS = [
+  { value: "all", label: "All" },
+  { value: "vip", label: "VIP" },
+  { value: "legend", label: "Legend" },
+  { value: "rare", label: "Rare" },
+  { value: "elite", label: "Elite" },
+  { value: "standard", label: "Standard" },
+  { value: "blocked", label: "Blocked" },
+];
+
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "spent_desc", label: "Total spent ↓" },
+  { value: "orders_desc", label: "Order count ↓" },
+  { value: "last_active", label: "Last active" },
+];
+
+const MEMBERSHIP_STYLES = {
+  vip: "border-[#f2ca50] bg-[#f2ca50]/15 text-[#f2ca50]",
+  legend: "border-purple-400/40 bg-purple-400/10 text-purple-300",
+  rare: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300",
+  elite: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
+  standard: "border-white/10 bg-white/5 text-gray-300",
+};
+
+// Customer tags drive segmentation in Marketing + Notifications. Order matters
+// here — these render as a chip row, left-to-right. Keep keys in sync with the
+// User model's enum.
+const CUSTOMER_TAGS = [
+  {
+    key: "vip",
+    label: "VIP",
+    description: "Manual flag for high-touch service",
+    accent: "border-[#f2ca50]/50 bg-[#f2ca50]/15 text-[#f2ca50]",
+  },
+  {
+    key: "high_spender",
+    label: "High Spender",
+    description: "Lifetime spend in top decile",
+    accent: "border-emerald-400/50 bg-emerald-400/10 text-emerald-200",
+  },
+  {
+    key: "drop_collector",
+    label: "Drop Collector",
+    description: "Buys from multiple drops",
+    accent: "border-violet-400/50 bg-violet-400/10 text-violet-200",
+  },
+  {
+    key: "frequent_buyer",
+    label: "Frequent Buyer",
+    description: "5+ orders in 90 days",
+    accent: "border-sky-400/50 bg-sky-400/10 text-sky-200",
+  },
+  {
+    key: "early_supporter",
+    label: "Early Supporter",
+    description: "Bought during launch window",
+    accent: "border-rose-400/50 bg-rose-400/10 text-rose-200",
+  },
+  {
+    key: "refund_risk",
+    label: "Refund Risk",
+    description: "Refunded ≥2 of last 5 orders",
+    accent: "border-orange-400/50 bg-orange-400/10 text-orange-200",
+  },
+];
+
+const membershipBadgeClasses = (membership) =>
+  MEMBERSHIP_STYLES[membership] || MEMBERSHIP_STYLES.standard;
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -122,7 +204,13 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [membershipFilter, setMembershipFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("newest");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [tagSubmitting, setTagSubmitting] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAdminUsers());
@@ -149,21 +237,81 @@ const UsersPage = () => {
     }
   }, [dispatch, selectedUserId]);
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.provider.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsers = useMemo(
+    () =>
+      users
+        .filter((user) => {
+          const matchesSearch =
+            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.provider.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && user.isActive) ||
-      (statusFilter === "inactive" && !user.isActive);
+          const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && user.isActive) ||
+            (statusFilter === "inactive" && !user.isActive);
 
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+          const matchesRole = roleFilter === "all" || user.role === roleFilter;
 
-    return matchesSearch && matchesStatus && matchesRole;
-  });
+          const matchesMembership = (() => {
+            if (membershipFilter === "all") return true;
+            if (membershipFilter === "blocked") return !user.isActive;
+            return (user.membership || "standard") === membershipFilter;
+          })();
+
+          return matchesSearch && matchesStatus && matchesRole && matchesMembership;
+        })
+        .sort((a, b) => {
+          switch (sortMode) {
+            case "spent_desc":
+              return (
+                (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
+              );
+            case "orders_desc":
+              return (
+                (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
+              );
+            case "last_active": {
+              const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
+              const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
+              return bDate - aDate;
+            }
+            case "newest":
+            default:
+              return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          }
+        }),
+    [membershipFilter, roleFilter, searchTerm, sortMode, statusFilter, users]
+  );
+
+  const bulk = useBulkSelection(filteredUsers);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkTagDraft, setBulkTagDraft] = useState("vip");
+  const runBulkUserTag = async (mode) => {
+    const ids = bulk.selectedIds;
+    if (ids.length === 0) return;
+    setBulkPending(true);
+    try {
+      const result = await dispatch(
+        bulkTagUsers({ ids, tag: bulkTagDraft, mode })
+      ).unwrap();
+      const ok = result.succeeded?.length || 0;
+      toast({
+        title: `Bulk ${mode} tag "${bulkTagDraft}": ${ok} user${ok === 1 ? "" : "s"}`,
+        variant: "success",
+      });
+      bulk.clear();
+      dispatch(fetchAdminUsers());
+    } catch (err) {
+      toast({
+        title: "Bulk tag failed",
+        description: typeof err === "string" ? err : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkPending(false);
+    }
+  };
 
   const handleRefresh = async () => {
     try {
@@ -212,6 +360,105 @@ const UsersPage = () => {
     }
   };
 
+  // Reset the note draft when switching users so we don't carry text across.
+  useEffect(() => {
+    setNoteDraft("");
+  }, [selectedUserId]);
+
+  const handleTagToggle = async (tagKey) => {
+    if (!selectedUser) return;
+    const currentTags = Array.isArray(selectedUser.tags) ? selectedUser.tags : [];
+    const nextTags = currentTags.includes(tagKey)
+      ? currentTags.filter((t) => t !== tagKey)
+      : [...currentTags, tagKey];
+
+    setTagSubmitting(tagKey);
+    try {
+      await dispatch(
+        updateAdminUserStatus({ userId: selectedUser._id, tags: nextTags })
+      ).unwrap();
+      // Refresh the detail so populated adminNotes/tags reflect the latest state.
+      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
+    } catch (tagError) {
+      toast({
+        title: "Tag update failed",
+        description: tagError || "Could not update tags.",
+        variant: "destructive",
+      });
+    } finally {
+      setTagSubmitting(null);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedUser || !noteDraft.trim()) return;
+    setNoteSubmitting(true);
+    try {
+      await dispatch(
+        updateAdminUserStatus({
+          userId: selectedUser._id,
+          addAdminNote: noteDraft.trim(),
+        })
+      ).unwrap();
+      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
+      setNoteDraft("");
+      toast({ title: "Note added", variant: "success" });
+    } catch (noteError) {
+      toast({
+        title: "Could not add note",
+        description: noteError || "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setNoteSubmitting(false);
+    }
+  };
+
+  const handleMembershipChange = async (nextMembership) => {
+    if (!selectedUser) return;
+    if ((selectedUser.membership || "standard") === nextMembership) return;
+
+    try {
+      await dispatch(
+        updateAdminUserStatus({
+          userId: selectedUser._id,
+          membership: nextMembership,
+        })
+      ).unwrap();
+      toast({
+        title: "Membership updated",
+        description: `${selectedUser.email} is now ${nextMembership}.`,
+        variant: "success",
+      });
+      await dispatch(fetchAdminUsers()).unwrap();
+    } catch (membershipError) {
+      toast({
+        title: "Membership update failed",
+        description: membershipError || "Could not update membership.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const executeResetPasswordConfirmed = async () => {
+    if (!selectedUser) return;
+    setResetConfirmOpen(false);
+    try {
+      await dispatch(triggerAdminPasswordReset(selectedUser._id)).unwrap();
+      toast({
+        title: "Password reset email sent",
+        description: `OTP delivered to ${selectedUser.email}.`,
+        variant: "success",
+      });
+    } catch (resetError) {
+      toast({
+        title: "Reset failed",
+        description: resetError || "Could not send password reset.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const executeDeleteConfirmed = async () => {
     if (!selectedUser) return;
     setDeleteConfirmOpen(false);
@@ -250,7 +497,7 @@ const UsersPage = () => {
       title="Users"
       description="Review account health, activity, and customer relationship details."
     >
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
@@ -349,6 +596,38 @@ const UsersPage = () => {
                     <option value="superadmin">Superadmins</option>
                   </select>
                 </div>
+
+                <select
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      Sort by — {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {MEMBERSHIP_FILTER_TABS.map((tab) => {
+                    const active = membershipFilter === tab.value;
+                    return (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        onClick={() => setMembershipFilter(tab.value)}
+                        className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
+                          active
+                            ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
+                            : "border-white/10 text-white/60 hover:text-white hover:border-white/30"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -370,16 +649,56 @@ const UsersPage = () => {
                   initial="hidden"
                   animate="visible"
                 >
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-5 py-3">
+                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible customers"
+                      checked={bulk.isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = bulk.isSomeSelected;
+                      }}
+                      onChange={bulk.toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-select-all"
+                    />
+                    Select all
+                  </label>
+                  <span className="text-[10px] uppercase tracking-widest text-white/40">Tag:</span>
+                  <select
+                    value={bulkTagDraft}
+                    onChange={(e) => setBulkTagDraft(e.target.value)}
+                    className="rounded-md border border-white/10 bg-black px-2 py-1 text-xs text-white"
+                  >
+                    {BULK_USER_TAGS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
                 {filteredUsers.map((user) => (
+                  <div key={user._id} className="relative">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${user.email}`}
+                      checked={bulk.isSelected(user._id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        bulk.toggle(user._id);
+                      }}
+                      className="absolute top-4 left-4 z-10 h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      data-testid="admin-bulk-row-select"
+                    />
                   <motion.button
-                    key={user._id}
                     type="button"
                     variants={itemVariants}
                     whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                     transition={{ duration: 0.2 }}
                     onClick={() => setSelectedUserId(user._id)}
-                    className={`w-full rounded-[1.5rem] border p-5 text-left transition ${
-                      selectedUserId === user._id
+                    className={`w-full rounded-[1.5rem] border p-5 pl-12 text-left transition ${
+                      bulk.isSelected(user._id)
+                        ? "border-[#D4AF37]/60 bg-[#15120a]"
+                        : selectedUserId === user._id
                         ? "border-[#D4AF37] bg-[#15120a]"
                         : "border-white/10 bg-[#101010] hover:border-[#D4AF37]/40 hover:bg-[#131313]"
                     }`}
@@ -398,6 +717,16 @@ const UsersPage = () => {
                           >
                             {user.provider}
                           </span>
+                          {user.membership && user.membership !== "standard" ? (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(user.membership)}`}
+                            >
+                              {user.membership === "vip" ? (
+                                <Crown className="h-3 w-3" />
+                              ) : null}
+                              {user.membership}
+                            </span>
+                          ) : null}
                         </div>
                         <div className="mt-4 flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-bold text-black">
@@ -422,6 +751,7 @@ const UsersPage = () => {
                       </div>
                     </div>
                   </motion.button>
+                  </div>
                 ))}
                 </motion.div>
               )}
@@ -462,6 +792,14 @@ const UsersPage = () => {
                         <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-gray-300">
                           {selectedUser.isVerified ? "Verified" : "Unverified"}
                         </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(selectedUser.membership)}`}
+                        >
+                          {selectedUser.membership === "vip" ? (
+                            <Crown className="h-3 w-3" />
+                          ) : null}
+                          {selectedUser.membership || "standard"}
+                        </span>
                       </div>
 
                       <h2 className="mt-5 break-all text-3xl font-serif font-semibold text-white">
@@ -492,6 +830,15 @@ const UsersPage = () => {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setResetConfirmOpen(true)}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-5 py-3 text-sm font-semibold text-[#D4AF37] transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                          Reset Password
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setDeleteConfirmOpen(true)}
                           disabled={!canManageSelectedUser || isMutating}
                           className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
@@ -499,6 +846,18 @@ const UsersPage = () => {
                           <Trash2 className="h-4 w-4" />
                           Delete User
                         </button>
+                        <select
+                          value={selectedUser.membership || "standard"}
+                          onChange={(e) => handleMembershipChange(e.target.value)}
+                          disabled={!canManageSelectedUser || isMutating}
+                          className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition focus:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="standard">Membership: Standard</option>
+                          <option value="elite">Membership: Elite</option>
+                          <option value="rare">Membership: Rare</option>
+                          <option value="legend">Membership: Legend</option>
+                          <option value="vip">Membership: VIP</option>
+                        </select>
                       </div>
                       <ConfirmInline
                         show={deleteConfirmOpen && !!selectedUser}
@@ -509,6 +868,17 @@ const UsersPage = () => {
                         }
                         onCancel={() => setDeleteConfirmOpen(false)}
                         onConfirm={executeDeleteConfirmed}
+                        className="w-full max-w-md"
+                      />
+                      <ConfirmInline
+                        show={resetConfirmOpen && !!selectedUser}
+                        message={
+                          selectedUser
+                            ? `Send a password reset OTP to ${selectedUser.email}?`
+                            : ""
+                        }
+                        onCancel={() => setResetConfirmOpen(false)}
+                        onConfirm={executeResetPasswordConfirmed}
                         className="w-full max-w-md"
                       />
                     </div>
@@ -539,6 +909,117 @@ const UsersPage = () => {
                     <p className="mt-3 text-2xl font-semibold text-white">
                       {selectedUser.relationship.unreadNotifications}
                     </p>
+                  </div>
+                </section>
+
+                <section className="grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <TagIcon className="h-5 w-5 text-[#D4AF37]" />
+                        <h3 className="text-lg font-semibold text-white">Customer Tags</h3>
+                      </div>
+                      {(selectedUser.tags?.length || 0) > 0 ? (
+                        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+                          {selectedUser.tags.length} active
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                      Internal segmentation. Used by Marketing for targeted notifications and Recommendations for cohort analysis.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {CUSTOMER_TAGS.map((tag) => {
+                        const isActive = (selectedUser.tags || []).includes(tag.key);
+                        const isPending = tagSubmitting === tag.key;
+                        return (
+                          <button
+                            key={tag.key}
+                            type="button"
+                            onClick={() => handleTagToggle(tag.key)}
+                            disabled={isPending}
+                            title={tag.description}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              isActive
+                                ? tag.accent
+                                : "border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20 hover:text-white"
+                            }`}
+                          >
+                            {isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  isActive ? "bg-current" : "bg-white/20"
+                                }`}
+                              />
+                            )}
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                    <div className="flex items-center gap-3">
+                      <StickyNote className="h-5 w-5 text-[#D4AF37]" />
+                      <h3 className="text-lg font-semibold text-white">Admin Notes</h3>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">
+                      Append-only. Captures who said what for support escalations.
+                    </p>
+
+                    <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                      {(selectedUser.adminNotes || []).length === 0 ? (
+                        <p className="rounded-xl border border-dashed border-white/10 bg-black/40 px-3 py-4 text-center text-xs text-gray-500">
+                          No admin notes yet.
+                        </p>
+                      ) : (
+                        [...selectedUser.adminNotes]
+                          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                          .map((note, idx) => (
+                            <div
+                              key={note._id || idx}
+                              className="rounded-xl border border-white/5 bg-black/40 px-3 py-2"
+                            >
+                              <p className="text-xs leading-5 text-gray-200">{note.note}</p>
+                              <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
+                                {note.author?.email || note.author?.name || "Admin"} ·{" "}
+                                {formatDate(note.createdAt, true)}
+                              </p>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2">
+                      <textarea
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value.slice(0, 2000))}
+                        placeholder="Add an internal note about this customer…"
+                        rows={3}
+                        className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                          {noteDraft.length} / 2000
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleAddNote}
+                          disabled={!noteDraft.trim() || noteSubmitting}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {noteSubmitting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Plus className="h-3 w-3" />
+                          )}
+                          Add note
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
@@ -721,6 +1202,89 @@ const UsersPage = () => {
 
                     <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
                       <div className="flex items-center gap-3">
+                        <ShieldCheck className="h-5 w-5 text-[#D4AF37]" />
+                        <h3 className="text-lg font-semibold text-white">Login Activity</h3>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Last 15 attempts. New IPs and devices are flagged for review.
+                      </p>
+                      <div className="mt-4 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                        {selectedUser.recentLogins?.length ? (
+                          selectedUser.recentLogins.map((login) => (
+                            <div
+                              key={login._id}
+                              className={`rounded-xl border p-3 text-sm ${
+                                login.success
+                                  ? login.newIp || login.newDevice
+                                    ? "border-amber-400/30 bg-amber-400/5"
+                                    : "border-white/5 bg-black/40"
+                                  : "border-rose-400/30 bg-rose-400/5"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`font-mono text-[9px] uppercase tracking-[0.22em] ${
+                                      login.success ? "text-emerald-300" : "text-rose-300"
+                                    }`}
+                                  >
+                                    {login.success
+                                      ? "Success"
+                                      : login.failureReason?.replace(/_/g, " ") || "Failed"}
+                                  </span>
+                                  {login.newIp ? (
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
+                                      · new IP
+                                    </span>
+                                  ) : null}
+                                  {login.newDevice ? (
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
+                                      · new device
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <span className="font-mono text-[10px] text-gray-400">
+                                  {formatDate(login.createdAt, true)}
+                                </span>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                    IP
+                                  </span>
+                                  <span className="font-mono text-[11px] text-gray-300">
+                                    {login.ip || "—"}
+                                  </span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                    Device
+                                  </span>
+                                  <span className="text-[11px] text-gray-300">
+                                    {login.deviceHint || "Unknown"}
+                                  </span>
+                                </span>
+                                {login.provider !== "local" ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                                      Via
+                                    </span>
+                                    <span className="text-[11px] text-gray-300">{login.provider}</span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-white/10 bg-black/40 p-4 text-sm text-gray-400">
+                            No login activity recorded yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                      <div className="flex items-center gap-3">
                         <BellRing className="h-5 w-5 text-[#D4AF37]" />
                         <h3 className="text-lg font-semibold text-white">Recent Notifications</h3>
                       </div>
@@ -781,6 +1345,16 @@ const UsersPage = () => {
           </div>
         </section>
       </div>
+      <BulkActionBar
+        count={bulk.count}
+        onClear={bulk.clear}
+        pending={bulkPending}
+        label="customers selected"
+        actions={[
+          { label: `Add "${bulkTagDraft}"`, onClick: () => runBulkUserTag("add") },
+          { label: `Remove "${bulkTagDraft}"`, onClick: () => runBulkUserTag("remove") },
+        ]}
+      />
     </AdminPage>
     </motion.div>
   );

@@ -4,6 +4,8 @@ const User = require("../Models/User");
 const createSendToken = require("../Utils/create-send-token");
 const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const Customer = require("../Models/Customer");
+const { ensureCustomerRecord } = require("../Services/migration-service");
 const logger = require("../Utils/logger");
 
 // ── shared helper: exchange Google access token for profile ──
@@ -30,51 +32,46 @@ const verifyGoogleToken = async (accessToken, next) => {
     return profile;
 };
 
-// ── Google Sign-In (existing users only) ──
-const googleSignIn = catchAsync(async (req, res, next) => {
+// ── Google Auth (consolidated sign-in & sign-up) ──
+const googleAuth = catchAsync(async (req, res, next) => {
     const profile = await verifyGoogleToken(req.body.accessToken, next);
     if (!profile) return; // error already sent by verifyGoogleToken
 
-    const existingUser = await User.findOne({ email: profile.email });
-
-    if (!existingUser) {
-        return next(
-            new AppError(
-                "No account found with this email. Please sign up first.",
-                404
-            )
-        );
-    }
-
-    // block admin / superadmin from using Google sign-in
-    if (existingUser.role === "admin" || existingUser.role === "superadmin") {
-        return next(
-            new AppError("Admin accounts cannot use Google sign-in", 403)
-        );
-    }
-
-    return createSendToken(existingUser, 200, res, "Signed in successfully");
-});
-
-// ── Google Sign-Up (new users only — sends welcome email) ──
-const googleSignUp = catchAsync(async (req, res, next) => {
-    const profile = await verifyGoogleToken(req.body.accessToken, next);
-    if (!profile) return;
-
     const { email, sub, picture } = profile;
 
-    const existingUser = await User.findOne({ email });
+    let user = await User.findOne({ email });
 
-    if (existingUser) {
-        return next(
-            new AppError(
-                "An account with this email already exists. Please sign in instead.",
-                400
-            )
-        );
+    if (user) {
+        // Block admin / superadmin from using Google sign-in
+        if (user.role === "admin" || user.role === "superadmin") {
+            return next(new AppError("Admin accounts cannot use Google sign-in", 403));
+        }
+        
+        // Update google id and picture if not present
+        if (!user.googleId || !user.profilePicture) {
+            user.googleId = sub || user.googleId;
+            user.profilePicture = picture || user.profilePicture;
+            await user.save({ validateBeforeSave: false });
+        }
+
+        // Update Customer session tracking
+        try {
+            await Customer.findOneAndUpdate(
+                { userId: user._id },
+                { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+            );
+        } catch (err) {
+            logger.warn("Customer session update failed on Google login", {
+                userId: user._id,
+                error: err.message,
+            });
+        }
+
+        return createSendToken(user, 200, res, "Signed in successfully");
     }
 
-    const newUser = await User.create({
+    // Creating new user
+    user = await User.create({
         email,
         googleId: sub,
         profilePicture: picture,
@@ -82,7 +79,17 @@ const googleSignUp = catchAsync(async (req, res, next) => {
         isVerified: true,
     });
 
-    // send welcome email (non-blocking — account creation still succeeds on mail failure)
+    // Ensure Customer enrichment record exists
+    try {
+        await ensureCustomerRecord({ userId: user._id, email: user.email });
+    } catch (err) {
+        logger.warn("Customer record creation failed after Google sign-up", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
+
+    // send welcome email (non-blocking)
     const welcomeBody = `
         <p>Hi there,</p>
         <p>Thank you for joining <strong>Saga Elite</strong> — Limited Edition Fashion built for the bold.</p>
@@ -94,7 +101,7 @@ const googleSignUp = catchAsync(async (req, res, next) => {
 
     try {
         await sendMail({
-            email: newUser.email,
+            email: user.email,
             subject: "Welcome to Saga Elite 🎉",
             html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
         });
@@ -102,10 +109,9 @@ const googleSignUp = catchAsync(async (req, res, next) => {
         logger.error("Google sign-up welcome email failed", { error: err });
     }
 
-    return createSendToken(newUser, 201, res, "Account created successfully");
+    return createSendToken(user, 201, res, "Account created successfully");
 });
 
 module.exports = {
-    googleSignIn,
-    googleSignUp,
+    googleAuth,
 };

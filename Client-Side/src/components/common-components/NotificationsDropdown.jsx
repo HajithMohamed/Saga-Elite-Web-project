@@ -62,13 +62,13 @@ const NotificationsDropdown = () => {
       <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        className="relative p-2 text-gray-400 hover:text-white transition-colors"
+        className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300"
         onClick={handleToggle}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="w-[18px] h-[18px]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-            {unreadCount}
+          <span className="absolute -top-2 -right-2 bg-[#ffb4ab] shadow-[0_0_8px_#ffb4ab] text-[#0e0e0e] text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>

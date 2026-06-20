@@ -1,4 +1,5 @@
 const SOCKET_EVENTS = require("./socket-events");
+const { ADMIN_ROLES } = require("./admin-roles");
 
 let ioInstance = null;
 
@@ -44,7 +45,7 @@ const registerSocketHandlers = (socket) => {
       socket.join(`user:${userId}`);
     }
 
-    if (["admin", "super_admin", "superadmin"].includes(role)) {
+    if (ADMIN_ROLES.includes(role)) {
       socket.join("admins");
     }
 

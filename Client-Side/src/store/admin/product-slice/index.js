@@ -78,6 +78,7 @@ export const getAllProducts = createAsyncThunk(
         drop,
         minPrice,
         maxPrice,
+        maxStock,
         size,
         color,
       } = params;
@@ -85,7 +86,7 @@ export const getAllProducts = createAsyncThunk(
       const query = new URLSearchParams();
       query.set("page", page);
       query.set("limit", limit);
-      if (isActive !== undefined && isActive !== "all") query.set("isActive", isActive);
+      if (isActive !== undefined) query.set("isActive", isActive);
       if (search) query.set("search", search);
       if (sort) query.set("sort", sort);
       if (brand) query.set("brand", brand);
@@ -93,6 +94,9 @@ export const getAllProducts = createAsyncThunk(
       if (drop) query.set("drop", drop);
       if (minPrice) query.set("minPrice", minPrice);
       if (maxPrice) query.set("maxPrice", maxPrice);
+      if (typeof maxStock !== "undefined" && maxStock !== "" && maxStock !== null) {
+        query.set("maxStock", maxStock);
+      }
       if (size) query.set("size", size);
       if (color) query.set("color", color);
 
@@ -163,6 +167,22 @@ export const deleteProduct = createAsyncThunk(
         { withCredentials: true }
       );
       return response.data.deletedProductSlug || slug;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const bulkUpdateProducts = createAsyncThunk(
+  "product/bulkUpdate",
+  async ({ ids, action }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(
+        `${API_BASE}/products/bulk`,
+        { ids, action },
+        { withCredentials: true }
+      );
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -253,6 +273,18 @@ const productSlice = createSlice({
         state.pagination.total -= 1;
       })
       .addCase(deleteProduct.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      // BULK
+      .addCase(bulkUpdateProducts.pending, (state) => {
+        state.isSubmitting = true;
+        state.error = null;
+      })
+      .addCase(bulkUpdateProducts.fulfilled, (state) => {
+        state.isSubmitting = false;
+      })
+      .addCase(bulkUpdateProducts.rejected, (state, action) => {
+        state.isSubmitting = false;
         state.error = action.payload;
       });
   },

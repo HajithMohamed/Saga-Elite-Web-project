@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { resetPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
 import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { Btn, Eyebrow, FieldError } from "@/components/ui/editorial";
+import { Btn, Eyebrow, FieldError, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const validateReset = (data, touched = {}) => {
   const errs = {};
@@ -44,7 +45,11 @@ const SetNewPassword = () => {
 
   if (!email || !otp) {
     return (
-      <div>
+      <motion.div
+        initial={{ opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
         <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
         <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
           Start again,<br />gently.
@@ -57,7 +62,7 @@ const SetNewPassword = () => {
             Back to forgot password
           </Btn>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
@@ -95,23 +100,34 @@ const SetNewPassword = () => {
     }
   };
 
-  const inputBase =
-    "w-full bg-transparent border-b py-3 pr-10 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors";
+  const inputBase = AUTH_INPUT;
   const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
   const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
 
   return (
-    <div>
-      <Eyebrow tone="gold" size="md">Reset · step three</Eyebrow>
+    <motion.div
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <Eyebrow tone="gold" size="md">Reset · final step</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Choose a new<br />password.
+        Set your<br />new key.
       </h1>
       <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
         Eight characters, with at least one uppercase letter, one number, and one symbol from{" "}
         <span className="se-mono text-[#e5e2e1]">@$!%*?&</span>.
       </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-10 md:mt-12 space-y-6">
+      <div className="mt-6 mb-2 flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#a8d8b6] animate-pulse" />
+        <span className="se-label text-[10px] tracking-[0.28em] text-[#a8d8b6]">
+          Secure session · encrypted
+        </span>
+        <div className="flex-1 h-px bg-[#4d4635]" />
+      </div>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-6 md:mt-8 space-y-6">
         <div>
           <Eyebrow tone="muted" size="xs">New password</Eyebrow>
           <div className="relative mt-2">
@@ -123,9 +139,7 @@ const SetNewPassword = () => {
               onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
               placeholder="Choose with care"
               aria-invalid={Boolean(touched.newPassword && errors.newPassword)}
-              className={`${inputBase} ${
-                touched.newPassword && errors.newPassword ? inputErr : inputOk
-              }`}
+              className={`${inputBase} pr-10 ${touched.newPassword && errors.newPassword ? inputErr : inputOk}`}
             />
             <button
               type="button"
@@ -157,9 +171,7 @@ const SetNewPassword = () => {
               onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
               placeholder="Once more"
               aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
-              className={`${inputBase} ${
-                touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk
-              }`}
+              className={`${inputBase} ${touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk}`}
             />
             <button
               type="button"
@@ -179,13 +191,12 @@ const SetNewPassword = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full"
+          className={AUTH_PRIMARY_BTN}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? "Updating" : "Update password"}
+          {isLoading ? "Securing" : "Set new key"}
         </Btn>
       </form>
 
@@ -194,9 +205,9 @@ const SetNewPassword = () => {
         className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
-        Cancel and return to sign in
+        Cancel · return to sign in
       </Link>
-    </div>
+    </motion.div>
   );
 };
 

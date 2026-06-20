@@ -1,23 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  Activity,
+  AlertTriangle,
   ArrowRight,
-  Boxes,
-  Clock3,
+  CreditCard,
   DollarSign,
   Layers3,
   Package,
-  ShieldAlert,
   ShoppingBag,
   ShoppingCart,
-  Sparkles,
-  Truck,
-  Users,
+  Timer,
   Wallet,
 } from "lucide-react";
 import { fetchDashboardStats } from "@/store/order-slice";
+import { useSocketEvent } from "@/hooks/use-socket-events";
+import { API_V1_URL } from "@/lib/api";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
   pageVariants,
@@ -36,22 +37,13 @@ const currencyFormatter = new Intl.NumberFormat("en-LK", {
 const numberFormatter = new Intl.NumberFormat("en-LK");
 
 const statusToneMap = {
-  pending: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  pending_payment: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-  verification_pending: "bg-orange-500/10 text-orange-300 border-orange-500/20",
-  confirmed: "bg-sky-500/10 text-sky-300 border-sky-500/20",
-  shipped: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20",
-  delivered: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  cancelled: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-};
-
-const paymentToneMap = {
-  manual: "from-amber-500/20 to-orange-500/10",
-  cash: "from-emerald-500/20 to-lime-500/10",
-  payhere: "from-sky-500/20 to-cyan-500/10",
-  gpay: "from-blue-500/20 to-indigo-500/10",
-  card: "from-fuchsia-500/20 to-violet-500/10",
-  lankapay: "from-teal-500/20 to-emerald-500/10",
+  pending: "border-amber-500/20 bg-amber-500/10 text-amber-200",
+  pending_payment: "border-amber-500/20 bg-amber-500/10 text-amber-200",
+  verification_pending: "border-orange-500/20 bg-orange-500/10 text-orange-200",
+  confirmed: "border-sky-500/20 bg-sky-500/10 text-sky-200",
+  shipped: "border-indigo-500/20 bg-indigo-500/10 text-indigo-200",
+  delivered: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
+  cancelled: "border-rose-500/20 bg-rose-500/10 text-rose-200",
 };
 
 const formatCurrency = (value) => currencyFormatter.format(value || 0);
@@ -73,89 +65,194 @@ const formatLabel = (value) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+const timeAgo = (date) => {
+  if (!date) return "";
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return formatDate(date);
+};
+
+const dropCountdown = (drop, nowMs) => {
+  if (!drop) return null;
+  const release = drop.releaseDate ? new Date(drop.releaseDate).getTime() : null;
+  const end = drop.endDate ? new Date(drop.endDate).getTime() : null;
+  if (release && release > nowMs) return { phase: "Releases in", remaining: release - nowMs };
+  if (end && end > nowMs) return { phase: "Ends in", remaining: end - nowMs };
+  if (end && end <= nowMs) return { phase: "Ended", remaining: 0 };
+  return { phase: "Live now", remaining: null };
+};
+
+const formatDuration = (ms) => {
+  if (ms == null) return "Active";
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  const pad = (n) => n.toString().padStart(2, "0");
+  if (days > 0) return `${days}d ${pad(hours)}h ${pad(minutes)}m`;
+  return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+};
+
 const quickLinks = [
   {
-    title: "Orders desk",
-    description: "Approve manual payments and move fulfilment forward.",
+    title: "Orders",
+    description: "Review orders and move fulfilment forward.",
     to: "/admin/order",
     icon: ShoppingCart,
+    permission: "orders",
   },
   {
-    title: "Manual payments",
-    description: "Review bank-transfer proofs and verify payments.",
-    to: "/admin/payments/pending",
-    icon: Wallet,
-  },
-  {
-    title: "Product catalog",
-    description: "Update stock, pricing, and limited-release products.",
+    title: "Products",
+    description: "Update stock, pricing, and catalog status.",
     to: "/admin/product",
     icon: Package,
+    permission: "products",
   },
   {
-    title: "Drop registry",
-    description: "Manage live collections and prepare the next release.",
+    title: "Payments",
+    description: "Verify bank-transfer proofs.",
+    to: "/admin/payments/pending",
+    icon: Wallet,
+    permission: "verifyPayments",
+  },
+  {
+    title: "Drops",
+    description: "Manage live and upcoming releases.",
     to: "/admin/drop",
     icon: Layers3,
-  },
-  {
-    title: "Notifications",
-    description: "Broadcast launch updates and customer alerts.",
-    to: "/admin/notifications",
-    icon: Sparkles,
+    permission: "drops",
   },
 ];
 
-const MetricCard = ({ label, hint, icon, tone = "text-[#D4AF37]", numericValue, formatter, displayValue }) => {
+const Card = ({ children, className = "" }) => (
+  <div className={`rounded-2xl border border-white/10 bg-[#101010] p-6 ${className}`}>
+    {children}
+  </div>
+);
+
+const SectionTitle = ({ eyebrow, title, action }) => (
+  <div className="mb-4 flex items-start justify-between gap-4">
+    <div>
+      <p className="text-xs font-medium text-[#D4AF37]">{eyebrow}</p>
+      <h2 className="mt-1 text-xl font-semibold text-white">{title}</h2>
+    </div>
+    {action}
+  </div>
+);
+
+const KpiTile = ({ label, value, formatter, hint, icon, tone = "text-[#D4AF37]" }) => {
   const Icon = icon;
 
   return (
     <motion.div
       variants={itemVariants}
-      whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.4)" }}
-      transition={{ duration: 0.2 }}
-      className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+      className="rounded-2xl border border-white/10 bg-[#101010] p-6 flex flex-col justify-center"
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="rounded-md bg-white/[0.04] p-1.5">
+            <Icon className={`h-4 w-4 ${tone}`} />
+          </div>
+          <p className="text-sm font-medium text-gray-400">{label}</p>
+        </div>
         <div>
-          <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">{label}</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white">
-            {numericValue != null && formatter ? (
-              <AnimatedNumber value={numericValue} formatter={formatter} />
+          <p className="truncate text-3xl font-semibold text-white">
+            {typeof value === "number" && formatter ? (
+              <AnimatedNumber value={value} formatter={formatter} />
             ) : (
-              displayValue
+              value
             )}
           </p>
-          <p className="mt-2 text-sm text-gray-400">{hint}</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
-          <Icon className={`h-6 w-6 ${tone}`} />
+          {hint ? <p className="mt-1.5 truncate text-sm text-gray-500">{hint}</p> : null}
         </div>
       </div>
     </motion.div>
   );
 };
 
-const HighlightCard = ({ eyebrow, title, value, meta, accent = "text-[#D4AF37]" }) => (
-  <motion.div
-    whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.4)" }}
-    transition={{ duration: 0.2 }}
-    className="rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.16),transparent_45%),rgba(255,255,255,0.03)] p-6"
-  >
-    <p className="text-[11px] uppercase tracking-[0.3em] text-gray-500">{eyebrow}</p>
-    <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
-    <p className={`mt-3 text-2xl font-black tracking-tight ${accent}`}>{value}</p>
-    <p className="mt-3 text-sm leading-6 text-gray-400">{meta}</p>
-  </motion.div>
+const OrderStatusPill = ({ label, value }) => (
+  <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+    <p className="text-[11px] text-gray-500">{label}</p>
+    <p className="mt-1 text-lg font-semibold text-white">{formatNumber(value)}</p>
+  </div>
+);
+
+const EmptyBlock = ({ children }) => (
+  <div className="rounded-xl border border-white/10 bg-black/25 px-6 py-6 text-sm text-gray-400">
+    {children}
+  </div>
 );
 
 const Dashboard = () => {
   const dispatch = useDispatch();
   const { dashboardStats, isLoading, orderError } = useSelector((state) => state.order);
+  const { user } = useSelector((state) => state.auth);
 
-  useEffect(() => {
+  const isSuperAdmin = user?.role === "super_admin" || user?.role === "superadmin";
+  const userPerms = user?.permissions || {};
+
+  const [activeDrop, setActiveDrop] = useState(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const refreshDashboard = useCallback(() => {
     dispatch(fetchDashboardStats());
   }, [dispatch]);
+
+  useEffect(() => {
+    refreshDashboard();
+  }, [refreshDashboard]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const fetchActiveDrop = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_V1_URL}/drops/get-all-drops`, { withCredentials: true });
+      const drops = res.data?.drops || [];
+      const ts = Date.now();
+      const live = drops.find(
+        (drop) =>
+          drop.isPublished &&
+          !drop.isArchived &&
+          (!drop.releaseDate || new Date(drop.releaseDate).getTime() <= ts) &&
+          (!drop.endDate || new Date(drop.endDate).getTime() > ts)
+      );
+      const upcoming = drops
+        .filter(
+          (drop) =>
+            drop.isPublished &&
+            !drop.isArchived &&
+            drop.releaseDate &&
+            new Date(drop.releaseDate).getTime() > ts
+        )
+        .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate))[0];
+
+      setActiveDrop(live || upcoming || null);
+    } catch {
+      setActiveDrop(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActiveDrop();
+  }, [fetchActiveDrop]);
+
+  useSocketEvent("order:refresh", refreshDashboard, [refreshDashboard]);
+  useSocketEvent("payment:new_pending", refreshDashboard, [refreshDashboard]);
+  useSocketEvent("payment:refresh", refreshDashboard, [refreshDashboard]);
+  useSocketEvent("admin:refresh", refreshDashboard, [refreshDashboard]);
+  useSocketEvent("drop:updated", () => {
+    refreshDashboard();
+    fetchActiveDrop();
+  }, [refreshDashboard, fetchActiveDrop]);
 
   const overview = dashboardStats?.overview || {};
   const highlights = dashboardStats?.highlights || {};
@@ -164,518 +261,387 @@ const Dashboard = () => {
   const topDrops = dashboardStats?.topDrops || [];
   const inventoryAlerts = dashboardStats?.inventoryAlerts || [];
   const recentOrders = dashboardStats?.recentOrders || [];
-  const paymentMethodBreakdown = dashboardStats?.paymentMethodBreakdown || [];
   const orderStatusBreakdown = dashboardStats?.orderStatusBreakdown || {};
 
+  const visibleQuickLinks = isSuperAdmin
+    ? quickLinks
+    : quickLinks.filter((item) => !item.permission || userPerms[item.permission]);
+
+  const dropCd = dropCountdown(activeDrop, nowMs);
   const maxRevenue = Math.max(...salesTrend.map((entry) => entry.revenue || 0), 1);
 
-  const primaryMetrics = [
-    {
-      label: "Revenue",
-      numericValue: Number(overview.totalRevenue) || 0,
-      formatter: (v) => currencyFormatter.format(Math.round(v)),
-      hint: `${formatCurrency(overview.averageOrderValue)} average order value`,
-      icon: DollarSign,
-      tone: "text-[#D4AF37]",
-    },
-    {
-      label: "Active Orders",
-      numericValue: Number(overview.activeOrders) || 0,
-      formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: `${formatNumber(overview.pendingVerification)} waiting for admin verification`,
-      icon: ShoppingBag,
-      tone: "text-sky-400",
-    },
-    {
-      label: "Customers",
-      numericValue: Number(overview.totalCustomers) || 0,
-      formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: `${formatNumber(overview.totalOrders)} total orders placed`,
-      icon: Users,
-      tone: "text-violet-400",
-    },
-    {
-      label: "Products",
-      numericValue: Number(overview.totalProducts) || 0,
-      formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: `${formatNumber(overview.totalSoldUnits)} units sold across all drops`,
-      icon: Package,
-      tone: "text-emerald-400",
-    },
-    {
-      label: "Live Drops",
-      numericValue: Number(overview.liveDrops) || 0,
-      formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: `${formatNumber(overview.archivedDrops)} archived releases in the ledger`,
-      icon: Layers3,
-      tone: "text-pink-400",
-    },
-    {
-      label: "Low Stock",
-      numericValue: Number(overview.lowStockProducts) || 0,
-      formatter: (v) => numberFormatter.format(Math.round(v)),
-      hint: `${formatNumber(overview.stockOnHand)} units currently on hand`,
-      icon: ShieldAlert,
-      tone: "text-amber-400",
-    },
-  ];
+  const latestOrders = recentOrders.slice(0, 5);
+  const latestFeed = recentOrders.slice(0, 4);
+  const lowStockLead = inventoryAlerts[0];
+  const bestSeller = highlights.bestSellingProduct || topProducts[0];
+  const topDrop = highlights.topDrop || topDrops[0];
 
-  const statusCards = [
-    { key: "pending", icon: Clock3 },
-    { key: "pending_payment", icon: Wallet },
-    { key: "verification_pending", icon: Wallet },
-    { key: "confirmed", icon: Sparkles },
-    { key: "shipped", icon: Truck },
-    { key: "delivered", icon: ShoppingCart },
-    { key: "cancelled", icon: ShieldAlert },
-  ];
+  const topStrip = useMemo(
+    () => [
+      {
+        label: "Revenue",
+        value: Number(overview.totalRevenue) || 0,
+        formatter: (value) => currencyFormatter.format(Math.round(value)),
+        hint: `${formatCurrency(overview.completedRevenue)} delivered`,
+        icon: DollarSign,
+        tone: "text-[#D4AF37]",
+      },
+      {
+        label: "Orders",
+        value: Number(overview.activeOrders) || 0,
+        formatter: (value) => numberFormatter.format(Math.round(value)),
+        hint: `${formatNumber(overview.totalOrders)} total`,
+        icon: ShoppingBag,
+        tone: "text-sky-300",
+      },
+      {
+        label: "Pending Payments",
+        value: Number(overview.pendingPayments) || 0,
+        formatter: (value) => numberFormatter.format(Math.round(value)),
+        hint: `${formatNumber(overview.pendingVerification)} orders to verify`,
+        icon: CreditCard,
+        tone: "text-orange-300",
+      },
+      {
+        label: "Low Stock",
+        value: Number(overview.lowStockProducts) || 0,
+        formatter: (value) => numberFormatter.format(Math.round(value)),
+        hint: `${formatNumber(overview.stockOnHand)} units on hand`,
+        icon: AlertTriangle,
+        tone: "text-amber-300",
+      },
+      {
+        label: "Live Drop",
+        value: Number(overview.liveDrops) || 0,
+        formatter: (value) => numberFormatter.format(Math.round(value)),
+        hint: activeDrop?.name || "No active drop",
+        icon: Layers3,
+        tone: "text-pink-300",
+      },
+    ],
+    [overview, activeDrop]
+  );
 
   return (
     <AdminPage
       eyebrow="Admin Overview"
       title="Command center"
-      description="Track sales, orders, customers, products, and drop performance in one place."
+      description="Focused operations for orders, payments, stock, and live drops."
     >
       <motion.div
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="mx-auto max-w-[1600px]"
+        className="w-full space-y-6"
       >
-        <section className="overflow-hidden rounded-[36px] border border-white/10 bg-[linear-gradient(135deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_28%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
-          <div className="grid gap-8 xl:grid-cols-[1.25fr_0.95fr]">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-4 py-2 text-[11px] uppercase tracking-[0.32em] text-[#D4AF37]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Saga Elite Command Center
-              </div>
-              <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-                Modern admin visibility for products, drops, orders, and launch momentum.
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-300 sm:text-base">
-                Track the most sold product and its drop, watch manual-payment workload, spot low-stock risks, and keep every limited release moving with real Saga Elite data.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-gray-300">
-                  Today: <span className="font-semibold text-white">{formatDate(new Date())}</span>
-                </div>
-                <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-gray-300">
-                  Delivered revenue: <span className="font-semibold text-white">{formatCurrency(overview.completedRevenue)}</span>
-                </div>
-                <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-gray-300">
-                  Wishlist adds: <span className="font-semibold text-white">{formatNumber(overview.totalWishlistAdds)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {quickLinks.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.title}
-                    to={item.to}
-                    className="group block rounded-[28px] border border-white/10 bg-black/30 p-5 transition duration-200 hover:border-[#D4AF37]/40 hover:bg-black/40"
-                  >
-                    <motion.div whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                          <Icon className="h-5 w-5 text-[#D4AF37]" />
-                        </div>
-                        <motion.span whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}>
-                          <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:text-white" />
-                        </motion.span>
-                      </div>
-                      <h2 className="mt-8 text-lg font-semibold text-white">{item.title}</h2>
-                      <p className="mt-2 text-sm leading-6 text-gray-400">{item.description}</p>
-                    </motion.div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        <motion.section
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:gap-6"
+        >
+          {topStrip.map((item) => (
+            <KpiTile key={item.label} {...item} />
+          ))}
+        </motion.section>
 
         {orderError ? (
-          <div className="mt-6 rounded-[24px] border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
             Dashboard data could not be loaded completely: {orderError}
           </div>
         ) : null}
 
+        <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <Card>
+            <SectionTitle
+              eyebrow="Operations"
+              title="Live orders"
+              action={
+                <Link
+                  to="/admin/order"
+                  className="inline-flex items-center gap-2 justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
+                >
+                  Open orders
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              }
+            />
+            <div className="space-y-3">
+              {latestFeed.length === 0 ? (
+                <EmptyBlock>Latest orders from the database will appear here.</EmptyBlock>
+              ) : (
+                latestFeed.map((order) => (
+                  <Link
+                    key={order._id}
+                    to="/admin/order"
+                    className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 px-4 py-3 transition hover:border-[#D4AF37]/30 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-emerald-300" />
+                        <p className="truncate text-sm font-semibold text-white">
+                          {order.customerEmail}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {timeAgo(order.createdAt)} | {order.itemCount} item{order.itemCount === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs ${
+                          statusToneMap[order.status] || "border-white/10 bg-white/5 text-gray-300"
+                        }`}
+                      >
+                        {formatLabel(order.status)}
+                      </span>
+                      <span className="text-sm font-semibold text-white">
+                        {formatCurrency(order.totalAmount)}
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <div className="grid gap-4">
+            <Card>
+              <SectionTitle
+                eyebrow="Drop Status"
+                title={activeDrop ? activeDrop.name : "No active drop"}
+                action={
+                  <Link to="/admin/drop" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
+                    Manage
+                  </Link>
+                }
+              />
+              {activeDrop ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-4">
+                    <div className="flex items-center gap-2 text-[#D4AF37]">
+                      <Timer className="h-4 w-4" />
+                      <p className="text-sm font-medium">{dropCd?.phase || "Live now"}</p>
+                    </div>
+                    <p className="mt-2 font-mono text-3xl font-semibold text-white">
+                      {formatDuration(dropCd?.remaining)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-xs text-gray-500">Release</p>
+                      <p className="mt-1 truncate text-gray-200">
+                        {formatDate(activeDrop.releaseDate)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                      <p className="text-xs text-gray-500">Ends</p>
+                      <p className="mt-1 truncate text-gray-200">
+                        {activeDrop.endDate ? formatDate(activeDrop.endDate) : "Open"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <EmptyBlock>Publish a drop to bring launch status into the dashboard.</EmptyBlock>
+              )}
+            </Card>
+
+            <Card>
+              <SectionTitle
+                eyebrow="Payment Alert"
+                title={`${formatNumber(overview.pendingPayments)} proof${overview.pendingPayments === 1 ? "" : "s"} waiting`}
+                action={
+                  <Link
+                    to="/admin/payments/pending"
+                    className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
+                  >
+                    Verify
+                  </Link>
+                }
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <OrderStatusPill label="Pending" value={orderStatusBreakdown.pending_payment || 0} />
+                <OrderStatusPill label="Verify" value={orderStatusBreakdown.verification_pending || 0} />
+                <OrderStatusPill label="Active" value={overview.activeOrders || 0} />
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+          <Card>
+            <SectionTitle eyebrow="Sales" title="Revenue trend" />
+            <div className="grid min-h-[260px] gap-3 sm:grid-cols-6">
+              {salesTrend.length === 0 ? (
+                <div className="sm:col-span-6">
+                  <EmptyBlock>Revenue data will appear after orders are placed.</EmptyBlock>
+                </div>
+              ) : (
+                salesTrend.map((entry, index) => (
+                  <div key={entry.monthKey} className="flex flex-col items-center gap-3">
+                    <div className="flex h-44 w-full items-end rounded-xl border border-white/10 bg-black/25 p-2">
+                      <motion.div
+                        className="w-full rounded-lg bg-[#D4AF37]"
+                        style={{
+                          height: `${Math.max(10, Math.round((entry.revenue / maxRevenue) * 100))}%`,
+                        }}
+                        initial={{ scaleY: 0 }}
+                        animate={{ scaleY: 1 }}
+                        transition={{ duration: 0.35, delay: index * 0.04 }}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500">{entry.label}</p>
+                      <p className="mt-1 text-sm font-semibold text-white">
+                        {formatCurrency(entry.revenue)}
+                      </p>
+                      <p className="text-xs text-gray-500">{formatNumber(entry.orders)} orders</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <SectionTitle
+              eyebrow="Orders"
+              title="Recent orders"
+              action={
+                <div className="hidden gap-2 md:flex">
+                  <OrderStatusPill label="Shipped" value={orderStatusBreakdown.shipped || 0} />
+                  <OrderStatusPill label="Delivered" value={orderStatusBreakdown.delivered || 0} />
+                  <OrderStatusPill label="Cancelled" value={orderStatusBreakdown.cancelled || 0} />
+                </div>
+              }
+            />
+            <div className="space-y-3">
+              {latestOrders.length === 0 ? (
+                <EmptyBlock>Recent orders from the database will appear here.</EmptyBlock>
+              ) : (
+                latestOrders.map((order) => (
+                  <div
+                    key={order._id}
+                    className="rounded-xl border border-white/10 bg-black/25 px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{order.customerEmail}</p>
+                        <p className="mt-1 text-xs text-gray-500">{formatDate(order.createdAt)}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">{formatCurrency(order.totalAmount)}</p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs ${
+                          statusToneMap[order.status] || "border-white/10 bg-white/5 text-gray-300"
+                        }`}
+                      >
+                        {formatLabel(order.status)}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
+                        {formatLabel(order.paymentMethod)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </section>
+
+        <Card>
+          <SectionTitle
+            eyebrow="Product Health"
+            title="Best seller, stock risk, and top drop"
+            action={
+              <Link to="/admin/product" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
+                Manage catalog
+              </Link>
+            }
+          />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-[#D4AF37]" />
+                <p className="text-sm font-medium text-gray-300">Best Seller</p>
+              </div>
+              <p className="line-clamp-1 text-lg font-semibold text-white">
+                {bestSeller?.name || "No sales yet"}
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                {bestSeller
+                  ? `${formatNumber(bestSeller.soldCount)} sold | ${formatNumber(bestSeller.totalStock)} in stock`
+                  : "Sales data will populate after checkout activity starts."}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-300" />
+                <p className="text-sm font-medium text-gray-300">Low Stock</p>
+              </div>
+              <p className="line-clamp-1 text-lg font-semibold text-white">
+                {lowStockLead?.name || "No low-stock products"}
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                {lowStockLead
+                  ? `${formatNumber(lowStockLead.totalStock)} units left | ${formatNumber(inventoryAlerts.length)} products flagged`
+                  : "Inventory levels currently look healthy."}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Layers3 className="h-4 w-4 text-pink-300" />
+                <p className="text-sm font-medium text-gray-300">Top Drop</p>
+              </div>
+              <p className="line-clamp-1 text-lg font-semibold text-white">
+                {topDrop?.name || "No drop data yet"}
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                {topDrop
+                  ? `${formatNumber(topDrop.soldUnits)} sold | ${formatNumber(topDrop.stockOnHand)} in stock`
+
+
+
+
+: "Drop performance will populate from product sales."}
+              </p>
+            </div>
+          </div>
+        </Card>
+
         <motion.section
-          className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6"
         >
-          {primaryMetrics.map((item) => (
-            <MetricCard
-              key={item.label}
-              label={item.label}
-              numericValue={item.numericValue}
-              formatter={item.formatter}
-              hint={item.hint}
-              icon={item.icon}
-              tone={item.tone}
-            />
-          ))}
+          {visibleQuickLinks.map((item) => {
+            const Icon = item.icon;
+            return (
+              <motion.div key={item.title} variants={itemVariants}>
+                <Link
+                  to={item.to}
+                  className="group block rounded-2xl border border-white/10 bg-[#101010] p-4 transition hover:border-[#D4AF37]/30"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="rounded-xl bg-white/[0.04] p-3">
+                      <Icon className="h-5 w-5 text-[#D4AF37]" />
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:text-white" />
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-white">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">{item.description}</p>
+                </Link>
+              </motion.div>
+            );
+          })}
         </motion.section>
 
-        <section className="mt-6 grid gap-4 xl:grid-cols-4">
-          <HighlightCard
-            eyebrow="Most Sold Product"
-            title={highlights.bestSellingProduct?.name || "No sales yet"}
-            value={
-              highlights.bestSellingProduct
-                ? `${formatNumber(highlights.bestSellingProduct.soldCount)} units`
-                : "Waiting for orders"
-            }
-            meta={
-              highlights.bestSellingProduct
-                ? `Drop: ${highlights.bestSellingProduct.drop?.name || "Independent Release"} | Art No: ${highlights.bestSellingProduct.artNo} | Stock left: ${formatNumber(highlights.bestSellingProduct.totalStock)}`
-                : "Once orders start coming in, the top-selling product will appear here with its release context."
-            }
-          />
-          <HighlightCard
-            eyebrow="Top Drop"
-            title={highlights.topDrop?.name || "No drop data yet"}
-            value={highlights.topDrop ? `${formatNumber(highlights.topDrop.soldUnits)} units sold` : "No movement yet"}
-            meta={
-              highlights.topDrop
-                ? `${formatNumber(highlights.topDrop.productCount)} products in this release | ${formatNumber(highlights.topDrop.stockOnHand)} units still in stock`
-                : "Top drop performance will be ranked using product sales across the collection."
-            }
-            accent="text-sky-300"
-          />
-          <HighlightCard
-            eyebrow="Most Wished"
-            title={highlights.mostWishedProduct?.name || "No wishlist leader yet"}
-            value={
-              highlights.mostWishedProduct
-                ? `${formatNumber(highlights.mostWishedProduct.wishCount)} wishlists`
-                : "No wishlist activity"
-            }
-            meta={
-              highlights.mostWishedProduct
-                ? `Drop: ${highlights.mostWishedProduct.drop?.name || "Independent Release"} | Sold: ${formatNumber(highlights.mostWishedProduct.soldCount)} | Stock left: ${formatNumber(highlights.mostWishedProduct.totalStock)}`
-                : "This helps you compare audience demand against actual sell-through."
-            }
-            accent="text-rose-300"
-          />
-          <HighlightCard
-            eyebrow="Next Drop"
-            title={highlights.nextScheduledDrop?.name || "No upcoming drop"}
-            value={
-              highlights.nextScheduledDrop
-                ? `${highlights.nextScheduledDrop.daysUntilRelease} day${highlights.nextScheduledDrop.daysUntilRelease === 1 ? "" : "s"}`
-                : "Schedule pending"
-            }
-            meta={
-              highlights.nextScheduledDrop
-                ? `Release date: ${formatDate(highlights.nextScheduledDrop.releaseDate)} | ${formatNumber(highlights.nextScheduledDrop.productCount)} active products prepared`
-                : "Create or publish the next drop to monitor launch readiness here."
-            }
-            accent="text-emerald-300"
-          />
-        </section>
-
-        <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.95fr]">
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Revenue Pulse</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Last 6 months</h2>
-              </div>
-              <div className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs uppercase tracking-[0.22em] text-gray-400">
-                Drop-led commerce
-              </div>
-            </div>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-6">
-              {salesTrend.map((entry, barIdx) => (
-                <div key={entry.monthKey} className="flex flex-col items-center gap-3">
-                  <div className="flex h-56 w-full items-end rounded-[24px] border border-white/10 bg-black/30 p-3">
-                    <motion.div
-                      className="w-full origin-bottom rounded-[18px] bg-[linear-gradient(180deg,rgba(212,175,55,0.95),rgba(212,175,55,0.18))] shadow-[0_0_40px_rgba(212,175,55,0.22)]"
-                      style={{
-                        height: `${Math.max(14, Math.round((entry.revenue / maxRevenue) * 100))}%`,
-                        transformOrigin: "bottom",
-                      }}
-                      initial={{ scaleY: 0 }}
-                      animate={{ scaleY: 1 }}
-                      transition={{ duration: 0.4, delay: barIdx * 0.06, ease: "easeOut" }}
-                    />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs uppercase tracking-[0.2em] text-gray-500">{entry.label}</p>
-                    <p className="mt-2 text-sm font-semibold text-white">{formatCurrency(entry.revenue)}</p>
-                    <p className="text-xs text-gray-500">{formatNumber(entry.orders)} orders</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-6">
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Order Pipeline</p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {statusCards.map((item) => {
-                  const Icon = item.icon;
-                  const total = orderStatusBreakdown[item.key] || 0;
-                  return (
-                    <div
-                      key={item.key}
-                      className={`rounded-[24px] border px-4 py-4 ${statusToneMap[item.key] || "border-white/10 bg-white/5 text-white"}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] opacity-80">{formatLabel(item.key)}</p>
-                          <p className="mt-2 text-2xl font-black tracking-tight">{formatNumber(total)}</p>
-                        </div>
-                        <Icon className="h-5 w-5 opacity-80" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Hybrid Payment Mix</p>
-              <div className="mt-5 space-y-3">
-                {paymentMethodBreakdown.length === 0 ? (
-                  <div className="rounded-[22px] border border-white/10 bg-black/30 px-4 py-5 text-sm text-gray-400">
-                    Payment analytics will appear here after the first order.
-                  </div>
-                ) : (
-                  paymentMethodBreakdown.map((item) => (
-                    <div
-                      key={item.method}
-                      className={`rounded-[22px] border border-white/10 bg-gradient-to-r ${paymentToneMap[item.method] || "from-white/10 to-white/[0.02]"} px-4 py-4`}
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-gray-300">{formatLabel(item.method)}</p>
-                          <p className="mt-2 text-lg font-semibold text-white">{formatNumber(item.count)} orders</p>
-                        </div>
-                        <p className="text-sm font-semibold text-white">{formatCurrency(item.revenue)}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Product Leaders</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Best-selling products</h2>
-              </div>
-              <motion.span whileTap={{ scale: 0.96 }} whileHover={{ scale: 1.02 }} className="inline-block">
-                <Link to="/admin/product" className="text-sm font-semibold text-[#D4AF37] transition hover:text-white">
-                  Manage products
-                </Link>
-              </motion.span>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {topProducts.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-6 text-sm text-gray-400">
-                  No product sales data recorded yet.
-                </div>
-              ) : (
-                topProducts.map((product, index) => (
-                  <div key={product._id || product.slug || product.artNo} className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-sm font-black text-[#D4AF37]">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold text-white">{product.name}</p>
-                          <p className="mt-1 text-sm text-gray-400">
-                            {product.dropName} | {product.artNo}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm sm:min-w-[320px]">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Sold</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(product.soldCount)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Stock</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(product.totalStock)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Wishes</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(product.wishCount)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Drop Leaders</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Top-performing drops</h2>
-              </div>
-              <Link to="/admin/drop" className="text-sm font-semibold text-[#D4AF37] transition hover:text-white">
-                Open drops
-              </Link>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {topDrops.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-6 text-sm text-gray-400">
-                  Drop performance will populate after products begin selling.
-                </div>
-              ) : (
-                topDrops.map((drop, index) => (
-                  <div key={drop.dropId || drop.slug || `${drop.name}-${index}`} className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-400/10 text-sm font-black text-sky-300">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold text-white">{drop.name}</p>
-                          <p className="mt-1 text-sm text-gray-400">
-                            Release {formatDate(drop.releaseDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm sm:min-w-[320px]">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Sold</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(drop.soldUnits)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Products</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(drop.productCount)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Stock</p>
-                          <p className="mt-2 font-semibold text-white">{formatNumber(drop.stockOnHand)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Recent Orders</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Latest customer activity</h2>
-              </div>
-              <Link to="/admin/order" className="text-sm font-semibold text-[#D4AF37] transition hover:text-white">
-                Open orders
-              </Link>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {recentOrders.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-6 text-sm text-gray-400">
-                  Orders will appear here after checkout activity starts.
-                </div>
-              ) : (
-                recentOrders.map((order) => (
-                  <div key={order._id} className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{order.customerEmail}</p>
-                        <p className="mt-1 break-all text-xs text-gray-500">{order._id}</p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.2em] ${statusToneMap[order.status] || "border-white/10 bg-white/10 text-white"}`}>
-                          {formatLabel(order.status)}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs uppercase tracking-[0.2em] text-gray-300">
-                          {formatLabel(order.paymentMethod)}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs uppercase tracking-[0.2em] text-gray-300">
-                          {order.itemCount} items
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-                      <p className="text-sm text-gray-400">{formatDate(order.createdAt)}</p>
-                      <p className="text-lg font-bold text-white">{formatCurrency(order.totalAmount)}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">Inventory Watch</p>
-                <h2 className="mt-2 text-2xl font-bold text-white">Low-stock product alerts</h2>
-              </div>
-              <Boxes className="h-6 w-6 text-[#D4AF37]" />
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {inventoryAlerts.length === 0 ? (
-                <div className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-6 text-sm text-gray-400">
-                  No low-stock products right now. Inventory levels look healthy.
-                </div>
-              ) : (
-                inventoryAlerts.map((product) => (
-                  <div key={product._id || product.slug || product.artNo} className="rounded-[24px] border border-white/10 bg-black/30 px-5 py-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-base font-semibold text-white">{product.name}</p>
-                        <p className="mt-1 text-sm text-gray-400">
-                          {product.dropName} | {product.artNo}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-center">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-amber-200">Stock</p>
-                          <p className="mt-2 text-lg font-semibold text-white">{formatNumber(product.totalStock)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Sold</p>
-                          <p className="mt-2 text-lg font-semibold text-white">{formatNumber(product.soldCount)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center">
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Wishes</p>
-                          <p className="mt-2 text-lg font-semibold text-white">{formatNumber(product.wishCount)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-
-        {isLoading && !dashboardStats ? (
-          <div className="mt-6">
-            <SkeletonGrid count={6} />
-          </div>
-        ) : null}
+        {isLoading && !dashboardStats ? <SkeletonGrid count={5} /> : null}
       </motion.div>
     </AdminPage>
   );

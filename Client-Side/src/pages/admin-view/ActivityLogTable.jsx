@@ -7,14 +7,18 @@ import { MethodBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonRow } from "@/components/admin-components/_shared/SkeletonCard";
 import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 
-const ActivityLogTable = () => {
-  const { activityLogs, logsLoading } = useSelector((s) => s.superAdmin);
+const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = false }) => {
+  // Default to the SuperAdmin slice while still allowing callers to pass
+  // their own logs explicitly.
+  const fallback = useSelector((s) => s.superAdmin);
+  const activityLogs = logsProp ?? fallback.activityLogs;
+  const logsLoading = loadingProp ?? fallback.logsLoading;
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return activityLogs;
-    return activityLogs.filter((log) => {
+    return (activityLogs || []).filter((log) => {
       const email = (log.adminId?.email || "").toLowerCase();
       const action = (log.action || "").toLowerCase();
       const route = (log.route || "").toLowerCase();
@@ -27,11 +31,11 @@ const ActivityLogTable = () => {
       <div className="mt-6 overflow-x-auto rounded-[20px] border border-white/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-              <th className="px-5 py-3 text-left">Date</th>
-              <th className="px-5 py-3 text-left">Admin Email</th>
-              <th className="px-5 py-3 text-left">Action</th>
-              <th className="px-5 py-3 text-left">Method &amp; Route</th>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
             </tr>
           </thead>
           <tbody>
@@ -44,7 +48,7 @@ const ActivityLogTable = () => {
     );
   }
 
-  if (!activityLogs.length) {
+  if (!activityLogs?.length) {
     return (
       <EmptyState
         icon={ScrollText}
@@ -56,16 +60,18 @@ const ActivityLogTable = () => {
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter by email, action, or route…"
-          className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
-        />
-      </div>
+      {hideSearch ? null : (
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Filter by email, action, or route…"
+            className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+          />
+        </div>
+      )}
 
       {!filtered.length ? (
         <p className="text-sm text-gray-500">No logs match your search.</p>
@@ -74,11 +80,11 @@ const ActivityLogTable = () => {
       <div className="overflow-x-auto rounded-[20px] border border-white/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.2em] text-gray-500">
-              <th className="px-5 py-3 text-left">Date</th>
-              <th className="px-5 py-3 text-left">Admin Email</th>
-              <th className="px-5 py-3 text-left">Action</th>
-              <th className="px-5 py-3 text-left">Method &amp; Route</th>
+            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Admin Email</th>
+              <th className="px-4 py-2 text-left">Action</th>
+              <th className="px-4 py-2 text-left">Method &amp; Route</th>
             </tr>
           </thead>
           <motion.tbody
@@ -91,18 +97,18 @@ const ActivityLogTable = () => {
               <motion.tr
                 key={log._id}
                 variants={itemVariants}
-                className="border-t border-white/10 transition-colors hover:bg-white/[0.02]"
+                className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
               >
-                <td className="whitespace-nowrap px-5 py-4 text-gray-400">
+                <td className="whitespace-nowrap px-4 py-3 text-[#99907c] se-mono text-[10px]">
                   {new Date(log.createdAt).toLocaleString("en-GB")}
                 </td>
-                <td className="px-5 py-4 font-medium text-white">
+                <td className="px-4 py-3 font-medium text-[#e5e2e1] se-body text-sm">
                   {log.adminId?.email || "Unknown Admin"}
                 </td>
-                <td className="px-5 py-4 text-gray-300">{log.action}</td>
-                <td className="px-5 py-4">
+                <td className="px-4 py-3 text-[#d0c5af] se-body text-sm">{log.action}</td>
+                <td className="px-4 py-3">
                   <MethodBadge method={log.method} />
-                  <span className="ml-2 text-xs font-mono text-gray-500">{log.route}</span>
+                  <span className="ml-2 text-xs se-mono text-[#99907c]">{log.route}</span>
                 </td>
               </motion.tr>
             ))}

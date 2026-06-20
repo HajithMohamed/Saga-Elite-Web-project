@@ -1,0 +1,54 @@
+PRIVACY POLICY
+Last Updated: May 2, 2026
+
+1. INTRODUCTION
+This policy covers what data Saga Elite collects, why we collect it, and how it is used to deliver our services.
+
+2. DATA WE COLLECT
+We may collect the following personal and technical data:
+- Name, email, phone number, and delivery address.
+- Order history and purchase records.
+- Technical data such as IP address.
+
+Note: Payment card data is handled securely by PayHere. We never store or process your card details on our servers.
+
+3. HOW WE USE YOUR DATA
+- Processing and fulfilling your orders.
+- Sending order and shipping notifications via WhatsApp (+94 77 070 4274) and email.
+- Providing responsive customer support.
+- Sending marketing and promotional emails (these invariably contain an opt-out link).
+
+4. DATA SHARING
+We partner with select third-party services to fulfill our business operations. These include:
+- PayHere: For secure payment processing.
+- Cloudinary: For image hosting and management.
+- Mailtrap/Nodemailer: To facilitate email delivery.
+
+We do NOT sell your data to any third parties.
+
+5. DATA STORAGE
+- All your personal data is stored securely on MongoDB Atlas databases.
+- We employ industry-standard SSL/TLS encryption to protect data in transit.
+- Your personal data is retained for exactly 2 years following your last order with us.
+
+6. YOUR RIGHTS
+Under data protection laws, you retain essential rights regarding your personal data:
+- Access: Request a copy of the data we hold on you.
+- Correction: Update any incorrect personal information.
+- Deletion: Request permanent deletion of all your data from our systems.
+
+To exercise these rights, please contact us at sagaaelite@gmail.com.
+
+7. COOKIES
+- Session Cookies: Kept to allow you to log in smoothly during your visit.
+- Preference Cookies: Used to remember your website layout and preferences.
+
+You have full control over cookies and can disable them within your browser settings.
+
+8. DELIVERY SCOPE
+At present, we exclusively support deliveries within Sri Lanka.
+
+9. CONTACT
+Saga Elite
+Email: sagaaelite@gmail.com
+Phone: +94 77 070 4274

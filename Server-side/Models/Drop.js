@@ -23,6 +23,34 @@ const dropSchema = new mongoose.Schema(
       maxlength: 2000,
     },
 
+    headline: {
+      type: String,
+      trim: true,
+      maxlength: 140,
+    },
+
+    manifesto: {
+      type: String,
+      trim: true,
+      maxlength: 4000,
+    },
+
+    cinematicMode: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Hours before `releaseDate` that customers tagged "vip" gain access.
+    // 0 = no early access (drop opens for everyone simultaneously).
+    // The shopping-side product/drop gate consumes this together with
+    // User.tags to decide visibility.
+    vipEarlyAccessHours: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 168,
+    },
+
     releaseDate: {
       type: Date,
       required: true,

@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import {
   verifyResetOtpAction,
   resendResetPasswordOtpAction,
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import OtpCells from "@/components/auth-components/OtpCells";
-import { Btn, Eyebrow } from "@/components/ui/editorial";
+import { Btn, Eyebrow, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
 
 const VerifyResetOtp = () => {
   const location = useLocation();
@@ -29,7 +30,11 @@ const VerifyResetOtp = () => {
 
   if (!email) {
     return (
-      <div>
+      <motion.div
+        initial={{ opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
         <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
         <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
           Start again,<br />gently.
@@ -39,11 +44,11 @@ const VerifyResetOtp = () => {
           code.
         </p>
         <Link to="/auth/forgot-password" className="mt-8 inline-block">
-          <Btn variant="default" size="lg" iconRight={ArrowRight}>
+          <Btn variant="default" className={AUTH_PRIMARY_BTN} iconRight={ArrowRight}>
             Back to forgot password
           </Btn>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
@@ -106,7 +111,11 @@ const VerifyResetOtp = () => {
   };
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Eyebrow tone="gold" size="md">Reset · step two</Eyebrow>
       <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
         Verify the code.
@@ -124,8 +133,7 @@ const VerifyResetOtp = () => {
 
         <Btn
           variant="default"
-          size="lg"
-          className="w-full mt-10"
+          className={`${AUTH_PRIMARY_BTN} mt-10`}
           iconRight={ArrowRight}
           type="submit"
           disabled={isLoading || otp.length < 4}
@@ -158,7 +166,7 @@ const VerifyResetOtp = () => {
         <ArrowLeft size={12} strokeWidth={1.5} />
         Back to sign in
       </Link>
-    </div>
+    </motion.div>
   );
 };
 

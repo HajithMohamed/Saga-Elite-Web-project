@@ -1,10 +1,14 @@
+# ── Client-Side .dockerignore ─────────────────────────────────
 node_modules
 npm-debug.log
 dist
+.vite
 .env
-.env.local
+.env.*
 .git
 .gitignore
 *.md
+*.txt
 coverage
 *.log
+build_output*.txt

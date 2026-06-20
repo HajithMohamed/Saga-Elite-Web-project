@@ -8,6 +8,12 @@ const withAuth = {
   },
 };
 
+const appendEmailQuery = (url, email) => {
+  if (!email) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}email=${encodeURIComponent(email)}`;
+};
+
 export const uploadManualPaymentProof = async (file) => {
   if (!file) {
     return "";
@@ -36,30 +42,92 @@ export const generateManualPaymentReference = async ({ orderId, amount }) => {
   return response.data;
 };
 
-export const submitManualPaymentProof = async ({ referenceNumber, proofUrl }) => {
+export const submitManualPaymentProof = async ({ referenceNumber, proofUrl, email }) => {
   const response = await axios.post(
     `${API_BASE}/manual-payment/submit-proof`,
-    { referenceNumber, proofUrl },
+    { referenceNumber, proofUrl, email },
     withAuth,
   );
 
   return response.data;
 };
 
-export const fetchMyManualPaymentStatus = async (paymentIdentifier) => {
-  const response = await axios.get(
-    `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,
+// New flow: send the receipt file directly. The server OCRs the receipt,
+// validates reference + amount, and auto-verifies / auto-rejects in one
+// round-trip. Replaces the old upload-then-submit two-step flow.
+export const submitManualPaymentReceipt = async ({ referenceNumber, file, email }) => {
+  const formData = new FormData();
+  formData.append("receipt", file);
+  formData.append("referenceNumber", referenceNumber);
+  if (email) {
+    formData.append("email", email);
+  }
+
+  const response = await axios.post(
+    `${API_BASE}/manual-payment/submit-with-receipt`,
+    formData,
     {
       withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
   );
 
   return response.data;
 };
 
-export const fetchPendingManualPayments = async ({ status = "proof_submitted", page = 1, limit = 20 } = {}) => {
+export const fetchMyManualPaymentStatus = async (paymentIdentifier, { email } = {}) => {
+  const url = appendEmailQuery(
+    `${API_BASE}/manual-payment/status/${encodeURIComponent(paymentIdentifier)}`,
+    email
+  );
+
+  const response = await axios.get(url, {
+    withCredentials: true,
+  });
+
+  return response.data;
+};
+
+export const requestManualPaymentExtension = async ({ slug, email }) => {
+  const response = await axios.post(
+    `${API_BASE}/manual-payments/${encodeURIComponent(slug)}/request-extension`,
+    { email },
+    withAuth
+  );
+  return response.data;
+};
+
+export const sendManualPaymentLink = async ({ slug, email }) => {
+  const response = await axios.post(
+    `${API_BASE}/manual-payments/${encodeURIComponent(slug)}/send-link`,
+    { email },
+    withAuth
+  );
+  return response.data;
+};
+
+export const lookupManualPayment = async ({ email, identifier }) => {
+  const response = await axios.post(
+    `${API_BASE}/manual-payments/lookup`,
+    { email, identifier },
+    withAuth
+  );
+  return response.data;
+};
+
+export const fetchPendingManualPayments = async ({
+  status = "proof_submitted",
+  guestOnly = false,
+  page = 1,
+  limit = 20,
+  paymentType,
+} = {}) => {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
+  if (guestOnly) query.set("guestOnly", "true");
+  if (paymentType && paymentType !== "all") query.set("paymentType", paymentType);
   query.set("page", String(page));
   query.set("limit", String(limit));
 
@@ -67,6 +135,24 @@ export const fetchPendingManualPayments = async ({ status = "proof_submitted", p
     withCredentials: true,
   });
 
+  return response.data;
+};
+
+export const fetchManualPaymentMethodSummary = async ({ guestOnly = false } = {}) => {
+  const query = new URLSearchParams();
+  if (guestOnly) query.set("guestOnly", "true");
+  const url = `${API_BASE}/admin/manual-payments/summary${query.toString() ? `?${query.toString()}` : ""}`;
+  const response = await axios.get(url, { withCredentials: true });
+  return response.data;
+};
+
+export const fetchMyPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/user/manual-payments`, withAuth);
+  return response.data;
+};
+
+export const fetchGuestPendingManualPayments = async () => {
+  const response = await axios.get(`${API_BASE}/guest/manual-payments`, withAuth);
   return response.data;
 };
 

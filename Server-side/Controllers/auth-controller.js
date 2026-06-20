@@ -8,7 +8,92 @@ const Guest = require("../Models/Guest");
 const filterObj = require("../Utils/filter-object");
 const createSendToken = require("../Utils/create-send-token");
 const buildEmailTemplate = require("../Utils/email-template");
+const {
+  cleanPhoneNumber,
+  sendWhatsAppMessage,
+  sendWhatsAppTemplateMessage,
+} = require("../Utils/whatsapp-service");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 const logger = require("../Utils/logger");
+const { recordLoginAttempt } = require("../Utils/login-activity-service");
+const { ensureWelcomeReward } = require("../Utils/reward-service");
+const Customer = require("../Models/Customer");
+const { migrateGuestToUser, ensureCustomerRecord } = require("../Services/migration-service");
+
+// Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
+// continue even if WhatsApp is misconfigured or the user has no phone.
+const trySendAuthWhatsApp = async (user, message, label) => {
+  const phone = cleanPhoneNumber(user?.phoneNumber);
+  if (!phone) return { sent: false, skipped: true };
+  try {
+    const result = await sendWhatsAppMessage({ to: phone, message });
+    if (result?.skipped) {
+      logger.warn(`Auth WhatsApp dispatch skipped (${label})`, {
+        reason: result.reason,
+        userId: user?._id,
+      });
+      return { sent: false, skipped: true, reason: result.reason };
+    }
+    return { sent: true, skipped: false };
+  } catch (err) {
+    logger.error(`Auth WhatsApp dispatch failed (${label})`, {
+      error: err?.message || String(err),
+      userId: user?._id,
+    });
+    return { sent: false, skipped: false, error: err };
+  }
+};
+
+const trySendAuthWhatsAppOtp = async (user, otp, label) => {
+  const phone = cleanPhoneNumber(user?.phoneNumber);
+  if (!phone) return { sent: false, skipped: true };
+
+  const templateName =
+    process.env.WHATSAPP_AUTH_OTP_TEMPLATE_NAME ||
+    process.env.WHATSAPP_OTP_TEMPLATE_NAME;
+  const languageCode = process.env.WHATSAPP_AUTH_OTP_LANGUAGE || "en_US";
+  const buttonSubType = process.env.WHATSAPP_AUTH_OTP_BUTTON_SUB_TYPE || "url";
+  const includeButton =
+    process.env.WHATSAPP_AUTH_OTP_INCLUDE_BUTTON !== "false";
+
+  try {
+    const result = templateName
+      ? await sendWhatsAppTemplateMessage({
+          to: phone,
+          templateName,
+          languageCode,
+          bodyParameters: [otp],
+          buttonParameters: includeButton ? [otp] : [],
+          buttonSubType,
+        })
+      : await sendWhatsAppMessage({
+          to: phone,
+          message: `Saga Elite verification code: ${otp}\nValid for ${otpExpiryMinutes()} minutes. Don't share this code.`,
+        });
+
+    if (result?.skipped) {
+      logger.warn(`Auth WhatsApp OTP dispatch skipped (${label})`, {
+        reason: result.reason,
+        userId: user?._id,
+        hasTemplate: Boolean(templateName),
+      });
+      return { sent: false, skipped: true, reason: result.reason };
+    }
+
+    return { sent: true, skipped: false };
+  } catch (err) {
+    logger.error(`Auth WhatsApp OTP dispatch failed (${label})`, {
+      error: err?.message || String(err),
+      userId: user?._id,
+      hasTemplate: Boolean(templateName),
+      templateName: templateName || undefined,
+    });
+    return { sent: false, skipped: false, error: err };
+  }
+};
 
 // how long (in minutes) our one‑time codes stay valid. defaults to 10.
 const otpExpiryMinutes = () => Number(process.env.OTP_EXPIRES_IN || 10);
@@ -23,17 +108,30 @@ const registerUser = catchAsync(async (req, res, next) => {
         req.body,
         "email",
         "password",
-        "confirmPassword"
+        "confirmPassword",
+        "phoneNumber",
+        "username"
     );
-    const { email, password, confirmPassword } = userData;
+    const { email, password, confirmPassword, phoneNumber, username } = userData;
 
     if (!email || !password || !confirmPassword) {
-        return next(new AppError("All fields are required", 400));
+        return next(new AppError("Email, password and confirm password are required", 400));
     }
 
     if (password !== confirmPassword) {
         return next(new AppError("Passwords do not match", 400));
     }
+
+    if (phoneNumber && !isValidSriLankanMobile(phoneNumber)) {
+        return next(
+            new AppError(
+                "Phone number must be a valid Sri Lankan mobile (e.g. 077 123 4567 or +94 77 123 4567).",
+                400
+            )
+        );
+    }
+
+    const normalizedPhone = phoneNumber ? normalizeSriLankanMobile(phoneNumber) : undefined;
 
     const existingUser = await User.findOne({ email });
 
@@ -46,6 +144,21 @@ const registerUser = catchAsync(async (req, res, next) => {
         );
     }
 
+    // Same phone shouldn't be reused across local accounts — otherwise the
+    // WhatsApp OTP fan-out becomes ambiguous when two users get the same
+    // code via the same channel.
+    if (normalizedPhone) {
+        const phoneOwner = await User.findOne({ phoneNumber: normalizedPhone });
+        if (phoneOwner) {
+            return next(
+                new AppError(
+                    "This phone number is already linked to another account.",
+                    400
+                )
+            );
+        }
+    }
+
     const otp = generateOtp();
     const otpExpires = getOtpExpiryDate();
 
@@ -54,9 +167,21 @@ const registerUser = catchAsync(async (req, res, next) => {
         password,
         otp,
         otpExpires,
+        phoneNumber: normalizedPhone || undefined,
+        username: username || undefined,
         isVerified: false,
         provider: "local",
     });
+
+    // Ensure Customer enrichment record exists for this user
+    try {
+      await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+      logger.warn("Customer record creation failed after registration", {
+        userId: newUser._id,
+        error: err.message,
+      });
+    }
 
     // send user verification email using shared template helper
     const registrationBody = `
@@ -72,7 +197,7 @@ const registerUser = catchAsync(async (req, res, next) => {
                 </span>
             </div>
             <p style="color: #555; font-size: 14px;">
-                This code will expire in <strong>10 minutes</strong>.
+                This code will expire in <strong>${otpExpiryMinutes()} minutes</strong>.
             </p>
             <p style="color: #555; font-size: 14px;">
                 If you did not request this, please ignore this email.
@@ -92,16 +217,26 @@ const registerUser = catchAsync(async (req, res, next) => {
         mailError = err;
     }
 
+    // WhatsApp OTP fan-out for users who supplied a phone at signup.
+    const whatsAppResult = await trySendAuthWhatsAppOtp(newUser, otp, "register");
+
     const responseMessage = mailError
         ? "User registered successfully but verification email could not be sent. Please contact support."
-        : "User registered successfully. Please verify your email with the OTP sent.";
+        : whatsAppResult.sent
+            ? "User registered successfully. Please verify your email with the OTP sent to your email and WhatsApp."
+            : normalizedPhone
+                ? "User registered successfully. Please verify your email with the OTP sent. WhatsApp delivery could not be confirmed."
+                : "User registered successfully. Please verify your email with the OTP sent.";
 
     // always return 201 so client doesn’t see a 500 on mail failures
     res.status(201).json({
         status: "success",
         message: responseMessage,
-        data: newUser,
-        mailError: mailError ? mailError.message : undefined,
+        data: {
+            _id: newUser._id,
+            email: newUser.email,
+            isVerified: newUser.isVerified,
+        },
     });
 });
 
@@ -133,18 +268,55 @@ const otpVerify = catchAsync(async(req, res, next)=>{
     await user.save({ validateBeforeSave: false });
 
     const welcomeBody = `
-                <p>Hi ${user.userName || "there"},</p>
+                <p>Hi ${user.username || "there"},</p>
                 <p>Thank you for verifying your email address. Your Saga Elite account is now active.</p>
                 <p>Explore our exclusive collections and enjoy limited‑edition fashion built for the bold.</p>
                 <br/>
                 <p>Happy shopping!<br/>The Saga Elite Team</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Welcome to Saga Elite 🎉",
-        html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Welcome to Saga Elite 🎉",
+            html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
+        });
+    } catch (err) {
+        logger.error("Welcome email failed after OTP verification", { error: err });
+    }
+
+    await ensureWelcomeReward(user).catch((err) =>
+        logger.warn("Welcome reward issuance failed", {
+            userId: user._id,
+            error: err?.message,
+        })
+    );
+
+    try {
+        await migrateGuestToUser(req.guestToken, user);
+    } catch (err) {
+        logger.warn("Guest migration on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even when no guest token was present
+    try {
+        await ensureCustomerRecord({ userId: user._id, email: user.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
+
+    await trySendAuthWhatsApp(
+        user,
+        `Welcome to Saga Elite! Your account is now verified — explore our limited drops at any time.`,
+        "welcome"
+    );
+
     createSendToken(user, 200, res, "Email has been verified.");
 });
 
@@ -173,14 +345,14 @@ const resendOTP = catchAsync(async (req, res, next) => {
 
     try {
         const resendBody = `
-                    <p>Hi ${user.userName || "there"},</p>
+                    <p>Hi ${user.username || "there"},</p>
                     <p>We received a request to resend your verification code for Saga Elite.</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <span style="font-size: 28px; letter-spacing: 6px; font-weight: bold; color: #000;">
                             ${newOTP}
                         </span>
                     </div>
-                    <p><strong>Note:</strong> This code is valid for the next 10 minutes. Please do not share it with anyone.</p>
+                    <p><strong>Note:</strong> This code is valid for the next ${otpExpiryMinutes()} minutes. Please do not share it with anyone.</p>
                     <p>If you didn’t request this, you can safely ignore this email.</p>
                 `;
 
@@ -189,6 +361,8 @@ const resendOTP = catchAsync(async (req, res, next) => {
             subject: "Saga Elite – New Verification Code",
             html: buildEmailTemplate("Email Verification - New Code", resendBody),
         });
+
+        await trySendAuthWhatsAppOtp(user, newOTP, "resend-signup-otp");
 
         res.status(200).json({
             status: "success",
@@ -213,21 +387,87 @@ const login = catchAsync(async (req, res, next) => {
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
+        recordLoginAttempt({
+            req,
+            emailAttempted: email,
+            success: false,
+            failureReason: "user_not_found",
+        });
         return next(new AppError("Incorrect email or password", 401));
     }
 
     const isPasswordCorrect = await user.correctPassword(password, user.password);
 
     if (!isPasswordCorrect) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "wrong_password",
+        });
         return next(new AppError("Incorrect email or password", 401));
     }
 
     if (!user.isVerified) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "not_verified",
+        });
         return next(new AppError("User not verified. Please verify your email first.", 401));
     }
 
     if (!user.isActive) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: false,
+            failureReason: "deactivated",
+        });
         return next(new AppError("Your account has been deactivated. Please contact support.", 403));
+    }
+
+    // Super-admin reset this account's password — block normal login until
+    // they rotate it. We log the attempt as a successful credential check
+    // (because the password DID match), but withhold the session token.
+    if (user.mustChangePassword) {
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: true,
+        });
+        return res.status(200).json({
+            status: "must_change_password",
+            success: false,
+            message:
+                "A super admin reset your password. Use the forgot-password flow to set a new one before signing in.",
+            email: user.email,
+        });
+    }
+
+    recordLoginAttempt({
+        req,
+        userId: user._id,
+        emailAttempted: email,
+        success: true,
+    });
+
+    // Update Customer session tracking
+    try {
+        await Customer.findOneAndUpdate(
+            { userId: user._id },
+            { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+        );
+    } catch (err) {
+        logger.warn("Customer session update failed on login", {
+            userId: user._id,
+            error: err.message,
+        });
     }
 
     createSendToken(user, 200, res, "Login successful");
@@ -297,11 +537,15 @@ const changePassword = catchAsync(async (req, res, next) => {
                 <p>If this wasn't you, please contact support immediately.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Updated",
-        html: buildEmailTemplate("Password Updated", passwordChangedBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Updated",
+            html: buildEmailTemplate("Password Updated", passwordChangedBody),
+        });
+    } catch (err) {
+        logger.error("Password change confirmation email failed", { error: err });
+    }
 
     res.status(200).json({
         status: "success",
@@ -338,7 +582,7 @@ const forgotPassword = catchAsync(async(req, res, next)=>{
                             ${otp}
                         </span>
                     </div>
-                    <p>This code is valid for <strong>15 minutes</strong>.</p>
+                    <p>This code is valid for <strong>${otpExpiryMinutes()} minutes</strong>.</p>
                     <p>If you didn't request this, please ignore this email.</p>
                 `;
 
@@ -347,6 +591,8 @@ const forgotPassword = catchAsync(async(req, res, next)=>{
             subject: "Saga Elite – Password Reset Code",
             html: buildEmailTemplate("Password Reset Request", resetBody),
         });
+
+        await trySendAuthWhatsAppOtp(user, otp, "forgot-password");
 
         res.status(200).json({
             status: "success",
@@ -386,15 +632,24 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
                         ${otp}
                     </span>
                 </div>
-                <p>This code is valid for <strong>15 minutes</strong>.</p>
+                <p>This code is valid for <strong>${otpExpiryMinutes()} minutes</strong>.</p>
                 <p>If you didn't request this, please ignore this email.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Reset Code",
-        html: buildEmailTemplate("Password Reset Request", resetBody2),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Reset Code",
+            html: buildEmailTemplate("Password Reset Request", resetBody2),
+        });
+    } catch (err) {
+        user.resetPasswordOtp = undefined;
+        user.resetPasswordOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("Failed to send email. Try again later.", 500));
+    }
+
+    await trySendAuthWhatsAppOtp(user, otp, "resend-reset-otp");
 
     res.status(200).json({
         status: "success",
@@ -462,11 +717,15 @@ const resetPassword = catchAsync(async(req, res, next)=>{
                 <p>You can now log in with your new password.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Changed Successfully",
-        html: buildEmailTemplate("Password Changed", resetSuccessBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Changed Successfully",
+            html: buildEmailTemplate("Password Changed", resetSuccessBody),
+        });
+    } catch (err) {
+        logger.error("Password reset confirmation email failed", { error: err });
+    }
 
     res.status(200).json({
         status: "success",
@@ -529,6 +788,25 @@ const registerGuest = catchAsync(async (req, res, next) => {
     if (guest) {
         guest.isRegistered = true;
         await guest.save();
+    }
+
+    try {
+        await migrateGuestToUser(req.guestToken, newUser);
+    } catch (err) {
+        logger.warn("Guest migration on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even without guest token
+    try {
+        await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
     }
 
     const registrationBody = `

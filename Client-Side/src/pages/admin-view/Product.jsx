@@ -1,75 +1,668 @@
-import React, { useEffect, useState, useCallback, Fragment } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useState, useCallback, Fragment, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateProducts,
 } from "@/store/admin/product-slice";
+import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
+import useBulkSelection from "@/hooks/use-bulk-selection";
 import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
-import ImageUpload from "@/components/admin-components/ImageUpload";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
-  Search,
   Settings,
-  Bell,
   Plus,
   Trash2,
   ChevronLeft,
   ChevronRight,
   Edit2,
-  Trash,
   Package,
   Eye,
+  Copy,
+  Download,
+  Loader2,
+  MoreVertical,
+  AlertCircle,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
+import { SearchFilterBar, FilterSelect } from "@/components/admin-components/_shared/SearchFilterBar";
 import {
   pageVariants,
   containerVariants,
   itemVariants,
-  slideInPanelVariants,
 } from "@/components/admin-components/_shared/animations";
 import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { ToastFlash } from "@/components/admin-components/_shared/ToastFlash";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import { ProductStudio } from "@/components/admin-components/product-studio";
+import {
+  initialProductForm,
+  defaultVariant,
+  PRODUCT_DRAFT_KEY,
+  validateProductFormData,
+  computeVariantStockSummary,
+} from "@/components/admin-components/product-studio/ProductFormContext";
 
-// Helper components for visual consistency
-const PulseDot = ({ active }) => (
-  <span className={`w-2 h-2 ${active ? 'bg-saga-primary animate-pulse' : 'bg-outline-variant'} shrink-0`} />
-);
+const normalizeText = (value = "") => String(value).trim().toLowerCase();
 
-const ToggleSwitch = ({ checked, onChange, activeColor = "bg-primary-container", activeThumb = "bg-on-primary-container" }) => (
-  <div onClick={onChange} className={`w-10 h-5 ${checked ? activeColor : 'bg-surface-variant'} relative cursor-pointer transition-colors duration-300`}>
-    <div className={`absolute top-0 w-5 h-5 transition-transform duration-300 ${checked ? `right-0 ${activeThumb}` : 'left-0 bg-outline-variant'}`} />
-  </div>
-);
-
-const defaultVariant = {
-  sku: "",
-  size: "",
-  color: "",
-  stock: "0",
-  priceAdjustment: "0",
+const getErrorMessage = (error, fallback = "Request failed") => {
+  if (typeof error === "string") return error;
+  return error?.response?.data?.message || error?.message || error?.error || fallback;
 };
 
-const initialProductForm = {
-  name: "",
-  artNo: "",
-  description: "",
-  brand: "Sovereign Elite",
-  category: "Unisex",
-  drop: "",
-  basePrice: "",
-  discountPercent: "0",
-  stockThreshold: "5",
-  isFeatured: false,
-  isActive: true,
-  isLimited: false,
-  variants: [defaultVariant],
+const revokeBlobUrl = (url) => {
+  if (typeof url === "string" && url.startsWith("blob:")) {
+    URL.revokeObjectURL(url);
+  }
+};
+
+const loadProductDraft = () => {
+  try {
+    const raw = localStorage.getItem(PRODUCT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const clearProductDraft = () => {
+  try {
+    localStorage.removeItem(PRODUCT_DRAFT_KEY);
+  } catch {
+    /* storage disabled — silent */
+  }
+};
+
+const rollbackCreatedProduct = async (product) => {
+  const slug = product?.slug;
+  if (!slug) return false;
+
+  try {
+    await axios.delete(`${API_BASE}/products/delete-product/${encodeURIComponent(slug)}`, {
+      withCredentials: true,
+    });
+    return true;
+  } catch (error) {
+    console.error("[Product] rollback failed after image upload error", error);
+    return false;
+  }
+};
+
+const CATEGORY_ROOT_TAGS = ["Gents", "Ladies", "Unisex"];
+const CATEGORY_MANAGER_PAGE_SIZE = 6;
+
+const getProductLedgerMeta = (product) => {
+  const summary = computeVariantStockSummary(product.variants || []);
+  const colors = summary.colorBreakdown.map((c) => c.color).slice(0, 3);
+  const sizes = summary.sizeBreakdown.map((s) => s.size).slice(0, 4);
+  const lowThreshold = Number(product.lowStockThreshold) || 5;
+  const isLowStock = summary.totalStock > 0 && summary.totalStock <= lowThreshold;
+  const isOutOfStock = summary.totalStock === 0;
+
+  return {
+    ...summary,
+    colors,
+    sizes,
+    isLowStock,
+    isOutOfStock,
+    hasDiscount: Number(product.discountPercent) > 0,
+  };
+};
+
+const normalizeCategorySegment = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const buildCategoryTree = (categories = []) => {
+  const nodes = categories.map((category) => ({ ...category, children: [] }));
+  const byId = new Map(nodes.map((category) => [String(category._id), category]));
+  const roots = [];
+
+  nodes.forEach((category) => {
+    const parentId = category.parentCategory ? String(category.parentCategory) : null;
+    if (parentId && byId.has(parentId)) {
+      byId.get(parentId).children.push(category);
+    } else {
+      roots.push(category);
+    }
+  });
+
+  const sortNodes = (list) =>
+    list
+      .sort(
+        (a, b) =>
+          Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) ||
+          normalizeText(a.name).localeCompare(normalizeText(b.name))
+      )
+      .map((node) => ({
+        ...node,
+        children: sortNodes(node.children || []),
+      }));
+
+  return sortNodes(roots);
+};
+
+const findCategoryNode = (categories = [], value) => {
+  const target = normalizeText(value);
+  if (!target) return null;
+
+  for (const category of categories) {
+    if (
+      normalizeText(category._id) === target ||
+      normalizeText(category.name) === target ||
+      normalizeText(category.slug) === target
+    ) {
+      return category;
+    }
+
+    const childMatch = findCategoryNode(category.children || [], value);
+    if (childMatch) return childMatch;
+  }
+
+  return null;
+};
+
+const formatCategoryPathDisplay = (value = "") =>
+  String(value || "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) =>
+      segment
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    )
+    .join(" / ");
+
+const collectCategoryOptions = (categories = [], path = []) =>
+  categories.flatMap((category) => [
+    {
+      value: String(category._id),
+      label: [...path, category.name].join(" / "),
+    },
+    ...collectCategoryOptions(category.children || [], [...path, category.name]),
+  ]);
+
+const collectFilterCategoryOptions = (categories = [], path = []) =>
+  categories.flatMap((category) => [
+    {
+      value: category.name,
+      label: [...path, category.name].join(" / "),
+    },
+    ...collectFilterCategoryOptions(category.children || [], [...path, category.name]),
+  ]);
+
+const flattenCategoryRows = (categories = [], path = []) =>
+  categories.flatMap((category) => {
+    const nextPath = [...path, category];
+
+    return [
+      {
+        ...category,
+        breadcrumb: nextPath.map((item) => item.name).join(" / "),
+        level: Math.max(0, nextPath.length - 1),
+      },
+      ...flattenCategoryRows(category.children || [], nextPath),
+    ];
+  });
+
+const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTag, setActiveTag] = useState(CATEGORY_ROOT_TAGS[0]);
+  const [editingId, setEditingId] = useState("");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [parentCategory, setParentCategory] = useState("");
+  const [sortOrder, setSortOrder] = useState("0");
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [showOnHome, setShowOnHome] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
+  const visibleCategoryRows = activeRootNode ? flattenCategoryRows(activeRootNode.children || [], [activeRootNode]) : [];
+  const totalPages = Math.max(1, Math.ceil(visibleCategoryRows.length / CATEGORY_MANAGER_PAGE_SIZE));
+  const activePage = Math.min(currentPage, totalPages);
+  const pageStart = (activePage - 1) * CATEGORY_MANAGER_PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + CATEGORY_MANAGER_PAGE_SIZE, visibleCategoryRows.length);
+  const pagedCategoryRows = visibleCategoryRows.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTag]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const resetForm = useCallback(
+    (nextParentCategory = activeRootNode ? String(activeRootNode._id) : "") => {
+      setEditingId("");
+      setName("");
+      setSlug("");
+      setParentCategory(nextParentCategory);
+      setSortOrder("0");
+      setIsFeatured(false);
+      setShowOnHome(false);
+      setIsActive(true);
+      setError(null);
+    },
+    [activeRootNode]
+  );
+
+  useEffect(() => {
+    if (!categoryTree.length) return;
+
+    const activeRootExists = findCategoryNode(categoryTree, activeTag);
+    if (activeRootExists) return;
+
+    const fallbackTag = CATEGORY_ROOT_TAGS.find((tag) => findCategoryNode(categoryTree, tag));
+    if (fallbackTag) {
+      setActiveTag(fallbackTag);
+    }
+  }, [activeTag, categoryTree]);
+
+  const switchActiveTag = useCallback(
+    (tag) => {
+      const nextTag = CATEGORY_ROOT_TAGS.find((candidate) => normalizeText(candidate) === normalizeText(tag)) || CATEGORY_ROOT_TAGS[0];
+      const nextRootNode = findCategoryNode(categoryTree, nextTag);
+
+      setActiveTag(nextTag);
+      setCurrentPage(1);
+      resetForm(nextRootNode ? String(nextRootNode._id) : "");
+    },
+    [categoryTree, resetForm]
+  );
+
+  const startEdit = useCallback((category) => {
+    setEditingId(String(category._id));
+    setName(category.name || "");
+    setSlug(category.slug || "");
+    setParentCategory(category.parentCategory ? String(category.parentCategory) : activeRootNode ? String(activeRootNode._id) : "");
+    setSortOrder(String(category.sortOrder ?? 0));
+    setIsFeatured(!!category.isFeatured);
+    setShowOnHome(!!category.showOnHome);
+    setIsActive(category.isActive ?? true);
+    setError(null);
+  }, [activeRootNode]);
+
+  const handleSave = useCallback(async () => {
+    if (!name.trim()) {
+      setError("Category name is required.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const payload = {
+      name: name.trim(),
+      slug: slug.trim() || undefined,
+      parentCategory: parentCategory || (activeRootNode ? String(activeRootNode._id) : null),
+      sortOrder: Number(sortOrder || 0),
+      isFeatured,
+      showOnHome,
+      isActive,
+    };
+
+    try {
+      if (editingId) {
+        await axios.put(`${API_BASE}/admin/categories/${editingId}`, payload, { withCredentials: true });
+      } else {
+        await axios.post(`${API_BASE}/admin/categories`, payload, { withCredentials: true });
+      }
+
+      await onRefreshCategories();
+      if (!editingId) {
+        setCurrentPage(1);
+      }
+      toast({
+        title: editingId ? "Category updated" : "Category created",
+        variant: "success",
+      });
+      resetForm();
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Failed to save category";
+      setError(message);
+      toast({ title: "Category save failed", description: message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [activeRootNode, editingId, isActive, isFeatured, name, onRefreshCategories, parentCategory, resetForm, showOnHome, slug, sortOrder, toast]);
+
+  const handleDelete = useCallback(
+    async (category) => {
+      if (!window.confirm(`Delete ${category.name}?`)) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        await axios.delete(`${API_BASE}/admin/categories/${category._id}`, { withCredentials: true });
+        await onRefreshCategories();
+        if (editingId === String(category._id)) {
+          resetForm();
+        }
+        toast({ title: "Category deleted", variant: "success" });
+      } catch (err) {
+        const message = err?.response?.data?.message || err?.message || "Failed to delete category";
+        setError(message);
+        toast({ title: "Delete failed", description: message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [editingId, onRefreshCategories, resetForm, toast]
+  );
+
+  const categoryOptions = collectCategoryOptions(activeRootNode ? [activeRootNode] : []).filter((option) => option.value !== editingId);
+
+  return (
+    <motion.div
+      id="category-manager-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-manager-title"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-black/60 backdrop-blur-sm p-6"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        className="category-modal-scroll w-full max-w-5xl max-h-[85vh] overflow-y-scroll rounded-3xl border border-[#D4AF37]/15 bg-[#0B0B0B] p-6 md:p-8 shadow-2xl shadow-black/50"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        data-lenis-prevent="true"
+      >
+        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
+            <h3 id="category-manager-title" className="mt-2 text-xl font-semibold text-white">Category management</h3>
+            <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onRefreshCategories()}
+              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
+            >
+              Refresh tree
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/25 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          {CATEGORY_ROOT_TAGS.map((tag) => {
+            const isActive = normalizeText(activeTag) === normalizeText(tag);
+            const rootNode = findCategoryNode(categoryTree, tag);
+
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => switchActiveTag(tag)}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition ${isActive
+                    ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                    : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
+                  }`}
+              >
+                {tag}
+                <span className="rounded-full border border-current/20 px-2 py-0.5 text-[9px] tracking-[0.12em]">
+                  {rootNode?.children?.length || 0}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {activeRootNode ? (
+          <div className="mb-4 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#f2ca50]">
+            Active tag: <span className="font-semibold">{activeRootNode.name}</span>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
+            {error}
+          </div>
+        ) : null}
+
+        {visibleCategoryRows.length > CATEGORY_MANAGER_PAGE_SIZE ? (
+          <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+                Showing {pageStart + 1}-{pageEnd} of {visibleCategoryRows.length} categories
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={activePage === 1}
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous category page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNumber = index + 1;
+                  const isActivePage = activePage === pageNumber;
+
+                  return (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.2em] transition ${isActivePage
+                          ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
+                          : "border-white/10 bg-black/40 text-white/65 hover:border-white/20 hover:text-white"
+                        }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={activePage === totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next category page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-3">
+            {pagedCategoryRows.map((category) => (
+              <div key={category._id} className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between" style={{ marginLeft: `${Math.min(category.level, 3) * 10}px` }}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-white">{category.name}</p>
+                    <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
+                      {category.isActive ? "Active" : "Inactive"}
+                    </span>
+                    {category.children?.length ? (
+                      <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
+                        {category.children.length} children
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{category.breadcrumb}</p>
+                  <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(category)}
+                    className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(category)}
+                    className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {activeRootNode && visibleCategoryRows.length === 0 ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+                No subcategories exist under {activeRootNode.name} yet.
+              </div>
+            ) : null}
+            {!activeRootNode ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
+                No categories loaded yet.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[#d0c5af]">{editingId ? "Edit category" : "Create category"}</p>
+                <h4 className="mt-1 text-base font-semibold text-white">{editingId ? "Update taxonomy node" : "New taxonomy node"}</h4>
+              </div>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-full border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
+              >
+                New
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Name</span>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="Ladies / Clothing / Dresses"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Slug</span>
+                <input
+                  value={slug}
+                  onChange={(event) => setSlug(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="dresses"
+                />
+                {(name || slug) && activeRootNode ? (
+                  <p className="mt-2 text-[11px] text-[#D4AF37]/80">
+                    Path preview: {activeRootNode.slug}/{normalizeCategorySegment(slug || name)}
+                  </p>
+                ) : null}
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Parent category</span>
+                <select
+                  value={parentCategory}
+                  onChange={(event) => setParentCategory(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                >
+                  <option value="" disabled>
+                    Select a parent inside {activeRootNode?.name || activeTag}
+                  </option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Sort order</span>
+                <input
+                  type="number"
+                  value={sortOrder}
+                  onChange={(event) => setSortOrder(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+                  placeholder="e.g. 10"
+                />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                  <span>Active</span>
+                  <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
+                  <span>Featured</span>
+                  <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
+                </label>
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white sm:col-span-2">
+                  <span>Show on home</span>
+                  <input type="checkbox" checked={showOnHome} onChange={(event) => setShowOnHome(event.target.checked)} />
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="rounded-full bg-[#D4AF37] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Saving..." : editingId ? "Update category" : "Create category"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-full border border-white/10 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/25 hover:text-white"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 const Product = () => {
@@ -79,6 +672,9 @@ const Product = () => {
   const [selectedProductId, setSelectedProductId] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [dropFilter, setDropFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [productImages, setProductImages] = useState([]);
@@ -87,6 +683,11 @@ const Product = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
   const [showProductSaved, setShowProductSaved] = useState(false);
+  const [categoryTree, setCategoryTree] = useState([]);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [bulkPendingAction, setBulkPendingAction] = useState(null);
+  const [studioGalleryProduct, setStudioGalleryProduct] = useState(null);
 
   const LIMIT = 10;
   const dispatch = useDispatch();
@@ -98,20 +699,206 @@ const Product = () => {
   const { drops = [] } = useSelector((state) => state.drop) || {};
 
   const fetchProducts = useCallback(() => {
-    dispatch(
+    return dispatch(
       getAllProducts({
         page: currentPage,
         limit: LIMIT,
-        isActive: statusFilter === "all" ? undefined : statusFilter,
+        isActive: statusFilter === "low_stock" ? undefined : statusFilter,
         search: searchQuery,
+        maxStock: statusFilter === "low_stock" ? 5 : undefined,
+        category: categoryFilter || undefined,
+        drop: dropFilter || undefined,
+        sort: sortFilter || undefined,
       })
     );
-  }, [dispatch, currentPage, statusFilter, searchQuery]);
+  }, [dispatch, currentPage, statusFilter, searchQuery, categoryFilter, dropFilter, sortFilter]);
+
+  const handleStatusFilterChange = (val) => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+  const handleCategoryFilterChange = (val) => {
+    setCategoryFilter(val);
+    setCurrentPage(1);
+  };
+  const handleDropFilterChange = (val) => {
+    setDropFilter(val);
+    setCurrentPage(1);
+  };
+  const handleSortFilterChange = (val) => {
+    setSortFilter(val);
+    setCurrentPage(1);
+  };
+  const handleSearchFilterChange = (val) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
+  const handleResetFilters = () => {
+    setStatusFilter("all");
+    setCategoryFilter("");
+    setDropFilter("");
+    setSortFilter("");
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  const handleExport = () => {
+    if (productList.length === 0) {
+      toast({
+        title: "No products to export",
+        description: "The product list is empty.",
+        variant: "warning"
+      });
+      return;
+    }
+    const headers = ["Name", "Art No", "Category", "SubCategory", "Base Price", "Total Stock", "Status", "Updated At"];
+    const rows = productList.map(product => {
+      const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+      return [
+        `"${product.name.replace(/"/g, '""')}"`,
+        `"${product.artNo || ''}"`,
+        `"${product.category || ''}"`,
+        `"${product.subCategory || ''}"`,
+        product.basePrice || 0,
+        stock,
+        product.isActive ? "Published" : "Draft",
+        product.updatedAt ? new Date(product.updatedAt).toISOString() : ""
+      ];
+    });
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Product_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Export Successful",
+      description: `Exported ${productList.length} products to CSV.`,
+      variant: "success"
+    });
+  };
+
+  const loadCategoryTree = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/categories`);
+      if (response.data?.success) {
+        const categories = response.data.data || [];
+        setCategoryTree(buildCategoryTree(categories));
+        return categories;
+      }
+    } catch (err) {
+      console.error("Failed to load categories for admin form", err);
+    }
+
+    setCategoryTree([]);
+    return [];
+  }, []);
 
   useEffect(() => {
     dispatch(getAllDrops());
     fetchProducts();
-  }, [fetchProducts]);
+    loadCategoryTree();
+  }, [dispatch, fetchProducts, loadCategoryTree]);
+
+  useSocketEvent(
+    "product:created",
+    () => {
+      fetchProducts();
+      toast({
+        title: "Catalog updated",
+        description: "A new product was added.",
+        variant: "success",
+      });
+    },
+    [fetchProducts, toast]
+  );
+
+  useSocketEvent(
+    "product:deleted",
+    () => {
+      fetchProducts();
+      toast({
+        title: "Catalog updated",
+        description: "A product was removed.",
+        variant: "success",
+      });
+    },
+    [fetchProducts, toast]
+  );
+
+  const stockSnapshotRef = useRef(new Map());
+
+  useEffect(() => {
+    const next = new Map();
+    productList.forEach((product) => {
+      const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
+      next.set(String(product._id), stock);
+    });
+    stockSnapshotRef.current = next;
+  }, [productList]);
+
+  useSocketEvent(
+    "product:updated",
+    (payload = {}) => {
+      const productId = String(payload.productId || payload._id || "");
+      if (!productId) return;
+
+      const variants = payload.changes?.variants || payload.variants;
+      if (!variants) return;
+
+      const prevStock = stockSnapshotRef.current.get(productId);
+      const newStock = variants.reduce((sum, v) => sum + Number(v.stock), 0);
+      if (prevStock === undefined || prevStock === newStock) return;
+
+      const product = productList.find((p) => String(p._id) === productId);
+      toast({
+        title: "Stock updated",
+        description: product
+          ? `${product.name}: ${prevStock} → ${newStock} units`
+          : `Inventory changed to ${newStock} units`,
+        variant: "success",
+      });
+    },
+    [productList, toast]
+  );
+
+  // Bulk operations on the product list. Selection wipes when productList
+  // identity changes (filter/page change), so stale IDs can't leak through.
+  const bulk = useBulkSelection(productList);
+  const [bulkPending, setBulkPending] = useState(false);
+  const runBulkProductAction = useCallback(
+    async (action) => {
+      const ids = bulk.selectedIds;
+      if (ids.length === 0) return;
+      setBulkPending(true);
+      try {
+        const result = await dispatch(bulkUpdateProducts({ ids, action })).unwrap();
+        const ok = result.succeeded?.length || 0;
+        const fail = result.failed?.length || 0;
+        toast({
+          title:
+            fail === 0
+              ? `Bulk ${action}: ${ok} product${ok === 1 ? "" : "s"}`
+              : `Bulk ${action}: ${ok} updated, ${fail} skipped`,
+          variant: fail === 0 ? "success" : "destructive",
+        });
+        bulk.clear();
+        fetchProducts();
+      } catch (err) {
+        toast({
+          title: `Bulk ${action} failed`,
+          description: typeof err === "string" ? err : "Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [bulk, dispatch, fetchProducts, toast]
+  );
 
   const resetForm = () => {
     setFormData(initialProductForm);
@@ -119,12 +906,45 @@ const Product = () => {
     setSelectedProductId(null);
     setShowForm(false);
     setProductImages([]);
+    setStudioGalleryProduct(null);
+    setIsSavingProduct(false);
+  };
+
+  const openNewProductForm = () => {
+    const draft = loadProductDraft();
+    setFormData(
+      draft
+        ? {
+            ...initialProductForm,
+            ...draft,
+            artNo: "",
+            variants: (draft.variants || [{ ...defaultVariant }]).map((v) => ({
+              ...v,
+              id: v.id || crypto.randomUUID(),
+            })),
+          }
+        : initialProductForm
+    );
+    setSelectedProductSlug(null);
+    setSelectedProductId(null);
+    setProductImages([]);
+    setStudioGalleryProduct(null);
+    setShowForm(true);
+    if (draft) {
+      toast({
+        title: "Draft restored",
+        description: "Resumed from your last unsaved product draft.",
+      });
+    }
   };
 
   const fetchProductImages = async (id) => {
     try {
       const res = await axios.get(`${API_BASE}/image/get-product-images/${id}`);
-      const loadedImages = res.data.images || [];
+      const loadedImages = (res.data.images || []).map((image) => ({
+        ...image,
+        isUploaded: true,
+      }));
       setProductImages(loadedImages);
       return loadedImages;
     } catch {
@@ -164,45 +984,187 @@ const Product = () => {
       name: product.name || "",
       artNo: product.artNo || "",
       description: product.description || "",
+      story: product.story || "",
+      fabric: product.fabric || "",
+      gsm: product.gsm || "",
+      fitType: product.fitType || "",
+      careInstructions: product.careInstructions || "",
+      sizeGuide: product.sizeGuide || "",
       brand: product.brand || "Sovereign Elite",
-      category: product.category || "Unisex",
-      drop: product.drop?._id || "",
-      basePrice: product.basePrice || "",
+      category: product.category || "",
+      categoryId: product.categoryId || "",
+      subCategory: product.subCategory || "",
+      categoryPath: product.categoryPath || "",
+      drop: product.drop?._id || product.drop || "",
+      basePrice: product.basePrice || "0",
       discountPercent: product.discountPercent || "0",
-      stockThreshold: "5",
+      costPrice: product.costPrice ?? "0",
+      maxPerUser: product.maxPerUser ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "5",
       isFeatured: product.isFeatured || false,
       isActive: product.isActive ?? true,
       isLimited: product.isLimited || false,
-      variants: product.variants?.length ? product.variants : [defaultVariant],
+      tags: Array.isArray(product.tags) ? product.tags : [],
+      variants: product.variants?.length
+        ? product.variants.map((v) => ({
+            ...v,
+            id: v.id || v._id || crypto.randomUUID(),
+            colorCode: v.colorCode || "",
+          }))
+        : [{ ...defaultVariant, id: crypto.randomUUID() }],
     });
+    setStudioGalleryProduct(product);
     setShowForm(true);
     fetchProductImages(product._id);
   };
 
-  const handleSubmit = async () => {
+  const beginDuplicate = (product) => {
+    setSelectedProductSlug(null);
+    setSelectedProductId(null);
+    setFormData({
+      name: `${product.name || "Product"} (Copy)`,
+      artNo: "",
+      description: product.description || "",
+      story: product.story || "",
+      fabric: product.fabric || "",
+      gsm: product.gsm || "",
+      fitType: product.fitType || "",
+      careInstructions: product.careInstructions || "",
+      sizeGuide: product.sizeGuide || "",
+      brand: product.brand || "Sovereign Elite",
+      category: product.category || "",
+      categoryId: product.categoryId || "",
+      subCategory: product.subCategory || "",
+      categoryPath: product.categoryPath || "",
+      drop: product.drop?._id || product.drop || "",
+      basePrice: product.basePrice || "0",
+      discountPercent: product.discountPercent || "0",
+      costPrice: product.costPrice ?? "0",
+      maxPerUser: product.maxPerUser ?? "",
+      lowStockThreshold: product.lowStockThreshold ?? "5",
+      isFeatured: false,
+      isActive: false,
+      isLimited: product.isLimited || false,
+      tags: Array.isArray(product.tags) ? [...product.tags] : [],
+      variants: product.variants?.length
+        ? product.variants.map((v) => ({
+            ...v,
+            id: crypto.randomUUID(),
+            sku: "",
+            colorCode: v.colorCode || "",
+          }))
+        : [{ ...defaultVariant, id: crypto.randomUUID() }],
+    });
+    setProductImages([]);
+    setStudioGalleryProduct(null);
+    setShowForm(true);
+  };
+
+  const openStudioGallery = async () => {
+    if (!studioGalleryProduct) return;
+    await openProductGallery(studioGalleryProduct);
+  };
+
+  const uploadProductImagesByColorTag = async (productId, imagesToUpload = []) => {
+    const groups = imagesToUpload.reduce((map, image) => {
+      const tag = String(image?.colorTag || "").trim();
+      const key = tag.toLowerCase();
+      const existing = map.get(key) || { colorTag: tag, images: [] };
+      existing.images.push(image);
+      map.set(key, existing);
+      return map;
+    }, new Map());
+
+    const uploadedImages = [];
+
+    for (const group of groups.values()) {
+      const fd = new FormData();
+      fd.append("refModel", "Product");
+      fd.append("refId", productId);
+      fd.append("type", "product");
+      if (group.colorTag) fd.append("colorTag", group.colorTag);
+      group.images.forEach((img) => fd.append("images", img.file));
+
+      const res = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+
+      uploadedImages.push(
+        ...(res.data?.images || []).map((image) => ({
+          ...image,
+          isUploaded: true,
+        }))
+      );
+
+      group.images.forEach((img) => revokeBlobUrl(img.url));
+    }
+
+    return uploadedImages;
+  };
+
+  const handleSubmit = async (studioFormData = formData, studioImages = productImages, setValidationErrors) => {
+    if (isSavingProduct) return;
+
+    const { errors, firstError } = validateProductFormData(studioFormData);
+    if (firstError) {
+      if (typeof setValidationErrors === "function") {
+        setValidationErrors(errors);
+      }
+      toast({ title: "Check the form", description: firstError, variant: "destructive" });
+      return;
+    }
+
+    setIsSavingProduct(true);
+
+    const isCreatingProduct = !selectedProductSlug;
+    let createdProductForRollback = null;
+
     try {
       let result;
-      const cleanData = { ...formData, variants: formData.variants.filter(v => v.sku) };
+      const cleanData = {
+        ...studioFormData,
+        categoryId: studioFormData.categoryId || undefined,
+        subCategory: studioFormData.subCategory || undefined,
+        variants: studioFormData.variants.filter(
+          (v) =>
+            v.size?.trim() &&
+            v.color?.trim() &&
+            v.stock !== "" &&
+            v.stock !== null &&
+            v.stock !== undefined
+        ),
+      };
+
+      if (!cleanData.categoryId) delete cleanData.categoryId;
+      if (!cleanData.subCategory) delete cleanData.subCategory;
 
       if (selectedProductSlug) {
         result = await dispatch(updateProduct({ slug: selectedProductSlug, productData: cleanData })).unwrap();
       } else {
         result = await dispatch(createProduct(cleanData)).unwrap();
+        createdProductForRollback = result.product || null;
       }
 
       const productId = result.product?._id;
       if (productId) {
-        const newImages = productImages.filter((img) => !img.isUploaded && img.file);
+        const newImages = studioImages.filter((img) => !img.isUploaded && img.file);
         if (newImages.length > 0) {
-          const fd = new FormData();
-          fd.append("refModel", "Product");
-          fd.append("refId", productId);
-          fd.append("type", "product");
-          newImages.forEach((img) => fd.append("images", img.file));
-          await axios.post(`${API_BASE}/image/upload-image`, fd, {
-            headers: { "Content-Type": "multipart/form-data" },
-            withCredentials: true,
-          });
+          try {
+            await uploadProductImagesByColorTag(productId, newImages);
+          } catch (uploadError) {
+            if (isCreatingProduct && createdProductForRollback) {
+              const rolledBack = await rollbackCreatedProduct(createdProductForRollback);
+              if (rolledBack) fetchProducts();
+              const uploadMessage = getErrorMessage(uploadError, "Image upload failed.");
+              throw new Error(
+                rolledBack
+                  ? `${uploadMessage} Product was not created.`
+                  : `${uploadMessage} Product was created, but automatic cleanup failed. Please delete it manually.`
+              );
+            }
+            throw uploadError;
+          }
         }
       }
 
@@ -210,11 +1172,19 @@ const Product = () => {
         title: selectedProductSlug ? "Product updated successfully" : "Product created successfully",
         className: "bg-surface border border-primary-container text-saga-primary",
       });
+      // Successful create — drop the draft so the next "New Product" starts fresh.
+      if (!selectedProductSlug) clearProductDraft();
       setShowProductSaved(true);
       resetForm();
       fetchProducts();
     } catch (e) {
-      toast({ title: "Failed to save product", description: e?.message, variant: "destructive" });
+      toast({
+        title: "Failed to save product",
+        description: getErrorMessage(e, "Something went wrong while saving the product."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -224,575 +1194,567 @@ const Product = () => {
     return () => clearTimeout(t);
   }, [showProductSaved]);
 
-  const handleVariantChange = (index, field, value) => {
-    const updatedVariants = [...formData.variants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
-    setFormData({ ...formData, variants: updatedVariants });
+  const bulkActions = [
+    { label: "Activate", onClick: () => runBulkProductAction("activate") },
+    { label: "Deactivate", onClick: () => runBulkProductAction("deactivate") },
+    {
+      label: "Delete",
+      variant: "destructive",
+      confirm: {
+        title: `Delete ${bulk.count} product${bulk.count === 1 ? "" : "s"}?`,
+        body: "Products will be permanently removed. Order history is preserved but the product pages will return 404.",
+        confirmLabel: "Delete forever",
+      },
+      onClick: () => runBulkProductAction("delete"),
+    },
+  ];
+
+  const runBulkAction = (action) => {
+    if (action.confirm) {
+      setBulkPendingAction(action);
+      return;
+    }
+    action.onClick?.();
   };
 
-  const addVariant = () => {
-    setFormData({ ...formData, variants: [...formData.variants, { ...defaultVariant }] });
+  const confirmBulkPending = () => {
+    if (!bulkPendingAction) return;
+    bulkPendingAction.onClick?.();
+    setBulkPendingAction(null);
   };
 
-  const removeVariant = (index) => {
-    const updatedVariants = formData.variants.filter((_, i) => i !== index);
-    setFormData({ ...formData, variants: updatedVariants });
-  };
-
-  // ----- ATELIER FORM (slide-in panel 2I) -----
-  const atelierForm = (
-      <motion.div
-        key="product-atelier"
-        variants={slideInPanelVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        className="fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto bg-[#050505]"
-      >
-      <div className="flex min-h-screen bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden w-full">
-        <main className="flex-1 w-full flex flex-col overflow-y-auto">
-          {/* Header */}
-          <header className="bg-surface-container-low flex justify-between items-center w-full px-8 md:px-16 py-6 border-b border-outline-variant/10 sticky top-0 z-10">
-            <div className="flex flex-col">
-              <h1 className="font-serif text-3xl font-bold tracking-tighter text-saga-primary">Saga Elite</h1>
-              <p className="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant opacity-70 mt-1">Product Atelier / Variant Studio</p>
-            </div>
-            <div className="flex items-center gap-8">
-              <button onClick={resetForm} className="text-sm uppercase tracking-[0.1em] text-on-surface hover:text-saga-primary transition-colors duration-300">
-                Cancel
-              </button>
-              <button onClick={handleSubmit} className="bg-primary-container text-on-primary-container px-8 py-3 text-sm uppercase font-extrabold tracking-widest hover:brightness-110 transition-all duration-300 shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]">
-                Save Product
-              </button>
-            </div>
-          </header>
-
-          <div className="max-w-7xl mx-auto w-full px-8 md:px-16 py-12 grid grid-cols-1 md:grid-cols-12 gap-12">
-
-            {/* Left Column: Media & Visuals */}
-            <div className="col-span-1 md:col-span-4 space-y-12">
-              <section>
-                <h2 className="font-serif text-xl mb-6 text-on-surface">Product Visuals</h2>
-                <div className="bg-surface-container-low p-4">
-                  <ImageUpload
-                    images={productImages}
-                    setImages={setProductImages}
-                    isMultiple
-                    refModel="Product"
-                    refId={selectedProductId}
-                    type="product"
-                  />
-                  {productImages.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => openProductGallery({ name: formData.name, _id: selectedProductId, images: productImages })}
-                      className="mt-3 inline-flex items-center justify-center rounded-full border border-saga-primary px-4 py-2 text-sm font-semibold text-saga-primary hover:bg-saga-primary/10 transition"
-                    >
-                      View all images
-                    </button>
-                  )}
-                </div>
-              </section>
-
-              <section className="bg-surface-container-low p-8 space-y-6 border border-outline-variant/10">
-                <h2 className="font-serif text-xl text-on-surface">Status &amp; Visibility</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Featured</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Promote on homepage carousel</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isFeatured}
-                      onChange={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high border-l-2 border-saga-primary">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Active</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Visible in public storefront</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isActive}
-                      onChange={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-surface-container-high">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-saga-primary font-bold">Is Limited</p>
-                      <p className="text-xs text-on-surface-variant mt-1">Badge as exclusive drop</p>
-                    </div>
-                    <ToggleSwitch
-                      checked={formData.isLimited}
-                      onChange={() => setFormData({ ...formData, isLimited: !formData.isLimited })}
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column: Form Data */}
-            <div className="col-span-1 md:col-span-8 space-y-12">
-
-              {/* Basic Info */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">01</span>
-                  <h2 className="font-serif text-2xl text-on-surface">Basic Information</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Product Name</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30"
-                      placeholder="e.g. Aethelgard Signature Oxford"
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Description</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={e => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary placeholder:text-on-surface-variant/30 min-h-[100px] resize-y"
-                      placeholder="Product details..."
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Art No. (SKU Root)</label>
-                    <input
-                      type="text"
-                      value={formData.artNo}
-                      onChange={e => setFormData({ ...formData, artNo: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Brand Identity</label>
-                    <select
-                      value={formData.brand}
-                      onChange={e => setFormData({ ...formData, brand: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="Sovereign Elite">Sovereign Elite</option>
-                      <option value="Atelier Reserve">Atelier Reserve</option>
-                      <option value="Nomad Lux">Nomad Lux</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Category Suite</label>
-                    <select
-                      value={formData.category}
-                      onChange={e => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="Unisex">Unisex</option>
-                      <option value="Men">Men</option>
-                      <option value="Women">Women</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Collection Drop</label>
-                    <select
-                      value={formData.drop}
-                      onChange={e => setFormData({ ...formData, drop: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary appearance-none cursor-pointer"
-                    >
-                      <option value="">Standalone / Core Collection</option>
-                      {drops.map(d => (
-                        <option key={d._id} value={d._id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </section>
-
-              {/* Fiscal Configuration */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex items-baseline gap-4 mb-10">
-                  <span className="font-serif text-4xl text-saga-primary opacity-20">02</span>
-                  <h2 className="font-serif text-2xl text-on-surface">Fiscal Configuration</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Base Price (USD)</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
-                      <input
-                        type="number"
-                        value={formData.basePrice}
-                        onChange={e => setFormData({ ...formData, basePrice: e.target.value })}
-                        className="w-full bg-surface-container-highest border-none p-4 pl-8 text-on-surface focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Discount (%)</label>
-                    <input
-                      type="number"
-                      value={formData.discountPercent}
-                      onChange={e => setFormData({ ...formData, discountPercent: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold block mb-3">Max Per User</label>
-                    <input
-                      type="number"
-                      value={formData.maxPerUser}
-                      onChange={e => setFormData({ ...formData, maxPerUser: e.target.value })}
-                      className="w-full bg-surface-container-highest border-none p-4 text-on-surface focus:ring-1 focus:ring-saga-primary"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Variant Studio */}
-              <section className="bg-surface-container-low p-8 md:p-12 border border-outline-variant/10">
-                <div className="flex justify-between items-end mb-10 border-b border-outline-variant/20 pb-4">
-                  <div className="flex items-baseline gap-4">
-                    <span className="font-serif text-4xl text-saga-primary opacity-20">03</span>
-                    <h2 className="font-serif text-2xl text-on-surface">Variant Studio</h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addVariant}
-                    className="text-[10px] uppercase tracking-[0.1em] text-saga-primary font-bold border border-saga-primary/30 px-6 py-2 hover:bg-saga-primary hover:text-surface transition-all duration-300"
-                  >
-                    + Add Variant
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left min-w-[600px]">
-                    <thead>
-                      <tr className="border-b border-outline-variant/15 text-on-surface-variant font-bold uppercase tracking-widest text-[10px]">
-                        <th className="py-4 font-normal">SKU Identifier</th>
-                        <th className="py-4 font-normal">Size</th>
-                        <th className="py-4 font-normal">Color/Material</th>
-                        <th className="py-4 font-normal text-right">Price Adj.</th>
-                        <th className="py-4 font-normal text-right">Qty</th>
-                        <th className="py-4"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/10">
-                      <AnimatePresence initial={false}>
-                      {formData.variants.map((v, i) => (
-                        <motion.tr
-                          key={`variant-row-${i}`}
-                          layout
-                          initial={{ opacity: 0, y: -14 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.28, ease: "easeOut" }}
-                          className="hover:bg-surface-bright/10 transition-colors"
-                        >
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.sku} onChange={(e) => handleVariantChange(i, 'sku', e.target.value)}
-                              placeholder="SKU-001"
-                              className="w-full bg-surface-container-highest border-transparent p-3 text-xs font-mono focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.size} onChange={(e) => handleVariantChange(i, 'size', e.target.value)}
-                              placeholder="EU 42"
-                              className="w-[80px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4">
-                            <input
-                              type="text" value={v.color} onChange={(e) => handleVariantChange(i, 'color', e.target.value)}
-                              placeholder="Obsidian"
-                              className="w-full bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary focus:ring-1 focus:ring-saga-primary"
-                            />
-                          </td>
-                          <td className="py-4 pr-4 text-right">
-                            <input
-                              type="number" value={v.priceAdjustment} onChange={(e) => handleVariantChange(i, 'priceAdjustment', e.target.value)}
-                              className="w-[100px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary text-right focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </td>
-                          <td className="py-4 text-right">
-                            <input
-                              type="number" value={v.stock} onChange={(e) => handleVariantChange(i, 'stock', e.target.value)}
-                              className="w-[80px] bg-surface-container-highest border-transparent p-3 text-sm focus:border-saga-primary text-right focus:ring-1 focus:ring-saga-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </td>
-                          <td className="py-4 text-right pl-4">
-                            {formData.variants.length > 1 && (
-                              <button onClick={() => removeVariant(i)} className="text-on-surface-variant hover:text-saga-error transition-colors">
-                                <Trash className="w-4 h-4" />
-                              </button>
-                            )}
-                          </td>
-                        </motion.tr>
-                      ))}
-                      </AnimatePresence>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-            </div>
-          </div>
-        </main>
-      </div>
-      </motion.div>
-  );
-
-  // ----- LEDGER LIST VIEW -----
   return (
     <Fragment>
-    <AdminPage
-      eyebrow="Catalog management"
-      title="Product Ledger"
-      description="Manage products, variants, stock, visibility, and gallery assets."
-    >
-    <motion.div
-      variants={pageVariants}
-      initial="hidden"
-      animate="visible"
-      className="flex-1 flex flex-col overflow-hidden bg-surface min-h-[calc(100vh-80px)] text-on-surface rounded-3xl border border-white/10"
-    >
-      <div className="border-b border-white/10 px-6 py-3">
-        <ToastFlash show={showProductSaved} message="Product saved" />
-      </div>
-      {/* List Header */}
-      <header className="flex flex-col md:flex-row justify-between items-center w-full px-8 md:px-16 py-6 bg-surface-dim z-10 gap-6">
-        <div className="flex items-center gap-8 w-full md:w-auto">
-          <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37] placeholder:text-gray-500"
-              placeholder="Search the collection…"
-              type="search"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-6 self-end md:self-auto">
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-saga-primary rounded-full"></span>
-          </button>
-          <button className="hover:text-saga-primary transition-colors text-on-surface-variant">
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-y-auto px-8 md:px-16 py-12 scroll-smooth">
-        {isLoading ? (
-          <SkeletonGrid count={6} />
-        ) : (
-        <>
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-          <div className="max-w-2xl">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-saga-primary mb-3 block font-bold" style={{ textShadow: "0px 0px 12px rgba(242, 202, 80, 0.2)" }}>Inventory Registry</span>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black font-serif tracking-tighter text-white leading-none mb-4">Product Ledger</h2>
-            <p className="text-on-surface-variant text-sm max-w-lg leading-relaxed font-sans">
-              Manage the digital heartbeat of your luxury portfolio. Curate availability, adjust valuation, and monitor stock levels.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex bg-surface-container-low p-1 border border-outline-variant/10">
-              <button
-                onClick={() => setStatusFilter("true")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "true" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setStatusFilter("all")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "all" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStatusFilter("false")}
-                className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${statusFilter === "false" ? 'bg-primary-container text-on-primary-container' : 'text-on-surface opacity-50 hover:opacity-100'}`}
-              >
-                Inactive
-              </button>
-            </div>
+      <AdminPage
+        eyebrow="Catalog management"
+        title="Product Ledger"
+        description="Manage products, variants, stock, visibility, and gallery assets."
+        actions={
+          <>
             <button
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
-              className="bg-surface-container-highest border border-outline-variant/30 px-6 py-2 text-[10px] uppercase tracking-widest text-saga-primary flex items-center gap-2 hover:bg-surface-bright transition-colors font-bold shadow-[0_0_10px_rgba(242,202,80,0.1)]"
+              onClick={handleExport}
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5"
             >
-              <Plus className="w-3 h-3" />
-              New Product
+              <Download className="h-4 w-4" /> Export
             </button>
-          </div>
-        </div>
-
-        {/* Bento Grid List Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
-          <div className="col-span-5">Product Details</div>
-          <div className="col-span-2">Category</div>
-          <div className="col-span-2">Valuation</div>
-          <div className="col-span-1">Stock</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1 text-right">Actions</div>
-        </div>
-
-        {/* Product Rows */}
+            <PrimaryButton onClick={openNewProductForm}>
+              <Plus className="h-4 w-4" /> Create Product
+            </PrimaryButton>
+          </>
+        }
+      >
         <motion.div
-          className="space-y-3"
-          variants={containerVariants}
+          variants={pageVariants}
           initial="hidden"
           animate="visible"
+          className="w-full flex-1 flex flex-col max-w-full overflow-x-hidden"
         >
-          {productList.map((product) => {
-            const stock = product.variants?.reduce((sum, v) => sum + Number(v.stock), 0) || 0;
-            return (
-              <motion.div
-                key={product._id}
-                variants={itemVariants}
-                whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
-                transition={{ duration: 0.2 }}
-                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center rounded-[28px] border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
+          <div className="w-full">
+            <ToastFlash show={showProductSaved} message="Product saved" />
+          </div>
 
-                <div className="col-span-1 md:col-span-5 flex items-center gap-6">
-                  <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
-                    {product.images && product.images.length > 0 ? (
-                      <img className="w-full h-full object-cover" src={product.images[0].url} alt={product.name} />
-                    ) : (
-                      <Package className="w-6 h-6 text-outline-variant/50" />
+          <div className="w-full pb-12 pt-6 scroll-smooth">
+            {isLoading ? (
+              <SkeletonGrid count={6} />
+            ) : (
+              <>
+                <SearchFilterBar
+                  searchValue={searchQuery}
+                  onSearchChange={handleSearchFilterChange}
+                  searchPlaceholder="Search the collection…"
+                  className="mb-8 justify-between"
+                >
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {/* Status Dropdown */}
+                    <FilterSelect
+                      value={statusFilter}
+                      onChange={handleStatusFilterChange}
+                      options={[
+                        { value: "all", label: "Status: All" },
+                        { value: "true", label: "Status: Active" },
+                        { value: "false", label: "Status: Inactive" },
+                        { value: "low_stock", label: "Status: Low Stock" }
+                      ]}
+                      className="min-w-[150px]"
+                    />
+
+                    {/* Category Dropdown */}
+                    <FilterSelect
+                      value={categoryFilter}
+                      onChange={handleCategoryFilterChange}
+                      options={[
+                        { value: "", label: "Category: All" },
+                        ...collectFilterCategoryOptions(categoryTree)
+                      ]}
+                      className="min-w-[170px]"
+                    />
+
+                    {/* Drop Dropdown */}
+                    <FilterSelect
+                      value={dropFilter}
+                      onChange={handleDropFilterChange}
+                      options={[
+                        { value: "", label: "Drop: All" },
+                        ...drops.map(d => ({ value: d._id, label: `Drop: ${d.name}` }))
+                      ]}
+                      className="min-w-[160px]"
+                    />
+
+                    {/* Sort Dropdown */}
+                    <FilterSelect
+                      value={sortFilter}
+                      onChange={handleSortFilterChange}
+                      options={[
+                        { value: "", label: "Sort By: Newest" },
+                        { value: "basePrice", label: "Price: Low to High" },
+                        { value: "-basePrice", label: "Price: High to Low" },
+                        { value: "name", label: "Name: A-Z" },
+                        { value: "-name", label: "Name: Z-A" }
+                      ]}
+                      className="min-w-[160px]"
+                    />
+
+                    {/* Manage Categories inline toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setCategoryManagerOpen((state) => !state)}
+                      aria-expanded={categoryManagerOpen}
+                      aria-controls="category-manager-panel"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-transparent px-4 text-[13px] font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Taxonomy
+                    </button>
+
+                    {/* Reset Filters button */}
+                    {(statusFilter !== "all" || categoryFilter !== "" || dropFilter !== "" || sortFilter !== "" || searchQuery !== "") && (
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4"
+                      >
+                        Reset Filters
+                      </button>
                     )}
                   </div>
-                  <div>
-                    <h4 className="text-white font-serif font-bold text-lg leading-tight group-hover:text-saga-primary transition-colors">{product.name}</h4>
-                    <p className="text-xs text-on-surface-variant opacity-60 mt-1 uppercase font-mono">SKU: {product.artNo || 'N/A'}</p>
-                  </div>
+                </SearchFilterBar>
+
+                <AnimatePresence>
+                  {categoryManagerOpen ? (
+                    <CategoryManagerPanel
+                      categoryTree={categoryTree}
+                      onRefreshCategories={loadCategoryTree}
+                      onClose={() => setCategoryManagerOpen(false)}
+                    />
+                  ) : null}
+                </AnimatePresence>
+
+                {/* Inline Bulk Actions Bar */}
+                <AnimatePresence>
+                  {bulk.count > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mb-4"
+                      data-testid="admin-bulk-action-bar"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white" data-testid="admin-bulk-count">
+                            {bulk.count}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]">selected</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {bulkActions.map((action) => (
+                            <button
+                              key={action.label}
+                              type="button"
+                              disabled={bulkPending}
+                              onClick={() => runBulkAction(action)}
+                              data-testid={`admin-bulk-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+                              className={`rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${action.variant === "destructive"
+                                  ? "border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                                  : "border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                                }`}
+                            >
+                              {bulkPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                action.label
+                              )}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={bulk.clear}
+                            disabled={bulkPending}
+                            className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition hover:border-white/20 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Native Data Table Layout */}
+                <div className="w-full max-w-full overflow-visible rounded-3xl border border-[#D4AF37]/10 bg-[#0B0B0B]/80 backdrop-blur-xl">
+                  <table className="min-w-full border-collapse text-left">
+                    <thead className="sticky top-0 z-10 bg-[#050505]/95 backdrop-blur-md rounded-t-3xl">
+                      <tr className="border-b border-white/5 text-[11px] uppercase tracking-[0.15em] text-[#A8A8A8] font-bold">
+                        <th className="py-5 pl-6 pr-3 w-12 rounded-tl-3xl">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all products on this page"
+                            checked={bulk.isAllSelected}
+                            ref={(el) => {
+                              if (el) el.indeterminate = bulk.isSomeSelected;
+                            }}
+                            onChange={bulk.toggleAll}
+                            className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-60 transition hover:opacity-100"
+                            data-testid="admin-bulk-select-all"
+                          />
+                        </th>
+                        <th className="py-5 px-4 min-w-[320px]">Product</th>
+                        <th className="py-5 px-4 w-[180px]">Inventory</th>
+                        <th className="py-5 px-4 w-[150px]">Status</th>
+                        <th className="py-5 px-4 w-[150px]">Updated</th>
+                        <th className="py-5 pr-6 pl-4 text-right w-[80px] rounded-tr-3xl">Actions</th>
+                      </tr>
+                    </thead>
+                    <motion.tbody
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="divide-y divide-white/5"
+                    >
+                      {productList.map((product) => {
+                        const meta = getProductLedgerMeta(product);
+                        const stock = meta.totalStock;
+                        const isSelected = bulk.isSelected(product._id);
+
+                        const isHealthy = stock > 10;
+                        const isLowStock = meta.isLowStock || (stock > 0 && stock <= 10);
+                        const isOutOfStock = meta.isOutOfStock;
+
+                        return (
+                          <Fragment key={product._id}>
+                            <motion.tr
+                              variants={itemVariants}
+                              className={`group transition-all duration-300 hover:bg-[#101010] ${
+                                isSelected ? "bg-[#D4AF37]/[0.04]" : "bg-transparent"
+                              }`}
+                            >
+                              <td className="py-5 pl-6 pr-3 align-middle">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${product.name}`}
+                                  checked={isSelected}
+                                  onChange={() => bulk.toggle(product._id)}
+                                  className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-30 transition group-hover:opacity-100 checked:opacity-100"
+                                  data-testid="admin-bulk-row-select"
+                                />
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex items-center gap-5">
+                                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-[#151515] flex items-center justify-center shadow-lg">
+                                    {product.images && product.images.length > 0 ? (
+                                      <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.images[0].url} alt={product.name} />
+                                    ) : (
+                                      <Package className="h-6 w-6 text-white/20" />
+                                    )}
+                                  </div>
+                                  <div className="flex min-w-0 flex-col justify-center">
+                                    <span
+                                      onClick={() => beginEdit(product)}
+                                      className="block truncate text-[15px] font-semibold tracking-tight text-white transition-colors hover:text-[#D4AF37] cursor-pointer"
+                                    >
+                                      {product.name}
+                                    </span>
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className="text-[11px] font-medium tracking-wider text-[#A8A8A8]">
+                                        SKU: {product.artNo || 'N/A'}
+                                      </span>
+                                    </div>
+                                    <span className="mt-1 truncate text-[12px] text-[#707070]">
+                                      {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" > ") || 'Uncategorized'}
+                                    </span>
+                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                      {meta.variantCount > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.variantCount} variant{meta.variantCount === 1 ? '' : 's'}
+                                        </span>
+                                      )}
+                                      {meta.colors.length > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.colors.join(', ')}{meta.uniqueColors > meta.colors.length ? '…' : ''}
+                                        </span>
+                                      )}
+                                      {meta.sizes.length > 0 && (
+                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                          {meta.sizes.join(', ')}{meta.uniqueSizes > meta.sizes.length ? '…' : ''}
+                                        </span>
+                                      )}
+                                      {product.isFeatured && (
+                                        <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#D4AF37]">
+                                          Featured
+                                        </span>
+                                      )}
+                                      {product.isLimited && (
+                                        <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-300">
+                                          Limited
+                                        </span>
+                                      )}
+                                      {meta.hasDiscount && (
+                                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                                          -{product.discountPercent}%
+                                        </span>
+                                      )}
+                                      {isLowStock && !isOutOfStock && (
+                                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                                          Low stock
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex w-full max-w-[120px] flex-col gap-1.5">
+                                  <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider">
+                                    <span className="text-[#A8A8A8]">Stock</span>
+                                    <span className={isHealthy ? "text-[#3D8B5C]" : isLowStock ? "text-[#D4AF37]" : "text-[#C85C5C]"}>
+                                      {stock}
+                                    </span>
+                                  </div>
+                                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-700 ${
+                                        isHealthy ? "bg-[#3D8B5C]" : isLowStock ? "bg-[#D4AF37]" : "bg-[#C85C5C]"
+                                      }`}
+                                      style={{ width: `${Math.min(100, (stock / 50) * 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                    {isHealthy ? "Healthy" : isLowStock ? "Low Stock" : "Critical"}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${
+                                  product.isActive
+                                    ? 'border-[#D4AF37]/20 bg-[#D4AF37]/[0.12] text-[#D4AF37]'
+                                    : 'border-white/10 bg-white/5 text-[#707070]'
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${product.isActive ? 'bg-[#D4AF37] shadow-[#D4AF37]/50' : 'bg-[#707070]'}`} />
+                                  {product.isActive ? 'Published' : 'Draft'}
+                                </span>
+                              </td>
+                              <td className="py-5 px-4 align-middle">
+                                <div className="flex flex-col">
+                                  <span className="text-[13px] text-white/90">
+                                    {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                  </span>
+                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                    {product.updatedAt ? new Date(product.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-5 pr-6 pl-4 align-middle text-right">
+                                <div className="relative inline-block text-left group/menu z-10">
+                                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/5 hover:text-white">
+                                    <MoreVertical className="h-5 w-5" />
+                                  </button>
+                                  <div className="invisible absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl border border-white/10 bg-[#151515] p-1.5 opacity-0 shadow-2xl transition-all duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:mt-1">
+                                    <button
+                                      onClick={() => openProductGallery(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                    >
+                                      <Eye className="h-4 w-4" /> View Images
+                                    </button>
+                                    <button
+                                      onClick={() => beginEdit(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/10"
+                                    >
+                                      <Edit2 className="h-4 w-4" /> Edit Product
+                                    </button>
+                                    <button
+                                      onClick={() => beginDuplicate(product)}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                    >
+                                      <Copy className="h-4 w-4" /> Duplicate
+                                    </button>
+                                    <div className="my-1 mx-2 h-px bg-white/5" />
+                                    <button
+                                      onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#C85C5C] transition-colors hover:bg-[#C85C5C]/10 hover:text-red-400"
+                                    >
+                                      <Trash2 className="h-4 w-4" /> Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </motion.tr>
+                            {deleteConfirmSlug === product.slug && (
+                              <tr className="border-b border-white/5 bg-rose-500/[0.02]">
+                                <td colSpan={6} className="px-6 py-4">
+                                  <ConfirmInline
+                                    show={true}
+                                    message="Delete this product permanently?"
+                                    onCancel={() => setDeleteConfirmSlug(null)}
+                                    onConfirm={() => {
+                                      const slug = product.slug;
+                                      setDeleteConfirmSlug(null);
+                                      dispatch(deleteProduct(slug)).then(() => fetchProducts());
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </motion.tbody>
+                  </table>
+
+                  {productList.length === 0 && (
+                    <div className="py-20 text-center border-t border-white/10 text-white/40 font-sans">
+                      <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                      <p>No products found in the ledger.</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <span className="text-[10px] uppercase tracking-widest text-on-surface-variant px-3 py-1 bg-surface-container-highest whitespace-nowrap">
-                    {product.category || 'Uncategorized'}
-                  </span>
-                </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <span className="font-serif text-saga-primary font-bold text-lg">${product.basePrice || 0}</span>
-                </div>
-
-                <div className="col-span-1 md:col-span-1">
-                  <span className={`text-sm ${stock === 0 ? 'text-saga-error font-bold' : 'text-on-surface'}`}>{stock} Units</span>
-                </div>
-
-                <div className="col-span-1 md:col-span-1">
-                  <div className="flex items-center gap-2">
-                    <PulseDot active={product.isActive} />
-                    <span className={`text-[10px] uppercase tracking-widest font-bold ${product.isActive ? 'text-saga-primary' : 'text-outline-variant'}`}>
-                      {product.isActive ? 'Live' : 'Archived'}
+                {/* Boxed Style Pagination */}
+                {productList.length > 0 && pagination.totalPages > 1 && (
+                  <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-white/10 bg-black/40 rounded-2xl p-4 gap-4">
+                    <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
+                      Showing {productList.length} products
                     </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      {[...Array(pagination.totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        const isCurrent = currentPage === pageNum;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${isCurrent
+                                ? 'bg-white text-black border-transparent font-bold'
+                                : 'border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
+                              }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        disabled={currentPage === pagination.totalPages}
+                        onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="col-span-1 flex flex-wrap justify-end gap-3 md:col-span-1">
-                  <button type="button" onClick={() => openProductGallery(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="View images">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => beginEdit(product)} className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2" title="Edit product">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
-                    className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="Delete product"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="col-span-1 md:col-span-12">
-                  <ConfirmInline
-                    show={deleteConfirmSlug === product.slug}
-                    message="Delete this product permanently?"
-                    onCancel={() => setDeleteConfirmSlug(null)}
-                    onConfirm={() => {
-                      const slug = product.slug;
-                      setDeleteConfirmSlug(null);
-                      dispatch(deleteProduct(slug)).then(() => fetchProducts());
-                    }}
-                  />
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {productList.length === 0 && (
-            <div className="py-20 text-center border border-dashed border-outline-variant/30 text-on-surface-variant font-sans">
-              <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No products found in the ledger.</p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Pagination */}
-        {productList.length > 0 && pagination.totalPages > 1 && (
-          <div className="mt-12 flex flex-col md:flex-row justify-between items-center bg-surface-container-low p-6 border border-outline-variant/10 gap-4">
-            <span className="text-xs uppercase tracking-widest text-outline-variant font-bold">Showing {productList.length} masterpieces</span>
-            <div className="flex gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="w-10 h-10 flex items-center justify-center bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant hover:text-saga-primary transition-colors disabled:opacity-50"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              {[...Array(pagination.totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-10 h-10 flex items-center justify-center border font-bold text-xs transition-colors ${
-                    currentPage === i + 1
-                      ? 'bg-saga-primary text-on-primary border-saga-primary'
-                      : 'bg-surface-container-highest border-outline-variant/20 text-on-surface-variant hover:text-saga-primary'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-
-              <button
-                disabled={currentPage === pagination.totalPages}
-                onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                className="w-10 h-10 flex items-center justify-center bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant hover:text-saga-primary transition-colors disabled:opacity-50"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+                )}
+              </>
+            )}
           </div>
+          {isGalleryOpen ? (
+            <ImageGalleryModal
+              title={galleryTitle}
+              images={galleryImages}
+              onClose={closeGallery}
+              onImagesUpdate={handleGalleryImagesUpdate}
+            />
+          ) : null}
+        </motion.div>
+      </AdminPage>
+      <AnimatePresence mode="wait">
+        {showForm ? (
+          <ProductStudio
+            initialData={formData}
+            initialImages={productImages}
+            isDraftMode={!selectedProductSlug}
+            isEditing={!!selectedProductSlug}
+            productId={selectedProductId}
+            productSlug={selectedProductSlug}
+            categoryTree={categoryTree}
+            drops={drops}
+            onBack={resetForm}
+            onSaveDraft={handleSubmit}
+            onSubmit={handleSubmit}
+            onOpenGallery={openStudioGallery}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      {/* Bulk Actions confirmation dialog */}
+      <AnimatePresence>
+        {bulkPendingAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            onClick={() => setBulkPendingAction(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-black p-6 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-rose-500/30 bg-rose-500/10">
+                  <AlertCircle className="h-5 w-5 text-rose-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white">
+                    {bulkPendingAction.confirm.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-gray-400">
+                    {bulkPendingAction.confirm.body}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBulkPendingAction(null)}
+                  className="rounded-full border border-gray-700 px-5 py-2 text-xs font-bold uppercase tracking-widest text-gray-300 hover:bg-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmBulkPending}
+                  data-testid="admin-bulk-confirm"
+                  className="rounded-full border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold uppercase tracking-widest text-rose-200 hover:bg-rose-500/30"
+                >
+                  {bulkPendingAction.confirm.confirmLabel || "Confirm"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
-        </>
-        )}
-      </main>
-      {isGalleryOpen ? (
-        <ImageGalleryModal
-          title={galleryTitle}
-          images={galleryImages}
-          onClose={closeGallery}
-          onImagesUpdate={handleGalleryImagesUpdate}
-        />
-      ) : null}
-    </motion.div>
-    </AdminPage>
-    <AnimatePresence mode="wait">{showForm ? atelierForm : null}</AnimatePresence>
+      </AnimatePresence>
     </Fragment>
   );
 };

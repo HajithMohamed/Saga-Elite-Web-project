@@ -20,7 +20,9 @@ const ImageUpload = ({
   refModel,
   type,
   label, // Added label prop
+  colorTag, // Color tag for variant-based image grouping
   disabled = false,
+  stagedOnly = false,
   onUploadSuccess,
 }) => {
   const inputRef = useRef(null);
@@ -43,6 +45,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag: colorTag || "",
     }));
 
     if (isMultiple) {
@@ -66,6 +69,7 @@ const ImageUpload = ({
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
+      colorTag: colorTag || "",
     }));
 
     if (isMultiple) {
@@ -132,42 +136,60 @@ const ImageUpload = ({
     setIsUploading(true);
     setUploadError(null);
 
-    const formData = new FormData();
-    formData.append("refModel", refModel);
-    if (refId) formData.append("refId", refId);
-    if (type) formData.append("type", type);
-    if (label) formData.append("label", label); // Append label if exists
-
-    filesToUpload.forEach((img) =>
-      formData.append("images", img.file)
-    );
-
     try {
-      const res = await axios.post(
-        `${API_BASE}/image/upload-image`,
-        formData,
-        {
+      const groups = filesToUpload.reduce((map, img) => {
+        const tag = String(img.colorTag || colorTag || "").trim();
+        const key = tag.toLowerCase();
+        const existing = map.get(key) || { colorTag: tag, images: [] };
+        existing.images.push(img);
+        map.set(key, existing);
+        return map;
+      }, new Map());
+
+      const uploaded = [];
+
+      for (const group of groups.values()) {
+        const formData = new FormData();
+        formData.append("refModel", refModel);
+        if (refId) formData.append("refId", refId);
+        if (type) formData.append("type", type);
+        if (label) formData.append("label", label);
+        if (group.colorTag) formData.append("colorTag", group.colorTag);
+
+        group.images.forEach((img) => formData.append("images", img.file));
+
+        const res = await axios.post(`${API_BASE}/image/upload-image`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
-        }
-      );
-
-      if (res.data.success) {
-        const uploaded = res.data.images.map((img) => ({
-          ...img,
-          isUploaded: true,
-        }));
-
-        images.forEach((img) => {
-          if (!img.isUploaded) URL.revokeObjectURL(img.url);
         });
 
-        setImages(uploaded);
-        if (onUploadSuccess) {
-          onUploadSuccess(uploaded);
+        if (!res.data.success) {
+          throw new Error(res.data.message || "Upload failed");
         }
+
+        uploaded.push(
+          ...(res.data.images || []).map((img) => ({
+            ...img,
+            isUploaded: true,
+          }))
+        );
+      }
+
+      images.forEach((img) => {
+        if (!img.isUploaded) URL.revokeObjectURL(img.url);
+      });
+
+      if (isMultiple) {
+        const uploadedSourceSet = new Set(filesToUpload);
+        setImages((prev) => [
+          ...prev.filter((img) => !uploadedSourceSet.has(img)),
+          ...uploaded,
+        ]);
       } else {
-        setUploadError(res.data.message || "Upload failed");
+        setImages(uploaded);
+      }
+      if (onUploadSuccess) {
+        onUploadSuccess(uploaded);
       }
     } catch (err) {
       setUploadError(
@@ -262,22 +284,24 @@ const ImageUpload = ({
 
       {images.length > 0 && (
         <>
-          <Button
-            onClick={uploadImages}
-            disabled={disabled || isUploading || images.every((i) => i.isUploaded)}
-            className="w-full"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              "Upload Images"
-            )}
-          </Button>
+          {!stagedOnly ? (
+            <Button
+              onClick={uploadImages}
+              disabled={disabled || isUploading || images.every((i) => i.isUploaded)}
+              className="w-full"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Upload Images"
+              )}
+            </Button>
+          ) : null}
 
-          {uploadError && (
+          {uploadError && !stagedOnly && (
             <p className="text-red-500 text-sm">{uploadError}</p>
           )}
 

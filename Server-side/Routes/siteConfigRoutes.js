@@ -1,12 +1,13 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
-const { requireAdmin } = require("../Middlewares/admin-middleware");
+const { requireAdmin, requireSuperAdmin } = require("../Middlewares/admin-middleware");
+const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const ctrl = require("../Controllers/siteConfigController");
 
 const router = express.Router();
 
 router.get("/about", ctrl.getAboutPageConfig);
 router.get("/:key", ctrl.getConfig);
-router.put("/:key", authMiddleware, requireAdmin, ctrl.upsertConfig);
+router.put("/:key", authMiddleware, requireSuperAdmin, adminLogMiddleware, ctrl.upsertConfig);
 
 module.exports = router;

@@ -1,11 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Clock3,
   Copy,
   Landmark,
   MessageSquareText,
   ShieldAlert,
+  ScanQrCode,
 } from "lucide-react";
 
 const formatDateTime = (value) => {
@@ -40,6 +42,29 @@ const DetailRow = ({ label, value, isMono = false }) => (
   </div>
 );
 
+// Build a human-readable QR payload that any QR scanner / banking app can
+// display. We can't generate a real EMVCo LANKAQR without a bank-issued
+// merchant ID, so this is a structured text fallback. If the merchant has a
+// real LANKAQR sticker, they can upload its image URL via bankDetails.qrImageUrl
+// and we'll show that instead.
+const buildQrPayload = ({ bankDetails, amount, referenceNumber }) => {
+  const lines = [
+    "SAGA ELITE PAYMENT",
+    `Bank: ${bankDetails.bankName || "Sampath Bank"}`,
+    bankDetails.branch ? `Branch: ${bankDetails.branch}` : null,
+    `Name: ${bankDetails.accountName || "N.Gayathree"}`,
+    `A/C: ${bankDetails.accountNumber || "108052612262"}`,
+    amount
+      ? `Amount: LKR ${Number(amount).toLocaleString("en-LK", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : null,
+    referenceNumber ? `Ref: ${referenceNumber}` : null,
+  ].filter(Boolean);
+  return lines.join("\n");
+};
+
 const ManualPaymentInstructions = ({
   bankDetails = {},
   referenceNumber,
@@ -49,6 +74,8 @@ const ManualPaymentInstructions = ({
   onCopyReference,
 }) => {
   const hasReference = Boolean(referenceNumber);
+  const qrPayload = buildQrPayload({ bankDetails, amount, referenceNumber });
+  const hasMerchantQrImage = Boolean(bankDetails.qrImageUrl);
   const steps = [
     "Transfer the exact total to the account below.",
     "Include the reference number in your bank transfer note / description.",
@@ -246,6 +273,54 @@ const ManualPaymentInstructions = ({
           </div>
         </div>
       </div>
+
+      {hasReference ? (
+        <div className="mt-6 rounded-[24px] border border-white/10 bg-black/35 p-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#D4AF37]">
+            <ScanQrCode className="h-4 w-4" />
+            Scan to view transfer details
+          </div>
+          <p className="mt-2 text-xs leading-5 text-gray-400">
+            Open your camera or banking app and scan this code to read the
+            account details and reference. Faster than typing.
+          </p>
+
+          <div className="mt-5 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <div className="rounded-2xl border border-white/10 bg-white p-4">
+              {hasMerchantQrImage ? (
+                <img
+                  src={bankDetails.qrImageUrl}
+                  alt="Saga Elite payment QR"
+                  className="h-48 w-48 object-contain"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={qrPayload}
+                  size={192}
+                  level="M"
+                  includeMargin={false}
+                />
+              )}
+            </div>
+
+            <div className="flex-1 rounded-2xl border border-white/5 bg-black/30 p-4 text-xs leading-5 text-gray-300">
+              <p className="text-[10px] uppercase tracking-[0.24em] text-gray-500">
+                What this code shows
+              </p>
+              <pre className="mt-2 whitespace-pre-wrap font-mono text-[11px] text-white">
+                {qrPayload}
+              </pre>
+              {!hasMerchantQrImage ? (
+                <p className="mt-3 text-[11px] text-gray-500">
+                  This is a text QR (not LANKAQR). Some banking apps may not
+                  auto-fill — you'll still need to enter the values shown
+                  above into the app's transfer screen.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };

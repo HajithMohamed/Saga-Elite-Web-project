@@ -49,6 +49,23 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    sentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative'],
+      default: null,
+    },
+
+    // AI-generated classification populated asynchronously after the review
+    // is saved. Each score is 0-100. Null means "not yet analyzed" — admin UI
+    // should treat that distinctly from "analyzed and clean."
+    aiAnalysis: {
+      toxicity: { type: Number, default: null, min: 0, max: 100 },
+      spam: { type: Number, default: null, min: 0, max: 100 },
+      sentimentScore: { type: Number, default: null, min: -100, max: 100 },
+      summary: { type: String, default: null, trim: true, maxlength: 280 },
+      analyzedAt: { type: Date, default: null },
+      model: { type: String, default: null, trim: true },
+    },
     helpfulCount: {
       type: Number,
       default: 0,
@@ -79,6 +96,37 @@ const reviewSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    brandReply: {
+      type: String,
+      maxlength: 1000,
+      trim: true,
+      default: "",
+    },
+    brandReplyAt: {
+      type: Date,
+      default: null,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    category: {
+      type: String,
+      enum: ["uncategorized", "fit", "quality", "delivery", "style", "value"],
+      default: "uncategorized",
+      index: true,
+    },
+    rewardCouponIssued: {
+      type: Boolean,
+      default: false,
+    },
+    rewardCouponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: null,
+    },
     slug: {
       type: String,
       unique: true,
@@ -92,13 +140,13 @@ const reviewSchema = new mongoose.Schema(
 
 reviewSchema.index({ productId: 1, status: 1 });
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+reviewSchema.index({ title: "text", content: "text" });
 
-reviewSchema.pre("save", function (next) {
+reviewSchema.pre("save", function () {
   if (!this.slug) {
     const idpart = this._id != null ? String(this._id) : `${this.productId}-${Date.now()}`;
     this.slug = slugify(`review-${idpart}`, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model("Review", reviewSchema);

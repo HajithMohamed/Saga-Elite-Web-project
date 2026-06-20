@@ -1,74 +1,36 @@
 services:
   backend:
     build:
-      context: ./Server-side
+      context: .
       dockerfile: Dockerfile.prod
     container_name: saga_backend_prod
     restart: always
     expose:
       - "5001"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=5001
-      - MONGO_URI=${MONGO_URI}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRE=${JWT_EXPIRE}
-      - FRONTEND_URL=${FRONTEND_URL}
-      - BACKEND_URL=${BACKEND_URL}
-      - PAYHERE_MERCHANT_ID=${PAYHERE_MERCHANT_ID}
-      - PAYHERE_MERCHANT_SECRET=${PAYHERE_MERCHANT_SECRET}
-      - PAYHERE_SANDBOX=false
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - FROM_NAME=${FROM_NAME}
-      - BANK_NAME=${BANK_NAME}
-      - BANK_ACCOUNT_NAME=${BANK_ACCOUNT_NAME}
-      - BANK_ACCOUNT_NUMBER=${BANK_ACCOUNT_NUMBER}
-      - BANK_BRANCH=${BANK_BRANCH}
-      - MOBILE_BANKING_1_NAME=${MOBILE_BANKING_1_NAME}
-      - MOBILE_BANKING_1_NUMBER=${MOBILE_BANKING_1_NUMBER}
+    volumes:
+      - ./Server-side:/app
+      - /app/node_modules
+    networks:
+      - saga_network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:5001/health"]
+      test: ["CMD", "wget", "-qO", "http://localhost:5001/api/v1/health", "||", "exit", "1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
-    networks:
-      - saga_network
+      start_period: 30s
 
   frontend:
     build:
       context: ./Client-Side
       dockerfile: Dockerfile.prod
       args:
-        # Default to relative /api/v1 — nginx proxies to backend, so no public backend URL leaks into the bundle.
-        - VITE_API_URL=${VITE_API_URL:-/api/v1}
+        - VITE_API_URL=${VITE_API_URL:-https://your-domain.com/api/v1}
     container_name: saga_frontend_prod
-    restart: always
-    expose:
-      - "80"
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - saga_network
-
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: saga_nginx
     restart: always
     ports:
       - "80:80"
@@ -76,8 +38,8 @@ services:
     volumes:
       - ./Client-Side/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - frontend
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - saga_network
 

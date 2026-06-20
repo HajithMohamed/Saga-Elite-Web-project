@@ -94,3 +94,72 @@ jobs:
           echo "✅ CI Pipeline completed!"
           echo "📦 Client-Side: ${{ steps.check-client.outputs.exists == 'true' && 'Built' || 'Skipped (not found)' }}"
           echo "🔧 Server-side: ${{ steps.check-server.outputs.exists == 'true' && 'Built' || 'Skipped (not found)' }}"
+
+  e2e-tests:
+    name: Playwright E2E
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Server-side dependencies
+        working-directory: ./Server-side
+        run: npm ci || npm install
+
+      - name: Install Client-Side dependencies
+        working-directory: ./Client-Side
+        run: npm ci || npm install
+
+      - name: Install root dependencies (including Playwright)
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify Playwright CLI
+        run: npx playwright --version
+
+      - name: Prepare e2e env file
+        run: cp e2e/.env.test.example e2e/.env.test
+
+      - name: Run Playwright suite
+        env:
+          CI: "1"
+          MONGODB_TEST_URI: mongodb://127.0.0.1:27017/saga_elite_test
+          NODE_ENV: test
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+      - name: Upload trace artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: e2e/test-results
+          retention-days: 7

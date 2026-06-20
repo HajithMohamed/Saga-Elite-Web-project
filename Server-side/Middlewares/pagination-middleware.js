@@ -1,6 +1,42 @@
 const mongoose = require("mongoose");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
+const Category = require("../Models/Category");
+const slugify = require("slugify");
+
+const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeCategoryPath = (value) => {
+  const segments = String(value || "")
+    .split(/\/|>|\|/)
+    .map((segment) => slugify(String(segment || "").trim(), { lower: true, strict: true }))
+    .filter(Boolean);
+
+  return segments.length ? segments.join("/") : "";
+};
+
+const resolveCategoryValues = async (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+
+  const normalized = raw.toLowerCase();
+  const categories = await Category.find({
+    $or: [
+      { slug: normalized },
+      { name: { $regex: `^${escapeRegex(raw)}$`, $options: "i" } },
+    ],
+  })
+    .select("slug name")
+    .lean();
+
+  const values = new Set([raw, normalized]);
+  categories.forEach((category) => {
+    if (category.slug) values.add(category.slug);
+    if (category.name) values.add(category.name);
+  });
+
+  return [...values].filter(Boolean);
+};
 
 const paginatedResult = (Model) =>
   catchAsync(async (req, res, next) => {
@@ -12,9 +48,12 @@ const paginatedResult = (Model) =>
       size,
       brand,
       category,
+      subCategory,
+      categoryPath,
       color,
       minPrice,
       maxPrice,
+      maxStock,
       search,
       sort,
       isActive,
@@ -49,7 +88,24 @@ const paginatedResult = (Model) =>
 
     /* ========= Brand / Category ========= */
     if (brand) matchStage.brand = brand;
-    if (category) matchStage.category = category;
+    if (category) {
+      const categoryValues = await resolveCategoryValues(category);
+      if (categoryValues.length > 0) {
+        matchStage.category = { $in: categoryValues };
+      }
+    }
+    if (subCategory) {
+      const subCategoryValues = await resolveCategoryValues(subCategory);
+      if (subCategoryValues.length > 0) {
+        matchStage.subCategory = { $in: subCategoryValues };
+      }
+    }
+    if (categoryPath) {
+      const normalizedPath = normalizeCategoryPath(categoryPath);
+      if (normalizedPath) {
+        matchStage.categoryPath = new RegExp(`^${escapeRegex(normalizedPath)}(?:/|$)`, "i");
+      }
+    }
 
     /* ========= Variant Color Filter ========= */
     // FIX 2: Merged size and color into a single $elemMatch to avoid overwriting
@@ -76,6 +132,15 @@ const paginatedResult = (Model) =>
       matchStage.basePrice = {};
       if (minPrice) matchStage.basePrice.$gte = Number(minPrice);
       if (maxPrice) matchStage.basePrice.$lte = Number(maxPrice);
+    }
+
+    /* ========= Stock Ceiling Filter ========= */
+    if (typeof maxStock !== "undefined" && maxStock !== "") {
+      const parsedMaxStock = Number(maxStock);
+      if (Number.isNaN(parsedMaxStock)) {
+        return next(new AppError("maxStock must be a number", 400));
+      }
+      matchStage.totalStock = { $lte: parsedMaxStock };
     }
 
     /* ========= Search ========= */

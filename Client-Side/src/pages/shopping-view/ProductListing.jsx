@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,29 +9,44 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, Gift, ShoppingBag, SlidersHorizontal } from "lucide-react";
 import useLiveProductUpdates from "@/hooks/use-live-product-updates";
+import { useSocketEvent } from "@/hooks/use-socket-events";
 import { applyLiveProductUpdate } from "@/store/live-product-slice";
 import { fetchCartAction } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Btn,
-  Countdown,
   Eyebrow,
-  FilterPills,
-  Hairline,
   Marquee,
   Reveal,
   SortDropdown,
-  StatusBadge,
 } from "@/components/ui/editorial";
-import ProductCard from "@/components/shopping-components/ProductCard";
+import usePageMeta from "@/hooks/use-page-meta";
+import FilterSidebar from "@/components/listing/FilterSidebar";
+import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 
-const CATEGORY_LABELS = {
-  boys: "Boys",
-  girls: "Girls",
-  unisex: "Unisex",
+import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
+import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
+
+// category slugs are passed via `?category=<slug>`; backend resolves slug or legacy string
+
+const formatCategoryLabel = (value = "") =>
+  String(value)
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const buildListingUrl = (segments = []) => {
+  const query = new URLSearchParams();
+  if (segments[0]) query.set("category", segments[0]);
+  if (segments[1]) query.set("subCategory", segments[1]);
+  if (segments.length > 2) query.set("categoryPath", segments.join("/"));
+  return `/shopping/product-list?${query.toString()}`;
 };
 
 const SORT_OPTIONS = [
@@ -39,61 +55,74 @@ const SORT_OPTIONS = [
   { value: "price_high", label: "Price · descending" },
 ];
 
-const PILL_KEYS = [
-  { value: "all", label: "All" },
-  { value: "boys", label: "Boys" },
-  { value: "girls", label: "Girls" },
-  { value: "unisex", label: "Unisex" },
-  { value: "drops", label: "Drops" },
-  { value: "archive", label: "Archive" },
-];
 
-const formatLKR = (value = 0) =>
-  `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
-    maximumFractionDigits: 0,
-  })}`;
+
+const PAGE_SIZE = 12;
+const FETCH_LIMIT = 60;
+const PRICE_MIN = 0;
+const PRICE_MAX = 50000;
+const MotionDiv = motion.div;
 
 const ProductListing = () => {
+  usePageMeta({ title: "Shop" });
   const [products, setProducts] = useState([]);
-  const [drops, setDrops] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
   const liveProductUpdates = useSelector((state) => state.liveProduct.byId);
+  const cartCount = useSelector(
+    (state) => state.cart?.cart?.totalQuantity || 0
+  );
 
   const categoryParam = (searchParams.get("category") || "").toLowerCase();
+  const subCategoryParam = (searchParams.get("subCategory") || "").toLowerCase();
+  const categoryPathParam = (searchParams.get("categoryPath") || "").toLowerCase();
+  const filterParam = (searchParams.get("filter") || "").toLowerCase();
   const sortParam = (searchParams.get("sort") || "new").toLowerCase();
   const inStockOnly = searchParams.get("stock") === "in";
   const limitedOnly = searchParams.get("limited") === "1";
-  const isDropListing = categoryParam === "drops";
+  const isOffersListing =
+    categoryParam === "offers" || filterParam === "offers";
 
-  const activePill =
-    categoryParam === "drops"
-      ? "drops"
-      : categoryParam === "archive"
-        ? "archive"
-        : CATEGORY_LABELS[categoryParam]
-          ? categoryParam
-          : "all";
+  // Refine row params (URL-driven, multi-select)
+  const colorsParam = useMemo(
+    () =>
+      (searchParams.get("colors") || "")
+        .split(",")
+        .map((c) => c.trim().toLowerCase())
+        .filter(Boolean),
+    [searchParams]
+  );
+  const sizesParam = useMemo(
+    () =>
+      (searchParams.get("sizes") || "")
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean),
+    [searchParams]
+  );
+  const priceMinParam = Number(searchParams.get("min") || PRICE_MIN);
+  const priceMaxParam = Number(searchParams.get("max") || PRICE_MAX);
+  const colorsKey = colorsParam.join(",");
+  const sizesKey = sizesParam.join(",");
+
+  // /shopping/drops is the dedicated drops page now — redirect old links.
+  useEffect(() => {
+    if (categoryParam === "drops" || filterParam === "drops") {
+      navigate("/shopping/drops", { replace: true });
+    }
+  }, [categoryParam, filterParam, navigate]);
 
   const updateParams = (mutator) => {
     const next = new URLSearchParams(searchParams);
     mutator(next);
-    const qs = next.toString();
-    navigate(qs ? `${location.pathname}?${qs}` : location.pathname);
-  };
-
-  const setCategoryFilter = (key) => {
-    const next = new URLSearchParams();
-    if (key !== "all") next.set("category", key);
-    if (sortParam !== "new") next.set("sort", sortParam);
-    if (inStockOnly) next.set("stock", "in");
-    if (limitedOnly) next.set("limited", "1");
     const qs = next.toString();
     navigate(qs ? `${location.pathname}?${qs}` : location.pathname);
   };
@@ -116,10 +145,56 @@ const ProductListing = () => {
       else p.set("limited", "1");
     });
 
-  const clearFilters = () =>
+  const toggleColor = (color) =>
+    updateParams((p) => {
+      const current = (p.get("colors") || "")
+        .split(",")
+        .filter(Boolean);
+      const has = current.includes(color);
+      const next = has
+        ? current.filter((c) => c !== color)
+        : [...current, color];
+      if (next.length) p.set("colors", next.join(","));
+      else p.delete("colors");
+    });
+
+  const toggleSize = (size) =>
+    updateParams((p) => {
+      const current = (p.get("sizes") || "")
+        .split(",")
+        .filter(Boolean);
+      const has = current.includes(size);
+      const next = has
+        ? current.filter((s) => s !== size)
+        : [...current, size];
+      if (next.length) p.set("sizes", next.join(","));
+      else p.delete("sizes");
+    });
+
+  const setPriceRange = ([lo, hi]) =>
+    updateParams((p) => {
+      if (lo > PRICE_MIN) p.set("min", String(lo));
+      else p.delete("min");
+      if (hi < PRICE_MAX) p.set("max", String(hi));
+      else p.delete("max");
+    });
+
+  const clearRefinements = () =>
+    updateParams((p) => {
+      p.delete("colors");
+      p.delete("sizes");
+      p.delete("min");
+      p.delete("max");
+    });
+
+  const clearAllFilters = () =>
     updateParams((p) => {
       p.delete("stock");
       p.delete("limited");
+      p.delete("colors");
+      p.delete("sizes");
+      p.delete("min");
+      p.delete("max");
     });
 
   const unitPrice = (product, variant) => {
@@ -154,8 +229,67 @@ const ProductListing = () => {
           !inStockOnly ||
           (p.variants || []).some((v) => Number(v?.stock || 0) > 0)
       )
-      .filter((p) => !limitedOnly || p.isLimited);
-  }, [sortedProducts, inStockOnly, limitedOnly]);
+      .filter((p) => !limitedOnly || p.isLimited)
+      .filter((p) => {
+        if (!colorsParam.length) return true;
+        return (p.variants || []).some((v) =>
+          colorsParam.includes(String(v?.color || "").toLowerCase())
+        );
+      })
+      .filter((p) => {
+        if (!sizesParam.length) return true;
+        return (p.variants || []).some((v) =>
+          sizesParam.includes(String(v?.size || "").toUpperCase())
+        );
+      })
+      .filter((p) => {
+        const price = Number(p.basePrice || 0);
+        return price >= priceMinParam && price <= priceMaxParam;
+      });
+  }, [
+    sortedProducts,
+    inStockOnly,
+    limitedOnly,
+    colorsParam,
+    sizesParam,
+    priceMinParam,
+    priceMaxParam,
+  ]);
+
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount]
+  );
+  const hasMore = visibleCount < filteredProducts.length;
+
+  // Reset visible window whenever the result set changes.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [
+    categoryParam,
+    filterParam,
+    inStockOnly,
+    limitedOnly,
+    colorsKey,
+    sizesKey,
+    priceMinParam,
+    priceMaxParam,
+  ]);
+
+  // Pick a featured product — prefer a limited piece with low remaining stock.
+  const featuredProduct = useMemo(() => {
+    if (filteredProducts.length < 4) return null;
+    const limited = filteredProducts.find((p) => {
+      const total =
+        Number(p?.totalStock) ||
+        (p?.variants || []).reduce(
+          (sum, v) => sum + Math.max(0, Number(v?.stock || 0)),
+          0
+        );
+      return p?.isLimited && total > 0 && total <= 12;
+    });
+    return limited || filteredProducts[0];
+  }, [filteredProducts]);
 
   useLiveProductUpdates((payload = {}) =>
     products.some(
@@ -167,59 +301,86 @@ const ProductListing = () => {
     dispatch(fetchCartAction());
   }, [dispatch]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchListingData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchListingData = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
 
-      try {
-        if (isDropListing) {
-          const response = await axios.get(`${API_BASE}/drops/get-all-drops`);
-          if (cancelled) return;
-          const allDrops = Array.isArray(response.data?.drops)
-            ? response.data.drops
-            : [];
-          setDrops(allDrops);
-          setProducts([]);
-          return;
+    try {
+      if (isOffersListing) {
+        const response = await axios.get(`${API_BASE}/offers`);
+        const offers = response.data?.data?.offers || [];
+        const seen = new Set();
+        const offerProducts = [];
+        for (const offer of offers) {
+          for (const product of offer.products || []) {
+            const key = String(product?._id || product?.id || "");
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            offerProducts.push({
+              ...product,
+              discountPercent: offer.discountPercent ?? product.discountPercent,
+              offerEndsAt: offer.endsAt,
+              offerBadge: offer.badgeText,
+            });
+          }
         }
+        setProducts(offerProducts);
+        return;
+      }
 
-        const query = new URLSearchParams({ limit: "30" });
-        if (categoryParam === "archive") {
-          query.set("status", "archive");
-        } else if (CATEGORY_LABELS[categoryParam]) {
-          query.set("category", CATEGORY_LABELS[categoryParam]);
+      const query = new URLSearchParams({ limit: String(FETCH_LIMIT) });
+      if (categoryParam === "archive" || filterParam === "archive") {
+        query.set("status", "archive");
+      } else if (categoryParam) {
+        // pass through the slug or legacy string; backend will resolve
+        query.set("category", categoryParam);
+        if (subCategoryParam) {
+          query.set("subCategory", subCategoryParam);
         }
+        if (categoryPathParam) {
+          query.set("categoryPath", categoryPathParam);
+        }
+      }
 
-        const response = await axios.get(
-          `${API_BASE}/products/get-all-products?${query.toString()}`
-        );
-        if (cancelled) return;
-        setProducts(response.data?.data || []);
-        setDrops([]);
-      } catch (err) {
-        if (cancelled) return;
-        const msg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Something went wrong";
-        setError(msg);
+      const response = await axios.get(
+        `${API_BASE}/products/get-all-products?${query.toString()}`
+      );
+      setProducts(response.data?.data || []);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Something went wrong";
+      setError(msg);
+      if (!silent) {
         toast({
-          title: isDropListing ? "Could not load drops" : "Could not load pieces",
+          title: "Could not load pieces",
           description: msg,
           variant: "destructive",
         });
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
-    };
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
 
+  useEffect(() => {
     fetchListingData();
-    return () => {
-      cancelled = true;
-    };
-  }, [categoryParam, isDropListing]);
+  }, [fetchListingData]);
+
+  // Real-time refetch on product create/delete (Fix #3). Updates are still
+  // patched in-place by useLiveProductUpdates above.
+  const refetchTimer = useRef(null);
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+    refetchTimer.current = setTimeout(() => fetchListingData({ silent: true }), 250);
+  }, [fetchListingData]);
+  useEffect(() => () => {
+    if (refetchTimer.current) clearTimeout(refetchTimer.current);
+  }, []);
+
+  useSocketEvent("product:created", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
 
   useEffect(() => {
     if (!products.length) return;
@@ -239,361 +400,222 @@ const ProductListing = () => {
 
   const articleCount = filteredProducts.length;
   const totalCount = sortedProducts.length;
-  const hasFilterActive = inStockOnly || limitedOnly;
-  const cappedAtThirty = sortedProducts.length === 30;
+  const refineActive =
+    colorsParam.length > 0 ||
+    sizesParam.length > 0 ||
+    priceMinParam > PRICE_MIN ||
+    priceMaxParam < PRICE_MAX;
+  const hasFilterActive = inStockOnly || limitedOnly || refineActive;
+  const categoryTrail = useMemo(() => {
+    if (isOffersListing) return [{ value: "offers", label: "Offers" }];
+    if (categoryParam === "archive" || filterParam === "archive") {
+      return [{ value: "archive", label: "Archive" }];
+    }
+
+    const pathSegments = categoryPathParam
+      ? categoryPathParam.split("/").filter(Boolean)
+      : [categoryParam, subCategoryParam].filter(Boolean);
+
+    return pathSegments.map((segment) => ({
+      value: segment,
+      label: formatCategoryLabel(segment),
+    }));
+  }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
 
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">
+    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-20">
+
       {/* STICKY FILTER RAIL */}
-      <div className="sticky top-16 z-30 bg-[#0a0a0a]/90 backdrop-blur-md border-y border-[#4d4635]/40">
-        <div className="px-5 md:px-12 max-w-7xl mx-auto py-3 md:py-4 flex items-center gap-3 md:gap-6 overflow-x-auto custom-scrollbar">
-          {/* Pills */}
-          <FilterPills
-            items={PILL_KEYS}
-            value={activePill}
-            onChange={setCategoryFilter}
-            layoutId="atelier-pill"
-            className="shrink-0"
-          />
+      
+      {/* Editorial layout container: Grid with right filter sidebar */}
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-8 lg:pb-16 pt-0">
+        <div className="flex flex-col lg:flex-row gap-12 items-start relative">
+          
+          {/* Main Product Grid (Left Pane) */}
+          <div className="flex-1 w-full min-w-0">
+            <div className="mb-10 border-b border-white/5 pb-6">
+              <Eyebrow>{categoryTrail.length ? categoryTrail[categoryTrail.length - 1].label : "Catalogue"}</Eyebrow>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#d0c5af]">
+                <Link to="/shopping/product-list" className="hover:text-[#f2ca50] transition-colors">
+                  Shop
+                </Link>
+                {categoryTrail.map((segment, index) => (
+                  <React.Fragment key={`${segment.value}-${index}`}>
+                    <span className="text-[#574500]">/</span>
+                    <Link
+                      to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))}
+                      className="hover:text-[#f2ca50] transition-colors"
+                    >
+                      {segment.label}
+                    </Link>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
 
-          <div className="hidden lg:block flex-1" />
+            {/* Top Bar inside main pane */}
+            <div className="flex flex-col md:flex-row justify-end items-start md:items-end mb-8 gap-4">
+              <div className="flex items-center gap-4">
+                <SortDropdown
+                  options={SORT_OPTIONS}
+                  value={sortParam}
+                  onChange={(v) => {
+                    const p = new URLSearchParams(searchParams);
+                    if (v) p.set("sort", v);
+                    else p.delete("sort");
+                    setSearchParams(p);
+                  }}
+                />
+                {/* Mobile Filter Toggle */}
+                <button
+                  onClick={() => setRefineOpen(!refineOpen)}
+                  className="lg:hidden flex items-center gap-2 se-label tracking-widest text-[10px] uppercase text-[#e5e2e1] bg-[#131313] px-4 py-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-[#4d4635]/40"
+                >
+                  <SlidersHorizontal size={14} />
+                  Filters
+                  {hasFilterActive && (
+                    <span className="ml-1 w-2 h-2 rounded-full bg-[#f2ca50]" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-          {/* Center count */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
-            <Eyebrow tone="muted" size="xs">
-              {hasFilterActive
-                ? `${String(articleCount).padStart(3, "0")} / ${String(totalCount).padStart(3, "0")}`
-                : `${String(totalCount).padStart(3, "0")}`}{" "}
-              articles
-            </Eyebrow>
+            {/* Mobile Filter Drawer / Inline content could go here, for now relying on right sidebar on desktop */}
+            <AnimatePresence>
+              {refineOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="lg:hidden mb-8 overflow-hidden rounded-xl border border-[#4d4635]/30 bg-[#0a0a0a]"
+                >
+                  <FilterSidebar
+                    selectedColors={colorsParam}
+                    selectedSizes={sizesParam}
+                    priceRange={[priceMinParam, priceMaxParam]}
+                    onToggleColor={(c) => {
+                      // existing color logic
+                      const p = new URLSearchParams(searchParams);
+                      let arr = [...colorsParam];
+                      if (arr.includes(c)) arr = arr.filter((x) => x !== c);
+                      else arr.push(c);
+                      if (arr.length) p.set("colors", arr.join(","));
+                      else p.delete("colors");
+                      setSearchParams(p);
+                    }}
+                    onToggleSize={(s) => {
+                      const p = new URLSearchParams(searchParams);
+                      let arr = [...sizesParam];
+                      if (arr.includes(s)) arr = arr.filter((x) => x !== s);
+                      else arr.push(s);
+                      if (arr.length) p.set("sizes", arr.join(","));
+                      else p.delete("sizes");
+                      setSearchParams(p);
+                    }}
+                    onChangePrice={(v) => {
+                      const p = new URLSearchParams(searchParams);
+                      if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
+                      if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
+                      setSearchParams(p);
+                    }}
+                    onClearAll={() => clearAllFilters()}
+                    priceMin={PRICE_MIN}
+                    priceMax={PRICE_MAX}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {isLoading ? (
+              <ProductGridSkeleton count={8} featuredEvery={Infinity} />
+            ) : filteredProducts.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-32 flex flex-col items-center justify-center text-center px-4"
+              >
+                <div className="w-24 h-24 mb-6 border border-[#4d4635] flex items-center justify-center rounded-sm bg-[#131313]/50">
+                  <span className="text-[#4d4635] text-4xl">ø</span>
+                </div>
+                <h3 className="text-[#e5e2e1] se-display text-2xl uppercase tracking-widest mb-2 font-bold">
+                  NO MATCHES FOUND
+                </h3>
+                <p className="text-[#99907c] max-w-md mx-auto se-body text-sm">
+                  Try exploring another collection or reducing your filter criteria.
+                </p>
+                <button
+                  onClick={() => clearAllFilters()}
+                  className="mt-8 px-8 py-3 bg-transparent border border-[#d4af37]/40 text-[#f2ca50] se-label text-[11px] uppercase tracking-widest hover:bg-[#d4af37]/10 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </motion.div>
+            ) : (
+              <div>
+                <EditorialProductGrid
+                  products={visibleProducts}
+                  featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
+                  motionKey={[categoryParam, subCategoryParam, categoryPathParam, filterParam, sortParam].join("|")}
+                />
+                
+
+
+                {hasMore && (
+                  <div className="mt-16 text-center">
+                    <button
+                      onClick={() =>
+                        setVisibleCount((c) =>
+                          Math.min(c + PAGE_SIZE, filteredProducts.length)
+                        )
+                      }
+                      className="px-12 py-4 bg-transparent border border-[#D4AF37] text-[#D4AF37] font-semibold tracking-[0.2em] text-xs uppercase hover:bg-[#D4AF37] hover:text-black transition-colors"
+                    >
+                      Load More
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="hidden lg:block flex-1" />
-
-          {/* Toggles + sort */}
-          {!isDropListing && (
-            <>
-              <button
-                type="button"
-                onClick={toggleInStock}
-                aria-pressed={inStockOnly}
-                className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-                  inStockOnly
-                    ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                    : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-                }`}
-              >
-                In stock
-              </button>
-              <button
-                type="button"
-                onClick={toggleLimited}
-                aria-pressed={limitedOnly}
-                className={`shrink-0 h-10 px-4 border se-label text-[10px] tracking-[0.18em] transition-colors se-focus ${
-                  limitedOnly
-                    ? "bg-[#1c1b1b] border-[#f2ca50] text-[#f2ca50]"
-                    : "bg-transparent border-[#4d4635] text-[#d0c5af] hover:border-[#99907c] hover:text-[#e5e2e1]"
-                }`}
-              >
-                Limited
-              </button>
-              <SortDropdown
-                options={SORT_OPTIONS}
-                value={sortParam}
-                onChange={setSort}
-                label="Sort"
-                className="shrink-0"
-              />
-            </>
-          )}
+          {/* Right Sidebar (Desktop only) */}
+          <div className="hidden lg:block w-[320px] shrink-0 sticky top-24 self-start h-max">
+             <FilterSidebar
+                selectedColors={colorsParam}
+                selectedSizes={sizesParam}
+                priceRange={[priceMinParam, priceMaxParam]}
+                onToggleColor={(c) => {
+                  const p = new URLSearchParams(searchParams);
+                  let arr = [...colorsParam];
+                  if (arr.includes(c)) arr = arr.filter((x) => x !== c);
+                  else arr.push(c);
+                  if (arr.length) p.set("colors", arr.join(","));
+                  else p.delete("colors");
+                  setSearchParams(p);
+                }}
+                onToggleSize={(s) => {
+                  const p = new URLSearchParams(searchParams);
+                  let arr = [...sizesParam];
+                  if (arr.includes(s)) arr = arr.filter((x) => x !== s);
+                  else arr.push(s);
+                  if (arr.length) p.set("sizes", arr.join(","));
+                  else p.delete("sizes");
+                  setSearchParams(p);
+                }}
+                onChangePrice={(v) => {
+                  const p = new URLSearchParams(searchParams);
+                  if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
+                  if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
+                  setSearchParams(p);
+                }}
+                onClearAll={() => clearAllFilters()}
+                priceMin={PRICE_MIN}
+                priceMax={PRICE_MAX}
+             />
+          </div>
         </div>
       </div>
-
-      {/* MAIN CONTENT */}
-      <main className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
-        {/* LOADING */}
-        {isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-[#4d4635]/40">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#0a0a0a] p-5 md:p-6">
-                <div
-                  className="border border-[#4d4635] bg-[#1c1b1b] animate-pulse"
-                  style={{ aspectRatio: "4/5" }}
-                />
-                <div className="mt-5 h-3 w-1/3 bg-[#1c1b1b] animate-pulse" />
-                <div className="mt-3 h-4 w-2/3 bg-[#1c1b1b] animate-pulse" />
-                <div className="mt-3 h-3 w-1/4 bg-[#1c1b1b] animate-pulse" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ERROR */}
-        {!isLoading && error && (
-          <div className="border border-[#93000a]/40 bg-[#93000a]/10 px-6 py-10 text-center">
-            <Eyebrow tone="muted" size="md" className="text-[#ffb4ab]">
-              Something went still
-            </Eyebrow>
-            <p className="mt-3 se-body text-sm text-[#ffb4ab]">{error}</p>
-          </div>
-        )}
-
-        {/* DROPS SUB-MODE — alternating 7/5 lookbook */}
-        {!isLoading && !error && isDropListing && (
-          <DropsLookbook drops={drops} />
-        )}
-
-        {/* PRODUCT GRID */}
-        {!isLoading && !error && !isDropListing && (
-          <>
-            {/* Empty state */}
-            {filteredProducts.length === 0 && (
-              <Reveal>
-                <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 md:py-20 text-center max-w-2xl mx-auto">
-                  <Eyebrow tone="muted" size="xs">Nothing here yet</Eyebrow>
-                  <h3 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-4xl">
-                    {hasFilterActive
-                      ? "No pieces match these filters."
-                      : "The chapter has yet to open."}
-                  </h3>
-                  <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-                    {hasFilterActive
-                      ? "Loosen the filters to see more pieces."
-                      : "Read the journal for word of the next chapter."}
-                  </p>
-                  <div className="mt-8 flex flex-wrap justify-center gap-3">
-                    {hasFilterActive ? (
-                      <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="inline-flex"
-                      >
-                        <Btn variant="default" iconRight={ArrowRight}>
-                          Clear filters
-                        </Btn>
-                      </button>
-                    ) : (
-                      <Link to="/about">
-                        <Btn variant="outline" iconRight={ArrowRight}>
-                          Read the journal
-                        </Btn>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </Reveal>
-            )}
-
-            {/* Grid */}
-            {filteredProducts.length > 0 && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`${categoryParam}-${sortParam}-${inStockOnly}-${limitedOnly}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40"
-                >
-                  {filteredProducts.map((product, idx) => (
-                    <ProductCard
-                      key={product._id}
-                      product={product}
-                      index={idx}
-                    />
-                  ))}
-                </motion.div>
-              </AnimatePresence>
-            )}
-
-            {/* End-of-chapter CTA */}
-            {filteredProducts.length > 0 && cappedAtThirty && (
-              <Reveal>
-                <div className="mt-16 md:mt-24 border border-[#4d4635] bg-[#0e0e0e]">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 md:p-12 items-end">
-                    <div className="lg:col-span-8">
-                      <Eyebrow tone="gold" size="md">
-                        Eighty-four pieces, then a new chapter
-                      </Eyebrow>
-                      <h2 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-                        Read the archive.
-                      </h2>
-                      <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base max-w-xl leading-relaxed">
-                        Every chapter that has closed. Held for record — nothing
-                        restocks, nothing returns. Members may request a private
-                        viewing of any single archived piece.
-                      </p>
-                    </div>
-                    <div className="lg:col-span-4 flex flex-wrap items-center gap-3 lg:justify-end">
-                      <Link to="/shopping/product-list?category=archive">
-                        <Btn variant="outline" iconRight={ArrowRight}>
-                          Browse the archive
-                        </Btn>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* CLOSING MARQUEE — sits above the global footer */}
-      <Marquee
-        tone="gold"
-        items={[
-          "Sent to ninety-three countries",
-          "Made in Sri Lanka",
-          "Hand-finished",
-          "No restock",
-          "Members enter first",
-          "Rare fit, forever",
-        ]}
-      />
     </div>
   );
-};
-
-// ─── DROPS LOOKBOOK ──────────────────────────────────────────────────────────
-const DropsLookbook = ({ drops }) => {
-  if (!drops || drops.length === 0) {
-    return (
-      <Reveal>
-        <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 md:py-20 text-center max-w-2xl mx-auto">
-          <Eyebrow tone="muted" size="xs">Between chapters</Eyebrow>
-          <h3 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-4xl">
-            No drops live just now.
-          </h3>
-          <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-            The next chapter opens soon. Members will hear first.
-          </p>
-          <div className="mt-8">
-            <Link to="/auth/register">
-              <Btn variant="default" iconRight={ArrowRight}>
-                Become a member
-              </Btn>
-            </Link>
-          </div>
-        </div>
-      </Reveal>
-    );
-  }
-
-  return (
-    <div className="space-y-16 md:space-y-24">
-      {drops.map((drop, i) => {
-        const release = drop?.releaseDate ? new Date(drop.releaseDate) : null;
-        const end = drop?.endDate ? new Date(drop.endDate) : null;
-        const now = Date.now();
-        const isUpcoming = release && release.getTime() > now;
-        const isLive =
-          (!release || release.getTime() <= now) &&
-          (!end || end.getTime() > now);
-        const isExpired = end && end.getTime() < now;
-
-        const target = isUpcoming ? release : end;
-        const mirror = i % 2 === 1;
-
-        return (
-          <Reveal key={drop._id || drop.slug || i}>
-            <article
-              className={`grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 ${
-                isExpired ? "opacity-80" : ""
-              }`}
-            >
-              {/* IMAGE */}
-              <Link
-                to={`/shopping/drop/${drop.slug}`}
-                className={`lg:col-span-7 group relative overflow-hidden border border-[#4d4635] hover:border-[#99907c] transition-colors ${
-                  mirror ? "lg:order-2" : ""
-                }`}
-                style={{ aspectRatio: "16/10" }}
-              >
-                <img
-                  src={drop?.images?.[0]?.url || "/LOGO.png"}
-                  alt={drop?.name || "Drop"}
-                  loading={i < 2 ? "eager" : "lazy"}
-                  className={`w-full h-full object-cover transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] ${
-                    isExpired ? "grayscale" : ""
-                  }`}
-                  draggable={false}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/70 via-transparent to-transparent" />
-                <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
-                  <span className="bg-[#0a0a0a]/85 backdrop-blur-sm border border-[#4d4635] px-3 py-1.5 se-label text-[9px] tracking-[0.32em] text-[#f2ca50]">
-                    Chapter · {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {isExpired && <StatusBadge status="archived" />}
-                  {isLive && <StatusBadge status="live" />}
-                  {isUpcoming && <StatusBadge status="pending" label="Soon" />}
-                </div>
-                <div className="absolute bottom-4 right-4">
-                  <ArrowUpRight
-                    size={20}
-                    strokeWidth={1.25}
-                    className="text-[#f2ca50] transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
-                  />
-                </div>
-              </Link>
-
-              {/* COPY */}
-              <div
-                className={`lg:col-span-5 flex flex-col justify-end pb-2 lg:pb-6 ${
-                  mirror ? "lg:order-1" : ""
-                }`}
-              >
-                <Eyebrow tone="muted" size="xs">
-                  {drop?.products?.length ?? 0} pieces
-                </Eyebrow>
-                <h3 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-4xl lg:text-5xl leading-tight">
-                  {drop?.name || "Untitled chapter"}
-                </h3>
-                <Hairline className="mt-5 max-w-[60px]" tone="strong" />
-                <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed max-w-md line-clamp-3">
-                  {drop?.description ||
-                    "Open the chapter to read every piece in this release."}
-                </p>
-
-                {/* Status / Countdown */}
-                <div className="mt-7">
-                  {isUpcoming && target && (
-                    <Countdown
-                      target={target}
-                      variant="compact"
-                      showSeconds={false}
-                      eyebrow="Opens in"
-                    />
-                  )}
-                  {isLive && target && (
-                    <Countdown
-                      target={target}
-                      variant="compact"
-                      showSeconds={false}
-                      eyebrow="Closes in"
-                    />
-                  )}
-                  {isExpired && (
-                    <Eyebrow tone="muted" size="xs">
-                      The chapter has passed.
-                    </Eyebrow>
-                  )}
-                </div>
-
-                <div className="mt-7 flex items-center gap-4">
-                  <Link to={`/shopping/drop/${drop.slug}`}>
-                    <Btn variant="outline" iconRight={ArrowRight}>
-                      Open the chapter
-                    </Btn>
-                  </Link>
-                </div>
-              </div>
-            </article>
-          </Reveal>
-        );
-      })}
-    </div>
-  );
-};
-
+}
 export default ProductListing;

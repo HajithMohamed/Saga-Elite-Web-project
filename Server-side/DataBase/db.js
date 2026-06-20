@@ -11,9 +11,21 @@ const connectToDB = async () => {
 
   let mongoUri = process.env.MONGO_DB_URI;
 
-  if (!mongoUri) {
-    logger.error("MONGO_DB_URI is not defined in environment variables");
-    process.exit(1);
+  const looksLikePlaceholder = (uri) =>
+    typeof uri === "string" && /<.*>|<credentials>|<username>|<password>/.test(uri);
+
+  if (!mongoUri || looksLikePlaceholder(mongoUri)) {
+    if (process.env.NODE_ENV !== "production") {
+      const fallback = "mongodb://127.0.0.1:27017/sagaelite";
+      logger.warn(
+        "MONGO_DB_URI is missing or looks like a placeholder; falling back to local MongoDB for development",
+        { fallback }
+      );
+      mongoUri = fallback;
+    } else {
+      logger.error("MONGO_DB_URI is not defined in environment variables");
+      process.exit(1);
+    }
   }
 
   const hasDatabase = /\/[^\/?]+(\?.*)?$/.test(mongoUri);
@@ -51,7 +63,48 @@ const connectToDB = async () => {
       isConnected = false;
     });
   } catch (error) {
-    logger.error("MongoDB connection failed", { error: error.message });
+    logger.error("MongoDB connection failed", { error: error.message, attemptedUri: mongoUri });
+
+    if (process.env.NODE_ENV !== "production" && mongoUri !== "mongodb://127.0.0.1:27017/sagaelite") {
+      const localFallback = "mongodb://127.0.0.1:27017/sagaelite";
+      logger.warn(
+        "Attempting local MongoDB fallback after connection failure",
+        { fallback: localFallback }
+      );
+
+      try {
+        await mongoose.connect(localFallback, {
+          serverSelectionTimeoutMS: 5000,
+          maxPoolSize: 10,
+        });
+
+        isConnected = mongoose.connection.readyState === 1;
+
+        if (isConnected) {
+          logger.info("MongoDB connected successfully", {
+            database: mongoose.connection.db.databaseName,
+            host: mongoose.connection.host,
+          });
+        }
+
+        mongoose.connection.on("error", (err) => {
+          logger.error("MongoDB connection error", { error: err });
+          isConnected = false;
+        });
+
+        mongoose.connection.on("disconnected", () => {
+          logger.warn("MongoDB disconnected; will attempt to reconnect on next use");
+          isConnected = false;
+        });
+
+        return;
+      } catch (fallbackError) {
+        logger.error("Local MongoDB fallback also failed", {
+          error: fallbackError.message,
+        });
+      }
+    }
+
     process.exit(1);
   }
 };
