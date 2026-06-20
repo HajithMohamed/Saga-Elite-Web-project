@@ -144,14 +144,7 @@ function App() {
     : "/shopping/home";
 
   useEffect(() => {
-    const hasLocalToken =
-      typeof window !== "undefined" && Boolean(localStorage.getItem("authToken"));
-    const hasCookieToken =
-      typeof document !== "undefined" && document.cookie.includes("token=");
-
-    if (hasLocalToken || hasCookieToken) {
-      dispatch(checkAuthAction());
-    }
+    dispatch(checkAuthAction());
   }, [dispatch]);
 
   useEffect(() => {

@@ -24,7 +24,7 @@ const fireEvent = (eventName, payload = {}) => {
 
 const initialState = {
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   user: null,
 };
 
