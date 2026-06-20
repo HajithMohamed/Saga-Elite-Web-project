@@ -1,4 +1,5 @@
 const SiteConfig = require("../Models/SiteConfig");
+const { POLICY_SEED_VALUES } = require("./legal-policy-seed-html");
 
 const DEFAULT_ABOUT_ROWS = [
   {
@@ -49,6 +50,47 @@ const DEFAULT_ABOUT_ROWS = [
     key: "about_team_subtext",
     label: "Team Section Subtext",
     value: "Team imagery coming soon — the spotlight is on you.",
+  },
+  {
+    key: "shop_hero_eyebrow",
+    label: "About Hero Eyebrow",
+    value: "Sri Lanka · Drop culture",
+  },
+  {
+    key: "shop_hero_headline",
+    label: "About Hero Headline",
+    value: "Rare fit, forever.",
+  },
+  {
+    key: "footer_brand_description",
+    label: "Footer Brand Description",
+    value:
+      "Limited edition fashion inspired by street culture, exclusivity, and modern youth identity — proudly made in Sri Lanka.",
+  },
+  {
+    key: "footer_copyright",
+    label: "Footer Copyright",
+    value: "© {year} Saga Elite. All rights reserved.",
+  },
+  {
+    key: "policy_terms",
+    label: "Terms & Conditions Policy",
+    value: POLICY_SEED_VALUES.policy_terms,
+  },
+  {
+    key: "policy_privacy",
+    label: "Privacy Policy",
+    value: POLICY_SEED_VALUES.policy_privacy,
+  },
+  {
+    key: "policy_refund",
+    label: "Refund Policy",
+    value: POLICY_SEED_VALUES.policy_refund,
+  },
+  {
+    key: "policy_shipping",
+    label: "Delivery Policy",
+    value: POLICY_SEED_VALUES.policy_shipping,
   },
   {
     key: "bank_details",

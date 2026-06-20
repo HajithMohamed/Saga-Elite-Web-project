@@ -106,6 +106,7 @@ const ROUTE_META = [
   { match: /^\/legal\/privacy-policy$/, title: "Privacy Policy" },
   { match: /^\/legal\/terms-and-conditions$/, title: "Terms & Conditions" },
   { match: /^\/legal\/refund-policy$/, title: "Refund Policy" },
+  { match: /^\/legal\/delivery-policy$/, title: "Delivery Policy" },
   { match: /^\/auth\/forgot-password$/, title: "Reset Access" },
   { match: /^\/auth\/verify-reset-otp$/, title: "Verify Reset Code" },
   { match: /^\/auth\/reset-password-otp$/, title: "Verify Reset Code" },

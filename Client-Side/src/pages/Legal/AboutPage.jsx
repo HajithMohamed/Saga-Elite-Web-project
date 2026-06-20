@@ -8,7 +8,22 @@ import {
   useScroll,
   useSpring,
 } from "framer-motion";
-import { ArrowRight, ArrowUpRight, Mail, MapPin } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Mail,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Heart,
+  Zap,
+  Award,
+  Leaf,
+  Globe,
+  Crown,
+  Users,
+} from "lucide-react";
 import usePageMeta from "@/hooks/use-page-meta";
 import { CONTACT_INFO as CONTACT_INFO_FALLBACK } from "@/config";
 import useShopAbout from "@/hooks/use-shop-about";
@@ -18,20 +33,22 @@ import {
   Btn,
   Eyebrow,
   Hairline,
-  Img,
   Marquee,
-  PullQuote,
   Reveal,
 } from "@/components/ui/editorial";
 
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1800&q=80&auto=format&fit=crop";
-const PROCESS_IMAGE =
-  "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1800&q=80&auto=format&fit=crop";
-const FOUNDER_IMAGE =
-  "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1200&q=80&auto=format&fit=crop";
-const ATELIER_IMAGE =
-  "https://images.unsplash.com/photo-1558769132-92e28c91c6f9?w=1200&q=80&auto=format&fit=crop";
+const VALUE_ICON_MAP = {
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Heart,
+  Zap,
+  Award,
+  Leaf,
+  Globe,
+  Crown,
+  Users,
+};
 
 const useAnimatedNumber = (target, suffix = "", duration = 2.0) => {
   const reduced = useReducedMotion();
@@ -59,6 +76,29 @@ const useAnimatedNumber = (target, suffix = "", duration = 2.0) => {
     ref,
     display: typeof target === "number" ? `${value}${suffix}` : target,
   };
+};
+
+const StatCell = ({ stat, index }) => {
+  const raw = stat.number ?? stat.value ?? "";
+  const suffix = stat.suffix || "";
+  const isNumeric = typeof raw === "number" || /^\d+$/.test(String(raw));
+  const numericTarget = isNumeric ? Number(raw) : null;
+  const animated = useAnimatedNumber(numericTarget ?? 0, suffix);
+
+  const display = isNumeric
+    ? animated.display
+    : `${raw}${suffix}`;
+
+  return (
+    <div ref={isNumeric ? animated.ref : undefined} className="bg-[#0e0e0e] p-5 md:p-7">
+      <span className="block se-serif text-[#fafafa] text-5xl md:text-7xl tabular-nums leading-none">
+        {display}
+      </span>
+      <Eyebrow tone="muted" size="xs" className="block mt-4">
+        {stat.label || ""}
+      </Eyebrow>
+    </div>
+  );
 };
 
 const InstagramGlyph = (props) => (
@@ -100,47 +140,26 @@ const ScrollProgress = () => {
   );
 };
 
-const VALUES = [
-  {
-    n: "01",
-    title: "Slowly",
-    body:
-      "Each piece passes one bench at a time. The cutter, the seamster, the finisher. Nothing is rushed because nothing is restocked.",
-  },
-  {
-    n: "02",
-    title: "Honestly",
-    body:
-      "We tell you where the wool came from, who finished the buttonhole, how many remain. The price is what it costs to make it well.",
-  },
-  {
-    n: "03",
-    title: "Once",
-    body:
-      "Eighty-four pieces a chapter. When they are gone, they are gone. There is something quiet about a thing that exists only once.",
-  },
-];
-
-const MATERIALS = [
-  ["Wool", "Itoi Mill, Biella · Japan"],
-  ["Cotton", "Long-staple, southern coast · Sri Lanka"],
-  ["Linings", "Viscose-cupro twill · Lyon"],
-  ["Buttons", "Corozo nut · finished by hand in Battaramulla"],
-  ["Lining stitch", "Hand-prick · 9 stitches per inch"],
-  ["Thread", "Gütermann silk · 30/2"],
-];
+const BrandColorBlock = ({ className = "" }) => (
+  <div
+    className={`w-full h-full bg-gradient-to-br from-[#1a1810] via-[#0a0a0a] to-[#0e0e0e] ${className}`}
+    aria-hidden="true"
+  >
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_40%,rgba(242,202,80,0.12),transparent_60%)]" />
+  </div>
+);
 
 const AboutPage = () => {
   usePageMeta({
     title: "About",
     description:
-      "Saga Elite — an atelier of limited-edition streetwear, made in Sri Lanka.",
+      "Saga Elite — a proudly Sri Lankan fashion and lifestyle brand built on drop culture and community.",
   });
 
-  // Merge siteConfig (admin-edited shop content) with the literal fallback.
-  // Each field falls through to CONTACT_INFO_FALLBACK if unset, so partial
-  // migration never breaks the page.
-  const { data: about } = useShopAbout();
+  const { data: about, loading } = useShopAbout();
+  const reduced = useReducedMotion();
+  const [logoUrl, setLogoUrl] = useState(null);
+
   const CONTACT_INFO = useMemo(
     () => ({
       email: about?.shop_contact_email || CONTACT_INFO_FALLBACK.email,
@@ -154,9 +173,7 @@ const AboutPage = () => {
       hours:
         Array.isArray(about?.shop_hours) && about.shop_hours.length > 0
           ? about.shop_hours
-              .map((h) => `${h.day || ""}: ${h.hours || ""}`.trim())
-              .join(" | ")
-          : CONTACT_INFO_FALLBACK.hours,
+          : null,
       socials: {
         instagram:
           about?.shop_social_instagram || CONTACT_INFO_FALLBACK.socials.instagram,
@@ -168,15 +185,43 @@ const AboutPage = () => {
     [about]
   );
 
-  const reduced = useReducedMotion();
-  const [logoUrl, setLogoUrl] = useState(null);
+  const heroEyebrow = about?.shop_hero_eyebrow?.trim() || "";
+  const heroHeadline = about?.shop_hero_headline?.trim() || "";
+  const brandStory = useMemo(
+    () =>
+      (Array.isArray(about?.about_brand_story) ? about.about_brand_story : [])
+        .map((p) => (typeof p === "string" ? p : p?.text || ""))
+        .filter(Boolean),
+    [about?.about_brand_story]
+  );
+  const stats = useMemo(
+    () => (Array.isArray(about?.about_stats) ? about.about_stats : []).filter((s) => s?.label),
+    [about?.about_stats]
+  );
+  const values = useMemo(
+    () =>
+      (Array.isArray(about?.about_values) ? about.about_values : []).filter(
+        (v) => v?.title
+      ),
+    [about?.about_values]
+  );
+  const materials = useMemo(
+    () =>
+      (Array.isArray(about?.shop_materials) ? about.shop_materials : []).filter(
+        (m) => m?.name?.trim()
+      ),
+    [about?.shop_materials]
+  );
 
-  const statPieces = useAnimatedNumber(84);
-  const statCountries = useAnimatedNumber(93);
-  const statChapters = useAnimatedNumber(14);
-  const statHours = useAnimatedNumber(36);
+  const hasFounder =
+    about?.shop_founder_name?.trim() &&
+    about?.shop_founder_bio?.trim() &&
+    about?.shop_founder_photo_url?.trim();
+
+  const heroImage = about?.shop_logo_url || logoUrl;
 
   useEffect(() => {
+    if (about?.shop_logo_url) return;
     axios
       .get(`${API_BASE}/image/get-logo-images`)
       .then((res) => {
@@ -184,568 +229,378 @@ const AboutPage = () => {
         if (url) setLogoUrl(url);
       })
       .catch(() => {});
-  }, []);
+  }, [about?.shop_logo_url]);
+
+  const marqueeItems = useMemo(() => {
+    if (stats.length > 0) {
+      return stats.map((s) => `${s.number ?? s.value ?? ""}${s.suffix || ""} ${s.label}`.trim());
+    }
+    return ["Made in Sri Lanka", "Limited drops", "Rare fit forever"];
+  }, [stats]);
+
+  const headlineWords = heroHeadline ? heroHeadline.split(/\s+/) : [];
+
+  if (loading && !about?.about_brand_story) {
+    return (
+      <div className="bg-[#0a0a0a] text-[#e5e2e1] min-h-screen flex items-center justify-center">
+        <div className="animate-pulse se-body text-[#574500]">Loading…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen overflow-x-hidden">
       <ScrollProgress />
 
-      {/* HERO ── editorial cover */}
-      <section className="relative min-h-[88vh] md:min-h-[92vh] overflow-hidden flex items-end">
-        {/* Background image with slow zoom */}
+      {/* HERO */}
+      <section className="relative min-h-[75vh] md:min-h-[85vh] overflow-hidden flex items-end">
         <motion.div
           className="absolute inset-0 overflow-hidden"
-          initial={{ scale: 1.08, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: reduced ? 0.4 : 1.6, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <img
-            src={HERO_IMAGE}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="eager"
-          />
-          <motion.div
-            className="absolute inset-0"
-            animate={!reduced ? { scale: [1, 1.04] } : {}}
-            transition={{ duration: 22, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/70 via-transparent to-[#0a0a0a]/40" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_25%,rgba(242,202,80,0.08),transparent_55%)]" />
-        </motion.div>
-
-        {/* Hairline frame */}
-        {[
-          { c: "top-3 md:top-6 left-3 md:left-6 right-3 md:right-6 h-px origin-left", k: "scaleX", t: 0.1 },
-          { c: "bottom-3 md:bottom-6 left-3 md:left-6 right-3 md:right-6 h-px origin-right", k: "scaleX", t: 0.2 },
-          { c: "top-3 md:top-6 bottom-3 md:bottom-6 left-3 md:left-6 w-px origin-top", k: "scaleY", t: 0.25 },
-          { c: "top-3 md:top-6 bottom-3 md:bottom-6 right-3 md:right-6 w-px origin-bottom", k: "scaleY", t: 0.3 },
-        ].map((f, i) => (
-          <motion.div
-            key={i}
-            className={`absolute ${f.c} bg-[#e5e2e1]/15`}
-            initial={{ [f.k]: 0 }}
-            animate={{ [f.k]: 1 }}
-            transition={{ duration: 1, delay: f.t, ease: [0.65, 0, 0.35, 1] }}
-          />
-        ))}
-
-        {/* Top corner labels */}
-        <motion.div
-          className="absolute top-8 md:top-12 left-8 md:left-12 right-8 md:right-12 flex items-start justify-between"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-        >
-          <Eyebrow tone="muted" size="sm">EST · MMXXVI · COLOMBO</Eyebrow>
-          <Eyebrow tone="muted" size="sm">Origin · The Atelier</Eyebrow>
-        </motion.div>
-
-        {/* Lockup */}
-        <div className="relative w-full px-5 md:px-12 lg:px-16 pb-16 md:pb-20 lg:pb-28 max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Eyebrow tone="gold" size="md">About · The atelier</Eyebrow>
-          </motion.div>
-
-          <h1 className="mt-5 md:mt-7 se-serif text-[#fafafa] leading-[0.92] text-5xl sm:text-7xl md:text-[110px] lg:text-[140px] max-w-5xl">
-            <span className="block overflow-hidden">
-              <motion.span
-                className="block"
-                initial={{ y: "110%" }}
-                animate={{ y: "0%" }}
-                transition={{ duration: 0.85, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              >
-                Quietly
-              </motion.span>
-            </span>
-            <span className="block overflow-hidden">
-              <motion.span
-                className="block"
-                initial={{ y: "110%" }}
-                animate={{ y: "0%" }}
-                transition={{ duration: 0.85, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
-              >
-                made.
-              </motion.span>
-            </span>
-          </h1>
-
-          <motion.div
-            className="mt-7 md:mt-9 h-px bg-[#f2ca50] origin-left"
-            style={{ width: 84 }}
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.7, delay: 1.05, ease: [0.65, 0, 0.35, 1] }}
-          />
-
-          <motion.p
-            className="mt-6 max-w-xl se-body text-[#d0c5af] text-base md:text-lg leading-relaxed"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 1.2 }}
-          >
-            An atelier of limited-edition streetwear, made by hand in Sri Lanka and sent to
-            ninety-three countries. Eighty-four pieces a chapter. Nothing restocks.
-          </motion.p>
-
-          <motion.div
-            className="mt-10 flex flex-wrap items-center gap-4"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 1.35 }}
-          >
-            <Link to="/shopping/product-list">
-              <Btn variant="default" iconRight={ArrowRight}>Read this chapter</Btn>
-            </Link>
-            <Link to="/contact">
-              <Btn variant="outline">Visit the atelier</Btn>
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Bottom-left chapter mark */}
-        <motion.div
-          className="absolute bottom-3 md:bottom-6 left-8 md:left-12 flex items-center gap-2 se-mono text-[10px] text-[#574500]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 1.6 }}
+          transition={{ duration: reduced ? 0.3 : 0.8 }}
         >
-          <motion.span
-            className="w-1.5 h-1.5 rounded-full bg-[#f2ca50]"
-            animate={!reduced ? { opacity: [1, 0.3, 1] } : {}}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-          />
-          Open by appointment
+          {heroImage ? (
+            <img
+              src={heroImage}
+              alt=""
+              className="w-full h-full object-contain object-center opacity-30"
+              loading="eager"
+            />
+          ) : (
+            <BrandColorBlock />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/70 to-[#0a0a0a]/40" />
         </motion.div>
+
+        <div className="relative w-full px-5 md:px-12 lg:px-16 pb-16 md:pb-20 max-w-7xl">
+          {heroEyebrow ? (
+            <Reveal>
+              <Eyebrow tone="gold" size="md">{heroEyebrow}</Eyebrow>
+            </Reveal>
+          ) : null}
+
+          {heroHeadline ? (
+            <h1 className="mt-5 md:mt-7 se-serif text-[#fafafa] leading-[0.92] text-5xl sm:text-6xl md:text-8xl max-w-5xl">
+              {headlineWords.length > 1 ? (
+                headlineWords.map((word, i) => (
+                  <span key={i} className="block overflow-hidden">
+                    <motion.span
+                      className="block"
+                      initial={{ y: "110%" }}
+                      animate={{ y: "0%" }}
+                      transition={{
+                        duration: 0.85,
+                        delay: 0.2 + i * 0.12,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                    >
+                      {word}
+                    </motion.span>
+                  </span>
+                ))
+              ) : (
+                <span>{heroHeadline}</span>
+              )}
+            </h1>
+          ) : (
+            <h1 className="mt-5 se-serif text-[#fafafa] text-5xl md:text-7xl">About Saga Elite</h1>
+          )}
+
+          {brandStory[0] ? (
+            <Reveal delay={0.2}>
+              <p className="mt-6 max-w-xl se-body text-[#d0c5af] text-base md:text-lg leading-relaxed">
+                {brandStory[0]}
+              </p>
+            </Reveal>
+          ) : null}
+
+          <Reveal delay={0.3}>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Link to="/shopping/product-list">
+                <Btn variant="default" iconRight={ArrowRight}>Shop drops</Btn>
+              </Link>
+              <Link to="/contact">
+                <Btn variant="outline">Contact us</Btn>
+              </Link>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
-      {/* VALUES MARQUEE */}
-      <Marquee
-        tone="gold"
-        items={[
-          "Eighty-four pieces a chapter",
-          "Made in Sri Lanka",
-          "Hand-finished in Battaramulla",
-          "No restock",
-          "Ninety-three countries",
-          "Members enter first",
-        ]}
-      />
+      {marqueeItems.length > 0 ? <Marquee tone="gold" items={marqueeItems} /> : null}
 
-      {/* BRAND MOMENT ── animated solar logo */}
+      {/* LOGO MOMENT */}
       <section className="relative bg-[#0a0a0a] border-b border-[#4d4635]/40 overflow-hidden">
-        {/* Soft ambient gold gradient backdrop */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 50%, rgba(242,202,80,0.06) 0%, rgba(212,175,55,0.02) 40%, transparent 70%)",
-          }}
-        />
-        {/* Subtle grain */}
-        <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), radial-gradient(rgba(0,0,0,0.4) 1px, transparent 1px)",
-            backgroundSize: "3px 3px, 4px 4px",
-            backgroundPosition: "0 0, 1px 2px",
-          }}
-        />
-
         <div className="relative px-5 md:px-12 py-20 md:py-28 max-w-7xl mx-auto flex flex-col items-center">
           <Reveal>
-            <Eyebrow tone="gold" size="md">The atelier</Eyebrow>
+            <Eyebrow tone="gold" size="md">
+              {about?.shop_brand_name || "Saga Elite"}
+            </Eyebrow>
           </Reveal>
-          <Reveal delay={0.06}>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] text-center leading-[1.0] text-2xl md:text-4xl max-w-md mx-auto">
-              A small house, a slow orbit.
-            </h2>
-          </Reveal>
-
           <div className="mt-12 md:mt-16 flex justify-center">
             <AnimatedLogo
               diameter={420}
-              eyebrow="EST · MMXXVI · COLOMBO"
+              eyebrow={about?.shop_tagline || "RARE FIT FOREVER"}
               caption="MADE IN SRI LANKA"
             />
           </div>
-
-          <Reveal delay={0.4}>
-            <div className="mt-20 md:mt-24 flex items-center gap-4">
-              <Hairline tone="strong" className="w-10" />
-              <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
-                Sent to ninety-three countries
-              </span>
-              <Hairline tone="strong" className="w-10" />
-            </div>
-          </Reveal>
         </div>
       </section>
 
-      {/* ORIGIN ── 7/5 split */}
-      <section className="px-5 md:px-12 py-16 md:py-28 lg:py-32 max-w-7xl mx-auto">
-        <Reveal>
-          <Eyebrow tone="gold" size="md">Origin</Eyebrow>
-          <h2 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl lg:text-6xl max-w-3xl">
-            We began with a question, not a collection.
-          </h2>
-        </Reveal>
-
-        <div className="mt-12 md:mt-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-          <Reveal className="lg:col-span-7">
-            <div className="relative" style={{ aspectRatio: "4/5" }}>
-              <img
-                src={FOUNDER_IMAGE}
-                alt="Hajith de Silva, founder"
-                className="w-full h-full object-cover border border-[#4d4635]"
-                loading="lazy"
-              />
-              <div className="absolute -bottom-3 -right-3 bg-[#0a0a0a] border border-[#4d4635] px-4 py-3">
-                <Eyebrow tone="muted" size="xs">Hajith de Silva</Eyebrow>
-                <div className="mt-1 se-body text-xs text-[#d0c5af]">Founder · Cutter</div>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal className="lg:col-span-5 lg:pt-12" delay={0.1}>
-            <Eyebrow tone="muted" size="xs">A note from the atelier</Eyebrow>
-            <p className="mt-4 se-body text-[#e5e2e1] text-base md:text-lg leading-[1.7]">
-              Could clothing be made the way it was — by hand, in small numbers, by
-              people who wear it themselves — and still arrive in front of a customer
-              today? That was the question.
-            </p>
-            <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-[1.7]">
-              We opened the atelier in early MMXXVI on the second floor of a quiet
-              building in Battaramulla. There were three sewing machines, two cutting
-              tables, and a kettle. We made the first piece, the Tally Coat, by
-              hand, signed it inside the placket, and posted a single photograph
-              the next morning. It sold to a customer in Mirissa within an hour.
-            </p>
-            <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-[1.7]">
-              The rule has not changed since: nothing leaves the atelier without
-              someone in it. Nothing restocks. Each chapter is photographed,
-              numbered, and released as a single drop. When it is finished, it
-              is finished.
-            </p>
-
-            <div className="mt-8 flex items-center gap-3">
-              <Hairline tone="strong" className="w-12" />
-              <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
-                Battaramulla · MMXXVI
-              </span>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* LEDGER ── animated stat row */}
-      <section className="border-y border-[#4d4635]/40 bg-[#0e0e0e]">
-        <div className="px-5 md:px-12 py-12 md:py-16 max-w-7xl mx-auto">
+      {/* BRAND STORY */}
+      {brandStory.length > 0 ? (
+        <section className="px-5 md:px-12 py-16 md:py-28 max-w-4xl mx-auto">
           <Reveal>
-            <Eyebrow tone="gold" size="md">The ledger</Eyebrow>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] text-2xl md:text-4xl">
-              Numbers, kept honestly.
+            <Eyebrow tone="gold" size="md">Our story</Eyebrow>
+            <h2 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-5xl leading-tight">
+              Who we are
             </h2>
           </Reveal>
-
-          <div className="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-px bg-[#4d4635]/40">
-            {[
-              { n: statPieces, label: "Pieces this chapter", hint: "Tide & Tally · 14" },
-              { n: statCountries, label: "Countries shipped to", hint: "Across six continents" },
-              { n: statChapters, label: "Chapters released", hint: "Since opening" },
-              { n: statHours, label: "Hours per piece", hint: "Cut, sewn, finished" },
-            ].map((s, i) => (
-              <div
-                key={i}
-                ref={s.n.ref}
-                className="bg-[#0e0e0e] p-5 md:p-7"
-              >
-                <span className="block se-serif text-[#fafafa] text-5xl md:text-7xl tabular-nums leading-none">
-                  {s.n.display}
-                </span>
-                <Eyebrow tone="muted" size="xs" className="block mt-4">
-                  {s.label}
-                </Eyebrow>
-                <span className="block mt-2 se-body text-xs text-[#574500]">
-                  {s.hint}
-                </span>
-              </div>
+          <div className="mt-8 space-y-5">
+            {brandStory.map((para, i) => (
+              <Reveal key={i} delay={i * 0.06}>
+                <p className="se-body text-[#d0c5af] text-base md:text-lg leading-[1.7]">
+                  {para}
+                </p>
+              </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="px-5 md:px-12 py-16 max-w-4xl mx-auto">
+          <p className="se-body text-[#574500] text-center">
+            Brand story content will appear here once configured in the admin.
+          </p>
+        </section>
+      )}
 
-      {/* PULL QUOTE ── full-bleed image */}
-      <section className="relative">
-        <div className="relative h-[420px] md:h-[640px] overflow-hidden">
-          <img
-            src={PROCESS_IMAGE}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/95 via-[#0a0a0a]/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/80 via-transparent to-transparent" />
-        </div>
-        <div className="px-5 md:px-12 py-12 md:py-20 max-w-4xl mx-auto md:-mt-32 relative">
-          <PullQuote attribution="Hajith de Silva, founder">
-            We do not chase the season. We do not chase anyone.
-            A piece is finished when it is finished.
-          </PullQuote>
-        </div>
-      </section>
+      {/* STATS */}
+      {stats.length > 0 ? (
+        <section className="border-y border-[#4d4635]/40 bg-[#0e0e0e]">
+          <div className="px-5 md:px-12 py-12 md:py-16 max-w-7xl mx-auto">
+            <Reveal>
+              <Eyebrow tone="gold" size="md">By the numbers</Eyebrow>
+            </Reveal>
+            <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-px bg-[#4d4635]/40">
+              {stats.map((stat, i) => (
+                <StatCell key={i} stat={stat} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
-      {/* THREE VALUES */}
-      <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-        <Reveal>
-          <Eyebrow tone="gold" size="md">House rules</Eyebrow>
-          <h2 className="mt-3 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl lg:text-6xl max-w-3xl">
-            Three principles,<br />held quietly.
-          </h2>
-        </Reveal>
+      {/* VALUES */}
+      {values.length > 0 ? (
+        <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
+          <Reveal>
+            <Eyebrow tone="gold" size="md">What we stand for</Eyebrow>
+            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Our values</h2>
+          </Reveal>
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
+            {values.map((v, i) => {
+              const Icon = VALUE_ICON_MAP[v.icon] || Sparkles;
+              const body = v.desc || v.body || "";
+              return (
+                <Reveal key={i} delay={i * 0.08} className="bg-[#0a0a0a]">
+                  <div className="p-7 md:p-10 h-full flex flex-col">
+                    <Icon className="h-8 w-8 text-[#f2ca50]" strokeWidth={1.25} />
+                    <h3 className="mt-6 se-headline text-[#e5e2e1] text-2xl md:text-3xl">
+                      {v.title}
+                    </h3>
+                    <Hairline className="mt-5" />
+                    {body ? (
+                      <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed">
+                        {body}
+                      </p>
+                    ) : null}
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
-        <div className="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
-          {VALUES.map((v, i) => (
-            <Reveal key={v.n} delay={i * 0.08} className="bg-[#0a0a0a]">
-              <div className="p-7 md:p-10 h-full flex flex-col">
-                <span className="se-serif text-[#f2ca50] text-7xl md:text-8xl tabular-nums leading-none">
-                  {v.n}
-                </span>
-                <h3 className="mt-8 se-headline text-[#e5e2e1] text-3xl md:text-4xl">
-                  {v.title}
-                </h3>
-                <Hairline className="mt-5" />
-                <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed">
-                  {v.body}
-                </p>
+      {/* FOUNDER — only when fully configured */}
+      {hasFounder ? (
+        <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto border-t border-[#4d4635]/40">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+            <Reveal className="lg:col-span-5">
+              <div className="relative" style={{ aspectRatio: "4/5" }}>
+                <img
+                  src={about.shop_founder_photo_url}
+                  alt={about.shop_founder_name}
+                  className="w-full h-full object-cover border border-[#4d4635]"
+                  loading="lazy"
+                />
               </div>
             </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* MATERIALS LEDGER */}
-      <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
-        <div className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
-            <Reveal className="lg:col-span-5">
-              <Eyebrow tone="gold" size="md">The materials</Eyebrow>
-              <h2 className="mt-3 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-                Sourced<br />by hand.
+            <Reveal className="lg:col-span-7 lg:pt-8" delay={0.1}>
+              <Eyebrow tone="gold" size="md">Founder</Eyebrow>
+              <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
+                {about.shop_founder_name}
               </h2>
-              <p className="mt-6 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed max-w-md">
-                Every piece begins with where its parts come from. We tell you because
-                you are buying a thing made of other things, and you should know.
+              {about.shop_founder_title ? (
+                <p className="mt-2 se-body text-[#99907c]">{about.shop_founder_title}</p>
+              ) : null}
+              <p className="mt-6 se-body text-[#d0c5af] text-base leading-[1.7] whitespace-pre-line">
+                {about.shop_founder_bio}
               </p>
             </Reveal>
+          </div>
+        </section>
+      ) : null}
 
-            <Reveal className="lg:col-span-7" delay={0.08}>
-              <div className="border border-[#4d4635]">
-                {MATERIALS.map(([k, v], i) => (
-                  <div
-                    key={k}
-                    className={`flex items-baseline justify-between gap-6 px-5 md:px-7 py-5 ${
-                      i < MATERIALS.length - 1 ? "border-b border-[#4d4635]/60" : ""
-                    }`}
-                  >
-                    <Eyebrow tone="muted" size="xs">{k}</Eyebrow>
-                    <span className="se-body text-sm md:text-base text-[#e5e2e1] text-right max-w-[60%]">
-                      {v}
-                    </span>
-                  </div>
-                ))}
-              </div>
+      {/* MATERIALS — only when configured */}
+      {materials.length > 0 ? (
+        <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
+          <div className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
+            <Reveal>
+              <Eyebrow tone="gold" size="md">Materials</Eyebrow>
+              <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">What we use</h2>
             </Reveal>
+            <div className="mt-10 border border-[#4d4635]">
+              {materials.map((m, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 px-5 md:px-7 py-5 ${
+                    i < materials.length - 1 ? "border-b border-[#4d4635]/60" : ""
+                  }`}
+                >
+                  <Eyebrow tone="muted" size="xs">{m.name}</Eyebrow>
+                  {m.description ? (
+                    <span className="se-body text-sm md:text-base text-[#e5e2e1] sm:text-right sm:max-w-[60%]">
+                      {m.description}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* VISIT */}
+      <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
+        <Reveal>
+          <Eyebrow tone="gold" size="md">Visit</Eyebrow>
+          <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Get in touch</h2>
+        </Reveal>
+        <div className="mt-10 border border-[#4d4635] max-w-xl">
+          <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
+            <Eyebrow tone="muted" size="xs">Where</Eyebrow>
+            <span className="se-body text-sm text-[#e5e2e1] text-right">
+              {CONTACT_INFO.addressLine1}
+              {CONTACT_INFO.addressLine2 ? `, ${CONTACT_INFO.addressLine2}` : ""}
+            </span>
+          </div>
+          {CONTACT_INFO.hours ? (
+            <div className="px-5 py-4 border-b border-[#4d4635]/60">
+              <Eyebrow tone="muted" size="xs">Business hours</Eyebrow>
+              <ul className="mt-3 space-y-2">
+                {CONTACT_INFO.hours.map((row, i) => (
+                  <li key={i} className="flex justify-between gap-4 text-sm">
+                    <span className="text-[#99907c]">{row.day}</span>
+                    <span className="se-mono text-[#e5e2e1] tabular-nums">{row.hours}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
+            <Eyebrow tone="muted" size="xs">Email</Eyebrow>
+            <a
+              href={`mailto:${CONTACT_INFO.email}`}
+              className="se-mono text-sm text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+            >
+              {CONTACT_INFO.email}
+            </a>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 px-5 py-4">
+            <Eyebrow tone="muted" size="xs">Phone</Eyebrow>
+            <a href={`tel:${CONTACT_INFO.phone}`} className="se-mono text-sm text-[#e5e2e1]">
+              {CONTACT_INFO.phone}
+            </a>
           </div>
         </div>
-      </section>
-
-      {/* ATELIER ADDRESS ── hairline location card */}
-      <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-stretch">
-          <Reveal className="lg:col-span-7">
-            <div className="relative" style={{ aspectRatio: "4/3" }}>
-              <img
-                src={ATELIER_IMAGE}
-                alt="The atelier"
-                className="w-full h-full object-cover border border-[#4d4635]"
-                loading="lazy"
-              />
-              <div className="absolute top-4 left-4 bg-[#0a0a0a]/85 backdrop-blur-sm border border-[#4d4635] px-3 py-2">
-                <Eyebrow tone="gold" size="xs">The atelier</Eyebrow>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal className="lg:col-span-5" delay={0.08}>
-            <Eyebrow tone="gold" size="md">Visit</Eyebrow>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-              By appointment,<br />always.
-            </h2>
-            <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed">
-              The atelier is a workplace, not a shop. Members may visit between
-              nine and seven on Saturdays, by appointment. We will pour something.
-            </p>
-
-            <div className="mt-8 border border-[#4d4635]">
-              <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
-                <Eyebrow tone="muted" size="xs">Where</Eyebrow>
-                <span className="se-body text-sm text-[#e5e2e1] text-right">
-                  {CONTACT_INFO.addressLine1}, {CONTACT_INFO.addressLine2}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
-                <Eyebrow tone="muted" size="xs">Hours</Eyebrow>
-                <span className="se-body text-xs text-[#d0c5af] text-right max-w-[60%]">
-                  {CONTACT_INFO.hours}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
-                <Eyebrow tone="muted" size="xs">Email</Eyebrow>
-                <a
-                  href={`mailto:${CONTACT_INFO.email}`}
-                  className="se-mono text-sm text-[#f2ca50] hover:text-[#ffe088] transition-colors"
-                >
-                  {CONTACT_INFO.email}
-                </a>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 px-5 py-4">
-                <Eyebrow tone="muted" size="xs">Phone</Eyebrow>
-                <a
-                  href={`tel:${CONTACT_INFO.phone}`}
-                  className="se-mono text-sm text-[#e5e2e1]"
-                >
-                  {CONTACT_INFO.phone}
-                </a>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/contact">
-                <Btn variant="default" icon={Mail}>Reach the atelier</Btn>
-              </Link>
-              <a
-                href={`https://wa.me/${(CONTACT_INFO.whatsapp || "").replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Btn variant="outline" icon={MapPin}>Find on map</Btn>
-              </a>
-            </div>
-          </Reveal>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Link to="/contact">
+            <Btn variant="default" icon={Mail}>Contact us</Btn>
+          </Link>
+          <a
+            href={`https://wa.me/${(CONTACT_INFO.whatsapp || "").replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Btn variant="outline" icon={MapPin}>WhatsApp</Btn>
+          </a>
         </div>
       </section>
 
-      {/* CONNECT ── editorial socials */}
+      {/* SOCIALS */}
       <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
         <div className="px-5 md:px-12 py-16 md:py-24 max-w-7xl mx-auto">
           <Reveal>
             <Eyebrow tone="gold" size="md">Connect</Eyebrow>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-              Read the journal,<br />slowly.
-            </h2>
+            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Follow along</h2>
           </Reveal>
-
-          <div className="mt-12 md:mt-14 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
             {[
-              {
-                href: CONTACT_INFO.socials.instagram,
-                handle: "@sagaaelite",
-                label: "Instagram",
-                Glyph: InstagramGlyph,
-                hint: "Daily photographs",
-              },
-              {
-                href: CONTACT_INFO.socials.facebook,
-                handle: "Saga Elite",
-                label: "Facebook",
-                Glyph: FacebookGlyph,
-                hint: "The longer journal",
-              },
-              {
-                href: CONTACT_INFO.socials.tiktok,
-                handle: "@sagaa_elite",
-                label: "TikTok",
-                Glyph: TikTokGlyph,
-                hint: "From the atelier floor",
-              },
-            ].map((s, i) => (
-              <Reveal key={s.label} delay={i * 0.06} className="bg-[#0a0a0a]">
-                <a
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block p-7 md:p-10 h-full transition-colors hover:bg-[#131313]"
-                >
-                  <div className="flex items-start justify-between">
-                    <s.Glyph className="h-7 w-7 text-[#f2ca50]" />
-                    <ArrowUpRight
-                      size={18}
-                      strokeWidth={1.25}
-                      className="text-[#99907c] transition-all group-hover:text-[#f2ca50] group-hover:translate-x-1 group-hover:-translate-y-1"
-                    />
-                  </div>
-                  <Eyebrow tone="muted" size="xs" className="mt-8 block">
-                    {s.label}
-                  </Eyebrow>
-                  <div className="mt-2 se-headline text-[#e5e2e1] text-2xl md:text-3xl">
-                    {s.handle}
-                  </div>
-                  <Hairline className="mt-5" />
-                  <span className="block mt-5 se-body text-xs md:text-sm text-[#d0c5af]">
-                    {s.hint}
-                  </span>
-                </a>
-              </Reveal>
-            ))}
+              { href: CONTACT_INFO.socials.instagram, label: "Instagram", Glyph: InstagramGlyph },
+              { href: CONTACT_INFO.socials.facebook, label: "Facebook", Glyph: FacebookGlyph },
+              { href: CONTACT_INFO.socials.tiktok, label: "TikTok", Glyph: TikTokGlyph },
+            ]
+              .filter((s) => s.href)
+              .map((s, i) => (
+                <Reveal key={s.label} delay={i * 0.06} className="bg-[#0a0a0a]">
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block p-7 md:p-10 h-full transition-colors hover:bg-[#131313]"
+                  >
+                    <div className="flex items-start justify-between">
+                      <s.Glyph className="h-7 w-7 text-[#f2ca50]" />
+                      <ArrowUpRight
+                        size={18}
+                        strokeWidth={1.25}
+                        className="text-[#99907c] transition-all group-hover:text-[#f2ca50] group-hover:translate-x-1 group-hover:-translate-y-1"
+                      />
+                    </div>
+                    <Eyebrow tone="muted" size="xs" className="mt-8 block">
+                      {s.label}
+                    </Eyebrow>
+                    <Hairline className="mt-5" />
+                  </a>
+                </Reveal>
+              ))}
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA ── next chapter */}
+      {/* CTA */}
       <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
         <Reveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
             <div className="lg:col-span-8">
-              <Eyebrow tone="gold" size="md">Next chapter</Eyebrow>
-              <h2 className="mt-4 se-serif text-[#e5e2e1] leading-[0.95] text-4xl md:text-6xl lg:text-7xl">
-                Become a member.<br />Enter first.
+              <Eyebrow tone="gold" size="md">Join us</Eyebrow>
+              <h2 className="mt-4 se-serif text-[#e5e2e1] text-4xl md:text-6xl leading-tight">
+                Become part of the community
               </h2>
-              <p className="mt-6 se-body text-[#d0c5af] text-base md:text-lg max-w-2xl leading-relaxed">
-                Members receive private viewing thirty-six hours before each chapter
-                opens, an occasional essay, and a private link to the lookbook.
-              </p>
             </div>
-            <div className="lg:col-span-4 flex flex-wrap items-center gap-4 lg:justify-end">
+            <div className="lg:col-span-4 flex flex-wrap gap-4 lg:justify-end">
               <Link to="/auth/register">
-                <Btn variant="default" size="lg" iconRight={ArrowRight}>
-                  Open an account
-                </Btn>
+                <Btn variant="default" size="lg" iconRight={ArrowRight}>Create account</Btn>
               </Link>
               <Link to="/shopping/product-list">
-                <Btn variant="outline" size="lg">
-                  Browse this chapter
-                </Btn>
+                <Btn variant="outline" size="lg">Browse drops</Btn>
               </Link>
             </div>
           </div>
         </Reveal>
       </section>
-
-      {/* Optional brand watermark from logo */}
-      {logoUrl ? (
-        <div
-          className="pointer-events-none fixed inset-x-0 bottom-0 h-32 opacity-[0.025] bg-no-repeat bg-center bg-contain"
-          style={{ backgroundImage: `url(${logoUrl})` }}
-          aria-hidden="true"
-        />
-      ) : null}
     </div>
   );
 };

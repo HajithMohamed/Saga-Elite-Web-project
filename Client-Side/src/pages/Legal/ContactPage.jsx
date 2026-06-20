@@ -18,6 +18,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  ChevronDown,
 } from "lucide-react";
 import usePageMeta from "@/hooks/use-page-meta";
 import { CONTACT_INFO as CONTACT_INFO_FALLBACK } from "@/config";
@@ -33,9 +34,6 @@ import {
   Reveal,
 } from "@/components/ui/editorial";
 
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1558769132-92e28c91c6f9?w=1800&q=80&auto=format&fit=crop";
-
 const SUBJECT_OPTIONS = [
   "Order inquiry",
   "Return request",
@@ -43,12 +41,6 @@ const SUBJECT_OPTIONS = [
   "General question",
   "Press / Wholesale",
   "Other",
-];
-
-const HOURS = [
-  ["Mon — Fri", "09:00 — 18:00"],
-  ["Saturday", "10:00 — 16:00"],
-  ["Sunday", "Closed"],
 ];
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -137,7 +129,7 @@ const ContactPage = () => {
   usePageMeta({
     title: "Contact",
     description:
-      "Reach the Saga Elite atelier — questions, orders, returns, press.",
+      "Contact Saga Elite — questions about orders, returns, delivery, and support.",
   });
 
   // Merge siteConfig (shop owner edits) with the literal fallback. Any field
@@ -154,12 +146,10 @@ const ContactPage = () => {
         [about?.shop_address_city, about?.shop_address_country]
           .filter(Boolean)
           .join(", ") || CONTACT_INFO_FALLBACK.addressLine2,
-      hours:
+      hoursRows:
         Array.isArray(about?.shop_hours) && about.shop_hours.length > 0
-          ? about.shop_hours
-              .map((h) => `${h.day || ""}: ${h.hours || ""}`.trim())
-              .join(" | ")
-          : CONTACT_INFO_FALLBACK.hours,
+          ? about.shop_hours.filter((h) => h?.day || h?.hours)
+          : null,
       socials: {
         instagram:
           about?.shop_social_instagram || CONTACT_INFO_FALLBACK.socials.instagram,
@@ -187,6 +177,20 @@ const ContactPage = () => {
     () => (CONTACT_INFO.whatsapp || "").replace(/\D/g, ""),
     [CONTACT_INFO.whatsapp]
   );
+
+  const faqItems = useMemo(
+    () =>
+      (Array.isArray(about?.faq_items) ? about.faq_items : []).filter(
+        (item) => item?.question?.trim() && item?.answer?.trim()
+      ),
+    [about?.faq_items]
+  );
+
+  const whatsappCta = about?.whatsapp_cta || {};
+  const showSectionWhatsapp =
+    whatsappCta.enabled === true && whatsappCta.displayPosition === "section";
+
+  const [openFaq, setOpenFaq] = useState(null);
   const messageCount = formData.message.length;
   const messageMax = 500;
 
@@ -213,7 +217,7 @@ const ContactPage = () => {
       await axios.post(`${API_BASE}/contact`, formData);
       setStatus({
         type: "success",
-        message: "Your note is with the atelier. We'll write back within hours.",
+        message: "Your message was sent. We'll reply within business hours.",
       });
       setFormData({
         name: "",
@@ -250,17 +254,9 @@ const ContactPage = () => {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: reduced ? 0.4 : 1.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img
-            src={HERO_IMAGE}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="eager"
-          />
-          <motion.div
-            className="absolute inset-0"
-            animate={!reduced ? { scale: [1, 1.04] } : {}}
-            transition={{ duration: 22, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
-          />
+          <div className="w-full h-full bg-gradient-to-br from-[#1a1810] via-[#0a0a0a] to-[#0e0e0e]">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_30%,rgba(242,202,80,0.10),transparent_55%)]" />
+          </div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/75 via-transparent to-[#0a0a0a]/30" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_30%,rgba(242,202,80,0.10),transparent_55%)]" />
@@ -289,8 +285,8 @@ const ContactPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.45 }}
         >
-          <Eyebrow tone="muted" size="sm">Contact · The atelier</Eyebrow>
-          <Eyebrow tone="muted" size="sm">Replies · Within hours</Eyebrow>
+          <Eyebrow tone="muted" size="sm">Contact · Saga Elite</Eyebrow>
+          <Eyebrow tone="muted" size="sm">Support · Mon–Sat</Eyebrow>
         </motion.div>
 
         <div className="relative w-full px-5 md:px-12 lg:px-16 pb-14 md:pb-20 lg:pb-24 max-w-7xl">
@@ -310,7 +306,7 @@ const ContactPage = () => {
                 animate={{ y: "0%" }}
                 transition={{ duration: 0.85, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
               >
-                Write to
+                Contact
               </motion.span>
             </span>
             <span className="block overflow-hidden">
@@ -320,7 +316,7 @@ const ContactPage = () => {
                 animate={{ y: "0%" }}
                 transition={{ duration: 0.85, delay: 0.85, ease: [0.22, 1, 0.36, 1] }}
               >
-                the atelier.
+                us
               </motion.span>
             </span>
           </h1>
@@ -339,8 +335,8 @@ const ContactPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 1.2 }}
           >
-            For orders, returns, press, or simply to ask. Replies arrive between
-            nine and seven, Sri Lankan time — usually within a few hours.
+            For orders, returns, delivery, or general questions. We reply during
+            business hours — usually within a few hours on weekdays.
           </motion.p>
         </div>
 
@@ -356,7 +352,7 @@ const ContactPage = () => {
             animate={!reduced ? { opacity: [1, 0.3, 1] } : {}}
             transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
           />
-          Atelier · Open
+          Open · Business hours
         </motion.div>
       </section>
 
@@ -364,11 +360,9 @@ const ContactPage = () => {
       <Marquee
         tone="gold"
         items={[
-          "Replies within hours",
-          "WhatsApp · 09:00 — 19:00 IST",
+          "Islandwide delivery",
           "Made in Sri Lanka",
-          "Members enter first",
-          "Orders · returns · press",
+          "Orders · returns · support",
         ]}
       />
 
@@ -399,15 +393,15 @@ const ContactPage = () => {
           </Reveal>
           <Reveal delay={0.06}>
             <h2 className="mt-3 se-serif text-[#e5e2e1] text-center leading-[1.0] text-2xl md:text-4xl max-w-lg mx-auto">
-              You're writing to a small atelier — please write at our pace.
+              Questions about an order? We're here to help.
             </h2>
           </Reveal>
 
           <div className="mt-12 md:mt-16 flex justify-center">
             <AnimatedLogo
               diameter={420}
-              eyebrow="ATELIER · OPEN"
-              caption="WE READ EVERY NOTE"
+              eyebrow="SAGA ELITE · SUPPORT"
+              caption="WE READ EVERY MESSAGE"
             />
           </div>
 
@@ -415,7 +409,7 @@ const ContactPage = () => {
             <div className="mt-20 md:mt-24 flex items-center gap-4">
               <Hairline tone="strong" className="w-10" />
               <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
-                Replies within hours · 09:00 — 19:00 IST
+                Replies during business hours
               </span>
               <Hairline tone="strong" className="w-10" />
             </div>
@@ -427,7 +421,8 @@ const ContactPage = () => {
       <section className="px-5 md:px-12 py-16 md:py-24 max-w-7xl mx-auto">
         <Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40">
-            {/* WhatsApp */}
+            {/* WhatsApp — shown when section placement or default */}
+            {showSectionWhatsapp ? (
             <a
               href={
                 whatsappDigits
@@ -454,9 +449,10 @@ const ContactPage = () => {
               </div>
               <Hairline className="mt-5" />
               <span className="block mt-5 se-body text-xs md:text-sm text-[#d0c5af]">
-                Fastest. We reply within an hour during atelier hours.
+                Fastest channel during business hours.
               </span>
             </a>
+            ) : null}
 
             {/* Email */}
             <a
@@ -528,23 +524,33 @@ const ContactPage = () => {
                 numbers, screenshots, the long story. We read every note ourselves.
               </p>
 
-              {/* Hours card */}
+              {/* Business hours */}
               <div className="mt-10 border border-[#4d4635]">
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-[#4d4635]/60">
                   <Clock size={14} strokeWidth={1.5} className="text-[#f2ca50]" />
-                  <Eyebrow tone="gold" size="xs">Atelier hours</Eyebrow>
+                  <Eyebrow tone="gold" size="xs">Business hours</Eyebrow>
                 </div>
-                {HOURS.map(([k, v], i) => (
-                  <div
-                    key={k}
-                    className={`flex items-baseline justify-between gap-4 px-5 py-3 ${
-                      i < HOURS.length - 1 ? "border-b border-[#4d4635]/60" : ""
-                    }`}
-                  >
-                    <Eyebrow tone="muted" size="xs">{k}</Eyebrow>
-                    <span className="se-mono text-sm text-[#e5e2e1] tabular-nums">{v}</span>
+                {CONTACT_INFO.hoursRows ? (
+                  CONTACT_INFO.hoursRows.map((row, i) => (
+                    <div
+                      key={row.day || i}
+                      className={`flex items-baseline justify-between gap-4 px-5 py-3 ${
+                        i < CONTACT_INFO.hoursRows.length - 1
+                          ? "border-b border-[#4d4635]/60"
+                          : ""
+                      }`}
+                    >
+                      <Eyebrow tone="muted" size="xs">{row.day}</Eyebrow>
+                      <span className="se-mono text-sm text-[#e5e2e1] tabular-nums">
+                        {row.hours}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-5 py-4 se-body text-sm text-[#574500]">
+                    Business hours will appear here once configured.
                   </div>
-                ))}
+                )}
               </div>
 
               <p className="mt-6 se-body text-xs text-[#574500]">
@@ -705,7 +711,7 @@ const ContactPage = () => {
         </div>
       </section>
 
-      {/* ATELIER ADDRESS LEDGER */}
+      {/* ADDRESS & CONTACT */}
       <section className="px-5 md:px-12 py-16 md:py-24 max-w-7xl mx-auto">
         <Reveal>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
@@ -719,7 +725,7 @@ const ContactPage = () => {
               <a
                 href={
                   whatsappDigits
-                    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent("Hi Saga Elite, I'd like to visit the atelier.")}`
+                    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent("Hi Saga Elite, I have a question.")}`
                     : `mailto:${CONTACT_INFO.email}`
                 }
                 target="_blank"
@@ -727,7 +733,7 @@ const ContactPage = () => {
                 className="inline-block"
               >
                 <Btn variant="outline" size="lg" iconRight={ArrowRight}>
-                  Book a visit
+                  Book via WhatsApp
                 </Btn>
               </a>
             </div>
@@ -748,8 +754,7 @@ const ContactPage = () => {
               <span className="mt-1 se-body text-[#99907c]">{CONTACT_INFO.addressLine2}</span>
               <Hairline className="mt-6" />
               <p className="mt-5 se-body text-xs md:text-sm text-[#d0c5af] leading-relaxed">
-                Open by appointment on Saturdays. Members may visit any weekday by
-                arrangement.
+                Reach us during business hours. We'll respond as soon as we can.
               </p>
             </div>
 
@@ -802,8 +807,8 @@ const ContactPage = () => {
               </div>
               <Hairline className="mt-6" />
               <p className="mt-5 se-body text-xs md:text-sm text-[#d0c5af] leading-relaxed">
-                We reply between nine and seven, Sri Lankan time. Outside hours,
-                we'll write back the next morning.
+                We reply during business hours. Messages sent outside hours
+                will be answered the next working day.
               </p>
             </div>
           </div>
@@ -816,7 +821,7 @@ const ContactPage = () => {
           <Reveal>
             <Eyebrow tone="gold" size="md">Follow</Eyebrow>
             <h2 className="mt-3 se-serif text-[#e5e2e1] leading-[1.0] text-3xl md:text-5xl">
-              From the atelier<br />floor.
+              From Saga Elite<br />floor.
             </h2>
           </Reveal>
 
@@ -876,6 +881,60 @@ const ContactPage = () => {
         </div>
       </section>
 
+      {/* FAQ */}
+      {faqItems.length > 0 ? (
+        <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
+          <div className="px-5 md:px-12 py-16 md:py-24 max-w-3xl mx-auto">
+            <Reveal>
+              <Eyebrow tone="gold" size="md">FAQ</Eyebrow>
+              <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
+                Common questions
+              </h2>
+            </Reveal>
+            <div className="mt-10 border border-[#4d4635] divide-y divide-[#4d4635]/60">
+              {faqItems.map((item, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div key={idx}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-[#131313]"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="se-body text-[#e5e2e1] text-sm md:text-base">
+                        {item.question}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`shrink-0 text-[#f2ca50] transition-transform ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen ? (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <p className="px-5 pb-5 se-body text-sm text-[#d0c5af] leading-relaxed whitespace-pre-line">
+                            {item.answer}
+                          </p>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {/* CLOSING NOTE */}
       <section className="px-5 md:px-12 py-16 md:py-24 max-w-7xl mx-auto">
         <Reveal>
@@ -886,17 +945,17 @@ const ContactPage = () => {
                 We read every note,<br />ourselves.
               </h2>
               <p className="mt-6 se-body text-[#d0c5af] text-base md:text-lg max-w-2xl leading-relaxed">
-                There is no support team. There is the atelier. So please write as
-                though you're writing to a tailor — patiently, and we'll do the same back.
+                We read every message ourselves and aim to reply promptly during
+                business hours.
               </p>
             </div>
             <div className="lg:col-span-4 flex flex-wrap items-center gap-4 lg:justify-end">
               <Link to="/about">
-                <Btn variant="outline" size="lg">Read the journal</Btn>
+                <Btn variant="outline" size="lg">About us</Btn>
               </Link>
               <Link to="/shopping/product-list">
                 <Btn variant="default" size="lg" iconRight={ArrowRight}>
-                  Browse the atelier
+                  Shop drops
                 </Btn>
               </Link>
             </div>
