@@ -133,6 +133,7 @@ const ensureCustomerRecord = async ({ userId, guestToken, email } = {}) => {
   if (guestToken) {
     const guest = await Guest.findOne({ guestToken });
 
+    const customerEmail = guest?.email || email;
     const customer = await Customer.findOneAndUpdate(
       { guestToken },
       {
@@ -140,7 +141,7 @@ const ensureCustomerRecord = async ({ userId, guestToken, email } = {}) => {
           guestToken,
           type: "guest",
           guestId: guest?._id || null,
-          email: guest?.email || email || null,
+          ...(customerEmail ? { email: customerEmail } : {}),
           name: guest?.name || null,
           firstSeenAt: guest?.createdAt || new Date(),
           lastSessionAt: new Date(),

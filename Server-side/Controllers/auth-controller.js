@@ -20,7 +20,8 @@ const {
 const logger = require("../Utils/logger");
 const { recordLoginAttempt } = require("../Utils/login-activity-service");
 const { ensureWelcomeReward } = require("../Utils/reward-service");
-const { migrateGuestToUser } = require("../Services/migration-service");
+const Customer = require("../Models/Customer");
+const { migrateGuestToUser, ensureCustomerRecord } = require("../Services/migration-service");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -172,6 +173,16 @@ const registerUser = catchAsync(async (req, res, next) => {
         provider: "local",
     });
 
+    // Ensure Customer enrichment record exists for this user
+    try {
+      await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+      logger.warn("Customer record creation failed after registration", {
+        userId: newUser._id,
+        error: err.message,
+      });
+    }
+
     // send user verification email using shared template helper
     const registrationBody = `
             <p style="color: #555; font-size: 14px;">
@@ -285,6 +296,16 @@ const otpVerify = catchAsync(async(req, res, next)=>{
         await migrateGuestToUser(req.guestToken, user);
     } catch (err) {
         logger.warn("Guest migration on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even when no guest token was present
+    try {
+        await ensureCustomerRecord({ userId: user._id, email: user.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on otpVerify failed", {
             userId: user._id,
             error: err.message,
         });
@@ -435,6 +456,19 @@ const login = catchAsync(async (req, res, next) => {
         emailAttempted: email,
         success: true,
     });
+
+    // Update Customer session tracking
+    try {
+        await Customer.findOneAndUpdate(
+            { userId: user._id },
+            { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+        );
+    } catch (err) {
+        logger.warn("Customer session update failed on login", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
 
     createSendToken(user, 200, res, "Login successful");
 });
@@ -760,6 +794,16 @@ const registerGuest = catchAsync(async (req, res, next) => {
         await migrateGuestToUser(req.guestToken, newUser);
     } catch (err) {
         logger.warn("Guest migration on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even without guest token
+    try {
+        await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on registerGuest failed", {
             userId: newUser._id,
             error: err.message,
         });

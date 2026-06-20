@@ -47,7 +47,7 @@ const adminLogMiddleware = (req, res, next) => {
         let action = `Performed ${req.method} on ${req.baseUrl}${req.path}`;
         
         // Attempt to extract typical resource IDs (e.g., /api/products/12345)
-        let resourceId = req.params.id || req.body._id || req.body.id || null;
+        let resourceId = req.params.id || req.body?._id || req.body?.id || null;
 
         // Custom action descriptions can be injected via req.adminAction earlier in the pipeline if needed
         if (req.adminAction) {

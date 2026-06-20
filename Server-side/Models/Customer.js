@@ -115,7 +115,7 @@ customerSchema.index(
   { email: 1 },
   {
     unique: true,
-    partialFilterExpression: { email: { $exists: true, $ne: null } },
+    partialFilterExpression: { email: { $type: "string" } },
   }
 );
 customerSchema.index({ email: 1, type: 1 });
