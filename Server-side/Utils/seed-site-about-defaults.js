@@ -15,29 +15,47 @@ const DEFAULT_ABOUT_ROWS = [
     key: "about_stats",
     label: "About Page Stats",
     value: [
-      { number: 100, suffix: "+", label: "Products launched" },
-      { number: 15, suffix: "", label: "Days delivery island-wide" },
-      { number: "LK", suffix: "", label: "Proudly Sri Lankan" },
+      { value: 10000, suffix: "+", label: "Orders Delivered" },
+      { value: 25, suffix: "+", label: "Districts Served" },
+      { value: 98, suffix: "%", label: "Customer Satisfaction" },
+      { value: "4.9★", suffix: "", label: "Average Rating" },
+    ],
+  },
+  {
+    key: "about_timeline",
+    label: "Brand Story Timeline",
+    value: [
+      { year: "2022", milestone: "The idea began" },
+      { year: "2023", milestone: "First customers" },
+      { year: "2024", milestone: "Islandwide delivery" },
+      { year: "2025", milestone: "Thousands of orders" },
     ],
   },
   {
     key: "about_values",
     label: "Brand Values",
     value: [
+      { icon: "Sparkles", title: "Quality" },
+      { icon: "ShieldCheck", title: "Authenticity" },
+      { icon: "Star", title: "Community" },
+      { icon: "Zap", title: "Innovation" },
+    ],
+  },
+  {
+    key: "shop_press_quotes",
+    label: "Customer Reviews & Press Quotes",
+    value: [
       {
-        icon: "ShieldCheck",
-        title: "Premium Quality",
-        desc: "Materials and construction chosen for longevity and comfort.",
+        source: "Verified Customer",
+        quote: "Best online shopping experience I've had in Sri Lanka.",
       },
       {
-        icon: "Users",
-        title: "Community First",
-        desc: "Built with Sri Lankan youth and diaspora at the centre.",
+        source: "Repeat Buyer",
+        quote: "Quality is unmatched. Fast delivery to Kandy — will order again.",
       },
       {
-        icon: "Zap",
-        title: "Drop Culture",
-        desc: "Limited releases — rare fit, forever mindset.",
+        source: "Saga Elite Member",
+        quote: "Finally a local brand that feels international. Love the drops.",
       },
     ],
   },
@@ -54,12 +72,12 @@ const DEFAULT_ABOUT_ROWS = [
   {
     key: "shop_hero_eyebrow",
     label: "About Hero Eyebrow",
-    value: "Sri Lanka · Drop culture",
+    value: "Saga Elite · Sri Lanka",
   },
   {
     key: "shop_hero_headline",
     label: "About Hero Headline",
-    value: "Rare fit, forever.",
+    value: "",
   },
   {
     key: "footer_brand_description",

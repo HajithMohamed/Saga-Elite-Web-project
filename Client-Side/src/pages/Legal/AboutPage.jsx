@@ -2,53 +2,129 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {
+  AnimatePresence,
   motion,
   useInView,
   useReducedMotion,
   useScroll,
   useSpring,
+  useTransform,
 } from "framer-motion";
 import {
   ArrowRight,
-  ArrowUpRight,
-  Mail,
-  MapPin,
+  Crown,
+  Headphones,
+  Lock,
+  Package,
+  Quote,
   ShieldCheck,
   Sparkles,
   Star,
-  Heart,
+  Truck,
   Zap,
-  Award,
-  Leaf,
-  Globe,
-  Crown,
-  Users,
 } from "lucide-react";
 import usePageMeta from "@/hooks/use-page-meta";
-import { CONTACT_INFO as CONTACT_INFO_FALLBACK } from "@/config";
 import useShopAbout from "@/hooks/use-shop-about";
 import { API_V1_URL as API_BASE } from "@/lib/api";
-import {
-  AnimatedLogo,
-  Btn,
-  Eyebrow,
-  Hairline,
-  Marquee,
-  Reveal,
-} from "@/components/ui/editorial";
+import { Btn, Eyebrow, Reveal } from "@/components/ui/editorial";
 
 const VALUE_ICON_MAP = {
   ShieldCheck,
   Sparkles,
   Star,
-  Heart,
-  Zap,
-  Award,
-  Leaf,
-  Globe,
+  Truck,
+  Lock,
+  Headphones,
   Crown,
-  Users,
+  Zap,
+  Package,
 };
+
+const DEFAULT_TIMELINE = [
+  { year: "2022", milestone: "The idea began" },
+  { year: "2023", milestone: "First customers" },
+  { year: "2024", milestone: "Islandwide delivery" },
+  { year: "2025", milestone: "Thousands of orders" },
+];
+
+const DEFAULT_STATS = [
+  { value: 10000, suffix: "+", label: "Orders Delivered" },
+  { value: 25, suffix: "+", label: "Districts Served" },
+  { value: 98, suffix: "%", label: "Customer Satisfaction" },
+  { value: "4.9★", suffix: "", label: "Average Rating" },
+];
+
+const DEFAULT_WHY_CHOOSE = [
+  { icon: "Truck", title: "Islandwide Delivery", body: "From Colombo to Jaffna — we deliver across Sri Lanka." },
+  { icon: "ShieldCheck", title: "Premium Quality", body: "Curated pieces built to last, never mass-produced." },
+  { icon: "Lock", title: "Secure Payments", body: "Bank transfer, card, and trusted checkout options." },
+  { icon: "Headphones", title: "Customer Support", body: "Real people on WhatsApp and email when you need us." },
+  { icon: "Crown", title: "Exclusive Collections", body: "Limited drops you won't find anywhere else on the island." },
+  { icon: "Zap", title: "Fast Shipping", body: "Orders packed and dispatched within 24–48 hours." },
+];
+
+const DEFAULT_VALUES = [
+  { icon: "Sparkles", title: "Quality" },
+  { icon: "ShieldCheck", title: "Authenticity" },
+  { icon: "Star", title: "Community" },
+  { icon: "Zap", title: "Innovation" },
+];
+
+const DEFAULT_GALLERY = [
+  {
+    imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+    caption: "Colombo lifestyle",
+    altText: "Premium lifestyle in Colombo",
+  },
+  {
+    imageUrl: "https://images.unsplash.com/photo-1607083206869-4c7672591458?w=800&q=80",
+    caption: "Packaging process",
+    altText: "Careful product packaging",
+  },
+  {
+    imageUrl: "https://images.unsplash.com/photo-1566576721346-4c3b9795ad51?w=800&q=80",
+    caption: "Islandwide deliveries",
+    altText: "Delivery across Sri Lanka",
+  },
+  {
+    imageUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&q=80",
+    caption: "Customer moments",
+    altText: "Happy customer unboxing",
+  },
+  {
+    imageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80",
+    caption: "Products in real environments",
+    altText: "Products styled in everyday settings",
+  },
+];
+
+const DEFAULT_REVIEWS = [
+  {
+    quote: "Best online shopping experience I've had in Sri Lanka.",
+    source: "Verified Customer",
+  },
+  {
+    quote: "Quality is unmatched. Fast delivery to Kandy — will order again.",
+    source: "Repeat Buyer",
+  },
+  {
+    quote: "Finally a local brand that feels international. Love the drops.",
+    source: "Saga Elite Member",
+  },
+];
+
+const HERO_BG =
+  "https://images.unsplash.com/photo-1441984904996-e0b6a687762d?w=1920&q=80";
+
+const GlassCard = React.forwardRef(({ children, className = "" }, ref) => (
+  <div
+    ref={ref}
+    className={`rounded-sm border border-white/[0.08] bg-white/[0.03] backdrop-blur-md ${className}`}
+  >
+    {children}
+  </div>
+));
+GlassCard.displayName = "GlassCard";
 
 const useAnimatedNumber = (target, suffix = "", duration = 2.0) => {
   const reduced = useReducedMotion();
@@ -74,151 +150,109 @@ const useAnimatedNumber = (target, suffix = "", duration = 2.0) => {
 
   return {
     ref,
-    display: typeof target === "number" ? `${value}${suffix}` : target,
+    display: typeof target === "number" ? `${value.toLocaleString()}${suffix}` : target,
   };
 };
 
-const StatCell = ({ stat, index }) => {
+const StatCell = ({ stat }) => {
   const raw = stat.number ?? stat.value ?? "";
   const suffix = stat.suffix || "";
   const isNumeric = typeof raw === "number" || /^\d+$/.test(String(raw));
   const numericTarget = isNumeric ? Number(raw) : null;
   const animated = useAnimatedNumber(numericTarget ?? 0, suffix);
-
-  const display = isNumeric
-    ? animated.display
-    : `${raw}${suffix}`;
+  const display = isNumeric ? animated.display : `${raw}${suffix}`;
 
   return (
-    <div ref={isNumeric ? animated.ref : undefined} className="bg-[#0e0e0e] p-5 md:p-7">
-      <span className="block se-serif text-[#fafafa] text-5xl md:text-7xl tabular-nums leading-none">
+    <GlassCard
+      ref={isNumeric ? animated.ref : undefined}
+      className="p-6 md:p-10 text-center group hover:border-[#D4AF37]/30 transition-colors duration-500"
+    >
+      <span className="block se-serif text-[#fafafa] text-4xl sm:text-5xl md:text-6xl lg:text-7xl tabular-nums leading-none group-hover:text-[#D4AF37] transition-colors duration-500">
         {display}
       </span>
-      <Eyebrow tone="muted" size="xs" className="block mt-4">
+      <Eyebrow tone="muted" size="xs" className="block mt-4 md:mt-6">
         {stat.label || ""}
       </Eyebrow>
-    </div>
+    </GlassCard>
   );
 };
-
-const InstagramGlyph = (props) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-    <path
-      fill="currentColor"
-      d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"
-    />
-  </svg>
-);
-
-const FacebookGlyph = (props) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-    <path
-      fill="currentColor"
-      d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-    />
-  </svg>
-);
-
-const TikTokGlyph = (props) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-    <path
-      fill="currentColor"
-      d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"
-    />
-  </svg>
-);
 
 const ScrollProgress = () => {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 28, mass: 0.4 });
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 h-px bg-[#f2ca50] z-[60] origin-left"
+      className="fixed top-0 left-0 right-0 h-px bg-[#D4AF37] z-[60] origin-left"
       style={{ scaleX }}
       aria-hidden="true"
     />
   );
 };
 
-const BrandColorBlock = ({ className = "" }) => (
-  <div
-    className={`w-full h-full bg-gradient-to-br from-[#1a1810] via-[#0a0a0a] to-[#0e0e0e] ${className}`}
-    aria-hidden="true"
-  >
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_40%,rgba(242,202,80,0.12),transparent_60%)]" />
-  </div>
-);
-
 const AboutPage = () => {
   usePageMeta({
     title: "About",
     description:
-      "Saga Elite — a proudly Sri Lankan fashion and lifestyle brand built on drop culture and community.",
+      "Saga Elite — premium lifestyle products for Sri Lanka. Crafted with passion, delivered islandwide.",
   });
 
   const { data: about, loading } = useShopAbout();
   const reduced = useReducedMotion();
   const [logoUrl, setLogoUrl] = useState(null);
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", reduced ? "0%" : "28%"]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], [1, reduced ? 1 : 1.12]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.3]);
 
-  const CONTACT_INFO = useMemo(
-    () => ({
-      email: about?.shop_contact_email || CONTACT_INFO_FALLBACK.email,
-      phone: about?.shop_contact_phone || CONTACT_INFO_FALLBACK.phone,
-      whatsapp: about?.shop_whatsapp_number || CONTACT_INFO_FALLBACK.whatsapp,
-      addressLine1: about?.shop_address_line1 || CONTACT_INFO_FALLBACK.addressLine1,
-      addressLine2:
-        [about?.shop_address_city, about?.shop_address_country]
-          .filter(Boolean)
-          .join(", ") || CONTACT_INFO_FALLBACK.addressLine2,
-      hours:
-        Array.isArray(about?.shop_hours) && about.shop_hours.length > 0
-          ? about.shop_hours
-          : null,
-      socials: {
-        instagram:
-          about?.shop_social_instagram || CONTACT_INFO_FALLBACK.socials.instagram,
-        facebook:
-          about?.shop_social_facebook || CONTACT_INFO_FALLBACK.socials.facebook,
-        tiktok: about?.shop_social_tiktok || CONTACT_INFO_FALLBACK.socials.tiktok,
-      },
-    }),
-    [about]
-  );
+  const timeline = useMemo(() => {
+    const rows = Array.isArray(about?.about_timeline)
+      ? about.about_timeline.filter((r) => r?.year && r?.milestone)
+      : [];
+    return rows.length > 0 ? rows : DEFAULT_TIMELINE;
+  }, [about?.about_timeline]);
 
-  const heroEyebrow = about?.shop_hero_eyebrow?.trim() || "";
-  const heroHeadline = about?.shop_hero_headline?.trim() || "";
-  const brandStory = useMemo(
-    () =>
-      (Array.isArray(about?.about_brand_story) ? about.about_brand_story : [])
-        .map((p) => (typeof p === "string" ? p : p?.text || ""))
-        .filter(Boolean),
-    [about?.about_brand_story]
-  );
-  const stats = useMemo(
-    () => (Array.isArray(about?.about_stats) ? about.about_stats : []).filter((s) => s?.label),
-    [about?.about_stats]
-  );
-  const values = useMemo(
-    () =>
-      (Array.isArray(about?.about_values) ? about.about_values : []).filter(
-        (v) => v?.title
-      ),
-    [about?.about_values]
-  );
-  const materials = useMemo(
-    () =>
-      (Array.isArray(about?.shop_materials) ? about.shop_materials : []).filter(
-        (m) => m?.name?.trim()
-      ),
-    [about?.shop_materials]
-  );
+  const stats = useMemo(() => {
+    const rows = Array.isArray(about?.about_stats)
+      ? about.about_stats.filter((s) => s?.label)
+      : [];
+    return rows.length > 0 ? rows : DEFAULT_STATS;
+  }, [about?.about_stats]);
 
-  const hasFounder =
-    about?.shop_founder_name?.trim() &&
-    about?.shop_founder_bio?.trim() &&
-    about?.shop_founder_photo_url?.trim();
+  const whyChoose = DEFAULT_WHY_CHOOSE;
 
-  const heroImage = about?.shop_logo_url || logoUrl;
+  const values = useMemo(() => {
+    const rows = Array.isArray(about?.about_values)
+      ? about.about_values.filter((v) => v?.title)
+      : [];
+    return rows.length > 0 ? rows : DEFAULT_VALUES;
+  }, [about?.about_values]);
+
+  const gallery = useMemo(() => {
+    const rows = Array.isArray(about?.about_studio_gallery)
+      ? about.about_studio_gallery.filter((g) => g?.imageUrl)
+      : [];
+    return rows.length > 0 ? rows : DEFAULT_GALLERY;
+  }, [about?.about_studio_gallery]);
+
+  const reviews = useMemo(() => {
+    const rows = Array.isArray(about?.shop_press_quotes)
+      ? about.shop_press_quotes.filter((r) => r?.quote?.trim())
+      : [];
+    return rows.length > 0 ? rows : DEFAULT_REVIEWS;
+  }, [about?.shop_press_quotes]);
+
+  const heroImage =
+    about?.shop_logo_url ||
+    logoUrl ||
+    gallery[0]?.imageUrl ||
+    HERO_BG;
+
+  const brandName = about?.shop_brand_name?.trim() || "Saga Elite";
+  const heroSubline = about?.shop_tagline?.trim() || "Premium lifestyle products for Sri Lanka.";
 
   useEffect(() => {
     if (about?.shop_logo_url) return;
@@ -231,373 +265,377 @@ const AboutPage = () => {
       .catch(() => {});
   }, [about?.shop_logo_url]);
 
-  const marqueeItems = useMemo(() => {
-    if (stats.length > 0) {
-      return stats.map((s) => `${s.number ?? s.value ?? ""}${s.suffix || ""} ${s.label}`.trim());
-    }
-    return ["Made in Sri Lanka", "Limited drops", "Rare fit forever"];
-  }, [stats]);
-
-  const headlineWords = heroHeadline ? heroHeadline.split(/\s+/) : [];
+  const [reviewIndex, setReviewIndex] = useState(0);
+  useEffect(() => {
+    if (reviews.length <= 1) return undefined;
+    const timer = setInterval(
+      () => setReviewIndex((i) => (i + 1) % reviews.length),
+      6000
+    );
+    return () => clearInterval(timer);
+  }, [reviews.length]);
 
   if (loading && !about?.about_brand_story) {
     return (
-      <div className="bg-[#0a0a0a] text-[#e5e2e1] min-h-screen flex items-center justify-center">
+      <div className="bg-[#0A0A0A] text-[#e5e2e1] min-h-screen flex items-center justify-center">
         <div className="animate-pulse se-body text-[#574500]">Loading…</div>
       </div>
     );
   }
 
+  const activeReview = reviews[reviewIndex];
+
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen overflow-x-hidden">
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] se-body min-h-screen overflow-x-hidden">
       <ScrollProgress />
 
-      {/* HERO */}
-      <section className="relative min-h-[75vh] md:min-h-[85vh] overflow-hidden flex items-end">
+      {/* 1. CINEMATIC HERO */}
+      <section
+        ref={heroRef}
+        className="relative min-h-screen overflow-hidden flex items-end"
+      >
         <motion.div
           className="absolute inset-0 overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: reduced ? 0.3 : 0.8 }}
+          style={{ opacity: heroOpacity }}
         >
-          {heroImage ? (
+          <motion.div className="absolute inset-0" style={{ y: bgY, scale: bgScale }}>
             <img
               src={heroImage}
               alt=""
-              className="w-full h-full object-contain object-center opacity-30"
+              className="w-full h-full object-cover object-center scale-105"
               loading="eager"
             />
-          ) : (
-            <BrandColorBlock />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/70 to-[#0a0a0a]/40" />
+          </motion.div>
+          <div className="absolute inset-0 bg-[#0A0A0A]/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/50 to-[#0A0A0A]/20" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(212,175,55,0.12),transparent_55%)]" />
         </motion.div>
 
-        <div className="relative w-full px-5 md:px-12 lg:px-16 pb-16 md:pb-20 max-w-7xl">
-          {heroEyebrow ? (
-            <Reveal>
-              <Eyebrow tone="gold" size="md">{heroEyebrow}</Eyebrow>
-            </Reveal>
-          ) : null}
+        <div className="relative w-full px-5 md:px-12 lg:px-16 pb-16 md:pb-24 max-w-7xl mx-auto">
+          <Reveal>
+            <Eyebrow tone="gold" size="md">
+              {about?.shop_hero_eyebrow?.trim() || `${brandName} · Sri Lanka`}
+            </Eyebrow>
+          </Reveal>
 
-          {heroHeadline ? (
-            <h1 className="mt-5 md:mt-7 se-serif text-[#fafafa] leading-[0.92] text-5xl sm:text-6xl md:text-8xl max-w-5xl">
-              {headlineWords.length > 1 ? (
-                headlineWords.map((word, i) => (
-                  <span key={i} className="block overflow-hidden">
-                    <motion.span
-                      className="block"
-                      initial={{ y: "110%" }}
-                      animate={{ y: "0%" }}
-                      transition={{
-                        duration: 0.85,
-                        delay: 0.2 + i * 0.12,
-                        ease: [0.22, 1, 0.36, 1],
-                      }}
-                    >
-                      {word}
-                    </motion.span>
-                  </span>
-                ))
-              ) : (
-                <span>{heroHeadline}</span>
-              )}
-            </h1>
-          ) : (
-            <h1 className="mt-5 se-serif text-[#fafafa] text-5xl md:text-7xl">About Saga Elite</h1>
-          )}
+          <h1 className="mt-6 md:mt-8 max-w-5xl">
+            {about?.shop_hero_headline?.trim() ? (
+              <span className="se-serif text-[#fafafa] leading-[0.92] text-4xl sm:text-5xl md:text-7xl lg:text-8xl block">
+                {about.shop_hero_headline}
+              </span>
+            ) : (
+              <>
+                <span className="block overflow-hidden">
+                  <motion.span
+                    className="block se-serif text-[#fafafa] leading-[0.92] text-4xl sm:text-5xl md:text-7xl lg:text-8xl uppercase tracking-tight"
+                    initial={{ y: "110%" }}
+                    animate={{ y: "0%" }}
+                    transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    We don&apos;t sell products.
+                  </motion.span>
+                </span>
+                <span className="block overflow-hidden mt-1 md:mt-2">
+                  <motion.span
+                    className="block se-serif text-[#D4AF37] leading-[0.92] text-4xl sm:text-5xl md:text-7xl lg:text-8xl uppercase tracking-tight"
+                    initial={{ y: "110%" }}
+                    animate={{ y: "0%" }}
+                    transition={{ duration: 0.85, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    We create experiences.
+                  </motion.span>
+                </span>
+              </>
+            )}
+          </h1>
 
-          {brandStory[0] ? (
-            <Reveal delay={0.2}>
-              <p className="mt-6 max-w-xl se-body text-[#d0c5af] text-base md:text-lg leading-relaxed">
-                {brandStory[0]}
-              </p>
-            </Reveal>
-          ) : null}
+          <Reveal delay={0.2}>
+            <div className="mt-8 md:mt-10 max-w-lg space-y-1">
+              <p className="se-body text-[#d0c5af] text-base md:text-lg">{heroSubline}</p>
+              <p className="se-body text-[#99907c] text-sm md:text-base">Crafted with passion.</p>
+              <p className="se-body text-[#99907c] text-sm md:text-base">Delivered islandwide.</p>
+            </div>
+          </Reveal>
 
-          <Reveal delay={0.3}>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+          <Reveal delay={0.35}>
+            <div className="mt-10 md:mt-12 flex flex-wrap items-center gap-4">
               <Link to="/shopping/product-list">
-                <Btn variant="default" iconRight={ArrowRight}>Shop drops</Btn>
+                <Btn variant="default" iconRight={ArrowRight}>
+                  Explore Collection
+                </Btn>
               </Link>
-              <Link to="/contact">
-                <Btn variant="outline">Contact us</Btn>
-              </Link>
+              <a href="#brand-story">
+                <Btn variant="outline">Our Story</Btn>
+              </a>
             </div>
           </Reveal>
         </div>
+
+        <motion.div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          aria-hidden="true"
+        >
+          <span className="se-label text-[9px] text-[#574500] tracking-[0.35em]">Scroll</span>
+          <motion.div
+            className="w-px h-10 bg-gradient-to-b from-[#D4AF37] to-transparent"
+            animate={{ scaleY: [1, 0.5, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
       </section>
 
-      {marqueeItems.length > 0 ? <Marquee tone="gold" items={marqueeItems} /> : null}
+      {/* 2. BRAND STORY TIMELINE */}
+      <section id="brand-story" className="relative px-5 md:px-12 py-20 md:py-32 max-w-7xl mx-auto">
+        <Reveal>
+          <Eyebrow tone="gold" size="md">Our journey</Eyebrow>
+          <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl lg:text-6xl leading-tight">
+            The {brandName} story
+          </h2>
+        </Reveal>
 
-      {/* LOGO MOMENT */}
-      <section className="relative bg-[#0a0a0a] border-b border-[#4d4635]/40 overflow-hidden">
-        <div className="relative px-5 md:px-12 py-20 md:py-28 max-w-7xl mx-auto flex flex-col items-center">
-          <Reveal>
-            <Eyebrow tone="gold" size="md">
-              {about?.shop_brand_name || "Saga Elite"}
-            </Eyebrow>
-          </Reveal>
-          <div className="mt-12 md:mt-16 flex justify-center">
-            <AnimatedLogo
-              diameter={420}
-              eyebrow={about?.shop_tagline || "RARE FIT FOREVER"}
-              caption="MADE IN SRI LANKA"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* BRAND STORY */}
-      {brandStory.length > 0 ? (
-        <section className="px-5 md:px-12 py-16 md:py-28 max-w-4xl mx-auto">
-          <Reveal>
-            <Eyebrow tone="gold" size="md">Our story</Eyebrow>
-            <h2 className="mt-4 se-serif text-[#e5e2e1] text-3xl md:text-5xl leading-tight">
-              Who we are
-            </h2>
-          </Reveal>
-          <div className="mt-8 space-y-5">
-            {brandStory.map((para, i) => (
-              <Reveal key={i} delay={i * 0.06}>
-                <p className="se-body text-[#d0c5af] text-base md:text-lg leading-[1.7]">
-                  {para}
-                </p>
+        <div className="mt-14 md:mt-20 relative">
+          <div
+            className="absolute left-0 right-0 top-1/2 hidden md:block h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent"
+            aria-hidden="true"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {timeline.map((item, i) => (
+              <Reveal key={`${item.year}-${i}`} delay={i * 0.08}>
+                <GlassCard className="p-6 md:p-8 h-full hover:border-[#D4AF37]/25 transition-all duration-500 group">
+                  <span className="se-mono text-[#D4AF37] text-sm md:text-base tabular-nums">
+                    {item.year}
+                  </span>
+                  <p className="mt-3 se-headline text-[#fafafa] text-xl md:text-2xl leading-snug group-hover:text-[#D4AF37] transition-colors duration-300">
+                    {item.milestone}
+                  </p>
+                  {item.imageUrl ? (
+                    <div className="mt-5 aspect-[4/3] overflow-hidden rounded-sm border border-white/[0.06]">
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                      />
+                    </div>
+                  ) : null}
+                </GlassCard>
               </Reveal>
             ))}
           </div>
-        </section>
-      ) : (
-        <section className="px-5 md:px-12 py-16 max-w-4xl mx-auto">
-          <p className="se-body text-[#574500] text-center">
-            Brand story content will appear here once configured in the admin.
-          </p>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* STATS */}
-      {stats.length > 0 ? (
-        <section className="border-y border-[#4d4635]/40 bg-[#0e0e0e]">
-          <div className="px-5 md:px-12 py-12 md:py-16 max-w-7xl mx-auto">
-            <Reveal>
-              <Eyebrow tone="gold" size="md">By the numbers</Eyebrow>
-            </Reveal>
-            <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-px bg-[#4d4635]/40">
-              {stats.map((stat, i) => (
-                <StatCell key={i} stat={stat} index={i} />
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {/* VALUES */}
-      {values.length > 0 ? (
-        <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-          <Reveal>
-            <Eyebrow tone="gold" size="md">What we stand for</Eyebrow>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Our values</h2>
+      {/* 3. STATISTICS */}
+      <section className="relative px-5 md:px-12 py-20 md:py-28 border-y border-white/[0.06] overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(212,175,55,0.06),transparent_60%)] pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto">
+          <Reveal className="text-center mb-12 md:mb-16">
+            <Eyebrow tone="gold" size="md">By the numbers</Eyebrow>
+            <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl">
+              Trusted across the island
+            </h2>
           </Reveal>
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
-            {values.map((v, i) => {
-              const Icon = VALUE_ICON_MAP[v.icon] || Sparkles;
-              const body = v.desc || v.body || "";
-              return (
-                <Reveal key={i} delay={i * 0.08} className="bg-[#0a0a0a]">
-                  <div className="p-7 md:p-10 h-full flex flex-col">
-                    <Icon className="h-8 w-8 text-[#f2ca50]" strokeWidth={1.25} />
-                    <h3 className="mt-6 se-headline text-[#e5e2e1] text-2xl md:text-3xl">
-                      {v.title}
-                    </h3>
-                    <Hairline className="mt-5" />
-                    {body ? (
-                      <p className="mt-5 se-body text-[#d0c5af] text-sm md:text-base leading-relaxed">
-                        {body}
-                      </p>
-                    ) : null}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {stats.map((stat, i) => (
+              <StatCell key={i} stat={stat} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. WHY CUSTOMERS CHOOSE US */}
+      <section className="px-5 md:px-12 py-20 md:py-32 max-w-7xl mx-auto">
+        <Reveal>
+          <Eyebrow tone="gold" size="md">Why choose us</Eyebrow>
+          <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl lg:text-6xl leading-tight max-w-3xl">
+            Built for Sri Lankan customers
+          </h2>
+        </Reveal>
+
+        <div className="mt-12 md:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {whyChoose.map((item, i) => {
+            const Icon = VALUE_ICON_MAP[item.icon] || Sparkles;
+            return (
+              <Reveal key={item.title} delay={i * 0.06}>
+                <GlassCard className="p-7 md:p-9 h-full hover:border-[#D4AF37]/25 hover:bg-white/[0.05] transition-all duration-500 group">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-[#D4AF37]/20 bg-[#D4AF37]/5 group-hover:bg-[#D4AF37]/10 transition-colors duration-500">
+                    <Icon className="h-7 w-7 text-[#D4AF37]" strokeWidth={1.25} />
                   </div>
+                  <h3 className="mt-6 se-headline text-[#fafafa] text-xl md:text-2xl">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 se-body text-[#99907c] text-sm md:text-base leading-relaxed">
+                    {item.body}
+                  </p>
+                </GlassCard>
+              </Reveal>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 5. LIFESTYLE GALLERY */}
+      <section className="relative px-5 md:px-12 py-20 md:py-32 border-t border-white/[0.06] overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <Reveal>
+            <Eyebrow tone="gold" size="md">Life with {brandName}</Eyebrow>
+            <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl lg:text-6xl leading-tight">
+              Sri Lankan lifestyle gallery
+            </h2>
+          </Reveal>
+
+          <div className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 auto-rows-[140px] md:auto-rows-[200px]">
+            {gallery.map((item, i) => {
+              const span =
+                i === 0
+                  ? "col-span-2 row-span-2"
+                  : i === 3
+                    ? "col-span-2 md:col-span-1 row-span-1"
+                    : "";
+              return (
+                <Reveal
+                  key={`${item.imageUrl}-${i}`}
+                  delay={i * 0.05}
+                  className={`relative overflow-hidden rounded-sm group ${span}`}
+                >
+                  <img
+                    src={item.imageUrl}
+                    alt={item.altText || item.caption || ""}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/80 via-[#0A0A0A]/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
+                  {item.caption ? (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                      <Eyebrow tone="gold" size="xs">
+                        {item.caption}
+                      </Eyebrow>
+                    </div>
+                  ) : null}
                 </Reveal>
               );
             })}
           </div>
-        </section>
-      ) : null}
+        </div>
+      </section>
 
-      {/* FOUNDER — only when fully configured */}
-      {hasFounder ? (
-        <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto border-t border-[#4d4635]/40">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            <Reveal className="lg:col-span-5">
-              <div className="relative" style={{ aspectRatio: "4/5" }}>
-                <img
-                  src={about.shop_founder_photo_url}
-                  alt={about.shop_founder_name}
-                  className="w-full h-full object-cover border border-[#4d4635]"
-                  loading="lazy"
+      {/* 6. CUSTOMER REVIEWS */}
+      <section className="relative px-5 md:px-12 py-20 md:py-32 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="relative max-w-4xl mx-auto">
+          <Reveal className="text-center mb-12 md:mb-16">
+            <Eyebrow tone="gold" size="md">Customer reviews</Eyebrow>
+            <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl">
+              What our customers say
+            </h2>
+          </Reveal>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={reviewIndex}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <GlassCard className="relative p-8 md:p-14 text-center">
+                <Quote
+                  className="absolute top-6 right-6 h-8 w-8 text-[#D4AF37]/25"
+                  strokeWidth={1}
                 />
-              </div>
-            </Reveal>
-            <Reveal className="lg:col-span-7 lg:pt-8" delay={0.1}>
-              <Eyebrow tone="gold" size="md">Founder</Eyebrow>
-              <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">
-                {about.shop_founder_name}
-              </h2>
-              {about.shop_founder_title ? (
-                <p className="mt-2 se-body text-[#99907c]">{about.shop_founder_title}</p>
-              ) : null}
-              <p className="mt-6 se-body text-[#d0c5af] text-base leading-[1.7] whitespace-pre-line">
-                {about.shop_founder_bio}
-              </p>
-            </Reveal>
-          </div>
-        </section>
-      ) : null}
-
-      {/* MATERIALS — only when configured */}
-      {materials.length > 0 ? (
-        <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
-          <div className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-            <Reveal>
-              <Eyebrow tone="gold" size="md">Materials</Eyebrow>
-              <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">What we use</h2>
-            </Reveal>
-            <div className="mt-10 border border-[#4d4635]">
-              {materials.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 px-5 md:px-7 py-5 ${
-                    i < materials.length - 1 ? "border-b border-[#4d4635]/60" : ""
-                  }`}
-                >
-                  <Eyebrow tone="muted" size="xs">{m.name}</Eyebrow>
-                  {m.description ? (
-                    <span className="se-body text-sm md:text-base text-[#e5e2e1] sm:text-right sm:max-w-[60%]">
-                      {m.description}
-                    </span>
-                  ) : null}
+                <div className="flex justify-center gap-1 mb-6">
+                  {Array.from({ length: 5 }).map((_, k) => (
+                    <Star
+                      key={k}
+                      className="h-4 w-4 text-[#D4AF37]"
+                      fill="#D4AF37"
+                      strokeWidth={0}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
+                <p className="se-serif text-[#fafafa] text-xl md:text-3xl leading-snug italic">
+                  &ldquo;{activeReview.quote}&rdquo;
+                </p>
+                <p className="mt-8 se-label text-[#99907c] text-xs tracking-[0.25em]">
+                  — {activeReview.source || "Customer"}
+                </p>
+              </GlassCard>
+            </motion.div>
+          </AnimatePresence>
 
-      {/* VISIT */}
-      <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-        <Reveal>
-          <Eyebrow tone="gold" size="md">Visit</Eyebrow>
-          <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Get in touch</h2>
-        </Reveal>
-        <div className="mt-10 border border-[#4d4635] max-w-xl">
-          <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
-            <Eyebrow tone="muted" size="xs">Where</Eyebrow>
-            <span className="se-body text-sm text-[#e5e2e1] text-right">
-              {CONTACT_INFO.addressLine1}
-              {CONTACT_INFO.addressLine2 ? `, ${CONTACT_INFO.addressLine2}` : ""}
-            </span>
-          </div>
-          {CONTACT_INFO.hours ? (
-            <div className="px-5 py-4 border-b border-[#4d4635]/60">
-              <Eyebrow tone="muted" size="xs">Business hours</Eyebrow>
-              <ul className="mt-3 space-y-2">
-                {CONTACT_INFO.hours.map((row, i) => (
-                  <li key={i} className="flex justify-between gap-4 text-sm">
-                    <span className="text-[#99907c]">{row.day}</span>
-                    <span className="se-mono text-[#e5e2e1] tabular-nums">{row.hours}</span>
-                  </li>
-                ))}
-              </ul>
+          {reviews.length > 1 ? (
+            <div className="flex justify-center gap-2 mt-8">
+              {reviews.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setReviewIndex(idx)}
+                  className={`h-0.5 transition-all duration-500 ${
+                    reviewIndex === idx
+                      ? "w-10 bg-[#D4AF37]"
+                      : "w-6 bg-[#4d4635] hover:bg-[#99907c]"
+                  }`}
+                  aria-label={`Show review ${idx + 1}`}
+                />
+              ))}
             </div>
           ) : null}
-          <div className="flex items-baseline justify-between gap-4 px-5 py-4 border-b border-[#4d4635]/60">
-            <Eyebrow tone="muted" size="xs">Email</Eyebrow>
-            <a
-              href={`mailto:${CONTACT_INFO.email}`}
-              className="se-mono text-sm text-[#f2ca50] hover:text-[#ffe088] transition-colors"
-            >
-              {CONTACT_INFO.email}
-            </a>
-          </div>
-          <div className="flex items-baseline justify-between gap-4 px-5 py-4">
-            <Eyebrow tone="muted" size="xs">Phone</Eyebrow>
-            <a href={`tel:${CONTACT_INFO.phone}`} className="se-mono text-sm text-[#e5e2e1]">
-              {CONTACT_INFO.phone}
-            </a>
-          </div>
-        </div>
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Link to="/contact">
-            <Btn variant="default" icon={Mail}>Contact us</Btn>
-          </Link>
-          <a
-            href={`https://wa.me/${(CONTACT_INFO.whatsapp || "").replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Btn variant="outline" icon={MapPin}>WhatsApp</Btn>
-          </a>
         </div>
       </section>
 
-      {/* SOCIALS */}
-      <section className="border-t border-[#4d4635]/40 bg-[#0e0e0e]">
-        <div className="px-5 md:px-12 py-16 md:py-24 max-w-7xl mx-auto">
-          <Reveal>
-            <Eyebrow tone="gold" size="md">Connect</Eyebrow>
-            <h2 className="mt-3 se-serif text-[#e5e2e1] text-3xl md:text-5xl">Follow along</h2>
+      {/* 7. COMPANY VALUES */}
+      <section className="px-5 md:px-12 py-20 md:py-32 border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto">
+          <Reveal className="text-center mb-12 md:mb-16">
+            <Eyebrow tone="gold" size="md">What we stand for</Eyebrow>
+            <h2 className="mt-4 se-serif text-[#fafafa] text-3xl md:text-5xl">
+              Our values
+            </h2>
           </Reveal>
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-px bg-[#4d4635]/40">
-            {[
-              { href: CONTACT_INFO.socials.instagram, label: "Instagram", Glyph: InstagramGlyph },
-              { href: CONTACT_INFO.socials.facebook, label: "Facebook", Glyph: FacebookGlyph },
-              { href: CONTACT_INFO.socials.tiktok, label: "TikTok", Glyph: TikTokGlyph },
-            ]
-              .filter((s) => s.href)
-              .map((s, i) => (
-                <Reveal key={s.label} delay={i * 0.06} className="bg-[#0a0a0a]">
-                  <a
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block p-7 md:p-10 h-full transition-colors hover:bg-[#131313]"
-                  >
-                    <div className="flex items-start justify-between">
-                      <s.Glyph className="h-7 w-7 text-[#f2ca50]" />
-                      <ArrowUpRight
-                        size={18}
-                        strokeWidth={1.25}
-                        className="text-[#99907c] transition-all group-hover:text-[#f2ca50] group-hover:translate-x-1 group-hover:-translate-y-1"
-                      />
-                    </div>
-                    <Eyebrow tone="muted" size="xs" className="mt-8 block">
-                      {s.label}
-                    </Eyebrow>
-                    <Hairline className="mt-5" />
-                  </a>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {values.map((v, i) => {
+              const Icon = VALUE_ICON_MAP[v.icon] || Sparkles;
+              return (
+                <Reveal key={v.title || i} delay={i * 0.06}>
+                  <GlassCard className="p-8 md:p-10 text-center hover:border-[#D4AF37]/30 transition-all duration-500 group">
+                    <Icon
+                      className="mx-auto h-6 w-6 text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors"
+                      strokeWidth={1.25}
+                    />
+                    <h3 className="mt-5 se-headline text-[#fafafa] text-lg md:text-xl uppercase tracking-wide">
+                      {v.title}
+                    </h3>
+                  </GlassCard>
                 </Reveal>
-              ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-5 md:px-12 py-16 md:py-28 max-w-7xl mx-auto">
-        <Reveal>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-            <div className="lg:col-span-8">
-              <Eyebrow tone="gold" size="md">Join us</Eyebrow>
-              <h2 className="mt-4 se-serif text-[#e5e2e1] text-4xl md:text-6xl leading-tight">
-                Become part of the community
-              </h2>
-            </div>
-            <div className="lg:col-span-4 flex flex-wrap gap-4 lg:justify-end">
-              <Link to="/auth/register">
-                <Btn variant="default" size="lg" iconRight={ArrowRight}>Create account</Btn>
-              </Link>
-              <Link to="/shopping/product-list">
-                <Btn variant="outline" size="lg">Browse drops</Btn>
-              </Link>
-            </div>
+      {/* 8. FINAL CTA */}
+      <section className="relative px-5 md:px-12 py-24 md:py-36 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_100%,rgba(212,175,55,0.08),transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0A0A0A]/50 to-[#0A0A0A] pointer-events-none" />
+
+        <Reveal className="relative max-w-4xl mx-auto text-center">
+          <Eyebrow tone="gold" size="md">Start your journey</Eyebrow>
+          <h2 className="mt-6 se-serif text-[#fafafa] text-4xl md:text-6xl lg:text-7xl leading-[0.95]">
+            Ready to experience something different?
+          </h2>
+          <p className="mt-6 se-body text-[#99907c] text-base md:text-lg max-w-xl mx-auto">
+            Discover limited drops, premium quality, and islandwide delivery — all from one Sri Lankan brand.
+          </p>
+          <div className="mt-10 md:mt-12 flex justify-center">
+            <Link to="/shopping/product-list">
+              <Btn variant="default" size="lg" iconRight={ArrowRight}>
+                Shop Now
+              </Btn>
+            </Link>
           </div>
         </Reveal>
       </section>

@@ -81,10 +81,26 @@ export default {
           foreground: '#0e0e0e',
         },
 
+        gold: {
+          DEFAULT: '#f2ca50',
+          light: '#ffe088',
+        },
+
         /* ── Status Colors ───────────────── */
         sale: '#ffb4ab',
         new: '#1D9E75',
         deal: '#f2ca50',
+      },
+
+      backgroundImage: {
+        'gradient-radial-gold':
+          'radial-gradient(ellipse at center, rgba(242,202,80,0.08) 0%, transparent 70%)',
+        'gradient-gold': 'linear-gradient(135deg, #f2ca50 0%, #d4af37 100%)',
+      },
+
+      boxShadow: {
+        gold: '0 0 40px rgba(242,202,80,0.15)',
+        elegant: '0 4px 60px rgba(0,0,0,0.4)',
       },
     },
   },
