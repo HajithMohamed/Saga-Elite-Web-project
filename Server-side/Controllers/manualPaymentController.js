@@ -70,6 +70,33 @@ const resolvePaymentEmail = async (payment) => {
   return "";
 };
 
+const populatePaymentForAccess = (query) =>
+  query
+    .populate({
+      path: "orderId",
+      populate: {
+        path: "user",
+        select: "email role profilePicture",
+      },
+    })
+    .populate("userId", "email role profilePicture");
+
+// Match by reference number or URL slug — same lookup used for status reads
+// and receipt submission so payment-page slugs work end-to-end.
+const findPaymentByIdentifier = async (identifier) => {
+  const trimmed = String(identifier || "").trim();
+  if (!trimmed) return null;
+
+  return populatePaymentForAccess(
+    ManualPayment.findOne({
+      $or: [
+        { referenceNumber: trimmed.toUpperCase() },
+        { slug: trimmed.toLowerCase() },
+      ],
+    })
+  );
+};
+
 // Authorize access to a manual payment for either an authenticated user
 // (via userId match) OR an unauthenticated visitor presenting the email
 // used at checkout. Throws AppError on mismatch.
@@ -368,15 +395,7 @@ const submitProof = catchAsync(async (req, res, next) => {
     return next(new AppError("Proof URL is required", 400));
   }
 
-  const payment = await ManualPayment.findOne({ referenceNumber: String(referenceNumber).trim() })
-    .populate({
-      path: "orderId",
-      populate: {
-        path: "user",
-        select: "email role profilePicture",
-      },
-    })
-    .populate("userId", "email role profilePicture");
+  const payment = await findPaymentByIdentifier(referenceNumber);
 
   if (!payment) {
     return next(new AppError("Payment reference not found", 404));
@@ -759,20 +778,12 @@ const submitWithReceipt = catchAsync(async (req, res, next) => {
     return next(new AppError("Receipt file is required", 400));
   }
 
-  const referenceInput = String(req.body.referenceNumber || "").trim().toUpperCase();
+  const referenceInput = String(req.body.referenceNumber || "").trim();
   if (!referenceInput) {
     return next(new AppError("Reference number is required", 400));
   }
 
-  const payment = await ManualPayment.findOne({ referenceNumber: referenceInput })
-    .populate({
-      path: "orderId",
-      populate: {
-        path: "user",
-        select: "email role profilePicture",
-      },
-    })
-    .populate("userId", "email role profilePicture");
+  const payment = await findPaymentByIdentifier(referenceInput);
 
   if (!payment) {
     return next(new AppError("Payment reference not found", 404));
@@ -1050,18 +1061,7 @@ const submitWithReceipt = catchAsync(async (req, res, next) => {
 const getMyPaymentStatus = catchAsync(async (req, res, next) => {
   const { paymentIdentifier } = req.params;
 
-  const identifier = String(paymentIdentifier || "").trim();
-  const payment = await ManualPayment.findOne({
-    $or: [{ slug: identifier }, { referenceNumber: identifier }],
-  })
-    .populate({
-      path: "orderId",
-      populate: {
-        path: "user",
-        select: "email role profilePicture",
-      },
-    })
-    .populate("userId", "email role profilePicture");
+  const payment = await findPaymentByIdentifier(paymentIdentifier);
 
   if (!payment) {
     return next(new AppError("Payment reference not found", 404));

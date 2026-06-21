@@ -152,6 +152,11 @@ const ProductDetails = () => {
   const { push: pushRecentlyViewed } = useRecentlyViewed();
   const { trackView } = useTracker();
 
+  const hasVariants = Array.isArray(product?.variants) && product.variants.length > 0;
+  const selectedVariant = hasVariants
+    ? product.variants.find((variant) => variant.sku === selectedVariantSku) || null
+    : null;
+
   useEffect(() => {
     if (product?._id && product?.slug) {
       pushRecentlyViewed(product);
@@ -444,10 +449,6 @@ const ProductDetails = () => {
     );
   }
 
-  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
-  const selectedVariant = hasVariants
-    ? product.variants.find((variant) => variant.sku === selectedVariantSku) || null
-    : null;
   const basePrice = product.basePrice + (selectedVariant?.priceAdjustment || 0);
   const price = basePrice * (1 - (product.discountPercent || 0) / 100);
   const inWishlist = wishlistItems.some((item) => item.id === product._id);

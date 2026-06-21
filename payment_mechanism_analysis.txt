@@ -1,0 +1,458 @@
+================================================================================
+  PAYMENT MECHANISM ANALYSIS — SAGA ELITE WEB PROJECT
+  Guest & Registered Users | Manual & Card Payments
+================================================================================
+
+TABLE OF CONTENTS
+  1. Overview
+  2. Supported Payment Methods
+  3. Guest vs Registered User Flow
+  4. Manual Bank Transfer (Full Flow)
+  5. Card Payment (Sample/Demo Flow)
+  6. Database Schema
+  7. File Inventory
+  8. Architecture Decisions
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+This project implements a "manual/admin-verification" payment model — no real
+payment gateway (Stripe, PayPal, etc.) is fully integrated. The system
+supports 7 payment method types, but only two are actively implemented:
+manual_bank_transfer (fully) and card (sample/demo placeholder).
+
+PayHere credentials exist in .env.example but are NOT wired up. The card flow
+is explicitly designed as a pre-PayHere simulation.
+
+================================================================================
+2. SUPPORTED PAYMENT METHODS
+================================================================================
+
+Defined in: Server-side/Middlewares/request-validation.js:6
+            Server-side/Models/Order.js:107-109
+
+  Enum Value             | Status            | Notes
+  -----------------------|-------------------|--------------------------------
+  manual_bank_transfer   | FULLY IMPLEMENTED | Primary method; 2-tier verification
+  card                   | SAMPLE/PLACEHOLDER| Demo flow; no real gateway
+  manual                 | LEGACY            | Partial support
+  cash                   | LISTED            | No specific UI flow
+  payhere                | CONFIGURED        | Credentials exist; NOT wired
+  gpay                   | LISTED            | Not implemented
+  lankapay               | LISTED            | Not implemented
+
+================================================================================
+3. GUEST vs REGISTERED USER FLOW
+================================================================================
+
+3A. Guest Tracking
+    File: Server-side/Middlewares/guest-tracking-middleware.js
+    - A guestToken cookie is set for unauthenticated visitors
+    - Guests place orders by providing an email address
+
+3B. Guest Order Creation
+    File: Server-side/Controllers/order-controller.js:145-159, 295
+    - If req.userInfo is null but guestEmail exists, a Guest record is
+      created/updated via findOneAndUpdate with upsert:true
+    - The order references guest._id instead of user._id
+
+3C. Guest OTP Verification for Bank Transfers
+    File: Client-Side/src/pages/shopping-view/Checkout.jsx:739-747
+    - Guests must pass OTP verification before submitting a bank transfer order
+
+3D. Guest Payment Authorization
+    File: Server-side/Controllers/manualPaymentController.js:73-111
+    - authorizePaymentAccess middleware allows guests to access their payment
+      by matching the email used at checkout
+    - Supports email-based auth via x-payment-email header or body field
+
+3E. Guest Payment Recovery
+    File: Client-Side/src/pages/FindPaymentPage.jsx
+    - Guests can look up payments using email + reference number
+    - API: POST /api/v1/manual-payments/lookup (manualPaymentController.js:1494-1545)
+
+3F. Registered User Flow
+    - Orders reference authenticated User._id (order-controller.js:294)
+    - Users can access GET /api/v1/orders/user-orders (requires auth)
+    - Users can generate references via POST /api/v1/manual-payment/generate
+    - Users see pending payments via GET /api/v1/payments/my-pending
+
+================================================================================
+4. MANUAL BANK TRANSFER — FULL FLOW
+================================================================================
+
+4A. Checkout → Order Creation
+    File: Client-Side/src/pages/shopping-view/Checkout.jsx:106-123
+    - User selects "manual_bank_transfer" as payment method
+    - Form submitted; dispatches createOrder Redux thunk
+
+    File: Server-side/Controllers/order-controller.js:124-547
+    - Validates items, checks stock per variant (lines 165-192)
+    - Applies coupon if provided (lines 255-290)
+    - Sets order status = "pending_payment", paymentStatus = "pending" (309-321)
+    - Deducts variant stock within transaction (lines 229-232)
+    - Creates the Order document (line 324)
+    - Creates a ManualPayment record (lines 475-531):
+        - Generates unique reference number via referenceGenerator.js
+        - Sends email with bank details and payment link
+        - Sends WhatsApp message with payment instructions
+    - Wrapped in safe MongoDB transaction (Server-side/Utils/safe-transaction.js)
+
+4B. Payment Reference & Instructions (User Facing)
+    File: Client-Side/src/pages/ManualPaymentPage.jsx
+    File: Client-Side/src/components/Payment/ManualPaymentInstructions.jsx
+    - Displays bank details (account name, number, bank name)
+    - Shows unique reference number
+    - QR code for easy scanning (line 50-60)
+    - 24-hour countdown timer for expiry
+    - Visual timeline: Transfer → Upload Receipt → Bank Verification →
+      Order Confirmed → Atelier Dispatch
+
+4C. Proof Submission — Receipt Upload
+    File: Client-Side/src/components/Payment/ProofSubmission.jsx
+    - Drag-and-drop file upload
+    - Image compression
+    - File size limit: 5MB (Server-side/Middlewares/multer-middleware.js:34)
+    - Accepts: PDF and image formats
+
+    API: POST /api/v1/manual-payment/submit-with-receipt (multipart)
+    File: Server-side/Controllers/manualPaymentController.js:757-1048
+    - Runs OCR via Tesseract.js on the receipt (line 797)
+    - Auto-decides based on OCR match:
+        ocr_matched     → status = "pending_bank_confirmation"
+        auto_rejected   → status = "rejected"
+        otherwise       → status = "proof_submitted"
+    - Stores receipt to Cloudinary (lines 812-821)
+    - Updates order status to "verification_pending" (line 402-415 in submitProof)
+    - Sends notifications: customer email, WhatsApp, admin email, admin WhatsApp
+
+    Alternative: POST /api/v1/manual-payment/submit-proof (URL-based)
+    File: Server-side/Controllers/manualPaymentController.js:360-537
+    - For when user submits a URL instead of uploading directly
+
+4D. Bank Verification (Auto-Verification via IMAP/SMS)
+    File: Server-side/Utils/bank-email-watcher.js (555 lines)
+    - Polls configured bank inbox via IMAP (default 2-minute interval, lines 519-540)
+    - Parses credit-alert emails using bank-specific parsers
+    - processBankNotification (lines 191-364):
+        - Finds matching ManualPayment by reference (239-244)
+        - Amount matches     → auto-verify, confirm order (283-309)
+        - Amount mismatch    → flag for admin review + WhatsApp alert (310-361)
+        - No matching payment → create OrphanBankCredit for reconciliation (246-263)
+
+    Bank Parsers:
+    - Sampath Bank: Server-side/Utils/bank-parsers/sampath.js (117 lines)
+    - Generic fallback: Server-side/Utils/bank-parsers/generic.js (55 lines)
+
+    SMS Webhook: POST /api/webhooks/bank-sms
+    File: Server-side/Routes/bank-sms-webhook-routes.js
+    - Authenticated via X-Webhook-Secret header (lines 53-59)
+    - Same processBankNotification path as IMAP watcher (line 87-96)
+
+4E. Admin Manual Verification
+    File: Server-side/Controllers/manualPaymentController.js:1196-1435
+    API: PUT /api/v1/admin/manual-payments/:id/verify
+    - Admin approves or rejects (lines 1199-1201)
+    - On approve:
+        ManualPayment.status = "verified"
+        Order.status = "confirmed"
+        Order.paymentStatus = "paid"
+    - On reject:
+        ManualPayment.status = "rejected"
+        Order.status = "verification_pending"
+        Order.paymentStatus = "failed"
+    - Full notification cycle on both paths
+
+    File: Client-Side/src/pages/admin-view/PendingPaymentsPage.jsx (716 lines)
+    File: Client-Side/src/pages/admin-view/PaymentVerificationPage.jsx (916 lines)
+
+4F. Payment Expiry & Cleanup
+    File: Server-side/Utils/manual-payment-cleanup.js (138 lines)
+    - markExpiredManualPayments (19-95): Marks expired payments, cancels orders
+    - pruneExpiredManualPayments (97-105): Deletes records older than 30 days
+    - Runs: every 15 minutes (line 124) and daily (line 125)
+    - Started in: Server-side/server.js:300
+
+4G. Extension Request
+    File: Server-side/Controllers/manualPaymentController.js:1453-1489
+    API: POST /api/v1/manual-payments/:slug/request-extension
+    - One-time 12-hour extension on the 24-hour expiry
+
+4H. Resend Payment Link
+    File: Server-side/Controllers/manualPaymentController.js:1550-1633
+    API: POST /api/v1/manual-payments/:slug/send-link
+    - Re-sends payment instructions via email and WhatsApp
+
+================================================================================
+5. CARD PAYMENT — SAMPLE/PLACEHOLDER FLOW
+================================================================================
+
+5A. Checkout → Order Creation
+    File: Client-Side/src/pages/shopping-view/Checkout.jsx:106-123
+    - User selects "card" as payment method
+    - On order creation, order status = "confirmed", paymentStatus = "paid"
+      (order-controller.js:309-321 — because payment method is not bank transfer)
+    - Redirected to CardPaymentPage (line 789)
+
+5B. Card Payment Page
+    File: Client-Side/src/pages/CardPaymentPage.jsx (468 lines)
+    - Collects: cardholder name, card number, expiry, CVV
+    - Client-side Luhn check for card number validity (lines 41-56)
+    - Detects card brand from PAN prefix (Visa, Mastercard, Amex, etc.)
+
+5C. Sample Card Submission
+    API: POST /api/v1/card-payment/submit-sample
+    File: Server-side/Controllers/manualPaymentController.js:560-749
+    - Validates card number via Luhn check server-side
+    - Detects card brand from PAN prefix (lines 542-549)
+    - Stores only: last4, brand, cardholder name, expiry month/year
+    - Generates a simulated gateway reference
+    - Sets ManualPayment.status = "proof_submitted" — goes to same admin queue
+    - ManualPayment.cardDetails.simulated = true (marks as pre-PayHere sample)
+    - FULL PAN AND CVV ARE NEVER STORED (ManualPayment.js:59-73)
+
+5D. PayHere Integration Path (Future)
+    File: Server-side/Controllers/manualPaymentController.js:556-559
+    Comment:
+      "When PayHere is wired up post-hosting, replace the body of this handler
+       with a PayHere notify-URL handler that flips `simulated` to false and
+       auto-verifies on `status_code === '2'`"
+
+    Config placeholders (.env.example:56-58):
+      PAYHERE_MERCHANT_ID=your_payhere_merchant_id
+      PAYHERE_MERCHANT_SECRET=your_payhere_merchant_secret
+      PAYHERE_SANDBOX=true
+
+================================================================================
+6. DATABASE SCHEMA — PAYMENT-RELATED MODELS
+================================================================================
+
+6A. ManualPayment Model
+    File: Server-side/Models/ManualPayment.js (221 lines)
+
+    Field                      | Type                    | Notes
+    ---------------------------|-------------------------|---------------------------
+    referenceNumber            | String, required, unique| 12 chars max, uppercase
+    slug                       | String, unique, sparse  | Auto-generated from ref
+    orderId                    | ObjectId ref→Order      | Links to Order
+    userId                     | ObjectId ref→User       | For registered users
+    guestId                    | ObjectId ref→Guest      | For guest checkouts
+    amount                     | Number, required, min 0 |
+    currency                   | String, default "LKR"   |
+    paymentType                | enum                    | manual_bank_transfer | card
+    cardDetails                | Embedded object         | {cardholderName, last4,
+                              |                         |  expiryMonth, expiryYear,
+                              |                         |  brand, gatewayReference,
+                              |                         |  simulated}
+    proofUrl                   | String, max 1000        | Receipt/proof image URL
+    proofSubmittedAt           | Date                    |
+    status                     | enum                    | pending_payment,
+                              |                         | proof_submitted,
+                              |                         | pending_bank_confirmation,
+                              |                         | verified, rejected, expired
+    expiresAt                  | Date, index             | 24h from generation
+    verifiedAt                 | Date                    |
+    verifiedBy                 | ObjectId ref→User       | Admin who verified
+    rejectionReason            | String, max 1000        |
+    adminNotes                 | String, max 2000        |
+    extensionGranted           | Boolean                 | 12h extension used?
+    ocr                        | Embedded object         | extractedText, ref,
+                              |                         | amount, match results,
+                              |                         | decision, processedAt
+    bankVerification           | Embedded object         | confirmed, confirmedAt,
+                              |                         | source, bankName,
+                              |                         | emailMessageId, from,
+                              |                         | subject, extracted data,
+                              |                         | amountMismatch, rawSnippet
+
+    Indexes:
+      { status: 1, createdAt: -1 }
+      { expiresAt: 1 }
+      { orderId: 1, status: 1 }
+      { paymentType: 1, status: 1, createdAt: -1 }
+      Partial unique on bankVerification.emailMessageId (prevents double-process)
+
+6B. Order Model (Payment fields)
+    File: Server-side/Models/Order.js
+
+    Field              | Type            | Notes
+    -------------------|-----------------|---------------------------
+    paymentMethod      | enum (7 values) | See section 2
+    paymentProofUrl    | String, max 1000|
+    transactionId      | String, index   | Gateway transaction ref
+    paymentProofHash   | String          | Hash of proof
+    paymentVerifiedAt  | Date            |
+    referenceNumber    | String, index   | Auto-generated
+    paymentStatus      | enum            | pending | paid | failed
+    status             | enum (9 values) | Includes pending_payment,
+                       |                 | verification_pending, confirmed
+    expiresAt          | Date            | Cash/manual order expiry
+
+    Order status flow (order-controller.js:41-51):
+      pending
+        → pending_payment / confirmed / cancelled
+      pending_payment
+        → verification_pending / confirmed / cancelled
+      verification_pending
+        → confirmed / cancelled
+      confirmed
+        → shipped / cancelled
+      shipped
+        → delivered
+      delivered
+        → refund_requested / refunded
+      cancelled / refunded
+        → [terminal]
+
+6C. OrphanBankCredit Model
+    File: Server-side/Models/OrphanBankCredit.js (56 lines)
+    - Stores unmatched bank credit notifications
+    - Fields: amount, currency, extractedReference, transactionId, bankName,
+      emailMessageId (unique), emailFrom, emailSubject, emailDate,
+      rawSnippet, resolved, linkedPaymentId
+
+6D. User Model (Payment field)
+    File: Server-side/Models/User.js:233-236
+    - savedPaymentMethod: string enum matching payment methods
+
+6E. Guest Model
+    File: Server-side/Models/Guest.js (75 lines)
+    - email, guestToken, phone, orderCount
+
+================================================================================
+7. COMPLETE FILE INVENTORY
+================================================================================
+
+7A. Backend (Server-Side)
+
+    Controllers:
+      Server-side/Controllers/manualPaymentController.js       1724 lines
+      Server-side/Controllers/order-controller.js              1707 lines
+      Server-side/Controllers/coupon-controller.js
+      Server-side/Controllers/shipping-zone-controller.js
+      Server-side/Controllers/notification-controller.js
+      Server-side/Controllers/whatsapp-webhook-controller.js
+
+    Models:
+      Server-side/Models/ManualPayment.js                      221 lines
+      Server-side/Models/Order.js                              226 lines
+      Server-side/Models/OrphanBankCredit.js                    56 lines
+      Server-side/Models/Guest.js                               75 lines
+      Server-side/Models/User.js                               267 lines
+      Server-side/Models/Coupon.js                             183 lines
+      Server-side/Models/ShippingZone.js                        47 lines
+      Server-side/Models/SiteConfig.js                          23 lines
+
+    Routes:
+      Server-side/Routes/manualPaymentRoutes.js                 95 lines
+      Server-side/Routes/order-routes.js                        35 lines
+      Server-side/Routes/bank-sms-webhook-routes.js            117 lines
+      Server-side/Routes/coupon-routes.js
+
+    Middleware:
+      Server-side/Middlewares/request-validation.js           2214 lines
+      Server-side/Middlewares/optional-auth-middleware.js       32 lines
+      Server-side/Middlewares/guest-tracking-middleware.js      24 lines
+      Server-side/Middlewares/multer-middleware.js              35 lines
+      Server-side/Middlewares/rateLimitinMiddleware.js
+
+    Utils:
+      Server-side/Utils/referenceGenerator.js                   32 lines
+      Server-side/Utils/safe-transaction.js                     50 lines
+      Server-side/Utils/manual-payment-cleanup.js              138 lines
+      Server-side/Utils/bank-email-watcher.js                  555 lines
+      Server-side/Utils/bank-parsers/index.js                   24 lines
+      Server-side/Utils/bank-parsers/sampath.js                117 lines
+      Server-side/Utils/bank-parsers/generic.js                 55 lines
+      Server-side/Utils/receipt-ocr.js                         247 lines
+      Server-side/Utils/invoice-pdf.js                         382 lines
+      Server-side/Utils/notification-service.js                106 lines
+      Server-side/Utils/socket-events.js                        12 lines
+      Server-side/Utils/socket-service.js
+      Server-side/Utils/send-mail.js
+      Server-side/Utils/email-template.js
+      Server-side/Utils/whatsapp-service.js
+      Server-side/Utils/reward-service.js                      238 lines
+      Server-side/Utils/image-upload.js
+      Server-side/Utils/logger.js
+      Server-side/Utils/cart-abandonment-job.js                 92 lines
+      Server-side/Utils/guest-promo-job.js                     112 lines
+
+    Config:
+      Server-side/Config/cloudinary-config.js
+      Server-side/Config/runtime-config.js
+      .env.example (lines 55-103: payment config)
+
+    Entry Point:
+      Server-side/server.js (lines 300-301: starts cleanup + bank watcher)
+
+7B. Frontend (Client-Side)
+
+    Pages:
+      Client-Side/src/pages/shopping-view/Checkout.jsx        1567 lines
+      Client-Side/src/pages/shopping-view/Cart.jsx
+      Client-Side/src/pages/shopping-view/OrderSuccess.jsx
+      Client-Side/src/pages/shopping-view/Orders.jsx
+      Client-Side/src/pages/shopping-view/OrderTracking.jsx
+      Client-Side/src/pages/ManualPaymentPage.jsx             1072 lines
+      Client-Side/src/pages/CardPaymentPage.jsx                468 lines
+      Client-Side/src/pages/FindPaymentPage.jsx                225 lines
+      Client-Side/src/pages/admin-view/PendingPaymentsPage.jsx 716 lines
+      Client-Side/src/pages/admin-view/PaymentVerificationPage.jsx 916 lines
+      Client-Side/src/pages/admin-view/Orders.jsx             1005 lines
+
+    Components:
+      Client-Side/src/components/Payment/ManualPaymentInstructions.jsx 328 lines
+      Client-Side/src/components/Payment/ProofSubmission.jsx           231 lines
+      Client-Side/src/components/Payment/PaymentReference.jsx
+
+    State & API:
+      Client-Side/src/store/manualPaymentSlice.js              541 lines
+      Client-Side/src/store/order-slice/index.js               319 lines
+      Client-Side/src/api/manualPaymentAPI.js                  175 lines
+      Client-Side/src/api/cardPaymentAPI.js                     37 lines
+
+7C. Documentation:
+      TEAM_DOCUMENTATION/03_Checkout_Order_Payment_System.txt  472 lines
+
+================================================================================
+8. KEY ARCHITECTURE DECISIONS
+================================================================================
+
+  1. No real payment gateway is fully integrated. The system uses a
+     manual/admin-verification model. PayHere credentials exist in config but
+     are not wired up yet.
+
+  2. Shared collection model: Both manual_bank_transfer and card payment types
+     share the ManualPayment collection, differentiated by the paymentType
+     field. This is by design.
+
+  3. Two-tier verification for bank transfers:
+     - OCR layer (Tesseract.js): Sanity-check on the uploaded receipt image
+     - Bank confirmation layer (IMAP/SMS): Actual proof of funds via bank
+       email notification polling or SMS webhook
+
+  4. Idempotent processing: bankVerification.emailMessageId has a partial
+     unique index to prevent double-processing of the same bank notification.
+
+  5. Never store full card details: Only last4, brand, cardholder name, and
+     expiry are stored. Full PAN and CVV are NEVER persisted.
+
+  6. Guest support: Complete guest checkout flow with email-based
+     authentication for payment access and recovery.
+
+  7. 24-hour payment expiry with one-time 12-hour extension option.
+
+  8. Multi-channel notifications: Every payment state change triggers email,
+     WhatsApp, in-app notification, and Socket.IO real-time events.
+
+  9. Transaction safety: Order creation is wrapped in a MongoDB transaction
+     when topology supports it (falls back gracefully on standalone MongoDB).
+
+ 10. Cart is stored client-side in localStorage (not server-side), cleared on
+     successful order creation.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

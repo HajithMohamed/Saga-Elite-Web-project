@@ -768,6 +768,7 @@ const Checkout = () => {
           structuredAddress,
           contactNumber: formData.phone,
           paymentMethod: formData.paymentMethod,
+          shippingFee,
           notes: `Delivery Mode: ${formData.deliveryMode}\n${formData.notes}`,
           guestEmail: formData.email,
           couponCode: appliedCoupon?.code || undefined,

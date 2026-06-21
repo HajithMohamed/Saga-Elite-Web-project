@@ -59,7 +59,7 @@ export default {
 
         muted: {
           DEFAULT: '#d0c5af',
-          foreground: '#131313',
+          foreground: '#99907c',
         },
 
         border: '#4d4635',

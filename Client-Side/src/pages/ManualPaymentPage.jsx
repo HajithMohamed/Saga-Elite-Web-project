@@ -613,36 +613,49 @@ const ManualPaymentPage = () => {
       throw new Error("Payment reference is not ready yet.");
     }
 
-    const result = await dispatch(
-      submitManualPaymentReceipt({
-        referenceNumber: activeReferenceNumber,
-        file,
-        email: resolvedEmail || undefined,
-      })
-    ).unwrap();
+    try {
+      const result = await dispatch(
+        submitManualPaymentReceipt({
+          referenceNumber: activeReferenceNumber,
+          file,
+          email: resolvedEmail || undefined,
+        })
+      ).unwrap();
 
-    const decision = result?.data?.decision;
-    if (decision === "ocr_matched") {
+      const decision = result?.data?.decision;
+      if (decision === "ocr_matched") {
+        toast({
+          title: "Receipt accepted",
+          description:
+            "We received your receipt. Your order will be confirmed once your bank notifies us of the credit.",
+          variant: "success",
+        });
+      } else if (decision === "auto_rejected") {
+        toast({
+          title: "Receipt didn't match",
+          description:
+            result?.data?.decisionReason ||
+            "We couldn't match the reference and amount on this receipt. Please upload a clearer or correct receipt.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Proof submitted",
+          description: "Your payment proof is now awaiting manual verification.",
+          variant: "success",
+        });
+      }
+    } catch (uploadError) {
+      const message =
+        typeof uploadError === "string"
+          ? uploadError
+          : uploadError?.message || "Failed to submit receipt.";
       toast({
-        title: "Receipt accepted",
-        description:
-          "We received your receipt. Your order will be confirmed once your bank notifies us of the credit.",
-        variant: "success",
-      });
-    } else if (decision === "auto_rejected") {
-      toast({
-        title: "Receipt didn't match",
-        description:
-          result?.data?.decisionReason ||
-          "We couldn't match the reference and amount on this receipt. Please upload a clearer or correct receipt.",
+        title: "Receipt upload failed",
+        description: message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Proof submitted",
-        description: "Your payment proof is now awaiting manual verification.",
-        variant: "success",
-      });
+      throw uploadError;
     }
   };
 

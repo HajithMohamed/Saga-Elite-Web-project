@@ -781,6 +781,10 @@ const validateOrderCreate = createValidationMiddleware((req) => {
     guestEmail: sanitizeEmail(req.body.guestEmail, "guestEmail", {
       required: false,
     }),
+    shippingFee: sanitizeNumber(req.body.shippingFee, "shippingFee", {
+      required: false,
+      min: 0,
+    }),
     dropId:
       req.body.dropId !== undefined && req.body.dropId !== null && req.body.dropId !== ""
         ? sanitizeObjectId(req.body.dropId, "dropId")

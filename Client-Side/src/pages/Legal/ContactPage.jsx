@@ -339,20 +339,20 @@ const ContactPage = () => {
 
               <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-5 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs tracking-widest uppercase text-[#d0c5af]">
+                  <Label htmlFor="name" className="text-xs tracking-widest uppercase text-gold/90">
                     Name
                   </Label>
                   <Input
                     id="name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="bg-input/50 border-border/60 h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#d0c5af]/50"
+                    className="bg-[#1a1810] border-[#4d4635] h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#99907c]"
                     placeholder="Your full name"
                     autoComplete="name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs tracking-widest uppercase text-[#d0c5af]">
+                  <Label htmlFor="email" className="text-xs tracking-widest uppercase text-gold/90">
                     Email
                   </Label>
                   <Input
@@ -360,38 +360,38 @@ const ContactPage = () => {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="bg-input/50 border-border/60 h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#d0c5af]/50"
+                    className="bg-[#1a1810] border-[#4d4635] h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#99907c]"
                     placeholder="you@email.com"
                     autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-xs tracking-widest uppercase text-[#d0c5af]">
+                  <Label htmlFor="phone" className="text-xs tracking-widest uppercase text-gold/90">
                     Phone
                   </Label>
                   <Input
                     id="phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="bg-input/50 border-border/60 h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#d0c5af]/50"
+                    className="bg-[#1a1810] border-[#4d4635] h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#99907c]"
                     placeholder="+94 …"
                     autoComplete="tel"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="subject" className="text-xs tracking-widest uppercase text-[#d0c5af]">
+                  <Label htmlFor="subject" className="text-xs tracking-widest uppercase text-gold/90">
                     Subject
                   </Label>
                   <Input
                     id="subject"
                     value={form.subject}
                     onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                    className="bg-input/50 border-border/60 h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#d0c5af]/50"
+                    className="bg-[#1a1810] border-[#4d4635] h-12 focus-visible:ring-gold text-[#e5e2e1] placeholder:text-[#99907c]"
                     placeholder="Styling, order, bespoke…"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="message" className="text-xs tracking-widest uppercase text-[#d0c5af]">
+                  <Label htmlFor="message" className="text-xs tracking-widest uppercase text-gold/90">
                     Message
                   </Label>
                   <Textarea
@@ -400,7 +400,7 @@ const ContactPage = () => {
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={5}
                     maxLength={500}
-                    className="bg-input/50 border-border/60 focus-visible:ring-gold resize-none text-[#e5e2e1] placeholder:text-[#d0c5af]/50"
+                    className="bg-[#1a1810] border-[#4d4635] focus-visible:ring-gold resize-none text-[#e5e2e1] placeholder:text-[#99907c]"
                     placeholder="Tell us how we can help…"
                   />
                 </div>
@@ -471,8 +471,8 @@ const ContactPage = () => {
                     key={day}
                     className="flex items-center justify-between pb-3 border-b border-border/40"
                   >
-                    <span className="text-sm text-[#d0c5af]">{day}</span>
-                    <span className="font-display text-lg text-gold-light">{time}</span>
+                    <span className="text-sm text-[#99907c]">{day}</span>
+                    <span className="font-display text-lg text-gold">{time}</span>
                   </div>
                 ))}
               </div>
@@ -510,7 +510,7 @@ const ContactPage = () => {
                     className="flex w-full items-center justify-between gap-4 py-5 text-left font-display text-xl group"
                     aria-expanded={isOpen}
                   >
-                    <span className="group-hover:text-gold transition-colors">{item.question}</span>
+                    <span className="text-[#e5e2e1] uppercase tracking-wide group-hover:text-gold transition-colors">{item.question}</span>
                     <ChevronDown
                       className={`w-5 h-5 shrink-0 text-gold transition-transform ${
                         isOpen ? "rotate-180" : ""
@@ -526,7 +526,7 @@ const ContactPage = () => {
                         transition={{ duration: 0.25 }}
                         className="overflow-hidden"
                       >
-                        <p className="text-[#d0c5af] leading-relaxed pb-5 whitespace-pre-line">
+                        <p className="text-[#d0c5af] leading-relaxed pb-5 whitespace-pre-line text-sm md:text-base">
                           {item.answer}
                         </p>
                       </motion.div>
