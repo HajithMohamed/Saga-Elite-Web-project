@@ -11,6 +11,7 @@ const {
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  listMyRewards,
 } = require("../Controllers/coupon-controller");
 const {
   validateCouponCreate,
@@ -22,6 +23,9 @@ const router = express.Router();
 
 // Public — validate from checkout (auth optional, supports guest)
 router.post("/validate", optionalAuthMiddleware, validateCoupon);
+
+// Customer rewards vault
+router.get("/my-rewards", authMiddleware, listMyRewards);
 
 // Admin
 router.get(

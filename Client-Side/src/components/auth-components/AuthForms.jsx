@@ -11,6 +11,7 @@ import {
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
+import { describeAuthError } from "@/lib/auth-errors";
 import LuxuryInput from "./LuxuryInput";
 import OtpCells from "./OtpCells";
 import GoogleAuthButton from "./GoogleAuthButton";
@@ -23,10 +24,12 @@ const PHONE = /^(\+?94|0)?7[0-9]{8}$/;
 const GOOGLE = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FB = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 
-export const resolveUser = (p) =>
+void motion;
+
+const resolveUser = (p) =>
   p?.data?.user ?? (p?.data && typeof p.data === "object" ? p.data : null) ?? p?.user ?? null;
 
-export const resolveDest = (user) => {
+const resolveDest = (user) => {
   const r = String(user?.role || "").toLowerCase();
   return ["admin","super_admin","superadmin","sub_admin"].includes(r) ? "/admin/dashboard" : "/shopping/home";
 };
@@ -74,7 +77,12 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
       toast({ title: "Welcome back", variant: "success" });
       onClose();
       navigate(resolveDest(resolveUser(r)), { replace: true });
-    }).catch(err => toast({ title: "Login failed", description: err?.response?.data?.message || err?.message, variant: "destructive" }));
+    }).catch((err) => {
+      const { title, description } = describeAuthError(err, {
+        title: "Login failed",
+      });
+      toast({ title, description, variant: "destructive" });
+    });
   };
 
   const handleGoogle = async ({ access_token }) => {
@@ -229,8 +237,8 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
     else if (d.password) { const pe = firstPasswordError(d.password); if (pe) e.password = pe; }
     if (t.confirmPassword && !d.confirmPassword) e.confirmPassword = "Confirm your password.";
     else if (d.confirmPassword && d.password !== d.confirmPassword) e.confirmPassword = "Passwords don't match.";
-    if (t.phoneNumber && !d.phoneNumber) e.phoneNumber = "Phone number required.";
-    else if (d.phoneNumber && !PHONE.test(d.phoneNumber.replace(/\s/g,""))) e.phoneNumber = "Valid Sri Lankan mobile (e.g. 0771234567).";
+    // phoneNumber is optional — only validate format if the user typed something
+    if (d.phoneNumber && !PHONE.test(d.phoneNumber.replace(/\s/g,""))) e.phoneNumber = "Valid Sri Lankan mobile (e.g. 0771234567).";
     return e;
   }, []);
 
@@ -240,7 +248,7 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    const t = { username: true, email: true, password: true, confirmPassword: true, phoneNumber: true };
+    const t = { username: true, email: true, password: true, confirmPassword: true };
     setTouched(t);
     const fresh = validate(fd, t);
     setErrors(fresh);
@@ -251,7 +259,10 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
       toast({ title: "Welcome to the atelier", description: "Verify your email to continue.", variant: "success" });
       onOtpRequired();
     } catch (err) {
-      toast({ title: "Registration failed", description: err?.response?.data?.message || err?.message, variant: "destructive" });
+      const { title, description } = describeAuthError(err, {
+        title: "Registration failed",
+      });
+      toast({ title, description, variant: "destructive" });
     } finally { setLoading(false); }
   };
 
@@ -271,7 +282,7 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
           {fd.password && <div className="mt-1"><PasswordStrengthMeter password={fd.password} /></div>}
         </div>
         <LuxuryInput id="r-confirm" type="password" label="Confirm Password" autoComplete="new-password" value={fd.confirmPassword} error={touched.confirmPassword ? errors.confirmPassword : ""} onChange={set("confirmPassword")} onBlur={() => setTouched(p => ({ ...p, confirmPassword: true }))} />
-        <LuxuryInput id="r-phone" type="tel" label="Mobile (Sri Lanka)" placeholder="0771234567" autoComplete="tel" value={fd.phoneNumber} error={touched.phoneNumber ? errors.phoneNumber : ""} onChange={set("phoneNumber")} onBlur={() => setTouched(p => ({ ...p, phoneNumber: true }))} />
+        <LuxuryInput id="r-phone" type="tel" label="Mobile (Sri Lanka) — Optional" placeholder="0771234567" autoComplete="tel" value={fd.phoneNumber} error={touched.phoneNumber ? errors.phoneNumber : ""} onChange={set("phoneNumber")} onBlur={() => setTouched(p => ({ ...p, phoneNumber: true }))} />
         <Btn variant="default" className={`${AUTH_PRIMARY_BTN} w-full`} iconRight={loading ? undefined : ArrowRight} type="submit" disabled={loading}>
           {loading ? "Creating account..." : "Create account"}
         </Btn>

@@ -130,12 +130,19 @@ const fetchActiveDrops = async () => {
 
 const fetchHomepageOffers = async () => {
   const res = await axios.get(`${API_BASE}/offers`, {
-    params: { featured: "true" },
+    params: { productLimit: 24 },
   });
   const offers = res?.data?.data?.offers || [];
-  return offers
-    .filter((offer) => offer.showOnHomepage)
-    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  const offersWithProducts = offers.filter(
+    (offer) => (offer.products || []).length > 0
+  );
+  const homepageOffers = offersWithProducts.filter(
+    (offer) => offer.showOnHomepage
+  );
+
+  return (homepageOffers.length ? homepageOffers : offersWithProducts).sort(
+    (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
+  );
 };
 
 const normalizeSystemHeroImage = (image, index) => ({
@@ -237,4 +244,3 @@ export const getLandingData = async () => {
     socialImages: adImages,
   };
 };
-

@@ -1,4 +1,5 @@
 const ManualPayment = require("../Models/ManualPayment");
+const Order = require("../Models/Order");
 const { createNotification } = require("./notification-service");
 const sendEmail = require("./send-mail");
 const buildEmailTemplate = require("./email-template");
@@ -94,6 +95,56 @@ const markExpiredManualPayments = async () => {
   return expiringPayments.length;
 };
 
+const markExpiredCardOrders = async () => {
+  const now = new Date();
+
+  const expiredOrders = await Order.find({
+    paymentMethod: "card",
+    status: "pending_payment",
+    expiresAt: { $lte: now },
+  }).populate("user", "email");
+
+  for (const order of expiredOrders) {
+    order.status = "cancelled";
+    order.paymentStatus = "failed";
+    order.cancellationReason = "Card payment not completed within 24 hours.";
+    order.cancelledAt = now;
+    await order.save({ validateModifiedOnly: true });
+
+    const customerUserId = order.user?._id || order.user;
+    if (customerUserId) {
+      await createNotification({
+        userId: customerUserId,
+        type: "order",
+        title: "Order expired — payment not completed",
+        message: `Order ${order._id} was cancelled because card payment was not completed in time.`,
+        entityRef: order._id,
+        entityType: "Order",
+        meta: { orderId: order._id, status: "cancelled" },
+      });
+    }
+
+    const customerEmail = order.user?.email || order.guestEmail || null;
+    if (customerEmail) {
+      try {
+        await sendEmail({
+          email: customerEmail,
+          subject: "Your Saga Elite order expired",
+          html: buildEmailTemplate(
+            "Order expired",
+            `<p>Your order <strong>${order._id}</strong> was cancelled because card payment was not completed within 24 hours.</p>
+             <p>Please place a new order if you'd still like to purchase.</p>`
+          ),
+        });
+      } catch (emailError) {
+        logger.error("Failed to send card order expiry email", { emailError });
+      }
+    }
+  }
+
+  return expiredOrders.length;
+};
+
 const pruneExpiredManualPayments = async () => {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const result = await ManualPayment.deleteMany({
@@ -114,6 +165,7 @@ const startManualPaymentCleanupJob = () => {
   const runSweep = async () => {
     try {
       await markExpiredManualPayments();
+      await markExpiredCardOrders();
       await pruneExpiredManualPayments();
     } catch (error) {
       logger.error("Manual payment cleanup job failed", { error });
@@ -133,6 +185,7 @@ const startManualPaymentCleanupJob = () => {
 
 module.exports = {
   markExpiredManualPayments,
+  markExpiredCardOrders,
   pruneExpiredManualPayments,
   startManualPaymentCleanupJob,
 };

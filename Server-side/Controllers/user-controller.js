@@ -38,6 +38,16 @@ const normalizeCartItem = (item) => {
   const price = Math.round(
     priceBeforeDiscount * (1 - (product.discountPercent || 0) / 100)
   );
+  const productImages = Array.isArray(product.images)
+    ? product.images.map((image) => ({
+        _id: image._id,
+        url: image.url,
+        altText: image.altText,
+        colorTag: image.colorTag || "",
+        order: image.order,
+        isPrimary: image.isPrimary,
+      }))
+    : [];
 
   return {
     id: item._id,
@@ -51,7 +61,8 @@ const normalizeCartItem = (item) => {
       category: product.category,
       discountPercent: product.discountPercent,
       basePrice: product.basePrice,
-      image: product.images?.[0]?.url || null,
+      image: productImages[0]?.url || null,
+      images: productImages,
       sizes: [...new Set((product.variants || []).map((entry) => entry?.size).filter(Boolean))],
       colors: [...new Set((product.variants || []).map((entry) => entry?.color).filter(Boolean))],
       variants: (product.variants || []).map((entry) => ({
@@ -59,6 +70,7 @@ const normalizeCartItem = (item) => {
         sku: entry.sku,
         size: entry.size,
         color: entry.color,
+        colorCode: entry.colorCode,
         stock: entry.stock,
         priceAdjustment: entry.priceAdjustment,
       })),
@@ -68,6 +80,7 @@ const normalizeCartItem = (item) => {
       sku: variant.sku,
       size: variant.size,
       color: variant.color,
+      colorCode: variant.colorCode,
       stock: variant.stock,
       priceAdjustment: variant.priceAdjustment,
     },

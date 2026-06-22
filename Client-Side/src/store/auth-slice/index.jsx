@@ -7,9 +7,24 @@ const unwrapAxiosError = (error) => {
   return serverMsg || error.message || "Request failed";
 };
 
+const fireEvent = (eventName, payload = {}) => {
+  try {
+    axiosInstance.post("/events/track", {
+      eventName,
+      payload,
+      metadata: {
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+      },
+    }).catch(() => {});
+  } catch {
+    /* fire-and-forget */
+  }
+};
+
 const initialState = {
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   user: null,
 };
 
@@ -279,6 +294,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.data;
         state.isAuthenticated = false;
+        fireEvent("register", { email: action.payload.data?.email });
       })
       .addCase(registerUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -318,6 +334,9 @@ const authSlice = createSlice({
         const isSuccess = action.payload.success || action.payload.status === "success";
         state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
         state.isAuthenticated = !!isSuccess;
+        if (isSuccess) {
+          fireEvent("login", { email: state.user?.email });
+        }
       })
       .addCase(loginUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -458,6 +477,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         localStorage.removeItem('authToken');
+        fireEvent("logout");
       })
       .addCase(logoutUserAction.rejected, (state) => {
         state.isLoading = false;

@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Heart, ShoppingBag, X } from "lucide-react";
+import { Eye, Heart, ShoppingBag, X, Tag } from "lucide-react";
+import { useProductOffers } from "@/hooks/use-product-offers";
 import {
   addToCartAction,
   addToWishlistAction,
@@ -108,9 +109,22 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const primaryImage = product?.images?.[0]?.url || "/LOGO.png";
   const secondaryImage = product?.images?.[1]?.url || null;
   const [activeColor, setActiveColor] = useState(null);
-  const displayImage = activeColor
-    ? imageByColor.get(activeColor.toLowerCase()) || primaryImage
+  const [lockedColor, setLockedColor] = useState(null);
+  const previewColor = lockedColor || activeColor;
+  const displayImage = previewColor
+    ? imageByColor.get(previewColor.toLowerCase()) || primaryImage
     : primaryImage;
+
+  const [imgLoaded, setImgLoaded] = useState(false);
+  
+  // Create a ref to check if image is already loaded from cache
+  const imgRef = useRef(null);
+  useEffect(() => {
+    setImgLoaded(false);
+    if (imgRef.current?.complete) {
+      setImgLoaded(true);
+    }
+  }, [displayImage]);
 
   // Sizes with aggregated stock (across colors) — for the hover preview strip.
   const sizesWithStock = useMemo(() => {
@@ -148,6 +162,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const isNew = isNewProduct(product);
   const isRare = Boolean(product?.isRare);
 
+  const { bestOffer } = useProductOffers(product);
+
   // Stacked badges — up to 2 visible, top-left.
   const badges = [];
   if (isSoldOut) badges.push({ key: "sold", label: "SOLD OUT", tone: "dead" });
@@ -166,6 +182,12 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   if (isMostWished) badges.push({ key: "wish", label: "MOST WISHED", tone: "goldOutline" });
   if (showDealBadge && discountPct > 0)
     badges.push({ key: "deal", label: `${discountPct}% OFF`, tone: "bone" });
+  if (bestOffer && !isSoldOut && !badges.some((b) => b.key === "deal"))
+    badges.push({
+      key: "offer",
+      label: bestOffer.badgeText || bestOffer.name || "OFFER",
+      tone: "gold",
+    });
   const visibleBadges = badges.slice(0, 2);
 
   // Drop ending soon (< 24h, > 0).
@@ -239,30 +261,42 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       <Link
         to={productHref}
         className={cn(
-          "relative w-full overflow-hidden bg-[#131313] block rounded-[1rem] border border-[#1c1b1b] transition-all duration-500 group-hover:border-[#333] group-hover:shadow-[0_8px_30px_rgb(0,0,0,0.8)]",
-          tall ? "aspect-square" : "aspect-[3/4]"
+          "relative w-full overflow-hidden bg-[#111] block rounded-2xl border border-white/5 transition-all duration-500 group-hover:border-[#D4AF37]/30 group-hover:shadow-[0_8px_30px_rgb(212,175,55,0.15)]",
+          tall ? "aspect-square" : "aspect-[3/4] md:aspect-[4/5]"
         )}
       >
-        {/* Primary / color-swap image — keying on src triggers a clean opacity fade */}
+        {/* Skeleton Loader */}
+        {!imgLoaded && (
+          <div className="absolute inset-0 bg-[#1a1a1a] animate-pulse flex items-center justify-center">
+             <div className="w-8 h-8 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+          </div>
+        )}
+
+        {/* Primary / color-swap image */}
         <img
+          ref={imgRef}
           key={displayImage}
           src={displayImage}
           alt={product?.name || "Piece"}
           loading="lazy"
-          width={220}
-          height={293}
-          className="object-cover w-full h-full transition-all duration-[600ms] group-hover:brightness-90 group-hover:scale-[1.05] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+          onLoad={() => setImgLoaded(true)}
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder.jpg";
+            setImgLoaded(true);
+          }}
+          className={cn(
+            "object-cover object-center w-full h-full transition-all duration-700 ease-[0.25,0.46,0.45,0.94] group-hover:scale-105",
+            imgLoaded ? "opacity-100" : "opacity-0"
+          )}
         />
-        {/* Alt image — fades in on hover ONLY when no swatch is active */}
+        {/* Alt image */}
         {secondaryImage && !activeColor ? (
           <img
             src={secondaryImage}
             alt=""
             aria-hidden="true"
             loading="lazy"
-            width={220}
-            height={293}
-            className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-0 group-hover:opacity-100 transition-opacity duration-700"
           />
         ) : null}
 
@@ -409,18 +443,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       </Link>
 
       {/* Metadata */}
-      <Link to={productHref} className="block transition-colors p-2 rounded-sm mt-1">
+      <Link to={productHref} className="block transition-all duration-500 p-2 mt-2">
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col flex-1">
-            <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-tight leading-snug line-clamp-2">
+            <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-widest leading-snug line-clamp-1">
               {product?.name || "Untitled piece"}
             </h3>
-            <p className="text-[#D4AF37]/80 text-[10px] mt-1 uppercase tracking-widest font-medium">
-              {product?.category?.name || "Collection"}
+            <p className="text-[#99907c] text-[10px] mt-1 uppercase tracking-widest font-medium">
+              {product?.category?.name || product?.category || "Collection"}
             </p>
           </div>
           <div className="flex flex-col items-end shrink-0">
-            <p className="text-[#D4AF37] font-mono text-sm tracking-wider font-semibold tabular-nums">
+            <p className="text-[#f2ca50] font-mono text-sm tracking-wider font-semibold tabular-nums">
               {formatLKR(price)}
             </p>
             {discountPct > 0 && basePrice > 0 && (
@@ -446,7 +480,9 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       {distinctColors.length >= 2 && (
         <div
           className="px-2 -mt-1 mb-1 flex items-center gap-1.5"
-          onMouseLeave={() => setActiveColor(null)}
+          onMouseLeave={() => {
+            if (!lockedColor) setActiveColor(null);
+          }}
         >
           {distinctColors.slice(0, 5).map((color) => {
             const isActive =
@@ -461,11 +497,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
                 <ColorSwatch
                   color={color}
                   size={18}
-                  selected={isActive}
+                  selected={isActive || (lockedColor && lockedColor.toLowerCase() === color.toLowerCase())}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setActiveColor(color);
+                    // Toggle lock: clicking locks preview color until cleared
+                    if (lockedColor && lockedColor.toLowerCase() === color.toLowerCase()) {
+                      setLockedColor(null);
+                      setActiveColor(null);
+                    } else {
+                      setLockedColor(color);
+                      setActiveColor(color);
+                    }
                   }}
                 />
               </span>

@@ -4,10 +4,23 @@ import { Facebook, Instagram, Youtube, ArrowRight, CheckCircle2, ChevronDown, Lo
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import useShopAbout from "@/hooks/use-shop-about";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
+
+const DEFAULT_QUICK_LINKS = [
+  { label: "About Saga Elite", url: "/about" },
+  { label: "Terms & Conditions", url: "/legal/terms-and-conditions" },
+  { label: "Privacy Policy", url: "/legal/privacy-policy" },
+  { label: "Refund Policy", url: "/legal/refund-policy" },
+  { label: "Delivery Policy", url: "/legal/delivery-policy" },
+];
 
 const MainFooter = () => {
   const location = useLocation();
   const isAdminView = location.pathname.startsWith("/admin");
+  const { open: openAuthDrawer } = useAuthDrawer();
 
   // Pull editable shop content from siteConfig — falls back to literal copy
   // when keys are unset, so the page never breaks during partial migrations.
@@ -15,7 +28,21 @@ const MainFooter = () => {
   const tagline =
     about?.shop_tagline ||
     "Limited edition fashion inspired by street culture, exclusivity, and modern youth identity.";
+  const brandDescription =
+    about?.footer_brand_description?.trim() || tagline;
   const brandName = about?.shop_brand_name || "Saga Elite";
+  const copyrightLine = (
+    about?.footer_copyright?.trim() ||
+    `© ${new Date().getFullYear()} Saga Elite. All rights reserved.`
+  ).replace(/\{year\}/g, String(new Date().getFullYear()));
+  const quickLinks =
+    Array.isArray(about?.footer_quick_links) && about.footer_quick_links.length > 0
+      ? about.footer_quick_links.filter((l) => l?.label && l?.url)
+      : DEFAULT_QUICK_LINKS;
+  const paymentMethods =
+    Array.isArray(about?.footer_payment_methods) && about.footer_payment_methods.length > 0
+      ? about.footer_payment_methods.filter((p) => p?.name || p?.iconUrl)
+      : null;
   const whatsappDigits = (about?.shop_whatsapp_number || "").replace(/[^0-9]/g, "");
   const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
   const socialLinks = [
@@ -33,12 +60,18 @@ const MainFooter = () => {
 
   if (isAdminView) return null;
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if(email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
-      setEmail("");
+      try {
+        await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
+        setSubscribed(true);
+        setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
+        setEmail("");
+        toast({ title: "Welcome to the Elite List.", variant: "success" });
+      } catch (error) {
+        toast({ title: "Subscription failed", description: error?.response?.data?.message || "Please try again", variant: "destructive" });
+      }
     }
   };
 
@@ -96,16 +129,29 @@ const MainFooter = () => {
               Unlock early access, rare drops, mystery rewards, and exclusive releases.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <Link to={isAuthenticated ? "/shopping/account" : "/auth/login"}>
-                <motion.button 
-                  whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
-                >
-                  <span className="relative z-10">{isAuthenticated ? "ENTER ELITE PORTAL" : "🔥 JOIN THE ELITE"}</span>
-                  <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
-                </motion.button>
-              </Link>
+              {isAuthenticated ? (
+                <Link to="/shopping/account">
+                  <motion.button 
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">ENTER ELITE PORTAL</span>
+                    <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
+                  </motion.button>
+                </Link>
+              ) : (
+                <div onClick={() => openAuthDrawer('register')}>
+                  <motion.button 
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">🔥 JOIN THE ELITE</span>
+                    <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
+                  </motion.button>
+                </div>
+              )}
               <Link to="/shopping/drops">
                 <motion.button 
                   whileHover={{ color: "#ffffff", borderColor: "#ffffff" }}
@@ -184,7 +230,7 @@ const MainFooter = () => {
               </div>
             </Link>
             <p className="text-sm text-[#777] mt-6 max-w-sm leading-relaxed">
-              {tagline}
+              {brandDescription}
             </p>
             <div className="mt-8 flex flex-col gap-2 text-xs text-[#555] font-mono tracking-wider">
               <p>🔥 12K+ ELITE MEMBERS</p>
@@ -247,11 +293,16 @@ const MainFooter = () => {
             <motion.div variants={itemVariants}>
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Company</h4>
               <ul className="space-y-4">
-                {['About Saga Elite', 'Community', 'Collaborations', 'Terms & Conditions', 'Privacy Policy'].map((item, i) => (
-                  <li key={item}>
-                    <Link to={i > 2 ? "/legal/terms-and-conditions" : "/about"} className="text-sm text-[#888] font-medium transition-colors flex items-center group">
+                {quickLinks.map((link) => (
+                  <li key={`${link.label}-${link.url}`}>
+                    <Link
+                      to={link.url}
+                      target={link.openInNewTab ? "_blank" : undefined}
+                      rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                      className="text-sm text-[#888] font-medium transition-colors flex items-center group"
+                    >
                       <motion.span variants={glowVariants} whileHover="hover" className="relative block">
-                        {item}
+                        {link.label}
                       </motion.span>
                     </Link>
                   </li>
@@ -294,12 +345,12 @@ const MainFooter = () => {
                     <li>⭐ Save Wishlist</li>
                   </ul>
                   <div className="flex flex-col gap-2">
-                    <Link to="/auth/login" className="text-center w-full bg-white text-black py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-colors">
+                    <button onClick={() => openAuthDrawer('login')} className="text-center w-full bg-white text-black py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-colors">
                       Login
-                    </Link>
-                    <Link to="/auth/register" className="text-center w-full bg-transparent border border-white/20 text-white py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-white/10 transition-colors">
+                    </button>
+                    <button onClick={() => openAuthDrawer('register')} className="text-center w-full bg-transparent border border-white/20 text-white py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-white/10 transition-colors">
                       Join Elite
-                    </Link>
+                    </button>
                   </div>
                 </div>
               )}
@@ -385,6 +436,28 @@ const MainFooter = () => {
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-[#444]" />
               <div className="flex gap-2 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300">
+                {paymentMethods ? (
+                  paymentMethods.map((method, idx) =>
+                    method.iconUrl ? (
+                      <img
+                        key={idx}
+                        src={method.iconUrl}
+                        alt={method.name || "Payment method"}
+                        className="h-6 w-auto bg-white rounded p-0.5 object-contain"
+                      />
+                    ) : (
+                      <div
+                        key={idx}
+                        className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20"
+                      >
+                        <span className="text-[#0e0e0e] text-[9px] font-bold uppercase">
+                          {method.name}
+                        </span>
+                      </div>
+                    )
+                  )
+                ) : (
+                  <>
                 {/* Visa SVG */}
                 <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
                   <path fill="#1434CB" d="M16.5 6.3h-2.4l-1.5 9.4h2.4l1.5-9.4zM24.7 6.4c-.4-.1-1.1-.3-2-.3-2.2 0-3.7 1.2-3.7 2.9 0 1.2 1.1 1.9 1.9 2.3.8.4 1.1.7 1.1 1.1 0 .6-.8.9-1.5.9-1 0-1.5-.2-2-.4l-.3-.1-.3 2.1c.5.2 1.4.5 2.4.5 2.4 0 3.9-1.2 3.9-3 0-1-.7-1.8-1.9-2.3-.7-.4-1.2-.6-1.2-1 0-.4.5-.8 1.4-.8.8 0 1.4.2 1.8.4l.2.1.3-2.1zM31 6.3h-1.9c-.6 0-1 .2-1.3.8L23.3 15.7h2.5l.5-1.4h3l.3 1.4h2.2L31 6.3zm-2.4 6l.6-1.7c0-.1.1-.3.1-.4 0 .1.1.2.2.3l.4 1.8h-1.3zM12.9 6.3L10 12.8l-.3-1.6c-.5-2.2-2.1-4.4-4-5l2.6 9.5h2.5l4-9.4h-2zM4 6.3H.1l-.1.4c2.5.6 4.2 1.8 5 3.3L3.8 6.3z" />
@@ -396,10 +469,11 @@ const MainFooter = () => {
                   <circle fill="#F79E1B" cx="22.2" cy="12" r="6.6" />
                   <path fill="#FF5F00" d="M19 18c2-1.3 3.3-3.5 3.3-6s-1.3-4.7-3.3-6c-2 1.3-3.3 3.5-3.3 6s1.3 4.7 3.3 6z" />
                 </svg>
-                {/* PayHere / Generic SVG placeholder for PayHere */}
                 <div className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20">
                   <span className="text-[#0e0e0e] text-[9px] font-bold">PAYHERE</span>
                 </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -407,7 +481,7 @@ const MainFooter = () => {
 
         {/* BOTTOM COPYRIGHT BAR */}
         <div className="flex flex-col-reverse md:flex-row items-center justify-between text-[11px] text-[#555] uppercase tracking-widest font-mono">
-          <p>© 2026 SAGA ELITE — RARE FIT FOREVER.</p>
+          <p>{copyrightLine}</p>
           
           <div className="flex items-center gap-3 mb-4 md:mb-0">
             <div className="flex items-center gap-2 bg-[#D4AF37]/10 px-3 py-1 rounded text-[#D4AF37] border border-[#D4AF37]/20">

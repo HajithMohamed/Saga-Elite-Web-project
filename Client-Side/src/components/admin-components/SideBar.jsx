@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
-  Gift,
   ShoppingBag,
   ShoppingCart,
   Star,
@@ -29,6 +28,7 @@ import {
   AlertTriangle,
   Layout,
   ScrollText,
+  ChevronDown,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -41,7 +41,7 @@ import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
-  Store: ["Products", "Drops", "Mystery Collectibles"],
+   Store: ["Products", "Drops"],
   Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Content: [
@@ -98,6 +98,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const [agingBounce, setAgingBounce] = useState(0);
   const [smartAlertBounce, setSmartAlertBounce] = useState(0);
   const [lowStockBounce, setLowStockBounce] = useState(0);
+
+  const [expandedSections, setExpandedSections] = useState(
+    SECTION_ORDER.reduce((acc, section) => ({ ...acc, [section]: true }), {})
+  );
+
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -275,12 +283,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
       permission: "drops",
-    },
-    {
-      label: "Mystery Collectibles",
-      path: "/admin/gifts",
-      icon: <Gift className="h-5 w-5" />,
-      permission: "products",
     },
 
     // Sales
@@ -514,7 +516,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             {item.icon}
           </div>
 
-          <span className="flex-1 font-sans text-sm font-bold uppercase tracking-wide">
+          <span className="flex-1 font-sans text-[13px] font-semibold capitalize tracking-wide">
             {item.label}
           </span>
 
@@ -569,24 +571,43 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
               <div className="se-label text-[10px] font-bold tracking-[0.34em] text-[#f2ca50]">
                 SAGA ELITE
               </div>
-              <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-[#99907c]">
+              <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-white">
                 Admin Panel
               </div>
             </div>
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar" data-lenis-prevent="true">
-          {renderGroups.map((group, groupIdx) => (
-            <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
-              {group.section ? (
-                <p className="px-4 pb-1 pt-4 font-sans text-[9px] uppercase tracking-[0.3em] text-[#4d4635] select-none">
-                  {group.section}
-                </p>
-              ) : null}
-              <div className="space-y-2">{group.items.map(renderItem)}</div>
-            </div>
-          ))}
+        <nav
+          className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
+          data-lenis-prevent="true"
+          data-testid="admin-sidebar-nav"
+        >
+          {renderGroups.map((group, groupIdx) => {
+            const isExpanded = group.section ? expandedSections[group.section] : true;
+            return (
+              <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
+                {group.section ? (
+                  <div 
+                    className="flex cursor-pointer items-center justify-between px-4 pb-1 pt-4 select-none group"
+                    onClick={() => toggleSection(group.section)}
+                  >
+                    <p className="font-sans text-sm font-black uppercase tracking-[0.2em] text-white transition-colors group-hover:text-[#D4AF37]">
+                      {group.section}
+                    </p>
+                    <ChevronDown 
+                      className={`h-4 w-4 text-white transition-transform duration-200 group-hover:text-[#D4AF37] ${isExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+                ) : null}
+                {isExpanded && (
+                  <div className={`space-y-2 ${group.section ? "ml-3" : ""}`}>
+                    {group.items.map(renderItem)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
@@ -596,7 +617,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
               location.pathname === "/admin/account"
                 ? "border-[#f2ca50]/40 bg-[#f2ca50]/15 text-white"
-                : "border-transparent text-[#99907c] hover:border-[#4d4635]/60 hover:bg-[#131313]"
+                : "border-transparent text-white hover:border-[#4d4635]/60 hover:bg-[#131313]"
             }`}
           >
             {location.pathname === "/admin/account" ? (
@@ -612,7 +633,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
               transition={{ duration: 0.2 }}
             >
               <User className="h-5 w-5" />
-              <span className="font-sans text-sm font-bold uppercase tracking-wide">
+              <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
                 My Account
               </span>
             </motion.div>
@@ -625,11 +646,11 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${
               isLoading
                 ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
-                : "text-[#99907c] hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+                : "text-white hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
             }`}
           >
             <LogOut className="h-5 w-5" />
-            <span className="font-sans text-sm font-bold uppercase tracking-wide">
+            <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
               {isLoading ? "Logging out…" : "Log Out"}
             </span>
           </button>

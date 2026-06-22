@@ -1,18 +1,56 @@
+# ── Root .dockerignore (used by backend Dockerfiles) ──────────
+# Dependencies (reinstalled inside container)
 node_modules
 **/node_modules
-npm-debug.log
-**/npm-debug.log
+
+# Build outputs
 dist
 **/dist
+
+# Environment / secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Git
 .git
 .github
-.env
-.env.local
-.env.example
-**/.env
-**/.env.local
 .gitignore
+
+# IDE / editor
+.claude
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docs (not needed in image)
 *.md
+*.txt
+
+# Testing
+e2e
 coverage
+**/coverage
+
+# Logs
 *.log
+**/logs
 **/*.log
+npm-debug.log
+**/npm-debug.log
+
+# Client-side (not needed for backend image)
+Client-Side/node_modules
+Client-Side/dist
+Client-Side/.vite
+Client-Side/src
+Client-Side/public
+Client-Side/index.html
+Client-Side/*.config.*
+Client-Side/*.json
+Client-Side/nginx.conf
+
+# Large files
+Server-side/eng.traineddata

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Bell, Loader2, Save, Eye } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateShopAbout } from "@/hooks/use-shop-about";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import {
@@ -96,6 +97,7 @@ const AnnouncementBar = () => {
         { withCredentials: true }
       );
       toast({ title: "Announcement saved", variant: "success" });
+      invalidateShopAbout();
       await load();
     } catch (err) {
       toast({

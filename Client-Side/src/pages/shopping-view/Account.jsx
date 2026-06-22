@@ -14,6 +14,7 @@ import {
   Phone,
   ShoppingBag,
   Star,
+  TicketPercent,
 } from "lucide-react";
 
 import { logoutUserAction, changePasswordAction, checkAuthAction } from "@/store/auth-slice";
@@ -178,6 +179,7 @@ const Account = () => {
 
   const quickLinks = [
     { to: "/shopping/orders", label: "Orders", sub: "Track and history", icon: Package },
+    { to: "/shopping/rewards", label: "My Rewards", sub: "Coupons & perks", icon: TicketPercent },
     { to: "/account/my-reviews", label: "My Reviews", sub: "View & manage", icon: Star },
     { to: "/shopping/wishlist", label: "Wishlist", sub: `${wishlistItems.length} saved`, icon: Heart },
     { to: "/shopping/product-list", label: "Shop", sub: "Browse catalog", icon: ShoppingBag },

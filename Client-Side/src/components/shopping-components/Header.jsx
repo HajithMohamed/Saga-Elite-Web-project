@@ -82,7 +82,7 @@ const Header = () => {
         description: 'See you next time.',
         variant: 'success',
       });
-      navigate('/auth/login');
+      navigate('/');
     } catch (err) {
       toast({
         title: 'Logout failed',

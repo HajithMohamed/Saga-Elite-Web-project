@@ -6,13 +6,11 @@ import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
-  AnnouncementBar,
   HeroCarousel,
   HeroBackdropFX,
   LiveDropCountdownXL,
   ProductSlider,
-  OffersSlider,
-  MysteryGiftSpline,
+  SeasonalCampaignSlider,
   WhyChooseSaga,
   TrendingFitsMarquee,
   CommunityFeed,
@@ -82,6 +80,7 @@ const Home = () => {
   useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:created", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:updated", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("offer:refresh", debouncedRefetch, [debouncedRefetch]);
 
   usePageMeta({ title: "Saga Elite — Own The Drop.", fullTitle: true });
 
@@ -129,7 +128,7 @@ const Home = () => {
   }
 
   return (
-    <ReactLenis root options={{ lerp: 0.08, smoothWheel: true }}>
+    <>
       <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
         {/* Ambient Three.js particle backdrop */}
         <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
@@ -137,15 +136,16 @@ const Home = () => {
         </div>
 
         <div className="relative z-10">
-          {/* 1. Announcement bar */}
-          <AnnouncementBar activeDrop={payload.activeDrop} />
-
-          {/* 2. Hero — cinematic */}
+          {/* 1. Hero — cinematic */}
           <HeroCarousel
-            slides={heroSlides}
             activeDrops={payload.activeDrops}
             nextDrop={nextDrop}
           />
+
+          {/* 2. Offers & Campaigns Slider */}
+          {payload.offers && payload.offers.length > 0 && (
+            <SeasonalCampaignSlider offers={payload.offers} />
+          )}
 
           {/* 3. Collection selector — Asymmetric */}
           <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
@@ -164,11 +164,6 @@ const Home = () => {
           <ForYouRail variant="recently-viewed" />
           <ForYouRail variant="trending-style" />
 
-          {/* 6. Active offers slider */}
-          {payload.offers && payload.offers.length > 0 && (
-            <OffersSlider offers={payload.offers} />
-          )}
-
           {/* 7. Next drop countdown */}
           {!payload.activeDrop && nextDrop?.releaseDate ? (
             <LiveDropCountdownXL
@@ -181,10 +176,7 @@ const Home = () => {
           {/* 8. Brand Manifesto */}
           <BrandManifesto />
 
-          {/* 9. Mystery gift */}
-          <MysteryGiftSpline />
-
-          {/* 10. Why Saga Elite */}
+          {/* 9. Why Saga Elite */}
           <WhyChooseSaga />
 
           {/* 11. Trending fits */}
@@ -207,7 +199,7 @@ const Home = () => {
           <CinematicFooter />
         </div>
       </div>
-    </ReactLenis>
+    </>
   );
 };
 

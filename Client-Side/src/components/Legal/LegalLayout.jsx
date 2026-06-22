@@ -6,6 +6,7 @@ const RELATED_POLICIES = [
   { label: "Privacy Policy", to: "/legal/privacy-policy" },
   { label: "Terms & Conditions", to: "/legal/terms-and-conditions" },
   { label: "Refund Policy", to: "/legal/refund-policy" },
+  { label: "Delivery Policy", to: "/legal/delivery-policy" },
   { label: "Contact Us", to: "/contact" },
   { label: "About Us", to: "/about" },
 ];

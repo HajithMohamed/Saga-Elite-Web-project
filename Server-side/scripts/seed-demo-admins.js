@@ -73,8 +73,7 @@ const seedDemoAdmins = async () => {
   const dbUri = process.env.MONGO_DB_URI || process.env.MONGO_URI || process.env.DATABASE_URI || process.env.DATABASE;
 
   if (!dbUri) {
-    console.error("Missing MONGO_DB_URI or MONGO_URI in environment.");
-    process.exit(1);
+    throw new Error("Missing MONGO_DB_URI or MONGO_URI in environment.");
   }
 
   await mongoose.connect(dbUri);

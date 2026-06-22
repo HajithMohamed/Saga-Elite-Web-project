@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,7 @@ import {
   Archive,
   ShieldCheck,
   Package,
+  Tag,
 } from "lucide-react";
 import {
   fetchCartAction,
@@ -26,12 +27,22 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
+import { useAllOffers } from "@/hooks/use-product-offers";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
 
-const productImage = (product) =>
-  product?.image || product?.images?.[0]?.url || "/LOGO.png";
+const productImage = (product, variantColor) => {
+  // Prefer an image tagged with the variant's color
+  if (variantColor && Array.isArray(product?.images)) {
+    const colorKey = variantColor.toLowerCase();
+    const matched = product.images.find(
+      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+    );
+    if (matched?.url) return matched.url;
+  }
+  return product?.image || product?.images?.[0]?.url || "/LOGO.png";
+};
 
 const variantLabel = (variant = {}) =>
   [variant?.size].filter(Boolean).join(" · ") || "Standard";
@@ -72,6 +83,45 @@ const Cart = () => {
 
   const { items = [], totalPrice = 0, totalQuantity = 0, isLoading } =
     useSelector((state) => state.cart.cart);
+
+  const { offers } = useAllOffers();
+
+  const offerSavings = useMemo(() => {
+    if (!offers.length || !items.length) return 0;
+    let totalSaving = 0;
+    for (const item of items) {
+      const product = item.product;
+      if (!product) continue;
+      const pid = String(product._id || product.id);
+      const productCats = [
+        product.category, product.subCategory,
+        ...(product.categoryPath || "").split("/"),
+      ].filter(Boolean).map((c) => c.toLowerCase().trim());
+
+      for (const offer of offers) {
+        if (!offer.isActive) continue;
+        const now = Date.now();
+        if (offer.startsAt && new Date(offer.startsAt).getTime() > now) continue;
+        if (offer.endsAt && new Date(offer.endsAt).getTime() < now) continue;
+
+        const offerPids = (offer.products || []).map((p) => String(p._id || p));
+        const offerCats = (offer.applicableCategories || []).map((c) => c.toLowerCase().trim());
+        const matchesProduct = offerPids.includes(pid);
+        const matchesCategory = offerCats.some((oc) => productCats.includes(oc));
+        if (!matchesProduct && !matchesCategory) continue;
+
+        const unitPrice = Number(item.unitPrice || product.basePrice || 0);
+        const qty = Number(item.quantity || 1);
+        if (offer.type === "fixed_amount" && offer.discountAmount) {
+          totalSaving += Number(offer.discountAmount) * qty;
+        } else if (offer.discountPercent) {
+          totalSaving += unitPrice * qty * (Number(offer.discountPercent) / 100);
+        }
+        break;
+      }
+    }
+    return totalSaving;
+  }, [items, offers]);
 
   useEffect(() => {
     dispatch(fetchCartAction()).finally(() => setHasLoadedOnce(true));
@@ -260,7 +310,7 @@ const Cart = () => {
                         style={{ aspectRatio: "4/5" }}
                       >
                         <img
-                          src={productImage(item.product)}
+                          src={productImage(item.product, item.variant?.color)}
                           alt={item.product?.name || "Piece"}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                           loading="lazy"
@@ -466,7 +516,7 @@ const Cart = () => {
                   {items.slice(0, 3).map((it, idx) => (
                     <img 
                       key={it.id} 
-                      src={productImage(it.product)} 
+                      src={productImage(it.product, it.variant?.color)} 
                       className="w-10 h-10 rounded-full border-2 border-[#0a0a0a] object-cover filter brightness-75"
                       style={{ zIndex: 3 - idx }}
                       alt=""
@@ -503,6 +553,14 @@ const Cart = () => {
                   <span className="se-body text-sm text-[#d0c5af]">Selection Value</span>
                   <span className="se-mono text-sm text-[#e5e2e1]">{formatLKR(totalPrice)}</span>
                 </div>
+                {offerSavings > 0 && (
+                  <div className="flex items-baseline justify-between">
+                    <span className="flex items-center gap-1.5 se-body text-sm text-[#22c55e]">
+                      <Tag className="h-3 w-3" /> Offer Savings
+                    </span>
+                    <span className="se-mono text-sm text-[#22c55e]">-{formatLKR(offerSavings)}</span>
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between">
                   <span className="se-body text-sm text-[#d0c5af]">Shipping</span>
                   <span className="se-body text-sm text-[#99907c]">{totalPrice >= 20000 ? "Complimentary" : "Calculated next"}</span>

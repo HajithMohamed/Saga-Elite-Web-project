@@ -5,8 +5,10 @@ import { checkAuthAction } from "./store/auth-slice";
 import usePageMeta from "./hooks/use-page-meta";
 import { useLenis } from "./hooks/use-lenis";
 import { useGuestId } from "./hooks/use-guest-id";
+import useTracker from "./hooks/useTracker";
 import AppLoader from "@/components/ui/AppLoader";
 import RegisterPromptModal from "./components/common-components/RegisterPromptModal";
+import ScrollToTop from "./components/common-components/ScrollToTop";
 
 // public layout import
 import PublicLayout from "./components/common-components/PublicLayout";
@@ -40,7 +42,6 @@ const AdminSeoSettings = lazy(() => import("./pages/admin-view/SeoSettings"));
 const AdminCommunity = lazy(() => import("./pages/admin-view/CommunityPage"));
 const AdminShipping = lazy(() => import("./pages/admin-view/ShippingPage"));
 const AdminOrders = lazy(() => import("./pages/admin-view/Orders"));
-const GiftManager = lazy(() => import("./pages/admin-view/GiftManager"));
 const AdminProduct = lazy(() => import("./pages/admin-view/Product"));
 const AdminDrops = lazy(() => import("./pages/admin-view/Drops"));
 const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
@@ -71,6 +72,7 @@ import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
 import Orders from "./pages/shopping-view/Orders";
+import MyRewards from "./pages/shopping-view/MyRewards";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
@@ -104,6 +106,7 @@ const ROUTE_META = [
   { match: /^\/legal\/privacy-policy$/, title: "Privacy Policy" },
   { match: /^\/legal\/terms-and-conditions$/, title: "Terms & Conditions" },
   { match: /^\/legal\/refund-policy$/, title: "Refund Policy" },
+  { match: /^\/legal\/delivery-policy$/, title: "Delivery Policy" },
   { match: /^\/auth\/forgot-password$/, title: "Reset Access" },
   { match: /^\/auth\/verify-reset-otp$/, title: "Verify Reset Code" },
   { match: /^\/auth\/reset-password-otp$/, title: "Verify Reset Code" },
@@ -132,6 +135,7 @@ function App() {
   const dispatch = useDispatch();
   useLenis();
   const { guestToken } = useGuestId();
+  useTracker();
 
   const ADMIN_ROLES = ["admin", "super_admin", "superadmin", "sub_admin"];
   const defaultAuthenticatedRoute = ADMIN_ROLES.includes(
@@ -141,14 +145,7 @@ function App() {
     : "/shopping/home";
 
   useEffect(() => {
-    const hasLocalToken =
-      typeof window !== "undefined" && Boolean(localStorage.getItem("authToken"));
-    const hasCookieToken =
-      typeof document !== "undefined" && document.cookie.includes("token=");
-
-    if (hasLocalToken || hasCookieToken) {
-      dispatch(checkAuthAction());
-    }
+    dispatch(checkAuthAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -170,6 +167,7 @@ function App() {
     <div>
       <SocketBridge />
       <RouteMetaManager />
+      <ScrollToTop />
       <RegisterPromptModal guestToken={guestToken} isAuthenticated={isAuthenticated} />
 
       <ErrorBoundary>
@@ -246,7 +244,6 @@ function App() {
             <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
             <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
             <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
-            <Route path="gifts" element={<PermissionGuard permission="products"><GiftManager /></PermissionGuard>} />
             <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
             <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
             <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
@@ -284,6 +281,7 @@ function App() {
             <Route path="home" element={<Home />} />
             <Route path="account" element={<Account />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="rewards" element={<MyRewards />} />
             <Route path="cart" element={<Cart />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="product-list" element={<ProductListing />} />

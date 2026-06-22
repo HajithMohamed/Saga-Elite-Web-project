@@ -190,17 +190,6 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
-    gift: {
-      giftId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Gift",
-        default: null,
-      },
-      revealed: {
-        type: Boolean,
-        default: false,
-      },
-    },
     notes: {
       type: String,
       trim: true,
@@ -215,6 +204,11 @@ const orderSchema = new mongoose.Schema(
     couponDiscount: {
       type: Number,
       default: 0,
+    },
+    shippingFee: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     expiresAt: {
       type: Date,

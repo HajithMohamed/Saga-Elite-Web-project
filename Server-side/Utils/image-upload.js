@@ -1,16 +1,47 @@
 const { Readable } = require("stream");
 const cloudinary = require("../Config/cloudinary-config");
 
+const getPositiveNumber = (value, fallback) => {
+    const normalized = Number(value);
+    return Number.isFinite(normalized) && normalized >= 0 ? normalized : fallback;
+};
+
+const getUploadOptions = (optionsOrRetries) => {
+    if (typeof optionsOrRetries === "number") {
+        return {
+            retries: optionsOrRetries,
+            timeout: getPositiveNumber(process.env.CLOUDINARY_UPLOAD_TIMEOUT_MS, 60000),
+        };
+    }
+
+    const options = optionsOrRetries || {};
+    return {
+        retries: getPositiveNumber(options.retries, 3),
+        timeout: getPositiveNumber(
+            options.timeout,
+            getPositiveNumber(process.env.CLOUDINARY_UPLOAD_TIMEOUT_MS, 60000)
+        ),
+    };
+};
+
 const isTransientError = (error) => {
-    const transientCodes = ["ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EPIPE"];
+    const transientCodes = ["ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EPIPE", "EAI_AGAIN"];
     if (error.code && transientCodes.includes(error.code)) return true;
-    if (error.http_code && error.http_code >= 500) return true;
+    if (error.http_code && (error.http_code >= 500 || error.http_code === 408 || error.http_code === 429)) return true;
     const msg = (error.message || "").toLowerCase();
-    if (msg.includes("econnreset") || msg.includes("etimedout") || msg.includes("socket hang up")) return true;
+    if (
+        msg.includes("econnreset") ||
+        msg.includes("etimedout") ||
+        msg.includes("request timeout") ||
+        msg.includes("timed out") ||
+        msg.includes("socket hang up")
+    ) return true;
     return false;
 };
 
-const uploadToCloudinary = (buffer, folder, mimetype = "image/jpeg", retries = 3) => {
+const uploadToCloudinary = (buffer, folder, mimetype = "image/jpeg", optionsOrRetries = 3) => {
+    const { retries, timeout } = getUploadOptions(optionsOrRetries);
+
     return new Promise((resolve, reject) => {
         const attempt = (attemptsLeft) => {
             const isImage = String(mimetype || "").startsWith("image/");
@@ -18,7 +49,7 @@ const uploadToCloudinary = (buffer, folder, mimetype = "image/jpeg", retries = 3
                 {
                     folder,
                     resource_type: isImage ? "image" : "auto",
-                    timeout: 60000,
+                    timeout,
                     transformation: isImage
                         ? [
                             {

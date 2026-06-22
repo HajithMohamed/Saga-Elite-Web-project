@@ -49,7 +49,7 @@ const categoryRoutes = require("./Routes/category-routes");
 const imageRoutes = require("./Routes/image-routes");
 const dropRoutes = require("./Routes/drop-routes");
 const orderRoutes = require("./Routes/order-routes");
-const giftRoutes = require("./Routes/gift-routes");
+
 const bannerRoutes = require("./Routes/banner-routes");
 const dealRoutes = require("./Routes/deal-routes");
 const manualPaymentRoutes = require("./Routes/manualPaymentRoutes");
@@ -68,8 +68,14 @@ const shippingZoneRoutes = require("./Routes/shipping-zone-routes");
 const guestRoutes = require("./Routes/guestRoutes");
 const guestTrackingMiddleware = require("./Middlewares/guest-tracking-middleware");
 const { initGuestPromoJob } = require("./Utils/guest-promo-job");
+const customerRoutes = require("./Routes/customerRoutes");
+const eventRoutes = require("./Routes/eventRoutes");
+const { identifyCustomer } = require("./Middlewares/customer-middleware");
+const { initCartAbandonmentJob } = require("./Utils/cart-abandonment-job");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
 const ManualPayment = require("./Models/ManualPayment");
+const Customer = require("./Models/Customer");
+const { CustomerEvent } = require("./Models/CustomerEvent");
 
 app.use(
   helmet({
@@ -80,7 +86,15 @@ app.use(
 app.use(cookieParser());
 app.use(configureCors());
 app.use(guestTrackingMiddleware);
+app.use(identifyCustomer);
 app.use(compression());
+app.use(
+  "/Uploads",
+  express.static(path.resolve(__dirname, "Uploads"), {
+    fallthrough: false,
+    maxAge: process.env.NODE_ENV === "production" ? "7d" : 0,
+  })
+);
 app.use(
   express.json({
     limit: "10kb",
@@ -127,7 +141,7 @@ app.use("/api/v1/facebook", facebookAuthRoute);
 app.use("/api/v1/image", imageRoutes);
 app.use("/api/v1/drops", dropRoutes);
 app.use("/api/v1/orders", orderRoutes);
-app.use("/api/v1/gifts", giftRoutes);
+
 app.use("/api/v1", manualPaymentRoutes);
 app.use("/api/v1/guest", guestRoutes);
 app.use("/api/v1/user", userRoutes);
@@ -145,6 +159,8 @@ app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
 app.use("/api/v1/admin/recommendations", recommendationsRoutes);
 app.use("/api/v1/admin/alerts", smartAlertsRoutes);
+app.use("/api/v1/customer", customerRoutes);
+app.use("/api/v1/events", eventRoutes);
 
 app.use(globalErrorController);
 
@@ -247,6 +263,40 @@ const runDeferredStartupTasks = async () => {
     });
   }
 
+  try {
+    // The old email_1 index was created as unique + non-sparse, so multiple
+    // documents with email:null cause E11000.  The new schema uses a partial
+    // filter index that excludes null emails from the uniqueness constraint.
+    // Drop the old index unconditionally, then let syncIndexes recreate it.
+    const customerIndexes = await Customer.collection.indexes();
+    const hasEmailIndex = customerIndexes.some((idx) => idx.name === "email_1");
+    if (hasEmailIndex) {
+      await Customer.collection.dropIndex("email_1");
+      logger.info("Dropped stale email_1 index on customers");
+    }
+    // Remove duplicate null-email rows so syncIndexes can build the new
+    // partial unique index without conflict.  Keep the first per guestToken.
+    const dupNullCustomers = await Customer.aggregate([
+      { $match: { email: null, type: "guest" } },
+      { $group: { _id: "$guestToken", ids: { $push: "$_id" }, count: { $sum: 1 } } },
+      { $match: { count: { $gt: 1 } } },
+    ]);
+    for (const group of dupNullCustomers) {
+      const [keep, ...remove] = group.ids;
+      await Customer.deleteMany({ _id: { $in: remove } });
+      logger.info("Cleaned duplicate null-email customers", {
+        kept: String(keep),
+        removed: remove.length,
+      });
+    }
+    await Customer.syncIndexes();
+    await CustomerEvent.syncIndexes();
+  } catch (err) {
+    logger.error("Customer/CustomerEvent.syncIndexes failed", {
+      error: err?.message || String(err),
+    });
+  }
+
   startManualPaymentCleanupJob();
   startBankInboxWatcher();
   initAgingStockJob();
@@ -254,6 +304,7 @@ const runDeferredStartupTasks = async () => {
   initSmartAlertsJob();
   initRecommendationsDigest();
   initGuestPromoJob();
+  initCartAbandonmentJob();
 };
 
 const startServer = async () => {
@@ -288,6 +339,9 @@ process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled promise rejection — shutting down", {
     reason: reason instanceof Error ? reason.stack : String(reason),
   });
+  if (process.env.NODE_ENV === "test") {
+    return;
+  }
   server.close(() => process.exit(1));
 });
 

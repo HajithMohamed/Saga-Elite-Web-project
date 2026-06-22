@@ -33,7 +33,7 @@ const ROLE_CREDENTIALS = {
 
 const BACKEND_URL =
   process.env.E2E_BACKEND_URL ||
-  `http://localhost:${process.env.E2E_BACKEND_PORT || 5001}`;
+  `http://127.0.0.1:${process.env.E2E_BACKEND_PORT || 5001}`;
 
 /**
  * Logs in as a seeded role by hitting the auth endpoint directly and
@@ -55,36 +55,84 @@ const loginAs = async ({ context, request }, role) => {
     );
   }
 
-  const setCookieHeader = response.headers()["set-cookie"];
-  if (!setCookieHeader) {
-    throw new Error(`Login for ${role} returned no Set-Cookie header`);
-  }
-
+  const payload = await response.json().catch(() => ({}));
+  const setCookieHeader = response.headers()["set-cookie"] || "";
   const tokenMatch = /token=([^;]+)/.exec(setCookieHeader);
-  if (!tokenMatch) {
-    throw new Error(`Login for ${role} returned no token cookie`);
+  const token = payload?.token || (tokenMatch ? tokenMatch[1] : null);
+
+  if (!token || token === "loggedout") {
+    throw new Error(`Login for ${role} returned no session token`);
   }
 
-  // Add cookie under the frontend origin so the SPA picks it up.
   const baseURL = process.env.E2E_BASE_URL || "http://localhost:5173";
-  const url = new URL(baseURL);
   await context.addCookies([
     {
       name: "token",
-      value: tokenMatch[1],
-      domain: url.hostname,
-      path: "/",
+      value: token,
+      url: baseURL,
       httpOnly: true,
       secure: false,
       sameSite: "Lax",
     },
   ]);
+
+  await context.addInitScript((authToken) => {
+    window.localStorage.setItem("authToken", authToken);
+  }, token);
+
+  // Bearer header for page.request calls to the backend origin (cookies are
+  // scoped to the Vite dev-server host, not 127.0.0.1:PORT).
+  await context.setExtraHTTPHeaders({ Authorization: `Bearer ${token}` });
+
+  return { token, baseURL };
+};
+
+const waitForAdminShell = async (page) => {
+  await page.getByTestId("admin-global-search-input").waitFor({
+    state: "visible",
+    timeout: 45_000,
+  });
+};
+
+/** Wait until the SPA has finished check-auth and rendered the admin layout. */
+const gotoAdmin = async (page, path = "/admin/dashboard", { baseURL, token } = {}) => {
+  if (token && baseURL) {
+    await page.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
+    await page.evaluate((authToken) => {
+      window.localStorage.setItem("authToken", authToken);
+    }, token);
+  }
+
+  const authReady = page.waitForResponse(
+    (res) =>
+      res.url().includes("/auth/check-auth") &&
+      res.status() >= 200 &&
+      res.status() < 400,
+    { timeout: 45_000 }
+  );
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await authReady.catch(() => {});
+  await page
+    .getByText("Opening the atelier")
+    .waitFor({ state: "hidden", timeout: 45_000 })
+    .catch(() => {});
+  await waitForAdminShell(page);
 };
 
 const test = baseTest.extend({
-  loginAs: async ({ context, request }, use) => {
-    await use((role) => loginAs({ context, request }, role));
+  loginAs: async ({ context, request, page }, use) => {
+    await use(async (role) => {
+      const session = await loginAs({ context, request }, role);
+      await gotoAdmin(page, "/admin/dashboard", session);
+    });
   },
 });
 
-module.exports = { test, expect, ROLE_CREDENTIALS, loginAs };
+module.exports = {
+  test,
+  expect,
+  ROLE_CREDENTIALS,
+  loginAs,
+  waitForAdminShell,
+  gotoAdmin,
+};

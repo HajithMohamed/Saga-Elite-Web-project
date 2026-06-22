@@ -19,6 +19,10 @@ export function useLenis({ enabled = true } = {}) {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
       smoothTouch: false,
+      prevent: (node) => {
+        return node.nodeName === 'TEXTAREA' || 
+               (node.closest && node.closest('[data-lenis-prevent]') !== null);
+      }
     });
     _lenis = lenis;
 

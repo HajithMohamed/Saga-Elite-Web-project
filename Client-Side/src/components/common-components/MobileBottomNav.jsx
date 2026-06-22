@@ -31,7 +31,7 @@ const MobileBottomNav = () => {
 
   const tabs = [
     { id: 'home', to: '/shopping/home', icon: Home, label: 'Home' },
-    { id: 'search', to: '/shopping/search', icon: Search, label: 'Search' },
+    { id: 'search', to: '/shopping/product-list', icon: Search, label: 'Search' },
     { id: 'categories', to: '/shopping/product-list', icon: LayoutGrid, label: 'Categories' },
     { id: 'wishlist', to: '/shopping/wishlist', icon: Heart, label: 'Wishlist', badge: wishlistCount },
     { id: 'account', to: user ? '/shopping/account' : null, icon: User, label: 'Account' },

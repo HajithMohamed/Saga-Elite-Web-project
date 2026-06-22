@@ -1,25 +1,43 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
-
 import { CONTACT_INFO } from "@/config";
+import useShopAbout from "@/hooks/use-shop-about";
 
 const DISPLAY_DELAY_MS = 2800;
 
 const WhatsAppFloatingButton = () => {
+  const location = useLocation();
+  const { data: about } = useShopAbout();
   const [visible, setVisible] = useState(false);
-  const raw = CONTACT_INFO?.whatsapp || "+94770704274";
+
+  const isAdmin = location.pathname.startsWith("/admin");
+  const whatsappCta = about?.whatsapp_cta || {};
+  const showFloating =
+    !isAdmin &&
+    whatsappCta.enabled === true &&
+    whatsappCta.displayPosition === "floating";
+
+  const raw =
+    about?.shop_whatsapp_number ||
+    about?.shop_contact_phone ||
+    CONTACT_INFO?.whatsapp ||
+    "+94770704274";
   const phoneDigits = String(raw).replace(/\D/g, "");
-  const message = encodeURIComponent(
-    "Hi, I need help with my Saga Elite order."
-  );
-  const waUrl = `https://wa.me/${phoneDigits}?text=${message}`;
+  const defaultMessage = "Hi, I need help with my Saga Elite order.";
+  const message = encodeURIComponent(whatsappCta.message?.trim() || defaultMessage);
+  const waUrl = phoneDigits ? `https://wa.me/${phoneDigits}?text=${message}` : null;
 
   useEffect(() => {
+    if (!showFloating || !waUrl) {
+      setVisible(false);
+      return undefined;
+    }
     const t = window.setTimeout(() => setVisible(true), DISPLAY_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [showFloating, waUrl]);
 
-  if (!visible) {
+  if (!visible || !waUrl) {
     return null;
   }
 

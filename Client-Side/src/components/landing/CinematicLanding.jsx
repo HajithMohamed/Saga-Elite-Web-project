@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { formatLkr } from "@/utils/currency";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 // BRAND MANIFESTO SECTION
 export const BrandManifesto = () => {
@@ -283,6 +286,24 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
 
 // CLOSING CREDITS FOOTER
 export const CinematicFooter = () => {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if(email) {
+      try {
+        await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
+        setSubscribed(true);
+        setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
+        setEmail("");
+        toast({ title: "Welcome to the Archive.", variant: "success" });
+      } catch (error) {
+        toast({ title: "Subscription failed", description: error?.response?.data?.message || "Please try again", variant: "destructive" });
+      }
+    }
+  };
+
   return (
     <footer className="relative bg-[#050505] pt-32 pb-16 overflow-hidden border-t border-[#1a1a1a]">
       {/* Huge Background Typography */}
@@ -306,10 +327,13 @@ export const CinematicFooter = () => {
           private events, and archived pieces.
         </p>
 
-        <form className="w-full max-w-md flex relative border-b border-[#4d4635] focus-within:border-[#f2ca50] transition-colors mb-24">
+        <form onSubmit={handleSubscribe} className="w-full max-w-md flex relative border-b border-[#4d4635] focus-within:border-[#f2ca50] transition-colors mb-24">
           <input
             type="email"
             placeholder="YOUR EMAIL ADDRESS"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
             className="w-full bg-transparent border-none outline-none font-mono text-xs tracking-widest text-[#FAF7F2] placeholder-[#4d4635] py-4 px-2"
           />
 

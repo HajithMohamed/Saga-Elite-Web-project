@@ -17,6 +17,7 @@ const COLLECTIONS_TO_RESET = [
   "reviews",
   "drops",
   "coupons",
+  "usercoupons",
   "smartalerts",
   "adminlogs",
   "notifications",
@@ -25,6 +26,8 @@ const COLLECTIONS_TO_RESET = [
   "contacts",
   "carts",
   "wishlists",
+  "customers",
+  "guests",
 ];
 
 const dropCollections = async (mongoose) => {
@@ -89,16 +92,32 @@ const seedFixtures = async (mongoose) => {
 };
 
 module.exports = async () => {
-  const mongoose = require(path.resolve(
-    __dirname,
-    "../Server-side/node_modules/mongoose"
-  ));
+  const mongoose = require("mongoose");
 
   console.log("[e2e setup] connecting to", TEST_DB_URI);
   await mongoose.connect(TEST_DB_URI);
 
   console.log("[e2e setup] resetting collections");
   await dropCollections(mongoose);
+
+  // Drop legacy email indexes that treat multiple null emails as duplicates.
+  const Customer = require(path.resolve(
+    __dirname,
+    "../Server-side/Models/Customer.js"
+  ));
+  // Drop legacy indexes then recreate partial unique indexes from the schema.
+  try {
+    const coll = mongoose.connection.db.collection("customers");
+    const indexes = await coll.indexes();
+    for (const idx of indexes) {
+      if (idx.name === "_id_") continue;
+      await coll.dropIndex(idx.name);
+      console.log(`[e2e setup] dropped index ${idx.name}`);
+    }
+    await Customer.syncIndexes();
+  } catch (err) {
+    console.warn("[e2e setup] customer index cleanup warning:", err.message);
+  }
 
   await mongoose.disconnect();
 

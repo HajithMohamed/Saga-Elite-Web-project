@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
       validate: {
         validator: function (value) {
           if (this.provider === "google") return true;
-          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(value);
         },
         message:
           "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",

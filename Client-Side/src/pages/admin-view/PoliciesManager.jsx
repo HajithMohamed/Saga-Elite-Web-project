@@ -7,13 +7,13 @@ import {
   ShieldCheck,
   RotateCcw,
   Truck,
-  Cookie,
   Loader2,
   Save,
   Eye,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateShopAbout } from "@/hooks/use-shop-about";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import {
@@ -26,8 +26,7 @@ const TABS = [
   { id: "policy_terms", label: "Terms & Conditions", icon: ScrollText },
   { id: "policy_privacy", label: "Privacy Policy", icon: ShieldCheck },
   { id: "policy_refund", label: "Refund Policy", icon: RotateCcw },
-  { id: "policy_shipping", label: "Shipping Policy", icon: Truck },
-  { id: "policy_cookie", label: "Cookie Policy", icon: Cookie },
+  { id: "policy_shipping", label: "Delivery Policy", icon: Truck },
 ];
 
 const blankPolicy = {
@@ -134,6 +133,7 @@ const PoliciesManager = () => {
         description: `${TABS.find((t) => t.id === activeTab)?.label} updated.`,
         variant: "success",
       });
+      invalidateShopAbout();
       await loadAll();
     } catch (err) {
       toast({
@@ -168,7 +168,7 @@ const PoliciesManager = () => {
       <AdminPage
         eyebrow="Content"
         title="Policies"
-        description="Edit Terms, Privacy, Refund, Shipping, and Cookie policies. Rich text supports headings, lists, links, and tables. Saves immediately to the public site."
+        description="Edit Terms, Privacy, Refund, and Delivery policies. Rich text supports headings, lists, links, and tables. Saves immediately to the public site."
       >
         <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-3">
           {TABS.map((tab) => {
