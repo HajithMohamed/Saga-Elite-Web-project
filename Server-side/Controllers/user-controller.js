@@ -7,6 +7,7 @@ const ManualPayment = require("../Models/ManualPayment");
 const Notification = require("../Models/Notification");
 const LoginActivity = require("../Models/LoginActivity");
 const UserActivityLog = require("../Models/UserActivityLog");
+const Customer = require("../Models/Customer");
 const { isAdminRole } = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
@@ -100,7 +101,7 @@ const normalizeWishlistItem = (product) => ({
   image: product.images?.[0]?.url || null,
 });
 
-const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) => ({
+const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}, customerStats = {}) => ({
   _id: user._id,
   email: user.email,
   role: user.role,
@@ -114,6 +115,10 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
+  intelligence: {
+    predictedChurnRisk: customerStats.predictedChurnRisk || 0,
+    customerLifetimeValue: customerStats.customerLifetimeValue || orderStats.totalSpent || user.totalSpent || 0,
+  },
   relationship: {
     cartCount: user.cart?.length || 0,
     wishlistCount: user.wishlist?.length || 0,
@@ -135,10 +140,11 @@ const getUserInsightMaps = async (userIds = []) => {
     return {
       orderStatsMap: new Map(),
       notificationStatsMap: new Map(),
+      customerStatsMap: new Map(),
     };
   }
 
-  const [orderStats, notificationStats] = await Promise.all([
+  const [orderStats, notificationStats, customerStats] = await Promise.all([
     Order.aggregate([
       { $match: { user: { $in: userIds } } },
       { $sort: { createdAt: -1 } },
@@ -187,6 +193,9 @@ const getUserInsightMaps = async (userIds = []) => {
         },
       },
     ]),
+    Customer.find({ userId: { $in: userIds } })
+      .select("userId predictedChurnRisk customerLifetimeValue")
+      .lean(),
   ]);
 
   return {
@@ -195,6 +204,9 @@ const getUserInsightMaps = async (userIds = []) => {
     ),
     notificationStatsMap: new Map(
       notificationStats.map((entry) => [entry._id.toString(), entry])
+    ),
+    customerStatsMap: new Map(
+      customerStats.map((entry) => [entry.userId.toString(), entry])
     ),
   };
 };
@@ -333,7 +345,7 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
   const users = paginated.data || [];
 
   const userIds = users.map((user) => user._id);
-  const [{ orderStatsMap, notificationStatsMap }, stats] = await Promise.all([
+  const [{ orderStatsMap, notificationStatsMap, customerStatsMap }, stats] = await Promise.all([
     getUserInsightMaps(userIds),
     getAdminUserStats(),
   ]);
@@ -342,7 +354,8 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
     buildAdminUserSummary(
       user,
       orderStatsMap.get(user._id.toString()),
-      notificationStatsMap.get(user._id.toString())
+      notificationStatsMap.get(user._id.toString()),
+      customerStatsMap.get(user._id.toString())
     )
   );
 
@@ -379,7 +392,7 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
 
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
-  const [recentOrders, recentNotifications, recentLogins] = await Promise.all([
+  const [recentOrders, recentNotifications, recentLogins, customerIntelligence] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -394,6 +407,9 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(15)
       .select("success failureReason provider ip deviceHint userAgent createdAt")
+      .lean(),
+    Customer.findOne({ userId: user._id })
+      .populate("viewedProducts.product", "name images basePrice slug discountPercent category")
       .lean(),
   ]);
 
@@ -418,7 +434,8 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const summary = buildAdminUserSummary(
     user,
     orderStatsMap.get(user._id.toString()),
-    notificationStatsMap.get(user._id.toString())
+    notificationStatsMap.get(user._id.toString()),
+    customerIntelligence || {}
   );
 
   res.status(200).json({
@@ -430,6 +447,22 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       recentOrders,
       recentNotifications,
       recentLogins: decoratedLogins,
+      intelligence: customerIntelligence ? {
+        behavioralScore: customerIntelligence.behavioralScore || 0,
+        customerLifetimeValue: customerIntelligence.customerLifetimeValue || 0,
+        predictedChurnRisk: customerIntelligence.predictedChurnRisk || 0,
+        preferredCategories: customerIntelligence.preferredCategories || [],
+        viewedProducts: (customerIntelligence.viewedProducts || []).map(vp => ({
+          ...vp,
+          product: vp.product ? normalizeWishlistItem(vp.product) : null
+        })).filter(vp => vp.product),
+      } : {
+        behavioralScore: 0,
+        customerLifetimeValue: 0,
+        predictedChurnRisk: 0,
+        preferredCategories: [],
+        viewedProducts: []
+      },
       activityTimeline: buildActivityTimeline({
         user,
         recentOrders,
@@ -500,7 +533,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
+  const { orderStatsMap, notificationStatsMap, customerStatsMap } = await getUserInsightMaps([user._id]);
 
   res.status(200).json({
     success: true,
@@ -508,7 +541,8 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     data: buildAdminUserSummary(
       user.toObject(),
       orderStatsMap.get(user._id.toString()),
-      notificationStatsMap.get(user._id.toString())
+      notificationStatsMap.get(user._id.toString()),
+      customerStatsMap.get(user._id.toString())
     ),
   });
 });
