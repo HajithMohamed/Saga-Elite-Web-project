@@ -32,7 +32,6 @@ export const fetchAdminUsers = createAsyncThunk(
         limit = 10,
         search,
         status,
-        role,
         membership,
         sort,
       } = params;
@@ -42,7 +41,6 @@ export const fetchAdminUsers = createAsyncThunk(
       query.set("limit", limit);
       if (search) query.set("search", search);
       if (status && status !== "all") query.set("status", status);
-      if (role && role !== "all") query.set("role", role);
       if (membership && membership !== "all") query.set("membership", membership);
       if (sort) query.set("sort", sort);
 
@@ -52,7 +50,7 @@ export const fetchAdminUsers = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to load users";
+      const message = serverMsg || error.message || "Failed to load customers";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -68,7 +66,7 @@ export const fetchAdminUserDetail = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to load user detail";
+      const message = serverMsg || error.message || "Failed to load customer detail";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -94,7 +92,7 @@ export const updateAdminUserStatus = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to update user";
+      const message = serverMsg || error.message || "Failed to update customer";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -112,7 +110,7 @@ export const triggerAdminPasswordReset = createAsyncThunk(
       return response.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to send password reset";
+      const message = serverMsg || error.message || "Failed to send customer password reset";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -128,7 +126,7 @@ export const deleteAdminUser = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to delete user";
+      const message = serverMsg || error.message || "Failed to delete customer";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -146,7 +144,7 @@ export const bulkTagUsers = createAsyncThunk(
       return response.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to bulk-tag users";
+      const message = serverMsg || error.message || "Failed to bulk-tag customers";
       return thunkAPI.rejectWithValue(message);
     }
   }

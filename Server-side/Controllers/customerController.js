@@ -2,7 +2,7 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Customer = require("../Models/Customer");
 const User = require("../Models/User");
-const { ensureCustomerRecord, migrateGuestToUser } = require("../Services/migration-service");
+const { migrateGuestToUser } = require("../Services/migration-service");
 const logger = require("../Utils/logger");
 
 // ── Profile merges Customer enrichment + User authoritative data ──
@@ -51,7 +51,7 @@ const getMyProfile = catchAsync(async (req, res) => {
 });
 
 const updateMyProfile = catchAsync(async (req, res) => {
-  const allowedFields = ["name", "preferences"];
+  const allowedFields = ["preferences"];
   const updates = {};
 
   for (const field of allowedFields) {
@@ -61,7 +61,7 @@ const updateMyProfile = catchAsync(async (req, res) => {
   }
 
   if (Object.keys(updates).length === 0) {
-    throw new AppError("No valid fields to update", 400);
+    throw new AppError("No valid customer enrichment fields to update", 400);
   }
 
   const customer = await Customer.findByIdAndUpdate(

@@ -9,6 +9,7 @@
 // ── Role Constants ──────────────────────────────────────────────────
 const ADMIN_ROLES = Object.freeze(["admin", "super_admin", "superadmin", "sub_admin"]);
 const SUPER_ADMIN_ROLES = Object.freeze(["super_admin", "superadmin"]);
+const CUSTOMER_ACCOUNT_ROLES = Object.freeze(["user", "customer"]);
 
 // ── Permission Keys ─────────────────────────────────────────────────
 const PERMISSION_KEYS = Object.freeze([
@@ -82,6 +83,10 @@ const isAdminRole = (role) => ADMIN_ROLES.includes(String(role || "").toLowerCas
 /** @returns {boolean} true if role is super_admin / superadmin */
 const isSuperAdmin = (role) => SUPER_ADMIN_ROLES.includes(String(role || "").toLowerCase());
 
+/** @returns {boolean} true if role is a customer-facing account */
+const isCustomerRole = (role) =>
+  CUSTOMER_ACCOUNT_ROLES.includes(String(role || "").toLowerCase());
+
 /** Build a permissions object with all keys set to the given default */
 const buildDefaultPermissions = (defaultValue = false) => {
   const perms = {};
@@ -95,6 +100,7 @@ const FULL_ADMIN_PERMISSIONS = Object.freeze(buildDefaultPermissions(true));
 module.exports = {
   ADMIN_ROLES,
   SUPER_ADMIN_ROLES,
+  CUSTOMER_ACCOUNT_ROLES,
   PERMISSION_KEYS,
   SUB_ROLES,
   SUB_ROLE_LABELS,
@@ -102,5 +108,6 @@ module.exports = {
   FULL_ADMIN_PERMISSIONS,
   isAdminRole,
   isSuperAdmin,
+  isCustomerRole,
   buildDefaultPermissions,
 };

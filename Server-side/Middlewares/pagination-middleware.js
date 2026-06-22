@@ -3,6 +3,7 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Category = require("../Models/Category");
 const slugify = require("slugify");
+const { CUSTOMER_ACCOUNT_ROLES } = require("../Utils/admin-roles");
 
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -13,7 +14,7 @@ const parsePositiveInt = (value, fallback, max = 100) => {
 };
 
 const buildAdminUserFilter = (query = {}) => {
-  const filter = {};
+  const filter = { role: { $in: CUSTOMER_ACCOUNT_ROLES } };
   const { search, status, role, membership } = query;
 
   if (search && String(search).trim()) {
@@ -22,7 +23,6 @@ const buildAdminUserFilter = (query = {}) => {
       { email: { $regex: safeSearch, $options: "i" } },
       { username: { $regex: safeSearch, $options: "i" } },
       { phoneNumber: { $regex: safeSearch, $options: "i" } },
-      { role: { $regex: safeSearch, $options: "i" } },
       { provider: { $regex: safeSearch, $options: "i" } },
     ];
   }
@@ -48,13 +48,12 @@ const buildAdminUserFilter = (query = {}) => {
     filter.isActive = isActiveFilter;
   }
 
-  if (role && role !== "all") {
-    if (role === "user" || role === "customer") {
-      filter.role = { $in: ["user", "customer"] };
-    } else if (role === "superadmin") {
-      filter.role = { $in: ["superadmin", "super_admin"] };
-    } else {
-      filter.role = role;
+  if (role) {
+    const normalizedRole = String(role).toLowerCase();
+    if (normalizedRole !== "all" && CUSTOMER_ACCOUNT_ROLES.includes(normalizedRole)) {
+      filter.role = normalizedRole;
+    } else if (normalizedRole !== "all") {
+      filter._id = null;
     }
   }
 

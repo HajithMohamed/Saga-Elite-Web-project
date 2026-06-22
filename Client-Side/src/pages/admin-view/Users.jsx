@@ -134,13 +134,13 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-LK", {
 const statCards = [
   {
     key: "totalUsers",
-    label: "Total Accounts",
+    label: "Total Customers",
     icon: Users,
     accent: "text-[#D4AF37]",
   },
   {
     key: "activeUsers",
-    label: "Active Users",
+    label: "Active Customers",
     icon: UserCheck,
     accent: "text-emerald-400",
   },
@@ -182,11 +182,6 @@ const statusBadgeClasses = (isActive) =>
     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
     : "border-red-500/20 bg-red-500/10 text-red-300";
 
-const roleBadgeClasses = (role) =>
-  role === "user"
-    ? "border-white/10 bg-white/5 text-gray-200"
-    : "border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]";
-
 const providerBadgeClasses = (provider) =>
   provider === "google"
     ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
@@ -194,7 +189,6 @@ const providerBadgeClasses = (provider) =>
 
 const UsersPage = () => {
   const dispatch = useDispatch();
-  const { user: currentUser } = useSelector((state) => state.auth);
   const {
     users,
     stats,
@@ -209,7 +203,6 @@ const UsersPage = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState("all");
   const [membershipFilter, setMembershipFilter] = useState("all");
   const [sortMode, setSortMode] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
@@ -225,11 +218,10 @@ const UsersPage = () => {
       limit: USER_PAGE_LIMIT,
       search: searchTerm.trim(),
       status: statusFilter,
-      role: roleFilter,
       membership: membershipFilter,
       sort: sortMode,
     }),
-    [currentPage, membershipFilter, roleFilter, searchTerm, sortMode, statusFilter]
+    [currentPage, membershipFilter, searchTerm, sortMode, statusFilter]
   );
 
   const loadUsers = useCallback(
@@ -328,8 +320,8 @@ const UsersPage = () => {
         await dispatch(fetchAdminUserDetail(selectedUserId)).unwrap();
       }
       toast({
-        title: "User data refreshed",
-        description: "Latest account activity has been loaded.",
+        title: "Customer data refreshed",
+        description: "Latest customer activity has been loaded.",
         variant: "success",
       });
     } catch (refreshError) {
@@ -354,7 +346,7 @@ const UsersPage = () => {
         })
       ).unwrap();
       toast({
-        title: nextIsActive ? "User activated" : "User deactivated",
+        title: nextIsActive ? "Customer activated" : "Customer deactivated",
         description: `${selectedUser.email} is now ${nextIsActive ? "active" : "inactive"}.`,
         variant: "success",
       });
@@ -473,7 +465,7 @@ const UsersPage = () => {
     try {
       await dispatch(deleteAdminUser(selectedUser._id)).unwrap();
       toast({
-        title: "User deleted",
+        title: "Customer deleted",
         description: `${selectedUser.email} has been removed from the system.`,
         variant: "success",
       });
@@ -492,11 +484,6 @@ const UsersPage = () => {
     }
   };
 
-  const canManageSelectedUser =
-    selectedUser &&
-    selectedUser.role === "user" &&
-    selectedUser._id !== currentUser?._id;
-
   return (
     <motion.div
       variants={pageVariants}
@@ -505,7 +492,7 @@ const UsersPage = () => {
       className="w-full min-h-0"
     >
       <AdminPage
-        eyebrow="Admin User Management"
+        eyebrow="Customer Management"
         title="Customer 360"
         description="Review account health, activity, and customer relationship details."
       >
@@ -586,7 +573,7 @@ const UsersPage = () => {
                     <input
                       value={searchTerm}
                       onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                      placeholder="Search accounts..."
+                      placeholder="Search customers..."
                       className="h-9 w-64 rounded-sm border border-white/10 bg-black/60 pl-9 pr-3 text-xs text-white outline-none focus:border-[#D4AF37]/50 transition"
                     />
                   </label>
@@ -598,15 +585,6 @@ const UsersPage = () => {
                     <option value="all">Any Status</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
-                  </select>
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-                    className="h-9 rounded-sm border border-white/10 bg-black/60 px-3 text-xs text-white outline-none focus:border-[#D4AF37]/50"
-                  >
-                    <option value="all">Any Role</option>
-                    <option value="user">Customers</option>
-                    <option value="admin">Admins</option>
                   </select>
                 </div>
               </div>
@@ -621,7 +599,7 @@ const UsersPage = () => {
                  </div>
               ) : users.length === 0 ? (
                  <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
-                   No users matched the current filters.
+                   No customers matched the current filters.
                  </div>
               ) : (
                 <div className="overflow-x-auto scrollbar-thin rounded-xl border border-white/10">

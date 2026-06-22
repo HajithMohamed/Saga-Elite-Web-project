@@ -18,10 +18,10 @@ const activityEntrySchema = new mongoose.Schema({
 }, { _id: false });
 
 // ── Customer: thin enrichment layer only ──
-// This model does NOT duplicate User fields (totalSpent, membership, orderCount, etc.).
-// The User model remains the single source of truth for loyalty & identity data.
-// Customer adds: event-driven enrichment (viewed products, behavioral scores,
-// session tracking, preferences) that User doesn't have.
+// User remains the source of truth for registered account identity, auth,
+// roles, loyalty, and order totals. Customer owns guest/session behavior,
+// viewed products, preferences, and computed intelligence. Contact fields are
+// lookup/fallback snapshots, not the authoritative registered-user profile.
 const customerSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -51,7 +51,7 @@ const customerSchema = new mongoose.Schema({
 
   name: { type: String, trim: true },
 
-  // ── Enrichment fields only (no overlap with User) ──
+  // Customer-owned behavioral enrichment.
 
   // Recently viewed products (capped at 100)
   viewedProducts: {
