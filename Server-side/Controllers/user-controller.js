@@ -263,16 +263,80 @@ const escapeCsvValue = (value) => {
   return `"${normalized.replace(/"/g, '""')}"`;
 };
 
+const getAdminUserStats = async () => {
+  const [userStatsResult, orderStatsResult] = await Promise.all([
+    User.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalUsers: { $sum: 1 },
+          activeUsers: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] },
+          },
+          inactiveUsers: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 0, 1] },
+          },
+          verifiedUsers: {
+            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+          },
+          googleUsers: {
+            $sum: { $cond: [{ $eq: ["$provider", "google"] }, 1, 0] },
+          },
+          localUsers: {
+            $sum: { $cond: [{ $eq: ["$provider", "local"] }, 1, 0] },
+          },
+          adminUsers: {
+            $sum: {
+              $cond: [{ $in: ["$role", ["user", "customer"]] }, 0, 1],
+            },
+          },
+        },
+      },
+    ]),
+    Order.aggregate([
+      { $match: { user: { $ne: null } } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+        },
+      },
+    ]),
+  ]);
+
+  const userStats = userStatsResult[0] || {};
+  const orderStats = orderStatsResult[0] || {};
+
+  return {
+    totalUsers: userStats.totalUsers || 0,
+    activeUsers: userStats.activeUsers || 0,
+    inactiveUsers: userStats.inactiveUsers || 0,
+    verifiedUsers: userStats.verifiedUsers || 0,
+    googleUsers: userStats.googleUsers || 0,
+    localUsers: userStats.localUsers || 0,
+    adminUsers: userStats.adminUsers || 0,
+    totalOrders: orderStats.totalOrders || 0,
+    totalRevenue: orderStats.totalRevenue || 0,
+  };
+};
+
 const getAdminUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find()
-    .select(
-      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
-    )
-    .sort({ createdAt: -1 })
-    .lean();
+  const paginated = res.paginatedResults || {
+    total: 0,
+    page: 1,
+    limit: 10,
+    results: 0,
+    totalPages: 1,
+    data: [],
+  };
+  const users = paginated.data || [];
 
   const userIds = users.map((user) => user._id);
-  const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps(userIds);
+  const [{ orderStatsMap, notificationStatsMap }, stats] = await Promise.all([
+    getUserInsightMaps(userIds),
+    getAdminUserStats(),
+  ]);
 
   const mappedUsers = users.map((user) =>
     buildAdminUserSummary(
@@ -282,38 +346,21 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
     )
   );
 
-  const stats = mappedUsers.reduce(
-    (accumulator, user) => {
-      accumulator.totalUsers += 1;
-      accumulator.activeUsers += user.isActive ? 1 : 0;
-      accumulator.inactiveUsers += user.isActive ? 0 : 1;
-      accumulator.verifiedUsers += user.isVerified ? 1 : 0;
-      accumulator.googleUsers += user.provider === "google" ? 1 : 0;
-      accumulator.localUsers += user.provider === "local" ? 1 : 0;
-      accumulator.adminUsers += user.role === "user" ? 0 : 1;
-      accumulator.totalOrders += user.relationship.orderCount;
-      accumulator.totalRevenue += user.relationship.totalSpent;
-      return accumulator;
-    },
-    {
-      totalUsers: 0,
-      activeUsers: 0,
-      inactiveUsers: 0,
-      verifiedUsers: 0,
-      googleUsers: 0,
-      localUsers: 0,
-      adminUsers: 0,
-      totalOrders: 0,
-      totalRevenue: 0,
-    }
-  );
-
   res.status(200).json({
     success: true,
     message: "Admin users fetched successfully",
     data: {
       stats,
       users: mappedUsers,
+      pagination: {
+        total: paginated.total || 0,
+        page: paginated.page || 1,
+        limit: paginated.limit || 10,
+        results: paginated.results || mappedUsers.length,
+        totalPages: paginated.totalPages || 1,
+        next: paginated.next || null,
+        previous: paginated.previous || null,
+      },
     },
   });
 });

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   BellRing,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   Crown,
@@ -57,6 +59,8 @@ const SORT_OPTIONS = [
   { value: "orders_desc", label: "Order count ↓" },
   { value: "last_active", label: "Last active" },
 ];
+
+const USER_PAGE_LIMIT = 10;
 
 const MEMBERSHIP_STYLES = {
   vip: "border-[#f2ca50] bg-[#f2ca50]/15 text-[#f2ca50]",
@@ -193,6 +197,7 @@ const UsersPage = () => {
   const {
     users,
     stats,
+    pagination,
     selectedUser,
     isListLoading,
     isDetailLoading,
@@ -206,15 +211,34 @@ const UsersPage = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [membershipFilter, setMembershipFilter] = useState("all");
   const [sortMode, setSortMode] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [tagSubmitting, setTagSubmitting] = useState(null);
 
+  const listQuery = useMemo(
+    () => ({
+      page: currentPage,
+      limit: USER_PAGE_LIMIT,
+      search: searchTerm.trim(),
+      status: statusFilter,
+      role: roleFilter,
+      membership: membershipFilter,
+      sort: sortMode,
+    }),
+    [currentPage, membershipFilter, roleFilter, searchTerm, sortMode, statusFilter]
+  );
+
+  const loadUsers = useCallback(
+    (overrides = {}) => dispatch(fetchAdminUsers({ ...listQuery, ...overrides })),
+    [dispatch, listQuery]
+  );
+
   useEffect(() => {
-    dispatch(fetchAdminUsers());
-  }, [dispatch]);
+    loadUsers();
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!users.length) {
@@ -237,54 +261,37 @@ const UsersPage = () => {
     }
   }, [dispatch, selectedUserId]);
 
-  const filteredUsers = useMemo(
-    () =>
-      users
-        .filter((user) => {
-          const matchesSearch =
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.provider.toLowerCase().includes(searchTerm.toLowerCase());
+  const paginationTotal = pagination?.total || 0;
+  const paginationLimit = pagination?.limit || USER_PAGE_LIMIT;
+  const paginationPage = pagination?.page || currentPage;
+  const totalPages =
+    pagination?.totalPages ||
+    Math.max(1, Math.ceil(paginationTotal / paginationLimit));
+  const showingFrom =
+    paginationTotal === 0 ? 0 : (paginationPage - 1) * paginationLimit + 1;
+  const showingTo =
+    paginationTotal === 0
+      ? 0
+      : Math.min(showingFrom + users.length - 1, paginationTotal);
 
-          const matchesStatus =
-            statusFilter === "all" ||
-            (statusFilter === "active" && user.isActive) ||
-            (statusFilter === "inactive" && !user.isActive);
+  const pageNumbers = useMemo(() => {
+    const maxButtons = 5;
+    const start = Math.max(
+      1,
+      Math.min(paginationPage - 2, totalPages - maxButtons + 1)
+    );
+    const end = Math.min(totalPages, start + maxButtons - 1);
 
-          const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [paginationPage, totalPages]);
 
-          const matchesMembership = (() => {
-            if (membershipFilter === "all") return true;
-            if (membershipFilter === "blocked") return !user.isActive;
-            return (user.membership || "standard") === membershipFilter;
-          })();
+  useEffect(() => {
+    if (!isListLoading && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, isListLoading, totalPages]);
 
-          return matchesSearch && matchesStatus && matchesRole && matchesMembership;
-        })
-        .sort((a, b) => {
-          switch (sortMode) {
-            case "spent_desc":
-              return (
-                (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
-              );
-            case "orders_desc":
-              return (
-                (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
-              );
-            case "last_active": {
-              const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
-              const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
-              return bDate - aDate;
-            }
-            case "newest":
-            default:
-              return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-          }
-        }),
-    [membershipFilter, roleFilter, searchTerm, sortMode, statusFilter, users]
-  );
-
-  const bulk = useBulkSelection(filteredUsers);
+  const bulk = useBulkSelection(users);
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkTagDraft, setBulkTagDraft] = useState("vip");
   const runBulkUserTag = async (mode) => {
@@ -301,7 +308,7 @@ const UsersPage = () => {
         variant: "success",
       });
       bulk.clear();
-      dispatch(fetchAdminUsers());
+      await loadUsers().unwrap();
     } catch (err) {
       toast({
         title: "Bulk tag failed",
@@ -315,7 +322,7 @@ const UsersPage = () => {
 
   const handleRefresh = async () => {
     try {
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
       if (selectedUserId) {
         await dispatch(fetchAdminUserDetail(selectedUserId)).unwrap();
       }
@@ -350,7 +357,7 @@ const UsersPage = () => {
         description: `${selectedUser.email} is now ${nextIsActive ? "active" : "inactive"}.`,
         variant: "success",
       });
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
     } catch (statusError) {
       toast({
         title: "Status update failed",
@@ -430,7 +437,7 @@ const UsersPage = () => {
         description: `${selectedUser.email} is now ${nextMembership}.`,
         variant: "success",
       });
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
     } catch (membershipError) {
       toast({
         title: "Membership update failed",
@@ -470,7 +477,11 @@ const UsersPage = () => {
         variant: "success",
       });
       setSelectedUserId(null);
-      await dispatch(fetchAdminUsers()).unwrap();
+      const nextPage = users.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      if (nextPage !== currentPage) {
+        setCurrentPage(nextPage);
+      }
+      await loadUsers({ page: nextPage }).unwrap();
     } catch (deleteError) {
       toast({
         title: "Delete failed",
@@ -568,7 +579,10 @@ const UsersPage = () => {
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                   <input
                     value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
+                    onChange={(event) => {
+                      setSearchTerm(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Search by email, role, or provider"
                     className="w-full rounded-2xl border border-white/10 bg-black/70 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[#D4AF37]"
                   />
@@ -577,7 +591,10 @@ const UsersPage = () => {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <select
                     value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
+                    onChange={(event) => {
+                      setStatusFilter(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
                   >
                     <option value="all">All statuses</option>
@@ -587,7 +604,10 @@ const UsersPage = () => {
 
                   <select
                     value={roleFilter}
-                    onChange={(event) => setRoleFilter(event.target.value)}
+                    onChange={(event) => {
+                      setRoleFilter(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
                   >
                     <option value="all">All roles</option>
@@ -599,7 +619,10 @@ const UsersPage = () => {
 
                 <select
                   value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value)}
+                  onChange={(event) => {
+                    setSortMode(event.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
                 >
                   {SORT_OPTIONS.map((option) => (
@@ -616,7 +639,10 @@ const UsersPage = () => {
                       <button
                         key={tab.value}
                         type="button"
-                        onClick={() => setMembershipFilter(tab.value)}
+                        onClick={() => {
+                          setMembershipFilter(tab.value);
+                          setCurrentPage(1);
+                        }}
                         className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
                           active
                             ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
@@ -638,7 +664,7 @@ const UsersPage = () => {
                     <SkeletonCard key={index} className="h-28" />
                   ))}
                 </div>
-              ) : filteredUsers.length === 0 ? (
+              ) : users.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
                   No users matched the current filters.
                 </div>
@@ -675,7 +701,7 @@ const UsersPage = () => {
                     ))}
                   </select>
                 </div>
-                {filteredUsers.map((user) => (
+                {users.map((user) => (
                   <div key={user._id} className="relative">
                     <input
                       type="checkbox"
@@ -753,6 +779,56 @@ const UsersPage = () => {
                   </motion.button>
                   </div>
                 ))}
+                <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-black/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                    Showing {showingFrom}-{showingTo} of {paginationTotal} accounts
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-[10px] uppercase tracking-[0.2em] text-white/35">
+                      Page {paginationPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={paginationPage <= 1 || isListLoading}
+                      onClick={() => setCurrentPage(Math.max(1, paginationPage - 1))}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-transparent text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:pointer-events-none disabled:opacity-30"
+                      aria-label="Previous customer page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    {pageNumbers.map((pageNumber) => {
+                      const isCurrent = paginationPage === pageNumber;
+
+                      return (
+                        <button
+                          key={pageNumber}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNumber)}
+                          disabled={isListLoading}
+                          className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold transition ${
+                            isCurrent
+                              ? "border-transparent bg-white text-black"
+                              : "border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white"
+                          } disabled:pointer-events-none disabled:opacity-40`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      disabled={paginationPage >= totalPages || isListLoading}
+                      onClick={() => setCurrentPage(Math.min(totalPages, paginationPage + 1))}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-transparent text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:pointer-events-none disabled:opacity-30"
+                      aria-label="Next customer page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
                 </motion.div>
               )}
             </div>

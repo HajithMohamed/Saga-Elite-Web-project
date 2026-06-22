@@ -2,9 +2,20 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
+const defaultPagination = {
+  total: 0,
+  page: 1,
+  limit: 10,
+  results: 0,
+  totalPages: 1,
+  next: null,
+  previous: null,
+};
+
 const initialState = {
   users: [],
   stats: null,
+  pagination: defaultPagination,
   selectedUser: null,
   isListLoading: false,
   isDetailLoading: false,
@@ -14,9 +25,28 @@ const initialState = {
 
 export const fetchAdminUsers = createAsyncThunk(
   "adminUsers/fetchAll",
-  async (_, thunkAPI) => {
+  async (params = {}, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/user/admin/users`, {
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        status,
+        role,
+        membership,
+        sort,
+      } = params;
+
+      const query = new URLSearchParams();
+      query.set("page", page);
+      query.set("limit", limit);
+      if (search) query.set("search", search);
+      if (status && status !== "all") query.set("status", status);
+      if (role && role !== "all") query.set("role", role);
+      if (membership && membership !== "all") query.set("membership", membership);
+      if (sort) query.set("sort", sort);
+
+      const response = await axios.get(`${API_BASE}/user/admin/users?${query.toString()}`, {
         withCredentials: true,
       });
       return response.data.data;
@@ -143,6 +173,10 @@ const adminUserSlice = createSlice({
         state.isListLoading = false;
         state.users = action.payload.users || [];
         state.stats = action.payload.stats || null;
+        state.pagination = {
+          ...defaultPagination,
+          ...(action.payload.pagination || {}),
+        };
       })
       .addCase(fetchAdminUsers.rejected, (state, action) => {
         state.isListLoading = false;
