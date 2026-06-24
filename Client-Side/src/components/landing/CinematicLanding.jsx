@@ -180,7 +180,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0e0e0e] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -213,7 +213,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1f1a2e] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1f1a2e] via-[#0e0e0e] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -244,7 +244,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#131313] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#131313] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -291,7 +291,7 @@ export const CinematicFooter = () => {
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
-    if(email) {
+    if (email) {
       try {
         await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
         setSubscribed(true);

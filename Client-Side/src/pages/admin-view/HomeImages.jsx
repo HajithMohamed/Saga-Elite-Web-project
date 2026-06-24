@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import ImageUpload from "@/components/admin-components/ImageUpload";
-import { RefreshCw, Star, Trash2, ArrowUpRight, Plus, ImageIcon, Type, GripVertical } from "lucide-react";
+import { RefreshCw, Star, Trash2, ArrowUpRight, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { compressImageFile } from "@/lib/image-compression";
@@ -164,7 +164,6 @@ const AdminHomeImages = () => {
   const categoryLogo = useSectionState();
   const [globalLoading, setGlobalLoading] = useState(false);
   const [newImageIds, setNewImageIds] = useState(() => new Set());
-  const [activeTab, setActiveTab] = useState("galleries");
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -421,39 +420,11 @@ const AdminHomeImages = () => {
           </motion.div>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-[#2a2a2a] pb-4">
-          {[
-            { key: "galleries", label: "Image Galleries", icon: ImageIcon },
-            { key: "strings", label: "Site Strings", icon: Type },
-          ].map((tab) => {
-            const TabIcon = tab.icon;
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.2em] transition-colors ${
-                  isActive
-                    ? "border-[#f2ca50] bg-[#131313] text-[#f2ca50]"
-                    : "border-[#2a2a2a] text-[#888] hover:text-[#e5e2e1]"
-                }`}
-              >
-                <TabIcon className="h-4 w-4" /> {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {activeTab === "strings" ? (
-          <SiteStringsPanel toast={toast} />
-        ) : null}
-
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className={`space-y-10 ${activeTab === "galleries" ? "" : "hidden"}`}
+          className="space-y-10"
         >
           {sectionConfig.map((section) => {
             const state = sectionState[section.key];
@@ -573,213 +544,5 @@ const AdminHomeImages = () => {
     </AdminPage>
   );
 };
-
-/* --------------------------------------------------------------------- */
-/* SITE STRINGS PANEL — announcement bar + marquee items                  */
-/* --------------------------------------------------------------------- */
-
-const STRING_LISTS = [
-  {
-    key: "announcement_items",
-    label: "Announcement Bar",
-    description:
-      "Rotating messages shown in the slim bar above the navigation (e.g. 'Free island-wide delivery').",
-    placeholder: "Free Delivery Island-Wide",
-    fallback: ["Free Delivery Island-Wide"],
-  },
-  {
-    key: "marquee_items",
-    label: "Brand Marquee",
-    description:
-      "Short brand value statements that scroll across the homepage marquee.",
-    placeholder: "Made in Sri Lanka",
-    fallback: [
-      "Made in Sri Lanka",
-      "Hand-finished",
-      "Limited edition",
-    ],
-  },
-];
-
-function SiteStringsPanel({ toast }) {
-  const [lists, setLists] = useState(() =>
-    STRING_LISTS.reduce((acc, cfg) => {
-      acc[cfg.key] = { items: cfg.fallback, dirty: false, saving: false };
-      return acc;
-    }, {})
-  );
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      const next = {};
-      for (const cfg of STRING_LISTS) {
-        try {
-          const res = await axios.get(
-            `${API_BASE}/site-config/${cfg.key}`,
-            { withCredentials: true }
-          );
-          const value = res.data?.data?.value ?? res.data?.value;
-          next[cfg.key] = {
-            items: Array.isArray(value) ? value : cfg.fallback,
-            dirty: false,
-            saving: false,
-          };
-        } catch {
-          next[cfg.key] = { items: cfg.fallback, dirty: false, saving: false };
-        }
-      }
-      if (!cancelled) {
-        setLists(next);
-        setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const updateItem = (key, index, value) => {
-    setLists((prev) => {
-      const items = [...prev[key].items];
-      items[index] = value;
-      return { ...prev, [key]: { ...prev[key], items, dirty: true } };
-    });
-  };
-
-  const addItem = (key) => {
-    setLists((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], items: [...prev[key].items, ""], dirty: true },
-    }));
-  };
-
-  const removeItem = (key, index) => {
-    setLists((prev) => {
-      const items = prev[key].items.filter((_, i) => i !== index);
-      return { ...prev, [key]: { ...prev[key], items, dirty: true } };
-    });
-  };
-
-  const save = async (key) => {
-    const cleaned = lists[key].items
-      .map((s) => String(s || "").trim())
-      .filter(Boolean);
-    setLists((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], saving: true },
-    }));
-    try {
-      await axios.put(
-        `${API_BASE}/site-config/${key}`,
-        { value: cleaned },
-        { withCredentials: true }
-      );
-      setLists((prev) => ({
-        ...prev,
-        [key]: { items: cleaned, dirty: false, saving: false },
-      }));
-      toast({ title: "Saved", description: `${key} updated.` });
-    } catch (err) {
-      setLists((prev) => ({
-        ...prev,
-        [key]: { ...prev[key], saving: false },
-      }));
-      toast({
-        title: "Save failed",
-        description:
-          err?.response?.data?.message || err?.message || "Could not save",
-        variant: "destructive",
-      });
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {loading ? (
-        <div className="flex justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-t-2 border-[#f2ca50]" />
-        </div>
-      ) : (
-        STRING_LISTS.map((cfg) => {
-          const state = lists[cfg.key];
-          return (
-            <section
-              key={cfg.key}
-              className="rounded-3xl border border-[#2a2a2a] bg-[#111111] p-6"
-            >
-              <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h2 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
-                    {cfg.label}
-                  </h2>
-                  <p className="mt-1 max-w-xl text-xs text-[#99907c]">
-                    {cfg.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => addItem(cfg.key)}
-                    className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
-                  >
-                    <Plus className="h-3 w-3" /> Add item
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => save(cfg.key)}
-                    disabled={!state.dirty || state.saving}
-                    className="bg-[#f2ca50] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {state.saving ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              </div>
-
-              {state.items.length === 0 ? (
-                <p className="border border-dashed border-[#2a2a2a] bg-[#0a0a0a] p-6 text-center text-xs text-[#666]">
-                  No items yet — click "Add item".
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {state.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2"
-                    >
-                      <span className="font-mono text-[10px] text-[#666]">
-                        {index + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) =>
-                          updateItem(cfg.key, index, e.target.value)
-                        }
-                        placeholder={cfg.placeholder}
-                        className="flex-1 border-none bg-transparent text-sm text-[#FAF7F2] outline-none placeholder:text-[#4d4635]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeItem(cfg.key, index)}
-                        className="text-[#99907c] hover:text-red-400"
-                        title="Remove"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })
-      )}
-    </div>
-  );
-}
 
 export default AdminHomeImages;

@@ -82,7 +82,11 @@ const DEFAULT_REWARD_REVIEW_DISCOUNT = {
 
 const ALLOWED_KEYS = new Set([
   ...ABOUT_KEYS,
+  "branding",
+  "seo_pages",
+  "maintenance",
   "bank_details",
+  "low_stock_global_threshold",
   REWARD_REVIEW_DISCOUNT_KEY,
 ]);
 

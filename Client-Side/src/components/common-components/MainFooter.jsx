@@ -51,7 +51,7 @@ const MainFooter = () => {
     { Icon: Youtube, href: about?.shop_social_youtube, label: "YouTube" },
     { Icon: Twitter, href: about?.shop_social_twitter, label: "Twitter" },
   ].filter((s) => s.href);
-  
+
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState(null);
@@ -62,7 +62,7 @@ const MainFooter = () => {
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
-    if(email) {
+    if (email) {
       try {
         await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
         setSubscribed(true);
@@ -82,9 +82,9 @@ const MainFooter = () => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1, 
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 } 
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
     }
   };
 
@@ -94,7 +94,7 @@ const MainFooter = () => {
   };
 
   const glowVariants = {
-    hover: { 
+    hover: {
       textShadow: "0px 0px 8px rgb(212, 175, 55)",
       color: "#D4AF37",
       x: 5,
@@ -104,18 +104,18 @@ const MainFooter = () => {
 
   return (
     <footer role="contentinfo" className="relative bg-[#050505] text-[#e5e2e1] mt-10 overflow-hidden font-sans">
-      
+
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent pointer-events-none z-0"></div>
       <div className="absolute top-0 left-1/4 w-1/2 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent z-0"></div>
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
       <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-6 lg:px-12 py-16">
-        
+
         {/* 🔥 1️⃣ VIP CTA SECTION & 2️⃣ NEWSLETTER */}
-        <motion.div 
-          initial="hidden" 
-          whileInView="visible" 
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={containerVariants}
           className="mb-20 pb-16 border-b border-[#D4AF37]/20 flex flex-col lg:flex-row items-center justify-between gap-12"
@@ -131,7 +131,7 @@ const MainFooter = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               {isAuthenticated ? (
                 <Link to="/shopping/account">
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
                     whileTap={{ scale: 0.95 }}
                     className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
@@ -142,7 +142,7 @@ const MainFooter = () => {
                 </Link>
               ) : (
                 <div onClick={() => openAuthDrawer('register')}>
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
                     whileTap={{ scale: 0.95 }}
                     className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
@@ -153,7 +153,7 @@ const MainFooter = () => {
                 </div>
               )}
               <Link to="/shopping/drops">
-                <motion.button 
+                <motion.button
                   whileHover={{ color: "#ffffff", borderColor: "#ffffff" }}
                   className="px-8 py-3 bg-transparent border border-[#555] text-[#ccc] font-bold uppercase tracking-wider rounded-sm transition-colors hover:bg-white/5"
                 >
@@ -172,10 +172,10 @@ const MainFooter = () => {
             <p className="text-sm text-[#888] mb-6">
               {subscribed ? "You will be notified before the next drop goes live." : "Be the first to know about limited collections."}
             </p>
-            
+
             <AnimatePresence mode="wait">
               {subscribed ? (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                   className="flex items-center gap-3 text-[#D4AF37] bg-[#D4AF37]/10 py-3 px-4 rounded-md border border-[#D4AF37]/30"
                 >
@@ -183,14 +183,14 @@ const MainFooter = () => {
                   <span className="font-medium text-sm tracking-widest uppercase">✔ YOU'RE ON THE ELITE LIST</span>
                 </motion.div>
               ) : (
-                <motion.form 
+                <motion.form
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  onSubmit={handleSubscribe} 
+                  onSubmit={handleSubscribe}
                   className="flex flex-col gap-3"
                 >
                   <div className="relative">
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       required
                       placeholder="Enter your email"
                       value={email}
@@ -198,10 +198,10 @@ const MainFooter = () => {
                       className="w-full bg-black/50 border border-[#333] text-white px-4 py-3 rounded-md focus:outline-none focus:border-[#D4AF37] transition-all placeholder:text-[#555]"
                     />
                   </div>
-                  <motion.button 
+                  <motion.button
                     whileHover={{ backgroundColor: "#222" }}
                     whileTap={{ scale: 0.98 }}
-                    type="submit" 
+                    type="submit"
                     className="w-full bg-white text-black font-bold uppercase tracking-widest py-3 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                   >
                     UNLOCK ACCESS <ArrowRight className="w-4 h-4" />
@@ -213,7 +213,7 @@ const MainFooter = () => {
         </motion.div>
 
         {/* 🔥 3️⃣ MAIN FOOTER GRID */}
-        <motion.div 
+        <motion.div
           initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants}
           className="grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-12 mb-16"
         >
@@ -241,7 +241,7 @@ const MainFooter = () => {
 
           {/* Desktop Grid Columns (Hidden on mobile) */}
           <div className="hidden md:grid md:grid-cols-4 lg:col-span-8 gap-8">
-            
+
             {/* COLUMN 2 — SHOP */}
             <motion.div variants={itemVariants}>
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Shop</h4>
@@ -316,7 +316,7 @@ const MainFooter = () => {
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#D4AF37] mb-6 flex items-center gap-2">
                 <Lock className="w-3 h-3" /> Elite Hub
               </h4>
-              
+
               {isAuthenticated ? (
                 <div className="space-y-4">
                   <div className="mb-4 pb-4 border-b border-white/10">
@@ -365,7 +365,7 @@ const MainFooter = () => {
               { title: 'Company', links: ['About Us', 'Terms & Conditions', 'Privacy Policy'] },
             ].map((section, idx) => (
               <div key={section.title} className="border-b border-[#222] overflow-hidden">
-                <button 
+                <button
                   onClick={() => toggleAccordion(idx)}
                   className="flex items-center justify-between w-full py-4 text-sm font-bold uppercase tracking-widest text-[#ccc]"
                 >
@@ -376,7 +376,7 @@ const MainFooter = () => {
                 </button>
                 <AnimatePresence>
                   {activeAccordion === idx && (
-                    <motion.div 
+                    <motion.div
                       initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
@@ -458,20 +458,20 @@ const MainFooter = () => {
                   )
                 ) : (
                   <>
-                {/* Visa SVG */}
-                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
-                  <path fill="#1434CB" d="M16.5 6.3h-2.4l-1.5 9.4h2.4l1.5-9.4zM24.7 6.4c-.4-.1-1.1-.3-2-.3-2.2 0-3.7 1.2-3.7 2.9 0 1.2 1.1 1.9 1.9 2.3.8.4 1.1.7 1.1 1.1 0 .6-.8.9-1.5.9-1 0-1.5-.2-2-.4l-.3-.1-.3 2.1c.5.2 1.4.5 2.4.5 2.4 0 3.9-1.2 3.9-3 0-1-.7-1.8-1.9-2.3-.7-.4-1.2-.6-1.2-1 0-.4.5-.8 1.4-.8.8 0 1.4.2 1.8.4l.2.1.3-2.1zM31 6.3h-1.9c-.6 0-1 .2-1.3.8L23.3 15.7h2.5l.5-1.4h3l.3 1.4h2.2L31 6.3zm-2.4 6l.6-1.7c0-.1.1-.3.1-.4 0 .1.1.2.2.3l.4 1.8h-1.3zM12.9 6.3L10 12.8l-.3-1.6c-.5-2.2-2.1-4.4-4-5l2.6 9.5h2.5l4-9.4h-2zM4 6.3H.1l-.1.4c2.5.6 4.2 1.8 5 3.3L3.8 6.3z" />
-                </svg>
-                {/* MasterCard SVG */}
-                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
-                  <path fill="#EB001B" d="M12.3 5.4h1.7v13.2h-1.7V5.4z" />
-                  <circle fill="#EB001B" cx="15.8" cy="12" r="6.6" />
-                  <circle fill="#F79E1B" cx="22.2" cy="12" r="6.6" />
-                  <path fill="#FF5F00" d="M19 18c2-1.3 3.3-3.5 3.3-6s-1.3-4.7-3.3-6c-2 1.3-3.3 3.5-3.3 6s1.3 4.7 3.3 6z" />
-                </svg>
-                <div className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20">
-                  <span className="text-[#0e0e0e] text-[9px] font-bold">PAYHERE</span>
-                </div>
+                    {/* Visa SVG */}
+                    <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
+                      <path fill="#1434CB" d="M16.5 6.3h-2.4l-1.5 9.4h2.4l1.5-9.4zM24.7 6.4c-.4-.1-1.1-.3-2-.3-2.2 0-3.7 1.2-3.7 2.9 0 1.2 1.1 1.9 1.9 2.3.8.4 1.1.7 1.1 1.1 0 .6-.8.9-1.5.9-1 0-1.5-.2-2-.4l-.3-.1-.3 2.1c.5.2 1.4.5 2.4.5 2.4 0 3.9-1.2 3.9-3 0-1-.7-1.8-1.9-2.3-.7-.4-1.2-.6-1.2-1 0-.4.5-.8 1.4-.8.8 0 1.4.2 1.8.4l.2.1.3-2.1zM31 6.3h-1.9c-.6 0-1 .2-1.3.8L23.3 15.7h2.5l.5-1.4h3l.3 1.4h2.2L31 6.3zm-2.4 6l.6-1.7c0-.1.1-.3.1-.4 0 .1.1.2.2.3l.4 1.8h-1.3zM12.9 6.3L10 12.8l-.3-1.6c-.5-2.2-2.1-4.4-4-5l2.6 9.5h2.5l4-9.4h-2zM4 6.3H.1l-.1.4c2.5.6 4.2 1.8 5 3.3L3.8 6.3z" />
+                    </svg>
+                    {/* MasterCard SVG */}
+                    <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
+                      <path fill="#EB001B" d="M12.3 5.4h1.7v13.2h-1.7V5.4z" />
+                      <circle fill="#EB001B" cx="15.8" cy="12" r="6.6" />
+                      <circle fill="#F79E1B" cx="22.2" cy="12" r="6.6" />
+                      <path fill="#FF5F00" d="M19 18c2-1.3 3.3-3.5 3.3-6s-1.3-4.7-3.3-6c-2 1.3-3.3 3.5-3.3 6s1.3 4.7 3.3 6z" />
+                    </svg>
+                    <div className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20">
+                      <span className="text-[#0e0e0e] text-[9px] font-bold">PAYHERE</span>
+                    </div>
                   </>
                 )}
               </div>
@@ -482,7 +482,7 @@ const MainFooter = () => {
         {/* BOTTOM COPYRIGHT BAR */}
         <div className="flex flex-col-reverse md:flex-row items-center justify-between text-[11px] text-[#555] uppercase tracking-widest font-mono">
           <p>{copyrightLine}</p>
-          
+
           <div className="flex items-center gap-3 mb-4 md:mb-0">
             <div className="flex items-center gap-2 bg-[#D4AF37]/10 px-3 py-1 rounded text-[#D4AF37] border border-[#D4AF37]/20">
               <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full"></motion.div>
@@ -490,7 +490,7 @@ const MainFooter = () => {
             </div>
           </div>
         </div>
-        
+
       </div>
     </footer>
   );

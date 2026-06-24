@@ -41,7 +41,7 @@ import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
-   Store: ["Products", "Drops"],
+  Store: ["Products", "Drops"],
   Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
   Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
   Content: [
@@ -426,9 +426,9 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const menuItems = (isSuperAdminUser
     ? allMenuItems
     : allMenuItems.filter((item) => {
-        if (item.superAdminOnly) return false;
-        return !item.permission || userPerms[item.permission];
-      })
+      if (item.superAdminOnly) return false;
+      return !item.permission || userPerms[item.permission];
+    })
   ).filter((item) => !item.hidden);
 
   if (isSuperAdminUser) {
@@ -487,11 +487,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
         key={item.path + item.label}
         to={item.path}
         onClick={onClose}
-        className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
-          isActive
+        className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${isActive
             ? "border-[#f2ca50]/50 bg-[#f2ca50]/10 text-[#f2ca50] shadow-[0_0_20px_rgba(242,202,80,0.15)]"
             : "border-transparent text-[#99907c] hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
-        } ${dimmed ? "opacity-60" : ""}`}
+          } ${dimmed ? "opacity-60" : ""}`}
       >
         {isActive ? (
           <motion.div
@@ -507,11 +506,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           transition={{ duration: 0.2 }}
         >
           <div
-            className={`transition-transform duration-200 ${
-              isActive
+            className={`transition-transform duration-200 ${isActive
                 ? "scale-110 text-black"
                 : "group-hover:scale-110 group-hover:text-[#f2ca50]"
-            }`}
+              }`}
           >
             {item.icon}
           </div>
@@ -545,118 +543,118 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   };
 
   return (
-      <motion.div
-        key="admin-sidebar"
-        initial={false}
-        animate={{ x: isLg ? 0 : drawerX }}
-        transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#4d4635]/60 bg-[#0a0a0a]"
-        style={{ willChange: "transform" }}
-      >
-        <div className="border-b border-[#4d4635]/60 px-5 py-5">
-          <Link
-            to="/admin/dashboard"
-            className="flex items-center gap-3"
-            onClick={onClose}
-          >
-            <img
-              src="/LOGO.png"
-              alt="Saga Elite"
-              className="h-8 w-8 shrink-0 object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-            <div>
-              <div className="se-label text-[10px] font-bold tracking-[0.34em] text-[#f2ca50]">
-                SAGA ELITE
-              </div>
-              <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-white">
-                Admin Panel
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        <nav
-          className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
-          data-lenis-prevent="true"
-          data-testid="admin-sidebar-nav"
+    <motion.div
+      key="admin-sidebar"
+      initial={false}
+      animate={{ x: isLg ? 0 : drawerX }}
+      transition={{ type: "spring", stiffness: 320, damping: 30 }}
+      className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#4d4635]/60 bg-[#0a0a0a]"
+      style={{ willChange: "transform" }}
+    >
+      <div className="border-b border-[#4d4635]/60 px-5 py-5">
+        <Link
+          to="/admin/dashboard"
+          className="flex items-center gap-3"
+          onClick={onClose}
         >
-          {renderGroups.map((group, groupIdx) => {
-            const isExpanded = group.section ? expandedSections[group.section] : true;
-            return (
-              <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
-                {group.section ? (
-                  <div 
-                    className="flex cursor-pointer items-center justify-between px-4 pb-1 pt-4 select-none group"
-                    onClick={() => toggleSection(group.section)}
-                  >
-                    <p className="font-sans text-sm font-black uppercase tracking-[0.2em] text-white transition-colors group-hover:text-[#D4AF37]">
-                      {group.section}
-                    </p>
-                    <ChevronDown 
-                      className={`h-4 w-4 text-white transition-transform duration-200 group-hover:text-[#D4AF37] ${isExpanded ? 'rotate-180' : ''}`}
-                    />
-                  </div>
-                ) : null}
-                {isExpanded && (
-                  <div className={`space-y-2 ${group.section ? "ml-3" : ""}`}>
-                    {group.items.map(renderItem)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
+          <img
+            src="/LOGO.png"
+            alt="Saga Elite"
+            className="h-8 w-8 shrink-0 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+          <div>
+            <div className="se-label text-[10px] font-bold tracking-[0.34em] text-[#f2ca50]">
+              SAGA ELITE
+            </div>
+            <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-white">
+              Admin Panel
+            </div>
+          </div>
+        </Link>
+      </div>
 
-        <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
-          <Link
-            to="/admin/account"
-            onClick={onClose}
-            className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
-              location.pathname === "/admin/account"
-                ? "border-[#f2ca50]/40 bg-[#f2ca50]/15 text-white"
-                : "border-transparent text-white hover:border-[#4d4635]/60 hover:bg-[#131313]"
+      <nav
+        className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
+        data-lenis-prevent="true"
+        data-testid="admin-sidebar-nav"
+      >
+        {renderGroups.map((group, groupIdx) => {
+          const isExpanded = group.section ? expandedSections[group.section] : true;
+          return (
+            <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
+              {group.section ? (
+                <div
+                  className="flex cursor-pointer items-center justify-between px-4 pb-1 pt-4 select-none group"
+                  onClick={() => toggleSection(group.section)}
+                >
+                  <p className="font-sans text-sm font-black uppercase tracking-[0.2em] text-white transition-colors group-hover:text-[#D4AF37]">
+                    {group.section}
+                  </p>
+                  <ChevronDown
+                    className={`h-4 w-4 text-white transition-transform duration-200 group-hover:text-[#D4AF37] ${isExpanded ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              ) : null}
+              {isExpanded && (
+                <div className={`space-y-2 ${group.section ? "ml-3" : ""}`}>
+                  {group.items.map(renderItem)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
+        <Link
+          to="/admin/account"
+          onClick={onClose}
+          className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${location.pathname === "/admin/account"
+              ? "border-[#f2ca50]/40 bg-[#f2ca50]/15 text-white"
+              : "border-transparent text-white hover:border-[#4d4635]/60 hover:bg-[#131313]"
             }`}
-          >
-            {location.pathname === "/admin/account" ? (
-              <motion.div
-                layoutId="sidebar-indicator"
-                className="absolute bottom-0 left-0 top-0 w-[3px] rounded-r-full bg-[#f2ca50]"
-                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              />
-            ) : null}
+        >
+          {location.pathname === "/admin/account" ? (
             <motion.div
-              className="flex items-center gap-4"
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.2 }}
-            >
-              <User className="h-5 w-5" />
-              <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
-                My Account
-              </span>
-            </motion.div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoading}
-            className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${
-              isLoading
-                ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
-                : "text-white hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
-            }`}
+              layoutId="sidebar-indicator"
+              className="absolute bottom-0 left-0 top-0 w-[3px] rounded-r-full bg-[#f2ca50]"
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            />
+          ) : null}
+          <motion.div
+            className="flex items-center gap-4"
+            whileHover={{ x: 2 }}
+            transition={{ duration: 0.2 }}
           >
-            <LogOut className="h-5 w-5" />
+            <User className="h-5 w-5" />
             <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
-              {isLoading ? "Logging out…" : "Log Out"}
+              My Account
             </span>
-          </button>
-        </div>
-      </motion.div>
+          </motion.div>
+        </Link>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoading}
+          className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${isLoading
+              ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
+              : "text-white hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+            }`}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
+            {isLoading ? "Logging out…" : "Log Out"}
+          </span>
+        </button>
+      </div>
+    </motion.div>
   );
 };
+
+export default SideBar;
 
 export default SideBar;

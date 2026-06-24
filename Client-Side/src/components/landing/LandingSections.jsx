@@ -88,7 +88,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
     <section className="w-full bg-[#050505] border-b border-[#1f1f1f]">
       {/* Container: 70vh desktop, 65vh tablet, auto mobile */}
       <div className="w-full h-auto md:h-[65vh] lg:h-[70vh] flex flex-col lg:flex-row">
-        
+
         {/* LEFT SECTION (75%) */}
         <div className="relative w-full lg:w-[75%] h-[60vh] md:h-full bg-[#111] overflow-hidden">
           <AnimatePresence mode="wait">
@@ -120,11 +120,11 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
                     LIVE DROP
                   </span>
-                  
+
                   <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md">
                     {liveDrop.name}
                   </h1>
-                  
+
                   <p className="font-sans text-sm md:text-base text-[#d0c5af] leading-relaxed mb-8 max-w-sm line-clamp-3">
                     {liveDrop.description}
                   </p>
@@ -134,12 +134,12 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                       <span className="relative z-10">SHOP THE DROP</span>
                       <div className="absolute inset-0 bg-[#FAF7F2] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                     </Link>
-                    
+
                     {liveDrop.endDate && (
                       <div className="flex flex-col justify-center border border-[#1f1f1f] bg-[#080808] px-6 py-4">
                         <span className="font-mono text-[9px] uppercase tracking-widest text-[#8c8577]">Ends In</span>
                         <div className="-mt-2">
-                           <InlineDropCountdown endDate={liveDrop.endDate} />
+                          <InlineDropCountdown endDate={liveDrop.endDate} />
                         </div>
                       </div>
                     )}
@@ -153,7 +153,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
               </div>
             )}
           </AnimatePresence>
-          
+
           {/* Slide Indicators */}
           {activeDrops && activeDrops.length > 1 && (
             <div className="absolute bottom-6 left-8 flex gap-2 z-20">
@@ -170,21 +170,21 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
 
         {/* RIGHT SECTION (25%) */}
         <div className="w-full lg:w-[25%] flex flex-col h-auto md:h-full border-t lg:border-t-0 lg:border-l border-[#1f1f1f]">
-          
+
           {/* Top Card: Upcoming Drop (50% height) */}
           <div className="flex-1 min-h-[250px] border-b border-[#1f1f1f] relative overflow-hidden group bg-[#080808] hover:bg-[#0c0c0c] transition-colors p-8 flex flex-col justify-center">
             {nextDrop ? (
               <>
                 {/* Background Thumbnail */}
                 <div className="absolute inset-0 z-0">
-                  <img 
-                    src={nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1920&q=80"} 
+                  <img
+                    src={nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1920&q=80"}
                     alt={nextDrop.name}
                     className="w-full h-full object-cover opacity-20 group-hover:opacity-30 group-hover:scale-105 transition-all duration-[2s]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/90 to-transparent" />
                 </div>
-                
+
                 <div className="relative z-10 flex flex-col h-full justify-end">
                   <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Upcoming Drop</span>
                   <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-2 leading-none drop-shadow-md">{nextDrop.name}</h3>
@@ -210,7 +210,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                 </div>
                 <div className="relative z-10">
                   <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Coming Soon</span>
-                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-4 leading-none">A New Chapter<br/>is forming.</h3>
+                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-4 leading-none">A New Chapter<br />is forming.</h3>
                   <Link to="/shopping/product-list" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50] transition-colors">
                     Explore Collections
                   </Link>
@@ -253,67 +253,67 @@ export const SeasonalEventBanner = ({ targetDate, title, benefits = [], ctaText,
 
   return (
     <section className="relative w-full bg-[#d7d5d2] overflow-hidden py-16 md:py-24">
-       {/* Fake concrete background layer */}
-       <div className="absolute inset-0 opacity-40 mix-blend-multiply pointer-events-none bg-grain" />
+      {/* Fake concrete background layer */}
+      <div className="absolute inset-0 opacity-40 mix-blend-multiply pointer-events-none bg-grain" />
 
-       <div className="relative z-10 max-w-[1200px] mx-auto px-4 lg:px-8">
-          
-          <div className="text-center mb-10">
-             <h2 className="font-display text-4xl md:text-[56px] text-[#1f1e1d] uppercase tracking-wide leading-none">
-                {title} ENDS IN
-             </h2>
-          </div>
+      <div className="relative z-10 max-w-[1200px] mx-auto px-4 lg:px-8">
 
-          {/* Geometric Countdown */}
-          <div className="flex justify-center flex-wrap gap-3 md:gap-5 mb-14">
-            {[['Days', timeLeft.d ?? timeLeft.days], ['Hours', timeLeft.hh ?? timeLeft.h], ['Minutes', timeLeft.mm ?? timeLeft.m], ['Seconds', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
-              <div key={label} className="flex flex-col items-center">
-                <div className="relative flex w-[80px] h-[80px] md:w-[130px] md:h-[130px] lg:w-[150px] lg:h-[150px] shadow-2xl overflow-hidden mb-4 rounded-sm">
-                   {/* Left Copper */}
-                   <div className="w-1/2 h-full bg-gradient-to-br from-[#d4a373] to-[#b07049]" />
-                   {/* Right Concrete */}
-                   <div className="w-1/2 h-full bg-gradient-to-br from-[#dfdbd8] to-[#b3b1ad]" />
-                   {/* Midline indent */}
-                   <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -ml-[1px] bg-[#1a1a1a]/10 shadow-[inset_1px_0_2px_rgba(0,0,0,0.1)]" />
-                   {/* Horizontal line indent */}
-                   <div className="absolute top-1/2 left-0 right-0 h-[2px] -mt-[1px] bg-[#1a1a1a]/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" />
+        <div className="text-center mb-10">
+          <h2 className="font-display text-4xl md:text-[56px] text-[#1f1e1d] uppercase tracking-wide leading-none">
+            {title} ENDS IN
+          </h2>
+        </div>
 
-                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="font-display text-5xl md:text-6xl lg:text-[80px] font-medium text-[#222]">
-                        {value !== undefined ? value.toString().padStart(2, '0') : '00'}
-                      </span>
-                   </div>
+        {/* Geometric Countdown */}
+        <div className="flex justify-center flex-wrap gap-3 md:gap-5 mb-14">
+          {[['Days', timeLeft.d ?? timeLeft.days], ['Hours', timeLeft.hh ?? timeLeft.h], ['Minutes', timeLeft.mm ?? timeLeft.m], ['Seconds', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
+            <div key={label} className="flex flex-col items-center">
+              <div className="relative flex w-[80px] h-[80px] md:w-[130px] md:h-[130px] lg:w-[150px] lg:h-[150px] shadow-2xl overflow-hidden mb-4 rounded-sm">
+                {/* Left Copper */}
+                <div className="w-1/2 h-full bg-gradient-to-br from-[#d4a373] to-[#b07049]" />
+                {/* Right Concrete */}
+                <div className="w-1/2 h-full bg-gradient-to-br from-[#dfdbd8] to-[#b3b1ad]" />
+                {/* Midline indent */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -ml-[1px] bg-[#1a1a1a]/10 shadow-[inset_1px_0_2px_rgba(0,0,0,0.1)]" />
+                {/* Horizontal line indent */}
+                <div className="absolute top-1/2 left-0 right-0 h-[2px] -mt-[1px] bg-[#1a1a1a]/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" />
+
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="font-display text-5xl md:text-6xl lg:text-[80px] font-medium text-[#222]">
+                    {value !== undefined ? value.toString().padStart(2, '0') : '00'}
+                  </span>
                 </div>
-                <span className="font-sans text-[15px] md:text-lg lg:text-[22px] text-[#222] font-medium">{label}</span>
               </div>
-            ))}
+              <span className="font-sans text-[15px] md:text-lg lg:text-[22px] text-[#222] font-medium">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Floating Benefit Bar */}
+        <div className="bg-[#faf7f2] rounded-xl p-4 md:p-6 lg:p-8 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)]">
+          <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 w-full xl:w-auto">
+            <h3 className="font-display text-2xl md:text-3xl text-[#111] whitespace-nowrap mb-2 xl:mb-0">
+              🎉 {title}
+            </h3>
+            <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 font-sans text-[13px] md:text-[15px] text-[#222]">
+              {benefits.map((b, i) => (
+                <span key={i} className="flex items-center gap-2 font-medium">
+                  <span className="text-black font-bold">✓</span> {b}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Floating Benefit Bar */}
-          <div className="bg-[#faf7f2] rounded-xl p-4 md:p-6 lg:p-8 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)]">
-             <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 w-full xl:w-auto">
-               <h3 className="font-display text-2xl md:text-3xl text-[#111] whitespace-nowrap mb-2 xl:mb-0">
-                 🎉 {title}
-               </h3>
-               <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 font-sans text-[13px] md:text-[15px] text-[#222]">
-                 {benefits.map((b, i) => (
-                   <span key={i} className="flex items-center gap-2 font-medium">
-                     <span className="text-black font-bold">✓</span> {b}
-                   </span>
-                 ))}
-               </div>
-             </div>
+          {ctaText && (
+            <Link to={ctaLink || "#"} className="shrink-0 w-full xl:w-auto">
+              <button className="w-full xl:w-auto bg-[#2b2a2a] text-[#ffffff] px-8 py-4 font-sans text-sm md:text-base font-medium rounded-lg hover:bg-black transition-colors whitespace-nowrap">
+                [{ctaText}]
+              </button>
+            </Link>
+          )}
+        </div>
 
-             {ctaText && (
-               <Link to={ctaLink || "#"} className="shrink-0 w-full xl:w-auto">
-                 <button className="w-full xl:w-auto bg-[#2b2a2a] text-[#ffffff] px-8 py-4 font-sans text-sm md:text-base font-medium rounded-lg hover:bg-black transition-colors whitespace-nowrap">
-                   [{ctaText}]
-                 </button>
-               </Link>
-             )}
-          </div>
-
-       </div>
+      </div>
     </section>
   );
 };
@@ -331,21 +331,21 @@ export const CountdownWidget = ({ targetDate, title, description }) => {
     <div className="bg-[#0b0b0b] border-y border-[#4d4635]/40 py-12 relative overflow-hidden">
       {/* Glow effects */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-1/2 bg-[#f2ca50]/5 blur-[120px] rounded-full pointer-events-none" />
-      
+
       <div className="max-w-[800px] mx-auto px-6 text-center relative z-10">
         <h3 className="font-mono text-[12px] tracking-[0.4em] uppercase text-[#ffb4ab] mb-3 flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#ffb4ab] animate-pulse" />
           {title || "Next Drop"}
         </h3>
         <p className="font-display text-2xl text-[#e5e2e1] mb-8">{description}</p>
-        
+
         <div className="flex justify-center gap-4 text-[#e5e2e1]">
           {[['Days', timeLeft.d], ['Hours', timeLeft.hh], ['Mins', timeLeft.mm], ['Secs', timeLeft.ss]].map(([label, value]) => (
             <div key={label} className="flex flex-col items-center">
-               <div className="w-16 h-16 md:w-20 md:h-20 bg-[#131313] border border-[#2a2a2a] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                 <span className="font-mono text-3xl md:text-4xl text-[#f2ca50]">{value.toString().padStart(2, '0')}</span>
-               </div>
-               <span className="font-body text-[10px] uppercase tracking-widest text-[#d0c5af] mt-2">{label}</span>
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-[#131313] border border-[#2a2a2a] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <span className="font-mono text-3xl md:text-4xl text-[#f2ca50]">{value.toString().padStart(2, '0')}</span>
+              </div>
+              <span className="font-body text-[10px] uppercase tracking-widest text-[#d0c5af] mt-2">{label}</span>
             </div>
           ))}
         </div>
@@ -368,7 +368,7 @@ export const IdentityCategoryGrid = ({ categories = [] }) => {
           <Link key={cat.name} to={cat.link} className="group block relative aspect-[3/4] overflow-hidden bg-[#131313]">
             <img src={cat.image} alt={cat.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-[0.19,1,0.22,1] group-hover:scale-105" loading="lazy" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/90 via-[#0e0e0e]/20 to-transparent" />
-            
+
             {/* Outline box that draws on hover */}
             <div className="absolute inset-4 border border-[#f2ca50]/0 group-hover:border-[#f2ca50]/50 transition-colors duration-500 rounded-sm pointer-events-none" />
 
@@ -409,19 +409,19 @@ export const ProductSlider = ({ title, subtitle, products = [], deal = false }) 
           </button>
         </div>
       </div>
-      
+
       <div ref={scrollerRef} className="flex gap-6 overflow-x-auto snap-x scroll-smooth pb-8 hide-scrollbar group/slider">
         {products.map((product, i) => (
-           <motion.div 
-             key={product.id} 
-             initial={{ opacity: 0, y: 30 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true, margin: "-50px" }}
-             transition={{ duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-             className="snap-start shrink-0 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] hover:scale-[1.03] hover:z-10 hover:shadow-2xl group-hover/slider:opacity-30 hover:!opacity-100 cursor-open"
-           >
-             <ProductCard product={product} badge={deal ? "deal" : "new"} />
-           </motion.div>
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="snap-start shrink-0 transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] hover:scale-[1.03] hover:z-10 hover:shadow-2xl group-hover/slider:opacity-30 hover:!opacity-100 cursor-open"
+          >
+            <ProductCard product={product} badge={deal ? "deal" : "new"} />
+          </motion.div>
         ))}
       </div>
     </section>
@@ -457,7 +457,7 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
     // We only want active offers that haven't ended yet
     const now = new Date().getTime();
     let valid = offers.filter(o => !o.endDate || new Date(o.endDate).getTime() > now);
-    
+
     // Sort logic:
     // 1. Highest discount first
     // 2. Closest ending campaign second
@@ -465,7 +465,7 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
       const discountA = a.discountPercentage || 0;
       const discountB = b.discountPercentage || 0;
       if (discountB !== discountA) return discountB - discountA;
-      
+
       const endA = a.endDate ? new Date(a.endDate).getTime() : Infinity;
       const endB = b.endDate ? new Date(b.endDate).getTime() : Infinity;
       return endA - endB;
@@ -511,11 +511,11 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
           {/* LEFT 55%: Content */}
           <div className="w-full md:w-[55%] flex flex-col justify-center px-8 py-8 md:px-12 lg:px-16 z-10 bg-[#050505] relative order-2 md:order-1">
             <div className="absolute inset-0 bg-grain opacity-10 pointer-events-none" />
-            
+
             <div className="relative z-10 max-w-xl">
               <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#f2ca50] mb-3 flex items-center gap-2">
-                 <span className="w-1 h-1 bg-[#f2ca50] rounded-full animate-pulse" />
-                 {currentCampaign.campaignType || "Seasonal Campaign"}
+                <span className="w-1 h-1 bg-[#f2ca50] rounded-full animate-pulse" />
+                {currentCampaign.campaignType || "Seasonal Campaign"}
               </span>
 
               <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-3 drop-shadow-sm">
@@ -533,12 +533,12 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
                     <span className="font-sans text-lg text-[#f2ca50] tracking-tighter">{currentCampaign.discountPercentage}% OFF</span>
                   </div>
                 )}
-                
+
                 {currentCampaign.endDate && (
                   <div className="flex flex-col">
                     <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Ends In</span>
                     <div className="scale-75 origin-left -ml-1 mt-0">
-                       <InlineDropCountdown endDate={currentCampaign.endDate} />
+                      <InlineDropCountdown endDate={currentCampaign.endDate} />
                     </div>
                   </div>
                 )}
@@ -557,8 +557,8 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
                 </div>
               )}
 
-              <Link 
-                to={`/shopping/product-list?offer=${currentCampaign._id}`} 
+              <Link
+                to={`/shopping/product-list?offer=${currentCampaign._id}`}
                 className="inline-flex bg-[#FAF7F2] text-[#050505] px-6 py-3 font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#f2ca50] transition-colors"
               >
                 SHOP COLLECTION
@@ -568,23 +568,23 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
 
           {/* RIGHT 45%: Image */}
           <div className="w-full md:w-[45%] h-[200px] md:h-auto relative bg-[#0a0a0a] overflow-hidden order-1 md:order-2 flex items-center justify-center pointer-events-none">
-             {currentCampaign.bannerImage ? (
-                <img 
-                  src={currentCampaign.bannerImage} 
-                  alt={currentCampaign.title || currentCampaign.name} 
-                  className="w-full h-full object-cover object-center opacity-90 scale-105 hover:scale-110 transition-transform duration-[10s] ease-out"
-                />
-             ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-[#12100A] via-[#050505] to-[#1A1608] flex items-center justify-center p-8 text-center">
-                   <div className="font-display text-6xl md:text-8xl text-[#f2ca50]/5 uppercase tracking-tighter leading-none break-words absolute inset-0 flex items-center justify-center rotate-[-10deg] scale-150">
-                     {currentCampaign.title || currentCampaign.name}
-                   </div>
-                   <div className="relative z-10 border border-[#f2ca50]/20 p-8">
-                     <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">Limited Edition</span>
-                   </div>
+            {currentCampaign.bannerImage ? (
+              <img
+                src={currentCampaign.bannerImage}
+                alt={currentCampaign.title || currentCampaign.name}
+                className="w-full h-full object-cover object-center opacity-90 scale-105 hover:scale-110 transition-transform duration-[10s] ease-out"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-[#12100A] via-[#050505] to-[#1A1608] flex items-center justify-center p-8 text-center">
+                <div className="font-display text-6xl md:text-8xl text-[#f2ca50]/5 uppercase tracking-tighter leading-none break-words absolute inset-0 flex items-center justify-center rotate-[-10deg] scale-150">
+                  {currentCampaign.title || currentCampaign.name}
                 </div>
-             )}
-             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent md:bg-gradient-to-r md:from-[#050505] md:via-[#050505]/40 md:to-transparent" />
+                <div className="relative z-10 border border-[#f2ca50]/20 p-8">
+                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">Limited Edition</span>
+                </div>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent md:bg-gradient-to-r md:from-[#050505] md:via-[#050505]/40 md:to-transparent" />
           </div>
         </motion.div>
       </AnimatePresence>
@@ -601,7 +601,7 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
               />
             ))}
           </div>
-          
+
           <div className="hidden md:flex gap-4 items-center">
             <button onClick={handlePrev} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowLeft className="w-5 h-5" /></button>
             <button onClick={handleNext} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowRight className="w-5 h-5" /></button>
@@ -682,34 +682,34 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
 
   return (
     <section className={`${sectionContainer} py-12`}>
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         {categories.map((cat) => {
-           const label = cat.name;
-           return (
-           <Link key={cat.name} to={cat.link} className="group relative overflow-hidden aspect-[3/4] cursor-pointer border border-[#4d4635]/60 transition-all duration-500 hover:border-[#f2ca50]/60 hover:[box-shadow:0_0_30px_rgba(242,202,80,0.20),inset_0_0_0_1px_rgba(242,202,80,0.15)] bg-[#131313]">
-             <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
-             {cat.img && (
-               <img
-                 src={cat.img}
-                 alt={cat.name}
-                 className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700"
-                 loading="lazy"
-                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
-               />
-             )}
-             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent" />
-             <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center text-center justify-end">
-               <div className="transition-transform duration-500 group-hover:-translate-y-2">
-                 <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest">{cat.name}</h3>
-               </div>
-               <p className="mt-1 se-label font-bold text-[9px] tracking-[0.3em] text-[#d0c5af]/80 opacity-0 translate-y-2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
-                 {label === 'Gents' ? 'BOLD · OVERSIZED · RARE' : label === 'Ladies' ? 'ICONIC · EDITORIAL · ELEGANT' : 'NO RULES · SHARED · UNLIMITED'}
-               </p>
-             </div>
-           </Link>
-           );
-         })}
-       </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {categories.map((cat) => {
+          const label = cat.name;
+          return (
+            <Link key={cat.name} to={cat.link} className="group relative overflow-hidden aspect-[3/4] cursor-pointer border border-[#4d4635]/60 transition-all duration-500 hover:border-[#f2ca50]/60 hover:[box-shadow:0_0_30px_rgba(242,202,80,0.20),inset_0_0_0_1px_rgba(242,202,80,0.15)] bg-[#131313]">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
+              {cat.img && (
+                <img
+                  src={cat.img}
+                  alt={cat.name}
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center text-center justify-end">
+                <div className="transition-transform duration-500 group-hover:-translate-y-2">
+                  <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest">{cat.name}</h3>
+                </div>
+                <p className="mt-1 se-label font-bold text-[9px] tracking-[0.3em] text-[#d0c5af]/80 opacity-0 translate-y-2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
+                  {label === 'Gents' ? 'BOLD · OVERSIZED · RARE' : label === 'Ladies' ? 'ICONIC · EDITORIAL · ELEGANT' : 'NO RULES · SHARED · UNLIMITED'}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </section>
   );
 };
@@ -737,27 +737,27 @@ export const RecommendationsSection = ({ title = "Recommended For You", products
 // 🔥 LIVE DROP DEDICATED SECTION
 export const LiveDropSection = ({ activeDrop }) => {
   if (!activeDrop) return null;
-  
+
   return (
     <section className="py-10 bg-[#050505]">
       <div className={`${sectionContainer}`}>
         <div className="border border-[#2a2a2a] p-8 md:p-12 relative overflow-hidden bg-[#0a0a0a]">
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#f2ca50] opacity-5 blur-[100px] pointer-events-none" />
           <div className="flex flex-col md:flex-row gap-12 items-center relative z-10">
-             <div className="flex-1">
-               <span className="bg-[#f2ca50] text-[#0a0a0a] font-mono text-[10px] px-3 py-1 uppercase tracking-widest font-bold">Live Selected Drop</span>
-               <h2 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase mt-6 mb-4 leading-none">{activeDrop.name}</h2>
-               <p className="font-sans text-[#FAF7F2]/70 text-sm mb-8 leading-relaxed max-w-md">{activeDrop.description}</p>
-               <InlineDropCountdown endDate={activeDrop.endDate} />
-               <Link to={`/shopping/drop/${activeDrop.slug}`} className="inline-block mt-8 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-mono text-[11px] tracking-[0.2em] font-bold hover:bg-[#ffe088] transition-colors uppercase">
-                 View The Collection
-               </Link>
-             </div>
-             {(activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl) && (
-               <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-[#131313]">
-                  <img src={activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
-               </div>
-             )}
+            <div className="flex-1">
+              <span className="bg-[#f2ca50] text-[#0a0a0a] font-mono text-[10px] px-3 py-1 uppercase tracking-widest font-bold">Live Selected Drop</span>
+              <h2 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase mt-6 mb-4 leading-none">{activeDrop.name}</h2>
+              <p className="font-sans text-[#FAF7F2]/70 text-sm mb-8 leading-relaxed max-w-md">{activeDrop.description}</p>
+              <InlineDropCountdown endDate={activeDrop.endDate} />
+              <Link to={`/shopping/drop/${activeDrop.slug}`} className="inline-block mt-8 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-mono text-[11px] tracking-[0.2em] font-bold hover:bg-[#ffe088] transition-colors uppercase">
+                View The Collection
+              </Link>
+            </div>
+            {(activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl) && (
+              <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-[#131313]">
+                <img src={activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1449,9 +1449,8 @@ export const Testimonials = () => {
             <button
               key={idx}
               onClick={() => setI(idx)}
-              className={`h-0.5 transition-all duration-500 ${
-                i === idx ? "w-10 bg-[#f2ca50]" : "w-6 bg-[#4d4635] hover:bg-[#99907c]"
-              }`}
+              className={`h-0.5 transition-all duration-500 ${i === idx ? "w-10 bg-[#f2ca50]" : "w-6 bg-[#4d4635] hover:bg-[#99907c]"
+                }`}
               aria-label={`Show testimonial ${idx + 1}`}
             />
           ))}
@@ -1469,55 +1468,55 @@ export const VipMembership = () => {
   const { isAuthenticated } = useSelector((state) => state.auth || { isAuthenticated: false });
 
   return (
-  <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
-    {/* Layered glow */}
-    <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
-    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#a855f7]/10 blur-[140px] rounded-full pointer-events-none" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(242,202,80,0.06),transparent_60%)] pointer-events-none" />
+    <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
+      {/* Layered glow */}
+      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#a855f7]/10 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(242,202,80,0.06),transparent_60%)] pointer-events-none" />
 
-    <div className="relative z-10 max-w-[900px] mx-auto px-6 text-center">
-      <div className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#f2ca50]/5 px-4 py-2 mb-6">
-        <Crown className="w-3.5 h-3.5 text-[#f2ca50]" />
-        <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-[#f2ca50]">
-          Members Only
-        </span>
+      <div className="relative z-10 max-w-[900px] mx-auto px-6 text-center">
+        <div className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#f2ca50]/5 px-4 py-2 mb-6">
+          <Crown className="w-3.5 h-3.5 text-[#f2ca50]" />
+          <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-[#f2ca50]">
+            Members Only
+          </span>
+        </div>
+        <h2 className="font-display text-[44px] md:text-[80px] leading-none text-[#FAF7F2] uppercase mb-6">
+          Become <span className="text-[#f2ca50]">Elite</span>
+        </h2>
+        <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
+          Get early drop access, members-only rewards, and a private channel
+          where the next chapter previews 48 hours before anyone else.
+        </p>
+
+        <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 max-w-2xl mx-auto">
+          {[
+            ["Early drop access", Zap],
+            ["Members-only rewards", Gift],
+            ["Closed community channel", Award],
+            ["Founders-list status", Crown],
+          ].map(([label, IconComponent]) => (
+            <div key={label} className="flex items-center gap-2 text-[#d0c5af]">
+              {React.createElement(IconComponent, {
+                className: "w-4 h-4 text-[#f2ca50]",
+                strokeWidth: 1.5,
+              })}
+              <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')}
+          className="inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group"
+          style={{ boxShadow: "0 0 32px rgba(242,202,80,0.25)" }}
+        >
+          Claim Elite Access
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </button>
       </div>
-      <h2 className="font-display text-[44px] md:text-[80px] leading-none text-[#FAF7F2] uppercase mb-6">
-        Become <span className="text-[#f2ca50]">Elite</span>
-      </h2>
-      <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
-        Get early drop access, members-only rewards, and a private channel
-        where the next chapter previews 48 hours before anyone else.
-      </p>
-
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 max-w-2xl mx-auto">
-        {[
-          ["Early drop access", Zap],
-          ["Members-only rewards", Gift],
-          ["Closed community channel", Award],
-          ["Founders-list status", Crown],
-        ].map(([label, IconComponent]) => (
-          <div key={label} className="flex items-center gap-2 text-[#d0c5af]">
-            {React.createElement(IconComponent, {
-              className: "w-4 h-4 text-[#f2ca50]",
-              strokeWidth: 1.5,
-            })}
-            <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <button
-        onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')}
-        className="inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group"
-        style={{ boxShadow: "0 0 32px rgba(242,202,80,0.25)" }}
-      >
-        Claim Elite Access
-        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-      </button>
-    </div>
-  </section>
+    </section>
   );
 };
