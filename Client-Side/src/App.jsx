@@ -64,7 +64,6 @@ const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"))
 const ContactPageManager = lazy(() => import("./pages/admin-view/ContactPageManager"));
 const HomepageManager = lazy(() => import("./pages/admin-view/HomepageManager"));
 const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
-const AdminCategoryEditor = lazy(() => import("./pages/admin/CategoryEditor"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
@@ -241,8 +240,6 @@ function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
               <Route path="categories" element={<PermissionGuard permission="products"><AdminCategoriesList /></PermissionGuard>} />
-              <Route path="categories/new" element={<PermissionGuard permission="products"><AdminCategoryEditor /></PermissionGuard>} />
-              <Route path="categories/:id" element={<PermissionGuard permission="products"><AdminCategoryEditor /></PermissionGuard>} />
               <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
               <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
               <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />

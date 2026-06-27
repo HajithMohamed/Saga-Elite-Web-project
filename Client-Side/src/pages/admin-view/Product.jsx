@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, Fragment, useRef } from "react";
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -17,7 +18,6 @@ import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
-  Settings,
   Plus,
   Trash2,
   ChevronLeft,
@@ -98,9 +98,6 @@ const rollbackCreatedProduct = async (product) => {
   }
 };
 
-const CATEGORY_ROOT_TAGS = ["Gents", "Ladies", "Unisex"];
-const CATEGORY_MANAGER_PAGE_SIZE = 6;
-
 const getProductLedgerMeta = (product) => {
   const summary = computeVariantStockSummary(product.variants || []);
   const colors = summary.colorBreakdown.map((c) => c.color).slice(0, 3);
@@ -118,13 +115,6 @@ const getProductLedgerMeta = (product) => {
     hasDiscount: Number(product.discountPercent) > 0,
   };
 };
-
-const normalizeCategorySegment = (value = "") =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 
 const buildCategoryTree = (categories = []) => {
   const nodes = categories.map((category) => ({ ...category, children: [] }));
@@ -155,26 +145,6 @@ const buildCategoryTree = (categories = []) => {
   return sortNodes(roots);
 };
 
-const findCategoryNode = (categories = [], value) => {
-  const target = normalizeText(value);
-  if (!target) return null;
-
-  for (const category of categories) {
-    if (
-      normalizeText(category._id) === target ||
-      normalizeText(category.name) === target ||
-      normalizeText(category.slug) === target
-    ) {
-      return category;
-    }
-
-    const childMatch = findCategoryNode(category.children || [], value);
-    if (childMatch) return childMatch;
-  }
-
-  return null;
-};
-
 const formatCategoryPathDisplay = (value = "") =>
   String(value || "")
     .split("/")
@@ -187,15 +157,6 @@ const formatCategoryPathDisplay = (value = "") =>
     )
     .join(" / ");
 
-const collectCategoryOptions = (categories = [], path = []) =>
-  categories.flatMap((category) => [
-    {
-      value: String(category._id),
-      label: [...path, category.name].join(" / "),
-    },
-    ...collectCategoryOptions(category.children || [], [...path, category.name]),
-  ]);
-
 const collectFilterCategoryOptions = (categories = [], path = []) =>
   categories.flatMap((category) => [
     {
@@ -204,466 +165,6 @@ const collectFilterCategoryOptions = (categories = [], path = []) =>
     },
     ...collectFilterCategoryOptions(category.children || [], [...path, category.name]),
   ]);
-
-const flattenCategoryRows = (categories = [], path = []) =>
-  categories.flatMap((category) => {
-    const nextPath = [...path, category];
-
-    return [
-      {
-        ...category,
-        breadcrumb: nextPath.map((item) => item.name).join(" / "),
-        level: Math.max(0, nextPath.length - 1),
-      },
-      ...flattenCategoryRows(category.children || [], nextPath),
-    ];
-  });
-
-const CategoryManagerPanel = ({ categoryTree, onRefreshCategories, onClose }) => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeTag, setActiveTag] = useState(CATEGORY_ROOT_TAGS[0]);
-  const [editingId, setEditingId] = useState("");
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [parentCategory, setParentCategory] = useState("");
-  const [sortOrder, setSortOrder] = useState("0");
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [showOnHome, setShowOnHome] = useState(false);
-  const [isActive, setIsActive] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const activeRootNode = findCategoryNode(categoryTree, activeTag) || categoryTree[0] || null;
-  const visibleCategoryRows = activeRootNode ? flattenCategoryRows(activeRootNode.children || [], [activeRootNode]) : [];
-  const totalPages = Math.max(1, Math.ceil(visibleCategoryRows.length / CATEGORY_MANAGER_PAGE_SIZE));
-  const activePage = Math.min(currentPage, totalPages);
-  const pageStart = (activePage - 1) * CATEGORY_MANAGER_PAGE_SIZE;
-  const pageEnd = Math.min(pageStart + CATEGORY_MANAGER_PAGE_SIZE, visibleCategoryRows.length);
-  const pagedCategoryRows = visibleCategoryRows.slice(pageStart, pageEnd);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTag]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
-
-  const resetForm = useCallback(
-    (nextParentCategory = activeRootNode ? String(activeRootNode._id) : "") => {
-      setEditingId("");
-      setName("");
-      setSlug("");
-      setParentCategory(nextParentCategory);
-      setSortOrder("0");
-      setIsFeatured(false);
-      setShowOnHome(false);
-      setIsActive(true);
-      setError(null);
-    },
-    [activeRootNode]
-  );
-
-  useEffect(() => {
-    if (!categoryTree.length) return;
-
-    const activeRootExists = findCategoryNode(categoryTree, activeTag);
-    if (activeRootExists) return;
-
-    const fallbackTag = CATEGORY_ROOT_TAGS.find((tag) => findCategoryNode(categoryTree, tag));
-    if (fallbackTag) {
-      setActiveTag(fallbackTag);
-    }
-  }, [activeTag, categoryTree]);
-
-  const switchActiveTag = useCallback(
-    (tag) => {
-      const nextTag = CATEGORY_ROOT_TAGS.find((candidate) => normalizeText(candidate) === normalizeText(tag)) || CATEGORY_ROOT_TAGS[0];
-      const nextRootNode = findCategoryNode(categoryTree, nextTag);
-
-      setActiveTag(nextTag);
-      setCurrentPage(1);
-      resetForm(nextRootNode ? String(nextRootNode._id) : "");
-    },
-    [categoryTree, resetForm]
-  );
-
-  const startEdit = useCallback((category) => {
-    setEditingId(String(category._id));
-    setName(category.name || "");
-    setSlug(category.slug || "");
-    setParentCategory(category.parentCategory ? String(category.parentCategory) : activeRootNode ? String(activeRootNode._id) : "");
-    setSortOrder(String(category.sortOrder ?? 0));
-    setIsFeatured(!!category.isFeatured);
-    setShowOnHome(!!category.showOnHome);
-    setIsActive(category.isActive ?? true);
-    setError(null);
-  }, [activeRootNode]);
-
-  const handleSave = useCallback(async () => {
-    if (!name.trim()) {
-      setError("Category name is required.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    const payload = {
-      name: name.trim(),
-      slug: slug.trim() || undefined,
-      parentCategory: parentCategory || (activeRootNode ? String(activeRootNode._id) : null),
-      sortOrder: Number(sortOrder || 0),
-      isFeatured,
-      showOnHome,
-      isActive,
-    };
-
-    try {
-      if (editingId) {
-        await axios.put(`${API_BASE}/admin/categories/${editingId}`, payload, { withCredentials: true });
-      } else {
-        await axios.post(`${API_BASE}/admin/categories`, payload, { withCredentials: true });
-      }
-
-      await onRefreshCategories();
-      if (!editingId) {
-        setCurrentPage(1);
-      }
-      toast({
-        title: editingId ? "Category updated" : "Category created",
-        variant: "success",
-      });
-      resetForm();
-    } catch (err) {
-      const message = err?.response?.data?.message || err?.message || "Failed to save category";
-      setError(message);
-      toast({ title: "Category save failed", description: message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [activeRootNode, editingId, isActive, isFeatured, name, onRefreshCategories, parentCategory, resetForm, showOnHome, slug, sortOrder, toast]);
-
-  const handleDelete = useCallback(
-    async (category) => {
-      if (!window.confirm(`Delete ${category.name}?`)) return;
-      setLoading(true);
-      setError(null);
-
-      try {
-        await axios.delete(`${API_BASE}/admin/categories/${category._id}`, { withCredentials: true });
-        await onRefreshCategories();
-        if (editingId === String(category._id)) {
-          resetForm();
-        }
-        toast({ title: "Category deleted", variant: "success" });
-      } catch (err) {
-        const message = err?.response?.data?.message || err?.message || "Failed to delete category";
-        setError(message);
-        toast({ title: "Delete failed", description: message, variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [editingId, onRefreshCategories, resetForm, toast]
-  );
-
-  const categoryOptions = collectCategoryOptions(activeRootNode ? [activeRootNode] : []).filter((option) => option.value !== editingId);
-
-  return (
-    <motion.div
-      id="category-manager-panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="category-manager-title"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[80] flex items-center justify-center overflow-hidden bg-black/60 backdrop-blur-sm p-6"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.97 }}
-        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        onClick={(e) => e.stopPropagation()}
-        className="category-modal-scroll w-full max-w-5xl max-h-[85vh] overflow-y-scroll rounded-3xl border border-[#D4AF37]/15 bg-[#0B0B0B] p-6 md:p-8 shadow-2xl shadow-black/50"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        data-lenis-prevent="true"
-      >
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]">Inline taxonomy editor</p>
-            <h3 id="category-manager-title" className="mt-2 text-xl font-semibold text-white">Category management</h3>
-            <p className="mt-1 text-sm text-white/50">Manage one root tag at a time so subcategory CRUD stays scoped and readable.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => onRefreshCategories()}
-              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37]"
-            >
-              Refresh tree
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-white/10 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/25 hover:text-white"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-4 flex flex-wrap gap-2">
-          {CATEGORY_ROOT_TAGS.map((tag) => {
-            const isActive = normalizeText(activeTag) === normalizeText(tag);
-            const rootNode = findCategoryNode(categoryTree, tag);
-
-            return (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => switchActiveTag(tag)}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] transition ${isActive
-                    ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
-                    : "border-white/10 bg-white/[0.03] text-white/55 hover:border-white/20 hover:text-white"
-                  }`}
-              >
-                {tag}
-                <span className="rounded-full border border-current/20 px-2 py-0.5 text-[9px] tracking-[0.12em]">
-                  {rootNode?.children?.length || 0}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {activeRootNode ? (
-          <div className="mb-4 rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#f2ca50]">
-            Active tag: <span className="font-semibold">{activeRootNode.name}</span>
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="mb-4 rounded-2xl border border-[#ffb4ab]/25 bg-[#ffb4ab]/10 px-4 py-3 text-sm text-[#ffb4ab]">
-            {error}
-          </div>
-        ) : null}
-
-        {visibleCategoryRows.length > CATEGORY_MANAGER_PAGE_SIZE ? (
-          <div className="mb-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-                Showing {pageStart + 1}-{pageEnd} of {visibleCategoryRows.length} categories
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={activePage === 1}
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Previous category page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                {[...Array(totalPages)].map((_, index) => {
-                  const pageNumber = index + 1;
-                  const isActivePage = activePage === pageNumber;
-
-                  return (
-                    <button
-                      key={pageNumber}
-                      type="button"
-                      onClick={() => setCurrentPage(pageNumber)}
-                      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.2em] transition ${isActivePage
-                          ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]"
-                          : "border-white/10 bg-black/40 text-white/65 hover:border-white/20 hover:text-white"
-                        }`}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  disabled={activePage === totalPages}
-                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 transition hover:border-[#D4AF37]/35 hover:text-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Next category page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-3">
-            {pagedCategoryRows.map((category) => (
-              <div key={category._id} className="rounded-2xl border border-white/5 bg-black/20 p-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between" style={{ marginLeft: `${Math.min(category.level, 3) * 10}px` }}>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-white">{category.name}</p>
-                    <span className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${category.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-white/40"}`}>
-                      {category.isActive ? "Active" : "Inactive"}
-                    </span>
-                    {category.children?.length ? (
-                      <span className="rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">
-                        {category.children.length} children
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-[#d0c5af]">{category.breadcrumb}</p>
-                  <p className="mt-1 text-[11px] text-white/40">/{category.slug}</p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(category)}
-                    className="rounded-full border border-[#D4AF37]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(category)}
-                    className="rounded-full border border-[#ffb4ab]/35 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb4ab] transition hover:bg-[#ffb4ab]/10"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {activeRootNode && visibleCategoryRows.length === 0 ? (
-              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
-                No subcategories exist under {activeRootNode.name} yet.
-              </div>
-            ) : null}
-            {!activeRootNode ? (
-              <div className="rounded-2xl border border-white/5 bg-black/20 p-6 text-sm text-white/45">
-                No categories loaded yet.
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-2xl border border-white/5 bg-black/20 p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-[#d0c5af]">{editingId ? "Edit category" : "Create category"}</p>
-                <h4 className="mt-1 text-base font-semibold text-white">{editingId ? "Update taxonomy node" : "New taxonomy node"}</h4>
-              </div>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-full border border-white/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
-              >
-                New
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <label className="block">
-                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Name</span>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                  placeholder="Ladies / Clothing / Dresses"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Slug</span>
-                <input
-                  value={slug}
-                  onChange={(event) => setSlug(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                  placeholder="dresses"
-                />
-                {(name || slug) && activeRootNode ? (
-                  <p className="mt-2 text-[11px] text-[#D4AF37]/80">
-                    Path preview: {activeRootNode.slug}/{normalizeCategorySegment(slug || name)}
-                  </p>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Parent category</span>
-                <select
-                  value={parentCategory}
-                  onChange={(event) => setParentCategory(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                >
-                  <option value="" disabled>
-                    Select a parent inside {activeRootNode?.name || activeTag}
-                  </option>
-                  {categoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-[10px] uppercase tracking-[0.2em] text-white/50">Sort order</span>
-                <input
-                  type="number"
-                  value={sortOrder}
-                  onChange={(event) => setSortOrder(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
-                  placeholder="e.g. 10"
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
-                  <span>Active</span>
-                  <input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white">
-                  <span>Featured</span>
-                  <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
-                </label>
-                <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-white sm:col-span-2">
-                  <span>Show on home</span>
-                  <input type="checkbox" checked={showOnHome} onChange={(event) => setShowOnHome(event.target.checked)} />
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="rounded-full bg-[#D4AF37] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-black transition hover:bg-[#D4AF37]/90 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Saving..." : editingId ? "Update category" : "Create category"}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-full border border-white/10 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/25 hover:text-white"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
 
 const Product = () => {
   const [showForm, setShowForm] = useState(false);
@@ -684,7 +185,6 @@ const Product = () => {
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState(null);
   const [showProductSaved, setShowProductSaved] = useState(false);
   const [categoryTree, setCategoryTree] = useState([]);
-  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [bulkPendingAction, setBulkPendingAction] = useState(null);
   const [studioGalleryProduct, setStudioGalleryProduct] = useState(null);
@@ -1314,18 +814,6 @@ const Product = () => {
                       className="min-w-[160px]"
                     />
 
-                    {/* Manage Categories inline toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setCategoryManagerOpen((state) => !state)}
-                      aria-expanded={categoryManagerOpen}
-                      aria-controls="category-manager-panel"
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-transparent px-4 text-[13px] font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Taxonomy
-                    </button>
-
                     {/* Reset Filters button */}
                     {(statusFilter !== "all" || categoryFilter !== "" || dropFilter !== "" || sortFilter !== "" || searchQuery !== "") && (
                       <button
@@ -1338,16 +826,6 @@ const Product = () => {
                     )}
                   </div>
                 </SearchFilterBar>
-
-                <AnimatePresence>
-                  {categoryManagerOpen ? (
-                    <CategoryManagerPanel
-                      categoryTree={categoryTree}
-                      onRefreshCategories={loadCategoryTree}
-                      onClose={() => setCategoryManagerOpen(false)}
-                    />
-                  ) : null}
-                </AnimatePresence>
 
                 {/* Inline Bulk Actions Bar */}
                 <AnimatePresence>

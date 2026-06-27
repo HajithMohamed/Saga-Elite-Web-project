@@ -1,71 +1,57 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Loader2, FolderTree, Star, Search } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  FolderTree,
+  Folder,
+  FolderOpen,
+  Star,
+  Search,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { PrimaryButton } from "@/components/admin-components/_shared/Buttons";
-import Pagination from "@/components/common-components/Pagination";
-import usePagination from "@/hooks/use-pagination";
-
-const PAGE_SIZE = 12;
-
-// Order the flat list depth-first (respecting sortOrder) so children render
-// directly beneath their parent, and tag each row with its nesting depth.
-const buildOrdered = (list) => {
-  const childrenMap = {};
-  list.forEach((c) => {
-    const key = c.parentCategory ? String(c.parentCategory) : "root";
-    (childrenMap[key] = childrenMap[key] || []).push(c);
-  });
-  Object.values(childrenMap).forEach((arr) =>
-    arr.sort(
-      (a, b) =>
-        (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
-        String(a.name).localeCompare(String(b.name))
-    )
-  );
-  const out = [];
-  const seen = new Set();
-  const walk = (key, depth) => {
-    (childrenMap[key] || []).forEach((c) => {
-      if (seen.has(String(c._id))) return; // guard against bad cycles
-      seen.add(String(c._id));
-      out.push({ ...c, depth });
-      walk(String(c._id), depth + 1);
-    });
-  };
-  walk("root", 0);
-  // Append any orphans (parent missing from the list) so nothing disappears.
-  list.forEach((c) => {
-    if (!seen.has(String(c._id))) out.push({ ...c, depth: 0 });
-  });
-  return out;
-};
+import CategoryEditorPanel from "./CategoryEditor";
 
 const CategoriesList = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(new Set());
+  const [selectedId, setSelectedId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [createParentId, setCreateParentId] = useState("");
+  const seededExpand = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/categories`);
-      setCategories(res.data?.data || []);
+      const list = res.data?.data || [];
+      setCategories(list);
+      // On the very first load, open the main categories so the tree shows structure.
+      if (!seededExpand.current) {
+        seededExpand.current = true;
+        setExpanded(
+          new Set(list.filter((c) => !c.parentCategory).map((c) => String(c._id)))
+        );
+      }
+      return list;
     } catch (err) {
       toast({
         title: "Could not load categories",
         description: err?.response?.data?.message || err?.message,
         variant: "destructive",
       });
+      return [];
     } finally {
       setLoading(false);
     }
@@ -75,47 +61,239 @@ const CategoriesList = () => {
     load();
   }, [load]);
 
-  const nameById = useMemo(() => {
-    const map = {};
-    categories.forEach((c) => {
-      map[c._id] = c.name;
-    });
-    return map;
+  const byId = useMemo(() => {
+    const m = new Map();
+    categories.forEach((c) => m.set(String(c._id), c));
+    return m;
   }, [categories]);
 
-  const ordered = useMemo(() => buildOrdered(categories), [categories]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return ordered;
-    return ordered.filter((c) => {
-      const parentName = c.parentCategory ? nameById[c.parentCategory] || "" : "";
-      return (
-        c.name?.toLowerCase().includes(q) ||
-        c.slug?.toLowerCase().includes(q) ||
-        parentName.toLowerCase().includes(q)
-      );
+  // parentId → sorted children (root-level under the "root" key).
+  const childrenMap = useMemo(() => {
+    const m = {};
+    categories.forEach((c) => {
+      const key = c.parentCategory ? String(c.parentCategory) : "root";
+      (m[key] = m[key] || []).push(c);
     });
-  }, [ordered, search, nameById]);
+    Object.values(m).forEach((arr) =>
+      arr.sort(
+        (a, b) =>
+          (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+          String(a.name).localeCompare(String(b.name))
+      )
+    );
+    return m;
+  }, [categories]);
 
-  const handleDelete = async (cat) => {
-    if (!window.confirm(`Delete category "${cat.name}"? This cannot be undone.`)) return;
-    setDeletingId(cat._id);
-    try {
-      await axios.delete(`${API_BASE}/admin/categories/${cat._id}`, {
-        withCredentials: true,
+  // Total descendants per node (for the count pill).
+  const descCount = useMemo(() => {
+    const map = {};
+    const compute = (id) => {
+      let total = 0;
+      (childrenMap[id] || []).forEach((ch) => {
+        total += 1 + compute(String(ch._id));
       });
-      toast({ title: "Category deleted", variant: "success" });
-      setCategories((curr) => curr.filter((c) => c._id !== cat._id));
-    } catch (err) {
-      toast({
-        title: "Delete failed",
-        description: err?.response?.data?.message || err?.message,
-        variant: "destructive",
+      map[id] = total;
+      return total;
+    };
+    (childrenMap.root || []).forEach((r) => compute(String(r._id)));
+    return map;
+  }, [childrenMap]);
+
+  // Search → set of ids to show (matches plus their ancestors); null = no filter.
+  const matchIds = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return null;
+    const set = new Set();
+    categories.forEach((c) => {
+      if (
+        c.name?.toLowerCase().includes(q) ||
+        c.slug?.toLowerCase().includes(q)
+      ) {
+        set.add(String(c._id));
+      }
+    });
+    [...set].forEach((id) => {
+      let cur = byId.get(id);
+      let guard = 0;
+      while (cur?.parentCategory && guard < 20) {
+        set.add(String(cur.parentCategory));
+        cur = byId.get(String(cur.parentCategory));
+        guard += 1;
+      }
+    });
+    return set;
+  }, [search, categories, byId]);
+
+  const expandAncestors = useCallback(
+    (id, list) => {
+      const map = new Map((list || categories).map((c) => [String(c._id), c]));
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        let cur = map.get(String(id));
+        let guard = 0;
+        while (cur?.parentCategory && guard < 20) {
+          next.add(String(cur.parentCategory));
+          cur = map.get(String(cur.parentCategory));
+          guard += 1;
+        }
+        return next;
       });
-    } finally {
-      setDeletingId(null);
+    },
+    [categories]
+  );
+
+  const toggle = (id) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const selectNode = (id) => {
+    setCreating(false);
+    setSelectedId(String(id));
+  };
+
+  const startNew = (parentId = "") => {
+    setCreateParentId(parentId ? String(parentId) : "");
+    setSelectedId(null);
+    setCreating(true);
+    if (parentId) expandAncestors(parentId);
+  };
+
+  const handleSaved = async (savedId) => {
+    const fresh = await load();
+    setCreating(false);
+    if (savedId) {
+      setSelectedId(String(savedId));
+      expandAncestors(savedId, fresh);
     }
+  };
+
+  const handleDeleted = async () => {
+    await load();
+    setCreating(false);
+    setSelectedId(null);
+  };
+
+  const handleCancel = () => {
+    setCreating(false);
+  };
+
+  const selectedCategory = useMemo(
+    () => (selectedId ? byId.get(String(selectedId)) || null : null),
+    [selectedId, byId]
+  );
+
+  const renderNodes = (parentKey, depth) => {
+    const kids = childrenMap[parentKey] || [];
+    return kids
+      .filter((c) => !matchIds || matchIds.has(String(c._id)))
+      .map((c) => {
+        const id = String(c._id);
+        const hasKids = (childrenMap[id] || []).length > 0;
+        const opened = matchIds ? true : expanded.has(id);
+        const selected = String(selectedId) === id && !creating;
+        const count = descCount[id] || 0;
+        return (
+          <div key={id}>
+            <div
+              onClick={() => selectNode(id)}
+              style={{ paddingLeft: `${8 + depth * 16}px` }}
+              className={`group flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pr-2 text-sm transition ${
+                selected
+                  ? "border border-[#D4AF37]/45 bg-[#D4AF37]/[0.12]"
+                  : "border border-transparent hover:bg-white/[0.03]"
+              }`}
+            >
+              {hasKids ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggle(id);
+                  }}
+                  aria-label={opened ? "Collapse" : "Expand"}
+                  className="grid h-5 w-5 place-items-center rounded text-gray-500 hover:text-gray-300"
+                >
+                  {opened ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              ) : (
+                <span className="w-5 shrink-0" />
+              )}
+
+              {hasKids ? (
+                opened ? (
+                  <FolderOpen
+                    className={`h-4 w-4 shrink-0 ${
+                      depth === 0 ? "text-[#D4AF37]" : "text-gray-500"
+                    }`}
+                  />
+                ) : (
+                  <Folder
+                    className={`h-4 w-4 shrink-0 ${
+                      depth === 0 ? "text-[#D4AF37]" : "text-gray-500"
+                    }`}
+                  />
+                )
+              ) : (
+                <span className="ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-700" />
+              )}
+
+              <span
+                className={`min-w-0 flex-1 truncate ${
+                  selected
+                    ? "text-[#f2ca50]"
+                    : depth === 0
+                      ? "font-medium text-white"
+                      : "text-gray-300"
+                }`}
+              >
+                {c.name}
+              </span>
+
+              {depth === 0 ? (
+                <span className="hidden rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500 sm:inline">
+                  Main
+                </span>
+              ) : null}
+              {c.isFeatured ? (
+                <Star className="h-3.5 w-3.5 text-[#D4AF37]" aria-label="Featured" />
+              ) : null}
+              {c.isActive === false ? (
+                <span className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500">
+                  Off
+                </span>
+              ) : null}
+              {hasKids ? (
+                <span className="min-w-[20px] text-right text-[11px] text-gray-600">
+                  {count}
+                </span>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startNew(id);
+                }}
+                aria-label={`Add subcategory under ${c.name}`}
+                title={`Add subcategory under ${c.name}`}
+                className="grid h-5 w-5 place-items-center rounded text-gray-600 opacity-0 transition hover:text-[#D4AF37] group-hover:opacity-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {hasKids && opened ? renderNodes(id, depth + 1) : null}
+          </div>
+        );
+      });
   };
 
   return (
@@ -123,11 +301,11 @@ const CategoriesList = () => {
       <AdminPage
         eyebrow="Store"
         title="Categories"
-        description="Organize your catalog. Create main categories (Gents, Ladies, Unisex…) and nest subcategories beneath them; control homepage visibility, featured status, and display order."
+        description="Build your catalog tree. Create a main category (Gents, Ladies, Unisex…), then select it and use “Add subcategory” to nest items beneath it. Click any node to edit it."
         actions={
           <PrimaryButton
             type="button"
-            onClick={() => navigate("/admin/categories/new")}
+            onClick={() => startNew("")}
             className="inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" /> New category
@@ -145,141 +323,89 @@ const CategoriesList = () => {
             <p className="mt-1 text-xs text-gray-600">
               Create your first main category (e.g. Gents) to organize the catalog.
             </p>
+            <PrimaryButton
+              type="button"
+              onClick={() => startNew("")}
+              className="mt-5 inline-flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" /> New category
+            </PrimaryButton>
           </div>
         ) : (
-          <CategoryTable
-            filtered={filtered}
-            nameById={nameById}
-            deletingId={deletingId}
-            onDelete={handleDelete}
-            search={search}
-            setSearch={setSearch}
-          />
+          <div className="grid gap-4 lg:grid-cols-[340px,1fr]">
+            {/* Tree */}
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0d]">
+              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+                <Search className="h-4 w-4 text-gray-500" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search categories…"
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <div className="max-h-[72vh] overflow-y-auto p-2">
+                {matchIds && matchIds.size === 0 ? (
+                  <p className="px-2 py-8 text-center text-sm text-gray-500">
+                    No categories match “{search}”.
+                  </p>
+                ) : (
+                  renderNodes("root", 0)
+                )}
+              </div>
+              <div className="border-t border-white/10 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
+                Hover a category and click{" "}
+                <Plus className="inline h-3 w-3 -translate-y-px text-gray-400" /> to
+                nest a subcategory beneath it.
+              </div>
+            </div>
+
+            {/* Editor / detail */}
+            <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-5 sm:p-6">
+              {creating ? (
+                <CategoryEditorPanel
+                  key={`new:${createParentId}`}
+                  category={null}
+                  categories={categories}
+                  defaultParentId={createParentId}
+                  onSaved={handleSaved}
+                  onDeleted={handleDeleted}
+                  onCancel={handleCancel}
+                />
+              ) : selectedCategory ? (
+                <CategoryEditorPanel
+                  key={String(selectedCategory._id)}
+                  category={selectedCategory}
+                  categories={categories}
+                  onSaved={handleSaved}
+                  onDeleted={handleDeleted}
+                  onCancel={handleCancel}
+                  onAddChild={(id) => startNew(id)}
+                />
+              ) : (
+                <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+                  <FolderTree className="mb-3 h-9 w-9 text-[#4d4635]" />
+                  <p className="text-sm text-gray-400">
+                    Select a category from the tree to edit it.
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Or create a new one — use the button above, or “+” on any branch
+                    to nest beneath it.
+                  </p>
+                  <PrimaryButton
+                    type="button"
+                    onClick={() => startNew("")}
+                    className="mt-5 inline-flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" /> New category
+                  </PrimaryButton>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </AdminPage>
     </motion.div>
-  );
-};
-
-// Split out so the pagination hook reads from the live filtered list.
-const CategoryTable = ({ filtered, nameById, deletingId, onDelete, search, setSearch }) => {
-  const { page, setPage, pageCount, total, pageItems, pageSize } = usePagination(
-    filtered,
-    PAGE_SIZE
-  );
-
-  return (
-    <>
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-white/10 bg-[#0d0d0d] px-3 py-2">
-        <Search className="h-4 w-4 text-gray-500" />
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Search categories by name, slug, or parent…"
-          className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-[#0d0d0d] px-6 py-12 text-center text-sm text-gray-500">
-          No categories match “{search}”.
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0d]">
-          <div className="hidden grid-cols-12 gap-4 border-b border-white/10 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500 md:grid">
-            <span className="col-span-5">Name</span>
-            <span className="col-span-3">Parent</span>
-            <span className="col-span-2">Order</span>
-            <span className="col-span-2 text-right">Actions</span>
-          </div>
-          <div className="divide-y divide-white/5">
-            {pageItems.map((c) => (
-              <div
-                key={c._id}
-                className="grid grid-cols-1 gap-2 px-5 py-4 md:grid-cols-12 md:items-center md:gap-4"
-              >
-                <div className="md:col-span-5">
-                  <div
-                    className="flex flex-wrap items-center gap-2"
-                    style={{ paddingLeft: `${(c.depth || 0) * 16}px` }}
-                  >
-                    {c.depth > 0 ? (
-                      <span className="text-gray-600">└</span>
-                    ) : null}
-                    <span className="font-medium text-white">{c.name}</span>
-                    {c.depth === 0 ? (
-                      <span className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500">
-                        Main
-                      </span>
-                    ) : null}
-                    {c.isFeatured ? (
-                      <Star className="h-3.5 w-3.5 text-[#D4AF37]" aria-label="Featured" />
-                    ) : null}
-                    {c.showOnHome ? (
-                      <span className="rounded-sm border border-[#D4AF37]/30 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[#D4AF37]">
-                        Home
-                      </span>
-                    ) : null}
-                    {c.isActive === false ? (
-                      <span className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500">
-                        Inactive
-                      </span>
-                    ) : null}
-                  </div>
-                  <div
-                    className="font-mono text-[11px] text-gray-500"
-                    style={{ paddingLeft: `${(c.depth || 0) * 16}px` }}
-                  >
-                    /{c.slug}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-400 md:col-span-3">
-                  {c.parentCategory ? (
-                    nameById[c.parentCategory] || "—"
-                  ) : (
-                    <span className="text-gray-600">Top level</span>
-                  )}
-                </div>
-                <div className="text-sm text-gray-400 md:col-span-2">{c.sortOrder ?? 0}</div>
-                <div className="flex items-center gap-2 md:col-span-2 md:justify-end">
-                  <Link
-                    to={`/admin/categories/${c._id}`}
-                    className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-[#e5e2e1] transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Edit
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(c)}
-                    disabled={deletingId === c._id}
-                    className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10 disabled:opacity-50"
-                  >
-                    {deletingId === c._id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}{" "}
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <Pagination
-        page={page}
-        pageCount={pageCount}
-        onPageChange={setPage}
-        total={total}
-        pageSize={pageSize}
-        label="categories"
-      />
-    </>
   );
 };
 
