@@ -27,6 +27,8 @@ import RefundOrderModal from "@/components/admin-components/RefundOrderModal";
 import OrderDetailDrawer from "@/components/admin-components/OrderDetailDrawer";
 import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
 import useBulkSelection from "@/hooks/use-bulk-selection";
+import usePagination from "@/hooks/use-pagination";
+import Pagination from "@/components/common-components/Pagination";
 
 const ADMIN_ORDERS_VIEW_KEY = "saga_admin_orders_view";
 
@@ -348,6 +350,7 @@ const Orders = () => {
   }, [orders]);
 
   const bulk = useBulkSelection(filteredOrders);
+  const ordersPg = usePagination(filteredOrders, 15);
 
   const runBulkStatus = useCallback(
     async (status) => {
@@ -624,7 +627,10 @@ const Orders = () => {
             <input
               type="search"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                ordersPg.setPage(1);
+              }}
               placeholder="Search order ID or email…"
               className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
             />
@@ -716,6 +722,7 @@ const Orders = () => {
                   </DragOverlay>
                 </DndContext>
               ) : (
+                <>
                 <table className="min-w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
@@ -740,7 +747,7 @@ const Orders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => {
+                  {ordersPg.pageItems.map((order) => {
                     const isSelected = selectedOrder?._id === order._id;
                     return (
                       <motion.tr
@@ -788,6 +795,16 @@ const Orders = () => {
                   })}
                 </tbody>
               </table>
+              <Pagination
+                page={ordersPg.page}
+                pageCount={ordersPg.pageCount}
+                onPageChange={ordersPg.setPage}
+                total={ordersPg.total}
+                pageSize={ordersPg.pageSize}
+                label="orders"
+                className="px-4 pb-4"
+              />
+              </>
             )}
           </div>
 

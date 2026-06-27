@@ -14,7 +14,6 @@ import {
   WhyChooseSaga,
   TrendingFitsMarquee,
   CommunityFeed,
-  Testimonials,
   VipMembership,
 } from "@/components/landing/LandingSections";
 import {
@@ -189,10 +188,7 @@ const Home = () => {
             <CommunityFeed images={payload.socialImages} />
           )}
 
-          {/* 13. Testimonials */}
-          <Testimonials />
-
-          {/* 14. VIP / membership CTA */}
+          {/* 13. VIP / membership CTA */}
           <VipMembership />
 
           {/* 15. Cinematic Footer */}

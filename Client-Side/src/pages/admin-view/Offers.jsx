@@ -30,6 +30,8 @@ import {
   RailToggleRow,
   ProgressBar,
 } from "@/components/admin-components/_form";
+import Pagination from "@/components/common-components/Pagination";
+import usePagination from "@/hooks/use-pagination";
 
 const OFFER_TYPES = [
   { value: "percentage_discount", label: "Percentage Discount" },
@@ -119,6 +121,10 @@ const AdminOffers = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(initialForm);
   const [productSearch, setProductSearch] = useState("");
+
+  const offersPg = usePagination(offers, 10);
+  const historyPg = usePagination(historyOffers, 10);
+  const agingPg = usePagination(agingStock, 12);
 
   const fetchOffers = async () => {
     try {
@@ -1049,9 +1055,20 @@ const AdminOffers = () => {
                   No active offers.
                 </div>
               ) : (
-                <div className="divide-y divide-white/[0.05]">
-                  {offers.map(renderOfferRow)}
-                </div>
+                <>
+                  <div className="divide-y divide-white/[0.05]">
+                    {offersPg.pageItems.map(renderOfferRow)}
+                  </div>
+                  <Pagination
+                    page={offersPg.page}
+                    pageCount={offersPg.pageCount}
+                    onPageChange={offersPg.setPage}
+                    total={offersPg.total}
+                    pageSize={offersPg.pageSize}
+                    label="offers"
+                    className="px-5 pb-5"
+                  />
+                </>
               )}
             </div>
           ) : null}
@@ -1068,9 +1085,20 @@ const AdminOffers = () => {
                   No historical offers yet.
                 </div>
               ) : (
-                <div className="divide-y divide-white/[0.05] opacity-80">
-                  {historyOffers.map(renderOfferRow)}
-                </div>
+                <>
+                  <div className="divide-y divide-white/[0.05] opacity-80">
+                    {historyPg.pageItems.map(renderOfferRow)}
+                  </div>
+                  <Pagination
+                    page={historyPg.page}
+                    pageCount={historyPg.pageCount}
+                    onPageChange={historyPg.setPage}
+                    total={historyPg.total}
+                    pageSize={historyPg.pageSize}
+                    label="offers"
+                    className="px-5 pb-5"
+                  />
+                </>
               )}
             </div>
           ) : null}
@@ -1092,7 +1120,7 @@ const AdminOffers = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {agingStock.map((item) => {
+                  {agingPg.pageItems.map((item) => {
                     const { discount: suggestedDiscount, fallback } =
                       computeSuggestedDiscount(item);
                     const suggestedMargin = computeMarginAfterDiscount(
@@ -1146,6 +1174,14 @@ const AdminOffers = () => {
                   })}
                 </div>
               )}
+              <Pagination
+                page={agingPg.page}
+                pageCount={agingPg.pageCount}
+                onPageChange={agingPg.setPage}
+                total={agingPg.total}
+                pageSize={agingPg.pageSize}
+                label="products"
+              />
             </div>
           ) : null}
         </div>

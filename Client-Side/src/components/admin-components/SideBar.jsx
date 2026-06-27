@@ -31,7 +31,6 @@ import {
   ChevronDown,
   FolderTree,
   LayoutTemplate,
-  MessageSquareQuote,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -61,7 +60,6 @@ const SECTION_LABELS = {
     "Policies",
     "Footer",
     "FAQ",
-    "Testimonials",
   ],
   Reports: ["Analytics", "Recommendations"],
   Settings: ["SEO & Branding", "Admin Team"],
@@ -427,13 +425,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "FAQ",
       path: "/admin/contact-content",
       icon: <MessageSquare className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Testimonials",
-      path: "/admin/testimonials",
-      icon: <MessageSquareQuote className="h-5 w-5" />,
       permission: null,
       superAdminOnly: true,
     },

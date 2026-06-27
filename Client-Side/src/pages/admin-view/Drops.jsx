@@ -1,5 +1,7 @@
 import React, { Fragment, useState, useEffect } from "react";
 import useBulkSelection from "@/hooks/use-bulk-selection";
+import usePagination from "@/hooks/use-pagination";
+import Pagination from "@/components/common-components/Pagination";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
@@ -222,6 +224,7 @@ const Drops = () => {
   }, [formData, showForm, currentEditedSlug]);
 
   const bulk = useBulkSelection(drops);
+  const dropsPg = usePagination(drops, 10);
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkPendingAction, setBulkPendingAction] = useState(null);
 
@@ -896,7 +899,7 @@ const Drops = () => {
                   </td>
                 </tr>
               ) : (
-                drops.map((drop) => {
+                dropsPg.pageItems.map((drop) => {
                   const daysAway = daysUntilRelease(drop.releaseDate);
                   return (
                   <tr
@@ -1037,6 +1040,15 @@ const Drops = () => {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={dropsPg.page}
+            pageCount={dropsPg.pageCount}
+            onPageChange={dropsPg.setPage}
+            total={dropsPg.total}
+            pageSize={dropsPg.pageSize}
+            label="drops"
+            className="px-6 pb-5"
+          />
         </div>
       </div>
 

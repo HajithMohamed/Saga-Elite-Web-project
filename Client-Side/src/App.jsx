@@ -63,7 +63,6 @@ const FooterManager = lazy(() => import("./pages/admin-view/FooterManager"));
 const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"));
 const ContactPageManager = lazy(() => import("./pages/admin-view/ContactPageManager"));
 const HomepageManager = lazy(() => import("./pages/admin-view/HomepageManager"));
-const TestimonialsManager = lazy(() => import("./pages/admin-view/TestimonialsManager"));
 const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
 const AdminCategoryEditor = lazy(() => import("./pages/admin/CategoryEditor"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
@@ -264,7 +263,6 @@ function App() {
               <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
               <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
               <Route path="homepage" element={<PermissionGuard superAdminOnly><HomepageManager /></PermissionGuard>} />
-              <Route path="testimonials" element={<PermissionGuard superAdminOnly><TestimonialsManager /></PermissionGuard>} />
               <Route path="policies" element={<PermissionGuard superAdminOnly><PoliciesManager /></PermissionGuard>} />
               <Route path="footer" element={<PermissionGuard superAdminOnly><FooterManager /></PermissionGuard>} />
               <Route path="announcement" element={<PermissionGuard superAdminOnly><AnnouncementBar /></PermissionGuard>} />

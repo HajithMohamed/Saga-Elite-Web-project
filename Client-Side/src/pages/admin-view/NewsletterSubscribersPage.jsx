@@ -11,6 +11,8 @@ import {
 } from "@/components/admin-components/_shared/animations";
 import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNumber";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import Pagination from "@/components/common-components/Pagination";
+import usePagination from "@/hooks/use-pagination";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -53,6 +55,11 @@ const NewsletterSubscribersPage = () => {
     if (!search) return true;
     return sub.email?.toLowerCase().includes(search.toLowerCase());
   });
+
+  const { page, setPage, pageCount, total, pageItems, pageSize } = usePagination(
+    filtered,
+    15
+  );
 
   // Group subscribers by month for a visual timeline
   const monthCounts = {};
@@ -166,7 +173,10 @@ const NewsletterSubscribersPage = () => {
               <input
                 type="search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search by email…"
                 className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
               />
@@ -197,12 +207,14 @@ const NewsletterSubscribersPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((sub, index) => (
+                  {pageItems.map((sub, index) => (
                     <tr
                       key={sub._id || sub.email}
                       className="border-b border-white/5 transition hover:bg-white/[0.02]"
                     >
-                      <td className="px-5 py-3.5 text-sm text-gray-500">{index + 1}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">
+                        {(page - 1) * pageSize + index + 1}
+                      </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
@@ -218,6 +230,15 @@ const NewsletterSubscribersPage = () => {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                total={total}
+                pageSize={pageSize}
+                label="subscribers"
+                className="px-4 pb-4"
+              />
             </div>
           )}
         </AdminPanel>
