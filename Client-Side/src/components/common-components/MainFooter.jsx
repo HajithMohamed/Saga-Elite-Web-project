@@ -17,6 +17,31 @@ const DEFAULT_QUICK_LINKS = [
   { label: "Delivery Policy", url: "/legal/delivery-policy" },
 ];
 
+// Shop / Support columns — admin-managed via footer_shop_links /
+// footer_support_links. Fallbacks mirror the previous hardcoded content so the
+// footer never breaks before the keys are populated.
+const DEFAULT_SHOP_LINKS = [
+  { label: "Gents", url: "/shopping/product-list" },
+  { label: "Ladies", url: "/shopping/product-list" },
+  { label: "Unisex", url: "/shopping/product-list" },
+  { label: "New Drops", url: "/shopping/product-list" },
+  { label: "Limited Editions", url: "/shopping/product-list" },
+  { label: "Archive", url: "/shopping/product-list" },
+];
+
+const DEFAULT_SUPPORT_LINKS = [
+  { label: "Contact Us", url: "/contact" },
+  { label: "Delivery Information", url: "/contact" },
+  { label: "Returns & Refunds", url: "/contact" },
+  { label: "Payment Methods", url: "/contact" },
+  { label: "FAQs", url: "/contact" },
+];
+
+const normalizeLinks = (raw, fallback) =>
+  Array.isArray(raw) && raw.length > 0
+    ? raw.filter((l) => l?.label && l?.url)
+    : fallback;
+
 const MainFooter = () => {
   const location = useLocation();
   const isAdminView = location.pathname.startsWith("/admin");
@@ -35,10 +60,9 @@ const MainFooter = () => {
     about?.footer_copyright?.trim() ||
     `© ${new Date().getFullYear()} Saga Elite. All rights reserved.`
   ).replace(/\{year\}/g, String(new Date().getFullYear()));
-  const quickLinks =
-    Array.isArray(about?.footer_quick_links) && about.footer_quick_links.length > 0
-      ? about.footer_quick_links.filter((l) => l?.label && l?.url)
-      : DEFAULT_QUICK_LINKS;
+  const quickLinks = normalizeLinks(about?.footer_quick_links, DEFAULT_QUICK_LINKS);
+  const shopLinks = normalizeLinks(about?.footer_shop_links, DEFAULT_SHOP_LINKS);
+  const supportLinks = normalizeLinks(about?.footer_support_links, DEFAULT_SUPPORT_LINKS);
   const paymentMethods =
     Array.isArray(about?.footer_payment_methods) && about.footer_payment_methods.length > 0
       ? about.footer_payment_methods.filter((p) => p?.name || p?.iconUrl)
@@ -259,11 +283,16 @@ const MainFooter = () => {
             <motion.div variants={itemVariants}>
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Shop</h4>
               <ul className="space-y-4">
-                {['Gents', 'Ladies', 'Unisex', 'New Drops', 'Limited Editions', 'Archive'].map((item) => (
-                  <li key={item}>
-                    <Link to={`/shopping/product-list`} className="text-sm text-[#888] font-medium transition-colors flex items-center group">
+                {shopLinks.map((link) => (
+                  <li key={`${link.label}-${link.url}`}>
+                    <Link
+                      to={link.url}
+                      target={link.openInNewTab ? "_blank" : undefined}
+                      rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                      className="text-sm text-[#888] font-medium transition-colors flex items-center group"
+                    >
                       <motion.span variants={glowVariants} whileHover="hover" className="relative group-hover:pl-2 transition-all block">
-                        {item}
+                        {link.label}
                         <span className="absolute left-0 -bottom-1 w-0 h-px bg-[#D4AF37] group-hover:w-full transition-all duration-300"></span>
                       </motion.span>
                     </Link>
@@ -276,11 +305,16 @@ const MainFooter = () => {
             <motion.div variants={itemVariants}>
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Support</h4>
               <ul className="space-y-4">
-                {['Contact Us', 'Delivery Information', 'Returns & Refunds', 'Payment Methods', 'FAQs'].map((item) => (
-                  <li key={item}>
-                    <Link to="/contact" className="text-sm text-[#888] font-medium transition-colors flex items-center group">
+                {supportLinks.map((link) => (
+                  <li key={`${link.label}-${link.url}`}>
+                    <Link
+                      to={link.url}
+                      target={link.openInNewTab ? "_blank" : undefined}
+                      rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                      className="text-sm text-[#888] font-medium transition-colors flex items-center group"
+                    >
                       <motion.span variants={glowVariants} whileHover="hover" className="relative block">
-                        {item}
+                        {link.label}
                       </motion.span>
                     </Link>
                   </li>
@@ -373,9 +407,9 @@ const MainFooter = () => {
           {/* Mobile Accordion Alternative (Visible only on small screens) */}
           <div className="md:hidden flex flex-col space-y-2 w-full">
             {[
-              { title: 'Shop', links: ['Gents', 'Ladies', 'Unisex', 'New Drops', 'Archive'] },
-              { title: 'Support', links: ['Contact Us', 'Delivery Info', 'Returns', 'FAQs'] },
-              { title: 'Company', links: ['About Us', 'Terms & Conditions', 'Privacy Policy'] },
+              { title: 'Shop', links: shopLinks },
+              { title: 'Support', links: supportLinks },
+              { title: 'Company', links: quickLinks },
             ].map((section, idx) => (
               <div key={section.title} className="border-b border-[#222] overflow-hidden">
                 <button
@@ -394,9 +428,16 @@ const MainFooter = () => {
                       className="overflow-hidden"
                     >
                       <ul className="pb-4 space-y-3 px-2">
-                        {section.links.map(link => (
-                          <li key={link}>
-                            <Link to="#" className="text-sm text-[#777] hover:text-[#D4AF37] transition-colors">{link}</Link>
+                        {section.links.map((link) => (
+                          <li key={`${link.label}-${link.url}`}>
+                            <Link
+                              to={link.url}
+                              target={link.openInNewTab ? "_blank" : undefined}
+                              rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                              className="text-sm text-[#777] hover:text-[#D4AF37] transition-colors"
+                            >
+                              {link.label}
+                            </Link>
                           </li>
                         ))}
                       </ul>

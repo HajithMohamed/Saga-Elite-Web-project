@@ -59,6 +59,8 @@ const ABOUT_KEYS = [
   // Footer
   "footer_brand_description",
   "footer_quick_links",
+  "footer_shop_links",
+  "footer_support_links",
   "footer_payment_methods",
   "footer_copyright",
   // Announcement bar

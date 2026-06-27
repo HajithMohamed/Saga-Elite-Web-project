@@ -23,7 +23,8 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Fullstack development course\\\\Saga-Elite-Web-Project\\\\Client-Side\\\\src\\\\components\\\\admin-components\\\\\" -Name)",
       "Bash(Get-ChildItem -Path \"c:\\\\Fullstack development course\\\\Saga-Elite-Web-Project\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(node --check Server-side/Routes/admin-routes.js)"
+      "Bash(node --check Server-side/Routes/admin-routes.js)",
+      "Bash(npx eslint *)"
     ]
   }
 }

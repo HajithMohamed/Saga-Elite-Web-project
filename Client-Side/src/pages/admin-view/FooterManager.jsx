@@ -25,13 +25,19 @@ import ImagePicker from "@/components/admin-components/_shared/ImagePicker";
 
 const KEYS = [
   "footer_brand_description",
+  "footer_shop_links",
+  "footer_support_links",
   "footer_quick_links",
   "footer_payment_methods",
   "footer_copyright",
 ];
 
+const LINK_KEYS = ["footer_shop_links", "footer_support_links", "footer_quick_links"];
+
 const DEFAULTS = {
   footer_brand_description: "",
+  footer_shop_links: [],
+  footer_support_links: [],
   footer_quick_links: [],
   footer_payment_methods: [],
   footer_copyright: "© {year} Saga Elite. All rights reserved.",
@@ -58,7 +64,9 @@ const FooterManager = () => {
         }
       });
       // Normalize array shapes
-      merged.footer_quick_links = ensureArray(merged.footer_quick_links);
+      LINK_KEYS.forEach((k) => {
+        merged[k] = ensureArray(merged[k]);
+      });
       merged.footer_payment_methods = ensureArray(merged.footer_payment_methods);
       setValues(merged);
       setOriginal(merged);
@@ -118,23 +126,23 @@ const FooterManager = () => {
     }
   };
 
-  const updateLinkRow = (idx, patch) => {
-    const next = values.footer_quick_links.map((r, i) =>
+  const updateLinkRow = (key, idx, patch) => {
+    const next = (values[key] || []).map((r, i) =>
       i === idx ? { ...r, ...patch } : r
     );
-    setField("footer_quick_links", next);
+    setField(key, next);
   };
 
-  const removeLinkRow = (idx) => {
+  const removeLinkRow = (key, idx) => {
     setField(
-      "footer_quick_links",
-      values.footer_quick_links.filter((_, i) => i !== idx)
+      key,
+      (values[key] || []).filter((_, i) => i !== idx)
     );
   };
 
-  const addLinkRow = () =>
-    setField("footer_quick_links", [
-      ...values.footer_quick_links,
+  const addLinkRow = (key) =>
+    setField(key, [
+      ...(values[key] || []),
       { label: "", url: "", openInNewTab: false },
     ]);
 
@@ -158,6 +166,76 @@ const FooterManager = () => {
       { name: "", iconUrl: "" },
     ]);
 
+  // Shared renderer for the three footer link columns (Shop / Support / Company).
+  // Each row is { label, url, openInNewTab } and is edited via the generalized
+  // updateLinkRow / removeLinkRow / addLinkRow helpers keyed by site-config key.
+  const renderLinkSection = (key, title, emptyText) => {
+    const rows = values[key] || [];
+    return (
+      <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+        <header className="mb-4 flex items-center gap-2">
+          <LinkIcon className="h-4 w-4 text-[#D4AF37]" />
+          <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+            {title}
+          </h2>
+        </header>
+        {rows.length === 0 ? (
+          <p className="mb-3 rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
+            {emptyText}
+          </p>
+        ) : null}
+        <div className="space-y-3">
+          {rows.map((row, idx) => (
+            <div key={idx} className="rounded-lg border border-white/10 bg-black/30 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                  #{idx + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeLinkRow(key, idx)}
+                  className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
+                >
+                  <Trash2 className="h-3 w-3" /> Remove
+                </button>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  value={row.label || ""}
+                  onChange={(e) => updateLinkRow(key, idx, { label: e.target.value })}
+                  placeholder="Label (e.g. New Drops)"
+                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                />
+                <input
+                  value={row.url || ""}
+                  onChange={(e) => updateLinkRow(key, idx, { url: e.target.value })}
+                  placeholder="URL (e.g. /shopping/product-list or https://…)"
+                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                />
+              </div>
+              <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={!!row.openInNewTab}
+                  onChange={(e) => updateLinkRow(key, idx, { openInNewTab: e.target.checked })}
+                  className="accent-[#D4AF37]"
+                />
+                Open in new tab
+              </label>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => addLinkRow(key)}
+          className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+        >
+          <Plus className="h-3.5 w-3.5" /> Add link
+        </button>
+      </section>
+    );
+  };
+
   if (loading) {
     return (
       <AdminPage eyebrow="Content" title="Footer">
@@ -178,7 +256,7 @@ const FooterManager = () => {
       <AdminPage
         eyebrow="Content"
         title="Footer"
-        description="Edit the public footer's brand blurb, quick links, payment method icons, and copyright. Social links and contact details are managed in Brand & About."
+        description="Edit the public footer's brand blurb, the Shop / Support / Company link columns, payment method icons, and copyright. Social links, the WhatsApp number, and contact details are managed in Brand & About."
         actions={
           <PrimaryButton
             type="button"
@@ -223,77 +301,26 @@ const FooterManager = () => {
             </p>
           </section>
 
-          {/* Quick links */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
-            <header className="mb-4 flex items-center gap-2">
-              <LinkIcon className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
-                Quick links
-              </h2>
-            </header>
-            {values.footer_quick_links.length === 0 ? (
-              <p className="mb-3 rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
-                No links yet. Add one to get started.
-              </p>
-            ) : null}
-            <div className="space-y-3">
-              {values.footer_quick_links.map((row, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-white/10 bg-black/30 p-3"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
-                      #{idx + 1}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeLinkRow(idx)}
-                      className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
-                    >
-                      <Trash2 className="h-3 w-3" /> Remove
-                    </button>
-                  </div>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <input
-                      value={row.label || ""}
-                      onChange={(e) =>
-                        updateLinkRow(idx, { label: e.target.value })
-                      }
-                      placeholder="Label (e.g. Privacy Policy)"
-                      className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
-                    />
-                    <input
-                      value={row.url || ""}
-                      onChange={(e) =>
-                        updateLinkRow(idx, { url: e.target.value })
-                      }
-                      placeholder="URL (e.g. /legal/privacy-policy or https://…)"
-                      className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
-                    />
-                  </div>
-                  <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={!!row.openInNewTab}
-                      onChange={(e) =>
-                        updateLinkRow(idx, { openInNewTab: e.target.checked })
-                      }
-                      className="accent-[#D4AF37]"
-                    />
-                    Open in new tab
-                  </label>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={addLinkRow}
-              className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add link
-            </button>
-          </section>
+          {/* Shop column links */}
+          {renderLinkSection(
+            "footer_shop_links",
+            "Shop column",
+            "No shop links yet — the public footer shows the built-in defaults until you add some."
+          )}
+
+          {/* Support column links */}
+          {renderLinkSection(
+            "footer_support_links",
+            "Support column",
+            "No support links yet — the public footer shows the built-in defaults until you add some."
+          )}
+
+          {/* Company / quick links */}
+          {renderLinkSection(
+            "footer_quick_links",
+            "Company links",
+            "No links yet. Add one to get started."
+          )}
 
           {/* Payment methods */}
           <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
