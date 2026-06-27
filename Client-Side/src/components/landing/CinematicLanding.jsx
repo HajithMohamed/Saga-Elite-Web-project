@@ -6,9 +6,19 @@ import { formatLkr } from "@/utils/currency";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import useShopAbout from "@/hooks/use-shop-about";
 
 // BRAND MANIFESTO SECTION
 export const BrandManifesto = () => {
+  const { data: about } = useShopAbout();
+  const manifesto = about?.homepage_sections?.manifesto || {};
+  const heading = manifesto.heading?.trim() || "Built for the";
+  const highlight = manifesto.highlight?.trim() || "rare few.";
+  const body =
+    manifesto.body?.trim() ||
+    "Every drop is intentionally limited. No mass production. No restocks. No trend chasing. We craft narrative-driven pieces that blur the line between fashion and identity.";
+  const tag = manifesto.tag?.trim() || "This is not fast fashion";
+
   return (
     <section className="relative bg-[#050505] border-y border-[#1a1a1a] py-16 md:py-20 overflow-hidden">
       {/* Ambient animated grain & glow */}
@@ -25,8 +35,8 @@ export const BrandManifesto = () => {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="font-display text-[50px] md:text-[80px] leading-[0.95] text-[#FAF7F2] uppercase tracking-tighter"
           >
-            Built for the <br />{" "}
-            <span className="text-[#f2ca50] italic pr-4">rare few.</span>
+            {heading} <br />{" "}
+            <span className="text-[#f2ca50] italic pr-4">{highlight}</span>
           </motion.h2>
         </div>
 
@@ -44,14 +54,12 @@ export const BrandManifesto = () => {
             className="border-l border-[#f2ca50]/30 pl-8"
           >
             <p className="font-sans text-lg md:text-xl text-[#d0c5af] leading-relaxed mb-6 max-w-lg">
-              Every drop is intentionally limited. No mass production. No
-              restocks. No trend chasing. We craft narrative-driven pieces that
-              blur the line between fashion and identity.
+              {body}
             </p>
             <div className="flex items-center gap-3">
               <span className="w-12 h-[1px] bg-[#f2ca50]"></span>
               <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">
-                This is not fast fashion
+                {tag}
               </span>
             </div>
           </motion.div>

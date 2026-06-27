@@ -15,6 +15,7 @@ const {
   registerGuest,
 } = require("../Controllers/auth-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
+const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
 const { loginLimiter } = require("../Middlewares/rateLimitinMiddleware");
 const {
   validateAuthRegister,
@@ -28,7 +29,7 @@ const {
 
 const router = express.Router();
 
-router.get("/check-auth", authMiddleware, checkAuth);
+router.get("/check-auth", optionalAuthMiddleware, checkAuth);
 router.post("/register", validateAuthRegister, registerUser);
 router.post("/login", loginLimiter, validateAuthLogin, login);
 router.post("/logout", authMiddleware, logout);

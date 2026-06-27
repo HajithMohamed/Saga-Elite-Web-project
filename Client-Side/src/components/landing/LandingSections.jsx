@@ -34,6 +34,7 @@ import ProductCard from "@/components/shopping-components/ProductCard";
 import { toast } from "@/hooks/use-toast";
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 import { useSelector } from "react-redux";
+import useShopAbout from "@/hooks/use-shop-about";
 
 const MotionDiv = motion.div;
 const seededRandom = (seed) => {
@@ -1064,29 +1065,34 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
 /* ──────────────────────────────────────────────────────────────────────────
    WHY CHOOSE SAGA — 5 feature cards with cursor-following tilt + glow.
    ────────────────────────────────────────────────────────────────────────── */
+// Icon registry — admin stores an icon by name (string); we resolve it here.
+// Keep keys in sync with the options offered in the Homepage admin editor.
+const FEATURE_ICONS = { Flame, Diamond, Gift, Truck, ShieldCheck, Sparkles, Crown, Award, Zap, Star, Lock };
+const DEFAULT_FEATURE_ICON = Flame;
+
 const TILT_FEATURES = [
   {
-    icon: Flame,
+    icon: "Flame",
     title: "Limited Drops",
     desc: "Capsule releases. Once gone, never restocked.",
   },
   {
-    icon: Diamond,
+    icon: "Diamond",
     title: "Premium Quality",
     desc: "Hand-finished pieces. Made in Sri Lanka.",
   },
   {
-    icon: Gift,
+    icon: "Gift",
     title: "Exclusive Perks",
     desc: "Every order ships with an unannounced extra.",
   },
   {
-    icon: Truck,
+    icon: "Truck",
     title: "Islandwide Delivery",
     desc: "Anywhere in Sri Lanka. Free over LKR 10,000.",
   },
   {
-    icon: ShieldCheck,
+    icon: "ShieldCheck",
     title: "Secure Checkout",
     desc: "Encrypted payments. Cash or card. Your call.",
   },
@@ -1135,31 +1141,51 @@ const TiltCard = ({ Icon, title, desc, index }) => {
   );
 };
 
-export const WhyChooseSaga = () => (
-  <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
-    <div className="max-w-[1440px] mx-auto px-6">
-      <div className="text-center mb-12">
-        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
-          Why Saga Elite
-        </p>
-        <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
-          Built for those who notice
-        </h2>
+export const WhyChooseSaga = () => {
+  const { data: about } = useShopAbout();
+
+  // Admin-managed feature cards (brand_features) with hardcoded fallback.
+  const featureRows = Array.isArray(about?.brand_features)
+    ? about.brand_features.filter((f) => f?.title)
+    : [];
+  const features = (featureRows.length > 0 ? featureRows : TILT_FEATURES).map(
+    (f) => ({
+      icon: f.icon,
+      title: f.title,
+      desc: f.desc ?? f.description ?? "",
+    })
+  );
+
+  const section = about?.homepage_sections?.whyChoose || {};
+  const eyebrow = section.eyebrow?.trim() || "Why Saga Elite";
+  const headline = section.headline?.trim() || "Built for those who notice";
+
+  return (
+    <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
+      <div className="max-w-[1440px] mx-auto px-6">
+        <div className="text-center mb-12">
+          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+            {eyebrow}
+          </p>
+          <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
+            {headline}
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+          {features.map((f, i) => (
+            <TiltCard
+              key={`${f.title}-${i}`}
+              Icon={FEATURE_ICONS[f.icon] || DEFAULT_FEATURE_ICON}
+              title={f.title}
+              desc={f.desc}
+              index={i}
+            />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-        {TILT_FEATURES.map((f, i) => (
-          <TiltCard
-            key={f.title}
-            Icon={f.icon}
-            title={f.title}
-            desc={f.desc}
-            index={i}
-          />
-        ))}
-      </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 /* ──────────────────────────────────────────────────────────────────────────
    TRENDING FITS MARQUEE — two rows scrolling in opposite directions.
@@ -1369,12 +1395,35 @@ const TESTIMONIALS = [
 ];
 
 export const Testimonials = () => {
+  const [items, setItems] = useState(TESTIMONIALS);
   const [i, setI] = useState(0);
+
+  // Admin-managed testimonials with the built-in array as fallback.
   useEffect(() => {
-    const t = setInterval(() => setI((v) => (v + 1) % TESTIMONIALS.length), 6000);
-    return () => clearInterval(t);
+    let cancelled = false;
+    axios
+      .get(`${API_BASE}/testimonials`)
+      .then((res) => {
+        const rows = res.data?.data;
+        if (!cancelled && Array.isArray(rows) && rows.length > 0) {
+          setItems(rows);
+          setI(0);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
-  const t = TESTIMONIALS[i];
+
+  useEffect(() => {
+    if (items.length <= 1) return undefined;
+    const timer = setInterval(() => setI((v) => (v + 1) % items.length), 6000);
+    return () => clearInterval(timer);
+  }, [items.length]);
+
+  const t = items[i] || items[0];
+  if (!t) return null;
 
   return (
     <section className="relative bg-[#0a0a0a] py-16 md:py-24 overflow-hidden">
@@ -1392,7 +1441,7 @@ export const Testimonials = () => {
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={t.handle}
+            key={t._id || t.handle || i}
             initial={{ opacity: 0, y: 30, rotateX: -4 }}
             animate={{ opacity: 1, y: 0, rotateX: 0 }}
             exit={{ opacity: 0, y: -30 }}
@@ -1418,9 +1467,10 @@ export const Testimonials = () => {
               </p>
               <div className="flex items-center gap-4">
                 <img
-                  src={t.avatar}
+                  src={t.avatar || "/placeholder.jpg"}
                   alt={t.name}
                   loading="lazy"
+                  onError={(e) => { e.currentTarget.src = "/placeholder.jpg"; }}
                   className="w-12 h-12 rounded-full object-cover border border-[#4d4635]"
                 />
                 <div>
@@ -1445,7 +1495,7 @@ export const Testimonials = () => {
         </AnimatePresence>
 
         <div className="flex justify-center gap-2 mt-8">
-          {TESTIMONIALS.map((_, idx) => (
+          {items.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setI(idx)}

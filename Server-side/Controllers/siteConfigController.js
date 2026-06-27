@@ -67,6 +67,10 @@ const ABOUT_KEYS = [
   "faq_items",
   "contact_form_settings",
   "whatsapp_cta",
+  // Homepage / editorial CMS (Phase 2)
+  "site_stats",
+  "brand_features",
+  "homepage_sections",
 ];
 
 const REWARD_REVIEW_DISCOUNT_KEY = "reward_review_discount";

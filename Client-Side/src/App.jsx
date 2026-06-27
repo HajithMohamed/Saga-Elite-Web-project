@@ -62,6 +62,10 @@ const PoliciesManager = lazy(() => import("./pages/admin-view/PoliciesManager"))
 const FooterManager = lazy(() => import("./pages/admin-view/FooterManager"));
 const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"));
 const ContactPageManager = lazy(() => import("./pages/admin-view/ContactPageManager"));
+const HomepageManager = lazy(() => import("./pages/admin-view/HomepageManager"));
+const TestimonialsManager = lazy(() => import("./pages/admin-view/TestimonialsManager"));
+const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
+const AdminCategoryEditor = lazy(() => import("./pages/admin/CategoryEditor"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
@@ -237,6 +241,9 @@ function App() {
             >
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
+              <Route path="categories" element={<PermissionGuard permission="products"><AdminCategoriesList /></PermissionGuard>} />
+              <Route path="categories/new" element={<PermissionGuard permission="products"><AdminCategoryEditor /></PermissionGuard>} />
+              <Route path="categories/:id" element={<PermissionGuard permission="products"><AdminCategoryEditor /></PermissionGuard>} />
               <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
               <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
               <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
@@ -256,6 +263,8 @@ function App() {
               <Route path="alerts" element={<PermissionGuard permission="manageReviews"><Alerts /></PermissionGuard>} />
               <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
               <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
+              <Route path="homepage" element={<PermissionGuard superAdminOnly><HomepageManager /></PermissionGuard>} />
+              <Route path="testimonials" element={<PermissionGuard superAdminOnly><TestimonialsManager /></PermissionGuard>} />
               <Route path="policies" element={<PermissionGuard superAdminOnly><PoliciesManager /></PermissionGuard>} />
               <Route path="footer" element={<PermissionGuard superAdminOnly><FooterManager /></PermissionGuard>} />
               <Route path="announcement" element={<PermissionGuard superAdminOnly><AnnouncementBar /></PermissionGuard>} />

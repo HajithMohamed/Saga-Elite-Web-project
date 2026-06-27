@@ -88,7 +88,7 @@ router.post(
     "/categories",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     createCategory
 );
 
@@ -96,7 +96,7 @@ router.put(
     "/categories/:id",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     validateObjectIdParam("id", "category id"),
     updateCategory
 );
@@ -105,7 +105,7 @@ router.delete(
     "/categories/:id",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     validateObjectIdParam("id", "category id"),
     deleteCategory
 );

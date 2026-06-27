@@ -45,6 +45,15 @@ const MainFooter = () => {
       : null;
   const whatsappDigits = (about?.shop_whatsapp_number || "").replace(/[^0-9]/g, "");
   const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
+  // Brand stat lines (site_stats) — admin-managed with hardcoded fallback.
+  const siteStats =
+    Array.isArray(about?.site_stats) && about.site_stats.length > 0
+      ? about.site_stats.filter((s) => s?.value || s?.label)
+      : [
+          { value: "12K+", label: "Elite Members" },
+          { value: "150+", label: "Limited Pieces Sold" },
+          { value: "", label: "Mystery Rewards Active" },
+        ];
   const socialLinks = [
     { Icon: Instagram, href: about?.shop_social_instagram, label: "Instagram" },
     { Icon: Facebook, href: about?.shop_social_facebook, label: "Facebook" },
@@ -232,10 +241,14 @@ const MainFooter = () => {
             <p className="text-sm text-[#777] mt-6 max-w-sm leading-relaxed">
               {brandDescription}
             </p>
-            <div className="mt-8 flex flex-col gap-2 text-xs text-[#555] font-mono tracking-wider">
-              <p>🔥 12K+ ELITE MEMBERS</p>
-              <p>🚀 150+ LIMITED PIECES SOLD</p>
-              <p>🎁 MYSTERY REWARDS ACTIVE</p>
+            <div className="mt-8 flex flex-col gap-2 text-xs uppercase text-[#555] font-mono tracking-wider">
+              {siteStats.map((s, idx) => (
+                <p key={idx}>
+                  {s.value ? <span className="text-[#888]">{s.value}</span> : null}
+                  {s.value && s.label ? " " : ""}
+                  {s.label}
+                </p>
+              ))}
             </div>
           </motion.div>
 

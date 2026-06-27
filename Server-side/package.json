@@ -10,6 +10,7 @@
     "seed:demo-admins": "node scripts/seed-demo-admins.js",
     "seed:categories": "node scripts/seed-category-taxonomy.js",
     "seed:reviews": "node scripts/seed-dummy-reviews.js",
+    "seed:testimonials": "node scripts/seed-testimonials.js",
     "lint": "eslint . --ext .js --ignore-path ../.gitignore",
     "test": "echo \"No tests implemented yet\" && exit 0"
   },

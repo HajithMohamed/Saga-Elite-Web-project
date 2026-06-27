@@ -29,6 +29,9 @@ import {
   Layout,
   ScrollText,
   ChevronDown,
+  FolderTree,
+  LayoutTemplate,
+  MessageSquareQuote,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -41,19 +44,27 @@ import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
   Dashboard: ["Dashboard", "Alerts"],
-  Store: ["Products", "Drops"],
-  Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
-  Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
+  Store: ["Products", "Categories", "Drops"],
+  Sales: ["Orders", "Payments", "Shipping"],
+  Marketing: [
+    "Offers / Campaigns",
+    "Coupons",
+    "Notifications",
+    "Newsletter",
+    "Announcement Bar",
+  ],
+  Customers: ["Customers", "Reviews", "Contact Messages"],
   Content: [
+    "Homepage",
     "Brand & About",
     "Home Images",
     "Policies",
     "Footer",
-    "Announcement Bar",
-    "Contact & FAQ",
+    "FAQ",
+    "Testimonials",
   ],
-  Analytics: ["Analytics", "Recommendations"],
-  Settings: ["Shipping", "SEO & Branding", "Admin Team"],
+  Reports: ["Analytics", "Recommendations"],
+  Settings: ["SEO & Branding", "Admin Team"],
 };
 
 const SECTION_ORDER = [
@@ -61,8 +72,9 @@ const SECTION_ORDER = [
   "Store",
   "Sales",
   "Marketing",
+  "Customers",
   "Content",
-  "Analytics",
+  "Reports",
   "Settings",
 ];
 
@@ -279,6 +291,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       tooltip: lowStockCount > 0 ? `${lowStockCount} product${lowStockCount === 1 ? "" : "s"} at or below low-stock threshold` : undefined,
     },
     {
+      label: "Categories",
+      path: "/admin/categories",
+      icon: <FolderTree className="h-5 w-5" />,
+      permission: "products",
+    },
+    {
       label: "Drops",
       path: "/admin/drop",
       icon: <Package className="h-5 w-5" />,
@@ -315,7 +333,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "manageReviews",
     },
     {
-      label: "Contact Inquiries",
+      label: "Contact Messages",
       path: "/admin/contact-inquiries",
       icon: <Inbox className="h-5 w-5" />,
       permission: null,
@@ -329,7 +347,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "notifications",
     },
     {
-      label: "Offers & Deals",
+      label: "Offers / Campaigns",
       path: "/admin/offers",
       icon: <BadgePercent className="h-5 w-5" />,
       badge: agingAlertCount,
@@ -365,6 +383,13 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
 
     // Content
     {
+      label: "Homepage",
+      path: "/admin/homepage",
+      icon: <LayoutTemplate className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
       label: "Brand & About",
       path: "/admin/about-content",
       icon: <Layout className="h-5 w-5" />,
@@ -399,9 +424,16 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       superAdminOnly: true,
     },
     {
-      label: "Contact & FAQ",
+      label: "FAQ",
       path: "/admin/contact-content",
       icon: <MessageSquare className="h-5 w-5" />,
+      permission: null,
+      superAdminOnly: true,
+    },
+    {
+      label: "Testimonials",
+      path: "/admin/testimonials",
+      icon: <MessageSquareQuote className="h-5 w-5" />,
       permission: null,
       superAdminOnly: true,
     },
@@ -654,7 +686,5 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     </motion.div>
   );
 };
-
-export default SideBar;
 
 export default SideBar;
