@@ -35,7 +35,12 @@
       "Bash(node --check Routes/notification-routes.js)",
       "Bash(node --check Utils/recommendations-digest.js)",
       "Bash(node -e \"require\\('./Utils/recommendations-digest'\\); require\\('./Utils/recommendations-job'\\); require\\('./Routes/notification-routes'\\); require\\('./Routes/admin-routes'\\); require\\('./Routes/siteConfigRoutes'\\); console.log\\('BACKEND_REQUIRES_OK'\\)\")",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git rm *)",
+      "Bash(npx playwright *)",
+      "Bash(powershell -NoProfile -Command 'Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 LocalPort,OwningProcess; $p=\\(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1\\).OwningProcess; if\\($p\\){ \\(Get-Process -Id $p\\).ProcessName + '\\\\'' \\(PID '\\\\'' + $p + '\\\\''\\)'\\\\'' } else { '\\\\''no-listener-on-5001'\\\\'' }')",
+      "Bash(git rev-list *)",
+      "Bash(git remote *)"
     ]
   }
 }

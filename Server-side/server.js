@@ -37,6 +37,14 @@ const { initRecommendationsDigest } = require('./Utils/recommendations-digest');
 
 const app = express();
 
+// Behind a reverse proxy (Render, nginx, etc.) trust the first hop so secure
+// cookies, req.ip, and express-rate-limit read the real client address from
+// X-Forwarded-For instead of the proxy's. Scoped to production so local dev is
+// unaffected.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 const authRoutes = require("./Routes/authRoutes");
 const whatsappWebhookRoutes = require("./Routes/whatsapp-webhook-routes");
 const googleAuthRoute = require("./Routes/google-routes");
