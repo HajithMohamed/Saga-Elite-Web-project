@@ -9,12 +9,12 @@ Your site runs on three services:
 
 | Service           | What it is                       | Dashboard                          |
 | ----------------- | -------------------------------- | ---------------------------------- |
-| **Render**        | The backend / API server         | https://dashboard.render.com       |
+| **Railway**       | The backend / API server         | https://railway.com                |
 | **Netlify**       | The website (what visitors see)  | https://app.netlify.com            |
 | **MongoDB Atlas** | The database                     | https://cloud.mongodb.com          |
 
 > You never edit code to change a password, key, or URL. You change an
-> environment variable in the relevant dashboard and restart the service.
+> environment variable in the relevant dashboard and the service redeploys.
 
 ---
 
@@ -22,30 +22,32 @@ Your site runs on three services:
 
 | Credential | Where it's used | Where to get / manage it |
 | ---------- | --------------- | ------------------------ |
-| **Database connection string** (`MONGO_DB_URI`) | Render | MongoDB Atlas → Database → **Connect** |
-| **JWT secret** (`JWT_SECRET`) | Render | Any random 32+ character string you generate |
-| **Cloudinary keys** (`CLOUDINARY_*`) | Render | https://cloudinary.com → Dashboard → Account Details |
-| **Email / SMTP** (`SMTP_*`, `FROM_EMAIL`) | Render | Your email provider (e.g. Gmail App Password, SendGrid, Mailgun) |
-| **Website → API URL** (`VITE_API_URL`) | Netlify | Your Render service URL + `/api` |
-| **Google / Facebook login** (optional) | Render + Netlify | Google Cloud Console / Meta for Developers |
-| **WhatsApp, PayHere, OpenAI** (optional) | Render | The respective provider dashboards |
+| **Database connection string** (`MONGO_DB_URI`) | Railway | MongoDB Atlas → Database → **Connect** |
+| **JWT secret** (`JWT_SECRET`) | Railway | Any random 32+ character string you generate |
+| **Cloudinary keys** (`CLOUDINARY_*`) | Railway | https://cloudinary.com → Dashboard → Account Details |
+| **Email / SMTP** (`SMTP_*`, `FROM_EMAIL`) | Railway | Your email provider (e.g. Gmail App Password, SendGrid, Mailgun) |
+| **Website → API URL** (`VITE_API_URL`) | Netlify | Your Railway service URL + `/api` |
+| **Google / Facebook login** (optional) | Railway + Netlify | Google Cloud Console / Meta for Developers |
+| **WhatsApp, PayHere, OpenAI** (optional) | Railway | The respective provider dashboards |
 
 The complete annotated lists are in `Server-side/.env.example` (backend) and
 `Client-Side/.env.example` (website). Names there match the dashboards exactly.
 
 ---
 
-## 2. Updating a value on **Render** (backend)
+## 2. Updating a value on **Railway** (backend)
 
-1. Go to https://dashboard.render.com and open the **saga-elite-api** service.
-2. Left menu → **Environment**.
-3. Click the value you want to change (or **Add Environment Variable**), edit it,
-   and **Save Changes**.
-4. Render automatically restarts the service with the new value (takes ~1–2
-   minutes). To force it: **Manual Deploy → Deploy latest commit** /
-   **Clear build cache & deploy**.
-5. Confirm it's healthy: open `https://<your-service>.onrender.com/health` — it
+1. Go to https://railway.com and open your **Saga Elite** project, then the
+   backend service.
+2. Open the **Variables** tab.
+3. Edit the value you want to change (or **+ New Variable**), then apply/save.
+4. Railway automatically redeploys the service with the new value (takes ~1–2
+   minutes). You can watch progress under the **Deployments** tab.
+5. Confirm it's healthy: open `https://<your-service>.up.railway.app/health` — it
    should show `{"status":"ok"}`.
+
+> Never delete or change `NODE_ENV` (must stay `production`). Never set `PORT`
+> manually — Railway manages it.
 
 ## 3. Updating a value on **Netlify** (website)
 
@@ -60,8 +62,8 @@ The complete annotated lists are in `Server-side/.env.example` (backend) and
 ## 4. Updating the database (MongoDB Atlas)
 
 - **Change the database password:** Atlas → **Database Access** → edit the user →
-  set a new password. Then update `MONGO_DB_URI` on **Render** (§2) with the new
-  password and restart.
+  set a new password. Then update `MONGO_DB_URI` on **Railway** (§2) with the new
+  password; Railway redeploys automatically.
 - **Connection string:** Atlas → **Database → Connect → Drivers** to copy it
   again if you ever need it.
 
@@ -71,7 +73,7 @@ The complete annotated lists are in `Server-side/.env.example` (backend) and
 
 | Service  | How to restart |
 | -------- | -------------- |
-| Render   | Saving an env var auto-restarts; or **Manual Deploy → Deploy latest commit**. |
+| Railway  | Saving a variable auto-redeploys; or **Deployments → ⋯ → Redeploy** on the latest deploy. |
 | Netlify  | **Deploys → Trigger deploy → Deploy site** (env changes need a fresh build). |
 | Database | MongoDB Atlas runs continuously — no restart needed; changes apply immediately. |
 
@@ -88,12 +90,12 @@ If a credential is ever leaked or you simply want to refresh it:
    - `JWT_SECRET` → generate a new random 32+ char string (note: rotating this
      logs every user out, which is the safe behaviour after a leak).
 2. **Revoke / disable the old value** in that provider's dashboard.
-3. **Update the variable** on Render (§2) or Netlify (§3).
+3. **Update the variable** on Railway (§2) or Netlify (§3).
 4. **Restart / redeploy** the affected service.
 5. Verify the site still works using the checklist in `DEPLOYMENT.md` §5.
 
 > **Golden rule:** never paste a real secret into code, a chat message, an
-> email, or a screenshot. Keep them only in the Render / Netlify / Atlas
+> email, or a screenshot. Keep them only in the Railway / Netlify / Atlas
 > dashboards. If a secret was shared anywhere insecure, rotate it (above).
 
 ---

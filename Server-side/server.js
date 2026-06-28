@@ -37,7 +37,7 @@ const { initRecommendationsDigest } = require('./Utils/recommendations-digest');
 
 const app = express();
 
-// Behind a reverse proxy (Render, nginx, etc.) trust the first hop so secure
+// Behind a reverse proxy (Railway, nginx, etc.) trust the first hop so secure
 // cookies, req.ip, and express-rate-limit read the real client address from
 // X-Forwarded-For instead of the proxy's. Scoped to production so local dev is
 // unaffected.

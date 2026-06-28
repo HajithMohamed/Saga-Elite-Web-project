@@ -16,16 +16,16 @@
 # Frontend runtime config is injected at BUILD time from Netlify environment
 # variables (Site settings → Environment variables) — do NOT hardcode the real
 # URLs here. Required:
-#   VITE_API_URL        = https://<your-render-service>.onrender.com/api
+#   VITE_API_URL        = https://<your-service>.up.railway.app/api
 # Recommended / optional:
-#   VITE_SOCKET_URL     = https://<your-render-service>.onrender.com
+#   VITE_SOCKET_URL     = https://<your-service>.up.railway.app
 #   VITE_APP_NAME       = Saga Elite
 #   VITE_GOOGLE_CLIENT_ID  = <google oauth client id>   (blank hides the button)
 #   VITE_FACEBOOK_APP_ID   = <facebook app id>          (blank hides the button)
 # ---------------------------------------------------------------------------
 
 # SPA fallback: every unknown path is served by index.html so React Router can
-# handle it. API/socket traffic goes directly to the Render backend via the
+# handle it. API/socket traffic goes directly to the Railway backend via the
 # absolute VITE_API_URL, so no proxy/redirect for /api is needed here.
 [[redirects]]
   from = "/*"

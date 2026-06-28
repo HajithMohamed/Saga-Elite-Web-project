@@ -40,7 +40,10 @@
       "Bash(npx playwright *)",
       "Bash(powershell -NoProfile -Command 'Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 LocalPort,OwningProcess; $p=\\(Get-NetTCPConnection -LocalPort 5001 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1\\).OwningProcess; if\\($p\\){ \\(Get-Process -Id $p\\).ProcessName + '\\\\'' \\(PID '\\\\'' + $p + '\\\\''\\)'\\\\'' } else { '\\\\''no-listener-on-5001'\\\\'' }')",
       "Bash(git rev-list *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "mcp__71c08203-98d6-43c2-8a12-e2e8f3f92df7__netlify-user-services-reader",
+      "Bash(git add *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('railway.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")"
     ]
   }
 }

@@ -28,7 +28,7 @@ const logger = winston.createLogger({
 });
 
 if (process.env.NODE_ENV === "production") {
-  // PaaS platforms (Render, Heroku, etc.) capture stdout/stderr and surface it
+  // PaaS platforms (Railway, Heroku, etc.) capture stdout/stderr and surface it
   // in their dashboards. Emit the structured JSON there so production logs are
   // actually visible — the file transports above live on an ephemeral disk.
   logger.add(new winston.transports.Console());
