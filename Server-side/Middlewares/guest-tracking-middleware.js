@@ -10,7 +10,7 @@ const guestTrackingMiddleware = (req, res, next) => {
     token = crypto.randomUUID();
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      // In production the SPA (Netlify) and API (Render) are on different
+      // In production the SPA (Netlify) and API (Railway) are on different
       // origins, so the cookie must be SameSite=None; Secure to survive
       // cross-site requests — matching the auth token cookie behaviour.
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
