@@ -51,6 +51,7 @@ const ReviewModerationPage = lazy(() => import("./pages/admin-view/ReviewModerat
 const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
 const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
+const ContentManagement = lazy(() => import("./pages/admin-view/ContentManagement"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
@@ -241,6 +242,13 @@ function App() {
               <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
               <Route path="account" element={<AdminAccount />} />
               <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
+              <Route path="content" element={<PermissionGuard superAdminOnly><ContentManagement /></PermissionGuard>} />
+              {/* Legacy Content routes → redirect into the tabbed Content Management page */}
+              <Route path="about-content" element={<Navigate to="/admin/content?tab=about" replace />} />
+              <Route path="policies" element={<Navigate to="/admin/content?tab=policies" replace />} />
+              <Route path="footer" element={<Navigate to="/admin/content?tab=footer" replace />} />
+              <Route path="announcement" element={<Navigate to="/admin/content?tab=announcement" replace />} />
+              <Route path="contact-content" element={<Navigate to="/admin/content?tab=contact" replace />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
 

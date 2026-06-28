@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
+  Layout,
   ShoppingBag,
   ShoppingCart,
   LogOut,
@@ -33,6 +34,7 @@ const SECTION_LABELS = {
   Sales: ["Orders", "Payments", "Shipping"],
   Marketing: ["Offers / Campaigns", "Coupons"],
   Customers: ["Customers", "Reviews", "Contact Messages"],
+  Content: ["Content Management"],
   Settings: ["Admin Team"],
 };
 
@@ -42,6 +44,7 @@ const SECTION_ORDER = [
   "Sales",
   "Marketing",
   "Customers",
+  "Content",
   "Settings",
 ];
 
@@ -270,6 +273,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/coupons",
       icon: <Tag className="h-5 w-5" />,
       permission: "sendCampaigns",
+    },
+
+    // Content
+    {
+      label: "Content Management",
+      path: "/admin/content",
+      icon: <Layout className="h-5 w-5" />,
+      superAdminOnly: true,
     },
   ];
 

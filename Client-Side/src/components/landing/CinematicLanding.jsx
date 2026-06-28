@@ -349,31 +349,6 @@ export const CinematicFooter = () => {
             Submit
           </button>
         </form>
-
-        <div className="w-full flex flex-col md:flex-row justify-end items-center gap-6 border-t border-[#1a1a1a] pt-8">
-          <div className="flex gap-6 font-mono text-[10px] tracking-[0.2em] text-[#99907c] uppercase">
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Instagram
-            </Link>
-
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Tiktok
-            </Link>
-
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Terms
-            </Link>
-          </div>
-        </div>
       </div>
     </footer>
   );
