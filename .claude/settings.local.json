@@ -25,7 +25,17 @@
       "Bash(Select-Object Name)",
       "Bash(node --check Server-side/Routes/admin-routes.js)",
       "Bash(npx eslint *)",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(xargs grep -l \"page\\\\|content\\\\|cms\" -i)",
+      "Bash(sed 's/.*\\\\\\\\//')",
+      "Bash(xargs ls -la)",
+      "Bash(cd \"/c/Fullstack development course/Saga-Elite-Web-Project\" && find Client-Side/src/store -name \"*notification*\" -o -name \"*Notification*\")",
+      "Bash(cd \"/c/Fullstack development course/Saga-Elite-Web-Project\" && grep -r \"initSmartAlertsJob\\\\|initRecommendationsJobs\\\\|initAgingStockJob\" Server-side/ --include=\"*.js\" | grep -v \"node_modules\")",
+      "Bash(node --check Routes/admin-routes.js)",
+      "Bash(node --check Routes/notification-routes.js)",
+      "Bash(node --check Utils/recommendations-digest.js)",
+      "Bash(node -e \"require\\('./Utils/recommendations-digest'\\); require\\('./Utils/recommendations-job'\\); require\\('./Routes/notification-routes'\\); require\\('./Routes/admin-routes'\\); require\\('./Routes/siteConfigRoutes'\\); console.log\\('BACKEND_REQUIRES_OK'\\)\")",
+      "Bash(git checkout *)"
     ]
   }
 }

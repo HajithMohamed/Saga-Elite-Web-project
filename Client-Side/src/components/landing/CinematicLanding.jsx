@@ -6,18 +6,15 @@ import { formatLkr } from "@/utils/currency";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import useShopAbout from "@/hooks/use-shop-about";
 
 // BRAND MANIFESTO SECTION
 export const BrandManifesto = () => {
-  const { data: about } = useShopAbout();
-  const manifesto = about?.homepage_sections?.manifesto || {};
-  const heading = manifesto.heading?.trim() || "Built for the";
-  const highlight = manifesto.highlight?.trim() || "rare few.";
+  // Static editorial copy.
+  const heading = "Built for the";
+  const highlight = "rare few.";
   const body =
-    manifesto.body?.trim() ||
     "Every drop is intentionally limited. No mass production. No restocks. No trend chasing. We craft narrative-driven pieces that blur the line between fashion and identity.";
-  const tag = manifesto.tag?.trim() || "This is not fast fashion";
+  const tag = "This is not fast fashion";
 
   return (
     <section className="relative bg-[#050505] border-y border-[#1a1a1a] py-16 md:py-20 overflow-hidden">

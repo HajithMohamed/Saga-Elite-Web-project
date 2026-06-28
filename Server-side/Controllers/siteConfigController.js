@@ -73,6 +73,7 @@ const ABOUT_KEYS = [
   "site_stats",
   "brand_features",
   "homepage_sections",
+  "vip_membership",
 ];
 
 const REWARD_REVIEW_DISCOUNT_KEY = "reward_review_discount";

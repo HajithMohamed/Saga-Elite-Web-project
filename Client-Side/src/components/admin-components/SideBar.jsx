@@ -4,33 +4,19 @@ import {
   LayoutDashboard,
   ShoppingBag,
   ShoppingCart,
-  Star,
   LogOut,
   User,
   Package,
-  ImagePlus,
-  MessageSquare,
   Users,
   Shield,
   CreditCard,
   StarHalf,
-  FileText,
   Inbox,
-  Newspaper,
-  Settings,
-  BarChart3,
   BadgePercent,
   Tag,
   Truck,
-  Bell,
-  Globe,
-  Sparkles,
-  AlertTriangle,
-  Layout,
-  ScrollText,
   ChevronDown,
   FolderTree,
-  LayoutTemplate,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -42,27 +28,12 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Dashboard: ["Dashboard", "Alerts"],
+  Dashboard: ["Dashboard"],
   Store: ["Products", "Categories", "Drops"],
   Sales: ["Orders", "Payments", "Shipping"],
-  Marketing: [
-    "Offers / Campaigns",
-    "Coupons",
-    "Notifications",
-    "Newsletter",
-    "Announcement Bar",
-  ],
+  Marketing: ["Offers / Campaigns", "Coupons"],
   Customers: ["Customers", "Reviews", "Contact Messages"],
-  Content: [
-    "Homepage",
-    "Brand & About",
-    "Home Images",
-    "Policies",
-    "Footer",
-    "FAQ",
-  ],
-  Reports: ["Analytics", "Recommendations"],
-  Settings: ["SEO & Branding", "Admin Team"],
+  Settings: ["Admin Team"],
 };
 
 const SECTION_ORDER = [
@@ -71,8 +42,6 @@ const SECTION_ORDER = [
   "Sales",
   "Marketing",
   "Customers",
-  "Content",
-  "Reports",
   "Settings",
 ];
 
@@ -93,21 +62,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
   const [uncategorizedReviewCount, setUncategorizedReviewCount] = useState(0);
   const [agingAlertCount, setAgingAlertCount] = useState(0);
-  const [smartAlertCount, setSmartAlertCount] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [isLg, setIsLg] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
   const prevPaymentRef = useRef(0);
   const prevReviewRef = useRef(0);
   const prevAgingRef = useRef(0);
-  const prevSmartAlertRef = useRef(0);
-  const prevLowStockRef = useRef(0);
   const [paymentBounce, setPaymentBounce] = useState(0);
   const [reviewBounce, setReviewBounce] = useState(0);
   const [agingBounce, setAgingBounce] = useState(0);
-  const [smartAlertBounce, setSmartAlertBounce] = useState(0);
-  const [lowStockBounce, setLowStockBounce] = useState(0);
 
   const [expandedSections, setExpandedSections] = useState(
     SECTION_ORDER.reduce((acc, section) => ({ ...acc, [section]: true }), {})
@@ -123,7 +86,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       // permission shouldn't break the others. Catch per-request so a 403
       // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
       const fallback = { data: { success: true, data: { count: 0 } } };
-      const [paymentRes, reviewRes, agingRes, smartAlertRes, lowStockRes] = await Promise.all([
+      const [paymentRes, reviewRes, agingRes] = await Promise.all([
         // Count anything that needs admin eyes — both manual-review proofs
         // and provisional OCR-matches still waiting on bank confirmation.
         axios
@@ -142,17 +105,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             withCredentials: true,
           })
           .catch(() => fallback),
-        axios
-          .get(`${API_V1_URL}/admin/alerts?countOnly=true`, { withCredentials: true })
-          .catch(() => fallback),
-        // Low-stock badge specifically for the Products entry. Pulls warning
-        // AND critical so the admin sees one combined number on the row.
-        axios
-          .get(
-            `${API_V1_URL}/admin/alerts?countOnly=true&kind=low_stock_warning,low_stock_critical`,
-            { withCredentials: true }
-          )
-          .catch(() => fallback),
       ]);
 
       if (paymentRes.data?.success) {
@@ -166,20 +118,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       if (agingRes.data?.success) {
         setAgingAlertCount(agingRes.data.data?.count || 0);
       }
-
-      if (smartAlertRes.data?.success) {
-        setSmartAlertCount(smartAlertRes.data.data?.count || 0);
-      }
-
-      if (lowStockRes.data?.success) {
-        setLowStockCount(lowStockRes.data.data?.count || 0);
-      }
     } catch {
       setPendingPaymentCount(0);
       setUncategorizedReviewCount(0);
       setAgingAlertCount(0);
-      setSmartAlertCount(0);
-      setLowStockCount(0);
     }
   }, []);
 
@@ -233,26 +175,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     prevAgingRef.current = a;
   }, [agingAlertCount]);
 
-  useEffect(() => {
-    const l = lowStockCount;
-    if (l > 0 && prevLowStockRef.current === 0 && l !== prevLowStockRef.current) {
-      setLowStockBounce((k) => k + 1);
-    } else if (l > prevLowStockRef.current && prevLowStockRef.current > 0) {
-      setLowStockBounce((k) => k + 1);
-    }
-    prevLowStockRef.current = l;
-  }, [lowStockCount]);
-
-  useEffect(() => {
-    const s = smartAlertCount;
-    if (s > 0 && prevSmartAlertRef.current === 0 && s !== prevSmartAlertRef.current) {
-      setSmartAlertBounce((k) => k + 1);
-    } else if (s > prevSmartAlertRef.current && prevSmartAlertRef.current > 0) {
-      setSmartAlertBounce((k) => k + 1);
-    }
-    prevSmartAlertRef.current = s;
-  }, [smartAlertCount]);
-
   useSocketEvent("payment:new_pending", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("admin:refresh", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("payment:refresh", () => fetchCounts(), [fetchCounts]);
@@ -269,14 +191,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <LayoutDashboard className="h-5 w-5" />,
       permission: null,
     },
-    {
-      label: "Alerts",
-      path: "/admin/alerts",
-      icon: <AlertTriangle className="h-5 w-5" />,
-      badge: smartAlertCount,
-      bounceKey: smartAlertBounce,
-      permission: "manageReviews",
-    },
 
     // Store
     {
@@ -284,9 +198,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
       permission: "products",
-      badge: lowStockCount,
-      bounceKey: lowStockBounce,
-      tooltip: lowStockCount > 0 ? `${lowStockCount} product${lowStockCount === 1 ? "" : "s"} at or below low-stock threshold` : undefined,
     },
     {
       label: "Categories",
@@ -317,6 +228,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "verifyPayments",
     },
     {
+      label: "Shipping",
+      path: "/admin/shipping",
+      icon: <Truck className="h-5 w-5" />,
+      permission: "manageInventory",
+    },
+
+    // Customers
+    {
       label: "Customers",
       path: "/admin/users",
       icon: <Users className="h-5 w-5" />,
@@ -339,12 +258,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
 
     // Marketing
     {
-      label: "Notifications",
-      path: "/admin/notifications",
-      icon: <Bell className="h-5 w-5" />,
-      permission: "notifications",
-    },
-    {
       label: "Offers / Campaigns",
       path: "/admin/offers",
       icon: <BadgePercent className="h-5 w-5" />,
@@ -357,91 +270,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/coupons",
       icon: <Tag className="h-5 w-5" />,
       permission: "sendCampaigns",
-    },
-    {
-      label: "Newsletter",
-      path: "/admin/newsletter",
-      icon: <Newspaper className="h-5 w-5" />,
-      permission: null,
-    },
-
-    // Analytics
-    {
-      label: "Analytics",
-      path: "/admin/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      permission: "viewAnalytics",
-    },
-    {
-      label: "Recommendations",
-      path: "/admin/recommendations",
-      icon: <Sparkles className="h-5 w-5" />,
-      permission: "manageReviews",
-    },
-
-    // Content
-    {
-      label: "Homepage",
-      path: "/admin/homepage",
-      icon: <LayoutTemplate className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Brand & About",
-      path: "/admin/about-content",
-      icon: <Layout className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Home Images",
-      path: "/admin/home-images",
-      icon: <ImagePlus className="h-5 w-5" />,
-      permission: "products",
-    },
-    {
-      label: "Policies",
-      path: "/admin/policies",
-      icon: <ScrollText className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Footer",
-      path: "/admin/footer",
-      icon: <FileText className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Announcement Bar",
-      path: "/admin/announcement",
-      icon: <Bell className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "FAQ",
-      path: "/admin/contact-content",
-      icon: <MessageSquare className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-
-    // Settings
-    {
-      label: "Shipping",
-      path: "/admin/shipping",
-      icon: <Truck className="h-5 w-5" />,
-      permission: "manageInventory",
-    },
-    {
-      label: "SEO & Branding",
-      path: "/admin/seo",
-      icon: <Globe className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
     },
   ];
 

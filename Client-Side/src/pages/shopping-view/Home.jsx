@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+import Reveal from "@/components/common-components/Reveal";
 import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
@@ -134,7 +137,12 @@ const Home = () => {
           <HeroBackdropFX />
         </div>
 
-        <div className="relative z-10">
+        <motion.div
+          className="relative z-10"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
           {/* 1. Hero — cinematic */}
           <HeroCarousel
             activeDrops={payload.activeDrops}
@@ -147,7 +155,9 @@ const Home = () => {
           )}
 
           {/* 3. Collection selector — Asymmetric */}
-          <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
+          <Reveal>
+            <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
+          </Reveal>
 
           {/* 4. Featured / Rare Pieces */}
           {payload.trending && payload.trending.length > 0 && (
@@ -189,11 +199,13 @@ const Home = () => {
           )}
 
           {/* 13. VIP / membership CTA */}
-          <VipMembership />
+          <Reveal>
+            <VipMembership />
+          </Reveal>
 
           {/* 15. Cinematic Footer */}
           <CinematicFooter />
-        </div>
+        </motion.div>
       </div>
     </>
   );

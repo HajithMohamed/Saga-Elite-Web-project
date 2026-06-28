@@ -38,31 +38,17 @@ const AdminDashboard = lazy(() => import("./pages/admin-view/Dashboard"));
 const AdminFeatures = lazy(() => import("./pages/admin-view/Features"));
 const AdminOffers = lazy(() => import("./pages/admin-view/Offers"));
 const AdminCoupons = lazy(() => import("./pages/admin-view/Coupons"));
-const AdminSeoSettings = lazy(() => import("./pages/admin-view/SeoSettings"));
 const AdminCommunity = lazy(() => import("./pages/admin-view/CommunityPage"));
 const AdminShipping = lazy(() => import("./pages/admin-view/ShippingPage"));
 const AdminOrders = lazy(() => import("./pages/admin-view/Orders"));
 const AdminProduct = lazy(() => import("./pages/admin-view/Product"));
 const AdminDrops = lazy(() => import("./pages/admin-view/Drops"));
-const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
-const AdminAnalytics = lazy(() => import("./pages/admin-view/Analytics"));
-const AdminHomeImages = lazy(() => import("./pages/admin-view/HomeImages"));
-const NotificationsManager = lazy(() => import("./pages/admin-view/NotificationsManager"));
 const PendingPaymentsPage = lazy(() => import("./pages/admin-view/PendingPaymentsPage"));
 const PaymentVerificationPage = lazy(() => import("./pages/admin-view/PaymentVerificationPage"));
 const AdminUsers = lazy(() => import("./pages/admin-view/Users"));
 const SuperAdminDashboard = lazy(() => import("./pages/admin-view/SuperAdminDashboard"));
 const ReviewModerationPage = lazy(() => import("./pages/admin-view/ReviewModerationPage"));
-const Recommendations = lazy(() => import("./pages/admin-view/Recommendations"));
-const Alerts = lazy(() => import("./pages/admin-view/Alerts"));
-const AboutSiteConfig = lazy(() => import("./pages/admin-view/AboutSiteConfig"));
 const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
-const NewsletterSubscribersPage = lazy(() => import("./pages/admin-view/NewsletterSubscribersPage"));
-const PoliciesManager = lazy(() => import("./pages/admin-view/PoliciesManager"));
-const FooterManager = lazy(() => import("./pages/admin-view/FooterManager"));
-const AnnouncementBar = lazy(() => import("./pages/admin-view/AnnouncementBar"));
-const ContactPageManager = lazy(() => import("./pages/admin-view/ContactPageManager"));
-const HomepageManager = lazy(() => import("./pages/admin-view/HomepageManager"));
 const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 
@@ -98,7 +84,7 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 // checking authentication
 import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
-import WhatsAppFloatingButton from "./components/common-components/WhatsAppFloatingButton";
+import MysteryGiftButton from "./components/common-components/MysteryGiftButton";
 
 
 const ROUTE_META = [
@@ -238,38 +224,24 @@ function App() {
               }
             >
               <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="home-images" element={<PermissionGuard permission="products"><AdminHomeImages /></PermissionGuard>} />
               <Route path="categories" element={<PermissionGuard permission="products"><AdminCategoriesList /></PermissionGuard>} />
               <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
               <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
               <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
-              <Route path="seo" element={<PermissionGuard superAdminOnly><AdminSeoSettings /></PermissionGuard>} />
               <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
               <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
               <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
               <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
               <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
               <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
-              <Route path="notifications" element={<PermissionGuard permission="notifications"><NotificationsManager /></PermissionGuard>} />
               <Route path="payments/pending" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
               <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
               <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
               <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
-              <Route path="recommendations" element={<PermissionGuard permission="manageReviews"><Recommendations /></PermissionGuard>} />
-              <Route path="alerts" element={<PermissionGuard permission="manageReviews"><Alerts /></PermissionGuard>} />
-              <Route path="review-insights" element={<Navigate to="/admin/recommendations" replace />} />
-              <Route path="about-content" element={<PermissionGuard superAdminOnly><AboutSiteConfig /></PermissionGuard>} />
-              <Route path="homepage" element={<PermissionGuard superAdminOnly><HomepageManager /></PermissionGuard>} />
-              <Route path="policies" element={<PermissionGuard superAdminOnly><PoliciesManager /></PermissionGuard>} />
-              <Route path="footer" element={<PermissionGuard superAdminOnly><FooterManager /></PermissionGuard>} />
-              <Route path="announcement" element={<PermissionGuard superAdminOnly><AnnouncementBar /></PermissionGuard>} />
-              <Route path="contact-content" element={<PermissionGuard superAdminOnly><ContactPageManager /></PermissionGuard>} />
               <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
-              <Route path="newsletter" element={<NewsletterSubscribersPage />} />
               <Route path="account" element={<AdminAccount />} />
               <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
-              <Route path="drop-analytics" element={<PermissionGuard permission="viewAnalytics"><DropAnalytics /></PermissionGuard>} />
-              <Route path="analytics" element={<PermissionGuard permission="viewAnalytics"><AdminAnalytics /></PermissionGuard>} />
+              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
 
             {/* SHOPPING */}
@@ -311,7 +283,7 @@ function App() {
           </Routes>
         </Suspense>
 
-        <WhatsAppFloatingButton />
+        <MysteryGiftButton />
       </ErrorBoundary>
     </div>
   );

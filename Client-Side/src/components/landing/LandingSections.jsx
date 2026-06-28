@@ -32,7 +32,6 @@ import ProductCard from "@/components/shopping-components/ProductCard";
 import { toast } from "@/hooks/use-toast";
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 import { useSelector } from "react-redux";
-import useShopAbout from "@/hooks/use-shop-about";
 
 const MotionDiv = motion.div;
 const seededRandom = (seed) => {
@@ -1140,23 +1139,15 @@ const TiltCard = ({ Icon, title, desc, index }) => {
 };
 
 export const WhyChooseSaga = () => {
-  const { data: about } = useShopAbout();
+  // Static feature cards — see TILT_FEATURES.
+  const features = TILT_FEATURES.map((f) => ({
+    icon: f.icon,
+    title: f.title,
+    desc: f.desc ?? f.description ?? "",
+  }));
 
-  // Admin-managed feature cards (brand_features) with hardcoded fallback.
-  const featureRows = Array.isArray(about?.brand_features)
-    ? about.brand_features.filter((f) => f?.title)
-    : [];
-  const features = (featureRows.length > 0 ? featureRows : TILT_FEATURES).map(
-    (f) => ({
-      icon: f.icon,
-      title: f.title,
-      desc: f.desc ?? f.description ?? "",
-    })
-  );
-
-  const section = about?.homepage_sections?.whyChoose || {};
-  const eyebrow = section.eyebrow?.trim() || "Why Saga Elite";
-  const headline = section.headline?.trim() || "Built for those who notice";
+  const eyebrow = "Why Saga Elite";
+  const headline = "Built for those who notice";
 
   return (
     <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
@@ -1365,9 +1356,30 @@ export const CommunityFeed = ({ images = [] }) => {
 /* ──────────────────────────────────────────────────────────────────────────
    VIP MEMBERSHIP — full-bleed gradient CTA.
    ────────────────────────────────────────────────────────────────────────── */
+// Admin-managed VIP block (vip_membership) with hardcoded fallback.
+const DEFAULT_VIP_PERKS = [
+  { icon: "Zap", label: "Early drop access" },
+  { icon: "Gift", label: "Members-only rewards" },
+  { icon: "Award", label: "Closed community channel" },
+  { icon: "Crown", label: "Founders-list status" },
+];
+
 export const VipMembership = () => {
   const { open: openAuthDrawer } = useAuthDrawer();
   const { isAuthenticated } = useSelector((state) => state.auth || { isAuthenticated: false });
+
+  // Static editorial copy + perks.
+  const eyebrow = "Members Only";
+  const headline = "Become";
+  const highlight = "Elite";
+  const body =
+    "Get early drop access, members-only rewards, and a private channel where the next chapter previews 48 hours before anyone else.";
+  const ctaText = "Claim Elite Access";
+  const perks = DEFAULT_VIP_PERKS;
+
+  const ctaClass =
+    "inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group";
+  const ctaStyle = { boxShadow: "0 0 32px rgba(242,202,80,0.25)" };
 
   return (
     <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
@@ -1380,42 +1392,48 @@ export const VipMembership = () => {
         <div className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#f2ca50]/5 px-4 py-2 mb-6">
           <Crown className="w-3.5 h-3.5 text-[#f2ca50]" />
           <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-[#f2ca50]">
-            Members Only
+            {eyebrow}
           </span>
         </div>
         <h2 className="font-display text-[44px] md:text-[80px] leading-none text-[#FAF7F2] uppercase mb-6">
-          Become <span className="text-[#f2ca50]">Elite</span>
+          {headline}
+          {highlight ? (
+            <>
+              {" "}
+              <span className="text-[#f2ca50]">{highlight}</span>
+            </>
+          ) : null}
         </h2>
         <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
-          Get early drop access, members-only rewards, and a private channel
-          where the next chapter previews 48 hours before anyone else.
+          {body}
         </p>
 
         <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10 max-w-2xl mx-auto">
-          {[
-            ["Early drop access", Zap],
-            ["Members-only rewards", Gift],
-            ["Closed community channel", Award],
-            ["Founders-list status", Crown],
-          ].map(([label, IconComponent]) => (
-            <div key={label} className="flex items-center gap-2 text-[#d0c5af]">
-              {React.createElement(IconComponent, {
-                className: "w-4 h-4 text-[#f2ca50]",
-                strokeWidth: 1.5,
-              })}
-              <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
-                {label}
-              </span>
-            </div>
-          ))}
+          {perks.map((perk, i) => {
+            const PerkIcon = FEATURE_ICONS[perk.icon] || Crown;
+            return (
+              <div
+                key={`${perk.label}-${i}`}
+                className="flex items-center gap-2 text-[#d0c5af]"
+              >
+                <PerkIcon
+                  className="w-4 h-4 text-[#f2ca50]"
+                  strokeWidth={1.5}
+                />
+                <span className="font-mono text-[10px] tracking-[0.22em] uppercase">
+                  {perk.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         <button
-          onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')}
-          className="inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group"
-          style={{ boxShadow: "0 0 32px rgba(242,202,80,0.25)" }}
+          onClick={() => (isAuthenticated ? undefined : openAuthDrawer("register"))}
+          className={ctaClass}
+          style={ctaStyle}
         >
-          Claim Elite Access
+          {ctaText}
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
       </div>

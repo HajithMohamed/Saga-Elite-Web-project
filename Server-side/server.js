@@ -32,10 +32,7 @@ const seedCategoryTaxonomy = require("./scripts/seed-category-taxonomy");
 
 validateRuntimeConfig();const { initAgingStockJob } = require('./Utils/aging-stock-job');
 const { initRecommendationsJobs } = require('./Utils/recommendations-job');
-const { initSmartAlertsJob } = require('./Utils/smart-alerts-job');
 const { initRecommendationsDigest } = require('./Utils/recommendations-digest');
-const recommendationsRoutes = require('./Routes/recommendationsRoutes');
-const smartAlertsRoutes = require('./Routes/smartAlertsRoutes');
 
 
 const app = express();
@@ -157,8 +154,6 @@ app.use("/api/v1/offers", offerRoutes);
 app.use("/api/v1/coupons", couponRoutes);
 app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
-app.use("/api/v1/admin/recommendations", recommendationsRoutes);
-app.use("/api/v1/admin/alerts", smartAlertsRoutes);
 app.use("/api/v1/customer", customerRoutes);
 app.use("/api/v1/events", eventRoutes);
 
@@ -301,7 +296,6 @@ const runDeferredStartupTasks = async () => {
   startBankInboxWatcher();
   initAgingStockJob();
   initRecommendationsJobs();
-  initSmartAlertsJob();
   initRecommendationsDigest();
   initGuestPromoJob();
   initCartAbandonmentJob();
