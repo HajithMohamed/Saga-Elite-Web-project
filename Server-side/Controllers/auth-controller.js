@@ -738,7 +738,14 @@ const resetPassword = catchAsync(async(req, res, next)=>{
 const checkAuth = catchAsync(async (req, res, next) => {
     const user = req.userInfo;
     if (!user) {
-        return next(new AppError("User not found", 404));
+        return res.status(200).json({
+            status: "success",
+            success: false,
+            message: "No authenticated user",
+            data: {
+                user: null,
+            },
+        });
     }
     res.status(200).json({
         status: "success",

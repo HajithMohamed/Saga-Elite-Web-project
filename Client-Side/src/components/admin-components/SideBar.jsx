@@ -2,33 +2,22 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
+  Layout,
   ShoppingBag,
   ShoppingCart,
-  Star,
   LogOut,
   User,
   Package,
-  ImagePlus,
-  MessageSquare,
   Users,
   Shield,
   CreditCard,
   StarHalf,
-  FileText,
   Inbox,
-  Newspaper,
-  Settings,
-  BarChart3,
   BadgePercent,
   Tag,
   Truck,
-  Bell,
-  Globe,
-  Sparkles,
-  AlertTriangle,
-  Layout,
-  ScrollText,
   ChevronDown,
+  FolderTree,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -40,20 +29,13 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Dashboard: ["Dashboard", "Alerts"],
-   Store: ["Products", "Drops"],
-  Sales: ["Orders", "Payments", "Customers", "Reviews", "Contact Inquiries"],
-  Marketing: ["Notifications", "Offers & Deals", "Coupons", "Newsletter"],
-  Content: [
-    "Brand & About",
-    "Home Images",
-    "Policies",
-    "Footer",
-    "Announcement Bar",
-    "Contact & FAQ",
-  ],
-  Analytics: ["Analytics", "Recommendations"],
-  Settings: ["Shipping", "SEO & Branding", "Admin Team"],
+  Dashboard: ["Dashboard"],
+  Store: ["Products", "Categories", "Drops"],
+  Sales: ["Orders", "Payments", "Shipping"],
+  Marketing: ["Offers / Campaigns", "Coupons"],
+  Customers: ["Customers", "Reviews", "Contact Messages"],
+  Content: ["Content Management"],
+  Settings: ["Admin Team"],
 };
 
 const SECTION_ORDER = [
@@ -61,8 +43,8 @@ const SECTION_ORDER = [
   "Store",
   "Sales",
   "Marketing",
+  "Customers",
   "Content",
-  "Analytics",
   "Settings",
 ];
 
@@ -83,21 +65,15 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
   const [uncategorizedReviewCount, setUncategorizedReviewCount] = useState(0);
   const [agingAlertCount, setAgingAlertCount] = useState(0);
-  const [smartAlertCount, setSmartAlertCount] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [isLg, setIsLg] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
   const prevPaymentRef = useRef(0);
   const prevReviewRef = useRef(0);
   const prevAgingRef = useRef(0);
-  const prevSmartAlertRef = useRef(0);
-  const prevLowStockRef = useRef(0);
   const [paymentBounce, setPaymentBounce] = useState(0);
   const [reviewBounce, setReviewBounce] = useState(0);
   const [agingBounce, setAgingBounce] = useState(0);
-  const [smartAlertBounce, setSmartAlertBounce] = useState(0);
-  const [lowStockBounce, setLowStockBounce] = useState(0);
 
   const [expandedSections, setExpandedSections] = useState(
     SECTION_ORDER.reduce((acc, section) => ({ ...acc, [section]: true }), {})
@@ -113,7 +89,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       // permission shouldn't break the others. Catch per-request so a 403
       // on (e.g.) verifyPayments doesn't zero out reviews + aging too.
       const fallback = { data: { success: true, data: { count: 0 } } };
-      const [paymentRes, reviewRes, agingRes, smartAlertRes, lowStockRes] = await Promise.all([
+      const [paymentRes, reviewRes, agingRes] = await Promise.all([
         // Count anything that needs admin eyes — both manual-review proofs
         // and provisional OCR-matches still waiting on bank confirmation.
         axios
@@ -132,17 +108,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
             withCredentials: true,
           })
           .catch(() => fallback),
-        axios
-          .get(`${API_V1_URL}/admin/alerts?countOnly=true`, { withCredentials: true })
-          .catch(() => fallback),
-        // Low-stock badge specifically for the Products entry. Pulls warning
-        // AND critical so the admin sees one combined number on the row.
-        axios
-          .get(
-            `${API_V1_URL}/admin/alerts?countOnly=true&kind=low_stock_warning,low_stock_critical`,
-            { withCredentials: true }
-          )
-          .catch(() => fallback),
       ]);
 
       if (paymentRes.data?.success) {
@@ -156,20 +121,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       if (agingRes.data?.success) {
         setAgingAlertCount(agingRes.data.data?.count || 0);
       }
-
-      if (smartAlertRes.data?.success) {
-        setSmartAlertCount(smartAlertRes.data.data?.count || 0);
-      }
-
-      if (lowStockRes.data?.success) {
-        setLowStockCount(lowStockRes.data.data?.count || 0);
-      }
     } catch {
       setPendingPaymentCount(0);
       setUncategorizedReviewCount(0);
       setAgingAlertCount(0);
-      setSmartAlertCount(0);
-      setLowStockCount(0);
     }
   }, []);
 
@@ -223,26 +178,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
     prevAgingRef.current = a;
   }, [agingAlertCount]);
 
-  useEffect(() => {
-    const l = lowStockCount;
-    if (l > 0 && prevLowStockRef.current === 0 && l !== prevLowStockRef.current) {
-      setLowStockBounce((k) => k + 1);
-    } else if (l > prevLowStockRef.current && prevLowStockRef.current > 0) {
-      setLowStockBounce((k) => k + 1);
-    }
-    prevLowStockRef.current = l;
-  }, [lowStockCount]);
-
-  useEffect(() => {
-    const s = smartAlertCount;
-    if (s > 0 && prevSmartAlertRef.current === 0 && s !== prevSmartAlertRef.current) {
-      setSmartAlertBounce((k) => k + 1);
-    } else if (s > prevSmartAlertRef.current && prevSmartAlertRef.current > 0) {
-      setSmartAlertBounce((k) => k + 1);
-    }
-    prevSmartAlertRef.current = s;
-  }, [smartAlertCount]);
-
   useSocketEvent("payment:new_pending", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("admin:refresh", () => fetchCounts(), [fetchCounts]);
   useSocketEvent("payment:refresh", () => fetchCounts(), [fetchCounts]);
@@ -259,14 +194,6 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <LayoutDashboard className="h-5 w-5" />,
       permission: null,
     },
-    {
-      label: "Alerts",
-      path: "/admin/alerts",
-      icon: <AlertTriangle className="h-5 w-5" />,
-      badge: smartAlertCount,
-      bounceKey: smartAlertBounce,
-      permission: "manageReviews",
-    },
 
     // Store
     {
@@ -274,9 +201,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/product",
       icon: <ShoppingBag className="h-5 w-5" />,
       permission: "products",
-      badge: lowStockCount,
-      bounceKey: lowStockBounce,
-      tooltip: lowStockCount > 0 ? `${lowStockCount} product${lowStockCount === 1 ? "" : "s"} at or below low-stock threshold` : undefined,
+    },
+    {
+      label: "Categories",
+      path: "/admin/categories",
+      icon: <FolderTree className="h-5 w-5" />,
+      permission: "products",
     },
     {
       label: "Drops",
@@ -301,6 +231,14 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "verifyPayments",
     },
     {
+      label: "Shipping",
+      path: "/admin/shipping",
+      icon: <Truck className="h-5 w-5" />,
+      permission: "manageInventory",
+    },
+
+    // Customers
+    {
       label: "Customers",
       path: "/admin/users",
       icon: <Users className="h-5 w-5" />,
@@ -315,7 +253,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       permission: "manageReviews",
     },
     {
-      label: "Contact Inquiries",
+      label: "Contact Messages",
       path: "/admin/contact-inquiries",
       icon: <Inbox className="h-5 w-5" />,
       permission: null,
@@ -323,13 +261,7 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
 
     // Marketing
     {
-      label: "Notifications",
-      path: "/admin/notifications",
-      icon: <Bell className="h-5 w-5" />,
-      permission: "notifications",
-    },
-    {
-      label: "Offers & Deals",
+      label: "Offers / Campaigns",
       path: "/admin/offers",
       icon: <BadgePercent className="h-5 w-5" />,
       badge: agingAlertCount,
@@ -342,82 +274,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <Tag className="h-5 w-5" />,
       permission: "sendCampaigns",
     },
-    {
-      label: "Newsletter",
-      path: "/admin/newsletter",
-      icon: <Newspaper className="h-5 w-5" />,
-      permission: null,
-    },
-
-    // Analytics
-    {
-      label: "Analytics",
-      path: "/admin/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      permission: "viewAnalytics",
-    },
-    {
-      label: "Recommendations",
-      path: "/admin/recommendations",
-      icon: <Sparkles className="h-5 w-5" />,
-      permission: "manageReviews",
-    },
 
     // Content
     {
-      label: "Brand & About",
-      path: "/admin/about-content",
+      label: "Content Management",
+      path: "/admin/content",
       icon: <Layout className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Home Images",
-      path: "/admin/home-images",
-      icon: <ImagePlus className="h-5 w-5" />,
-      permission: "products",
-    },
-    {
-      label: "Policies",
-      path: "/admin/policies",
-      icon: <ScrollText className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Footer",
-      path: "/admin/footer",
-      icon: <FileText className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Announcement Bar",
-      path: "/admin/announcement",
-      icon: <Bell className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-    {
-      label: "Contact & FAQ",
-      path: "/admin/contact-content",
-      icon: <MessageSquare className="h-5 w-5" />,
-      permission: null,
-      superAdminOnly: true,
-    },
-
-    // Settings
-    {
-      label: "Shipping",
-      path: "/admin/shipping",
-      icon: <Truck className="h-5 w-5" />,
-      permission: "manageInventory",
-    },
-    {
-      label: "SEO & Branding",
-      path: "/admin/seo",
-      icon: <Globe className="h-5 w-5" />,
-      permission: null,
       superAdminOnly: true,
     },
   ];
@@ -426,9 +288,9 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   const menuItems = (isSuperAdminUser
     ? allMenuItems
     : allMenuItems.filter((item) => {
-        if (item.superAdminOnly) return false;
-        return !item.permission || userPerms[item.permission];
-      })
+      if (item.superAdminOnly) return false;
+      return !item.permission || userPerms[item.permission];
+    })
   ).filter((item) => !item.hidden);
 
   if (isSuperAdminUser) {
@@ -487,11 +349,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
         key={item.path + item.label}
         to={item.path}
         onClick={onClose}
-        className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
-          isActive
+        className={`group relative flex items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${isActive
             ? "border-[#f2ca50]/50 bg-[#f2ca50]/10 text-[#f2ca50] shadow-[0_0_20px_rgba(242,202,80,0.15)]"
             : "border-transparent text-[#99907c] hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
-        } ${dimmed ? "opacity-60" : ""}`}
+          } ${dimmed ? "opacity-60" : ""}`}
       >
         {isActive ? (
           <motion.div
@@ -507,11 +368,10 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
           transition={{ duration: 0.2 }}
         >
           <div
-            className={`transition-transform duration-200 ${
-              isActive
+            className={`transition-transform duration-200 ${isActive
                 ? "scale-110 text-black"
                 : "group-hover:scale-110 group-hover:text-[#f2ca50]"
-            }`}
+              }`}
           >
             {item.icon}
           </div>
@@ -545,117 +405,115 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
   };
 
   return (
-      <motion.div
-        key="admin-sidebar"
-        initial={false}
-        animate={{ x: isLg ? 0 : drawerX }}
-        transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#4d4635]/60 bg-[#0a0a0a]"
-        style={{ willChange: "transform" }}
-      >
-        <div className="border-b border-[#4d4635]/60 px-5 py-5">
-          <Link
-            to="/admin/dashboard"
-            className="flex items-center gap-3"
-            onClick={onClose}
-          >
-            <img
-              src="/LOGO.png"
-              alt="Saga Elite"
-              className="h-8 w-8 shrink-0 object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-            <div>
-              <div className="se-label text-[10px] font-bold tracking-[0.34em] text-[#f2ca50]">
-                SAGA ELITE
-              </div>
-              <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-white">
-                Admin Panel
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        <nav
-          className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
-          data-lenis-prevent="true"
-          data-testid="admin-sidebar-nav"
+    <motion.div
+      key="admin-sidebar"
+      initial={false}
+      animate={{ x: isLg ? 0 : drawerX }}
+      transition={{ type: "spring", stiffness: 320, damping: 30 }}
+      className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#4d4635]/60 bg-[#0a0a0a]"
+      style={{ willChange: "transform" }}
+    >
+      <div className="border-b border-[#4d4635]/60 px-5 py-5">
+        <Link
+          to="/admin/dashboard"
+          className="flex items-center gap-3"
+          onClick={onClose}
         >
-          {renderGroups.map((group, groupIdx) => {
-            const isExpanded = group.section ? expandedSections[group.section] : true;
-            return (
-              <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
-                {group.section ? (
-                  <div 
-                    className="flex cursor-pointer items-center justify-between px-4 pb-1 pt-4 select-none group"
-                    onClick={() => toggleSection(group.section)}
-                  >
-                    <p className="font-sans text-sm font-black uppercase tracking-[0.2em] text-white transition-colors group-hover:text-[#D4AF37]">
-                      {group.section}
-                    </p>
-                    <ChevronDown 
-                      className={`h-4 w-4 text-white transition-transform duration-200 group-hover:text-[#D4AF37] ${isExpanded ? 'rotate-180' : ''}`}
-                    />
-                  </div>
-                ) : null}
-                {isExpanded && (
-                  <div className={`space-y-2 ${group.section ? "ml-3" : ""}`}>
-                    {group.items.map(renderItem)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
+          <img
+            src="/LOGO.png"
+            alt="Saga Elite"
+            className="h-8 w-8 shrink-0 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+          <div>
+            <div className="se-label text-[10px] font-bold tracking-[0.34em] text-[#f2ca50]">
+              SAGA ELITE
+            </div>
+            <div className="se-body mt-0.5 text-[10px] tracking-[0.22em] text-white">
+              Admin Panel
+            </div>
+          </div>
+        </Link>
+      </div>
 
-        <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
-          <Link
-            to="/admin/account"
-            onClick={onClose}
-            className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${
-              location.pathname === "/admin/account"
-                ? "border-[#f2ca50]/40 bg-[#f2ca50]/15 text-white"
-                : "border-transparent text-white hover:border-[#4d4635]/60 hover:bg-[#131313]"
+      <nav
+        className="flex-1 px-4 py-6 overflow-y-auto custom-scrollbar"
+        data-lenis-prevent="true"
+        data-testid="admin-sidebar-nav"
+      >
+        {renderGroups.map((group, groupIdx) => {
+          const isExpanded = group.section ? expandedSections[group.section] : true;
+          return (
+            <div key={`group-${groupIdx}-${group.section || "top"}`} className="space-y-2">
+              {group.section ? (
+                <div
+                  className="flex cursor-pointer items-center justify-between px-4 pb-1 pt-4 select-none group"
+                  onClick={() => toggleSection(group.section)}
+                >
+                  <p className="font-sans text-sm font-black uppercase tracking-[0.2em] text-white transition-colors group-hover:text-[#D4AF37]">
+                    {group.section}
+                  </p>
+                  <ChevronDown
+                    className={`h-4 w-4 text-white transition-transform duration-200 group-hover:text-[#D4AF37] ${isExpanded ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              ) : null}
+              {isExpanded && (
+                <div className={`space-y-2 ${group.section ? "ml-3" : ""}`}>
+                  {group.items.map(renderItem)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="space-y-3 border-t border-[#4d4635]/60 p-6">
+        <Link
+          to="/admin/account"
+          onClick={onClose}
+          className={`group relative flex w-full items-center gap-4 rounded-lg border px-4 py-3 transition-all duration-200 ${location.pathname === "/admin/account"
+              ? "border-[#f2ca50]/40 bg-[#f2ca50]/15 text-white"
+              : "border-transparent text-white hover:border-[#4d4635]/60 hover:bg-[#131313]"
             }`}
-          >
-            {location.pathname === "/admin/account" ? (
-              <motion.div
-                layoutId="sidebar-indicator"
-                className="absolute bottom-0 left-0 top-0 w-[3px] rounded-r-full bg-[#f2ca50]"
-                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-              />
-            ) : null}
+        >
+          {location.pathname === "/admin/account" ? (
             <motion.div
-              className="flex items-center gap-4"
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.2 }}
-            >
-              <User className="h-5 w-5" />
-              <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
-                My Account
-              </span>
-            </motion.div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoading}
-            className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${
-              isLoading
-                ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
-                : "text-white hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
-            }`}
+              layoutId="sidebar-indicator"
+              className="absolute bottom-0 left-0 top-0 w-[3px] rounded-r-full bg-[#f2ca50]"
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            />
+          ) : null}
+          <motion.div
+            className="flex items-center gap-4"
+            whileHover={{ x: 2 }}
+            transition={{ duration: 0.2 }}
           >
-            <LogOut className="h-5 w-5" />
+            <User className="h-5 w-5" />
             <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
-              {isLoading ? "Logging out…" : "Log Out"}
+              My Account
             </span>
-          </button>
-        </div>
-      </motion.div>
+          </motion.div>
+        </Link>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoading}
+          className={`flex w-full items-center gap-4 rounded-lg border border-transparent px-4 py-3 transition-all ${isLoading
+              ? "cursor-not-allowed bg-[#131313] text-[#99907c]"
+              : "text-white hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+            }`}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-sans text-[13px] font-semibold capitalize tracking-wide">
+            {isLoading ? "Logging out…" : "Log Out"}
+          </span>
+        </button>
+      </div>
+    </motion.div>
   );
 };
 

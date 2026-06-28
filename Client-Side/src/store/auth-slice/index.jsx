@@ -87,6 +87,9 @@ export const checkAuthAction = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const response = await axiosInstance.get(`/auth/check-auth`);
+      if (response.data?.success === false) {
+        localStorage.removeItem('authToken');
+      }
       return response.data;
     } catch (error) {
       if (error?.response?.status === 401) {
@@ -349,7 +352,9 @@ const authSlice = createSlice({
       })
       .addCase(checkAuthAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        const isSuccess = action.payload.success || action.payload.status === "success";
+        const isSuccess =
+          action.payload.success === true ||
+          (action.payload.success !== false && action.payload.status === "success");
         state.user = isSuccess ? action.payload.data?.user : null;
         state.isAuthenticated = !!isSuccess;
       })

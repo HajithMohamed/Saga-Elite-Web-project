@@ -59,6 +59,8 @@ const ABOUT_KEYS = [
   // Footer
   "footer_brand_description",
   "footer_quick_links",
+  "footer_shop_links",
+  "footer_support_links",
   "footer_payment_methods",
   "footer_copyright",
   // Announcement bar
@@ -67,6 +69,11 @@ const ABOUT_KEYS = [
   "faq_items",
   "contact_form_settings",
   "whatsapp_cta",
+  // Homepage / editorial CMS (Phase 2)
+  "site_stats",
+  "brand_features",
+  "homepage_sections",
+  "vip_membership",
 ];
 
 const REWARD_REVIEW_DISCOUNT_KEY = "reward_review_discount";
@@ -82,7 +89,11 @@ const DEFAULT_REWARD_REVIEW_DISCOUNT = {
 
 const ALLOWED_KEYS = new Set([
   ...ABOUT_KEYS,
+  "branding",
+  "seo_pages",
+  "maintenance",
   "bank_details",
+  "low_stock_global_threshold",
   REWARD_REVIEW_DISCOUNT_KEY,
 ]);
 

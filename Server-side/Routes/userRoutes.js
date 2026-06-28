@@ -1,6 +1,8 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const paginatedResult = require("../Middlewares/pagination-middleware");
+const User = require("../Models/User");
 const {
   validateObjectIdParam,
   validateAdminUserStatus,
@@ -42,7 +44,7 @@ router.use(authMiddleware);
 router.get("/me", getMyProfile);
 router.patch("/me", updateMyProfile);
 
-router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
+router.get("/admin/users", adminMiddleware, requirePermission("users"), paginatedResult.adminUsers(User), getAdminUsers);
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
 router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
 router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);

@@ -27,6 +27,8 @@ import {
   RailToggleRow,
   ProgressBar,
 } from "@/components/admin-components/_form";
+import Pagination from "@/components/common-components/Pagination";
+import usePagination from "@/hooks/use-pagination";
 
 const ISSUED_FOR_OPTIONS = [
   { value: "manual", label: "Manual" },
@@ -123,6 +125,11 @@ const AdminCoupons = () => {
   const totalRedemptions = useMemo(
     () => coupons.reduce((sum, c) => sum + (c.usedCount || 0), 0),
     [coupons]
+  );
+
+  const { page, setPage, pageCount, total, pageItems, pageSize } = usePagination(
+    coupons,
+    10
   );
 
   const resetForm = () => {
@@ -939,7 +946,7 @@ const AdminCoupons = () => {
             </div>
           ) : (
             <div className="divide-y divide-white/[0.05]">
-              {coupons.map((c) => (
+              {pageItems.map((c) => (
                 <div
                   key={c._id}
                   className="flex flex-col gap-4 p-6 hover:bg-white/[0.02] md:flex-row md:items-center md:justify-between"
@@ -1030,6 +1037,15 @@ const AdminCoupons = () => {
               ))}
             </div>
           )}
+          <Pagination
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            total={total}
+            pageSize={pageSize}
+            label="coupons"
+            className="px-6 pb-5"
+          />
         </div>
       )}
 

@@ -101,9 +101,8 @@ const AdminBottomNav = ({ onMenuToggle }) => {
       <Link
         key={item.path}
         to={item.path}
-        className={`relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 transition-colors ${
-          isActive ? "text-[#f2ca50]" : "text-[#99907c]"
-        }`}
+        className={`relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 transition-colors ${isActive ? "text-[#f2ca50]" : "text-[#99907c]"
+          }`}
       >
         {isActive ? (
           <motion.span

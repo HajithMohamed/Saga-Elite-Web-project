@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
   BellRing,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   Crown,
@@ -21,6 +23,7 @@ import {
   StickyNote,
   Plus,
   Loader2,
+  Activity, Sparkles, CheckCircle2, Circle, Heart, Truck, Package, MessageSquare, ArrowUpRight, ArrowUp, ArrowDown, Eye, AlertTriangle, TrendingUp, Filter, Download,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
@@ -57,6 +60,8 @@ const SORT_OPTIONS = [
   { value: "orders_desc", label: "Order count ↓" },
   { value: "last_active", label: "Last active" },
 ];
+
+const USER_PAGE_LIMIT = 10;
 
 const MEMBERSHIP_STYLES = {
   vip: "border-[#f2ca50] bg-[#f2ca50]/15 text-[#f2ca50]",
@@ -129,13 +134,13 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-LK", {
 const statCards = [
   {
     key: "totalUsers",
-    label: "Total Accounts",
+    label: "Total Customers",
     icon: Users,
     accent: "text-[#D4AF37]",
   },
   {
     key: "activeUsers",
-    label: "Active Users",
+    label: "Active Customers",
     icon: UserCheck,
     accent: "text-emerald-400",
   },
@@ -177,11 +182,6 @@ const statusBadgeClasses = (isActive) =>
     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
     : "border-red-500/20 bg-red-500/10 text-red-300";
 
-const roleBadgeClasses = (role) =>
-  role === "user"
-    ? "border-white/10 bg-white/5 text-gray-200"
-    : "border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]";
-
 const providerBadgeClasses = (provider) =>
   provider === "google"
     ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
@@ -189,10 +189,10 @@ const providerBadgeClasses = (provider) =>
 
 const UsersPage = () => {
   const dispatch = useDispatch();
-  const { user: currentUser } = useSelector((state) => state.auth);
   const {
     users,
     stats,
+    pagination,
     selectedUser,
     isListLoading,
     isDetailLoading,
@@ -203,18 +203,35 @@ const UsersPage = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState("all");
   const [membershipFilter, setMembershipFilter] = useState("all");
   const [sortMode, setSortMode] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
   const [tagSubmitting, setTagSubmitting] = useState(null);
 
+  const listQuery = useMemo(
+    () => ({
+      page: currentPage,
+      limit: USER_PAGE_LIMIT,
+      search: searchTerm.trim(),
+      status: statusFilter,
+      membership: membershipFilter,
+      sort: sortMode,
+    }),
+    [currentPage, membershipFilter, searchTerm, sortMode, statusFilter]
+  );
+
+  const loadUsers = useCallback(
+    (overrides = {}) => dispatch(fetchAdminUsers({ ...listQuery, ...overrides })),
+    [dispatch, listQuery]
+  );
+
   useEffect(() => {
-    dispatch(fetchAdminUsers());
-  }, [dispatch]);
+    loadUsers();
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!users.length) {
@@ -237,54 +254,37 @@ const UsersPage = () => {
     }
   }, [dispatch, selectedUserId]);
 
-  const filteredUsers = useMemo(
-    () =>
-      users
-        .filter((user) => {
-          const matchesSearch =
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.provider.toLowerCase().includes(searchTerm.toLowerCase());
+  const paginationTotal = pagination?.total || 0;
+  const paginationLimit = pagination?.limit || USER_PAGE_LIMIT;
+  const paginationPage = pagination?.page || currentPage;
+  const totalPages =
+    pagination?.totalPages ||
+    Math.max(1, Math.ceil(paginationTotal / paginationLimit));
+  const showingFrom =
+    paginationTotal === 0 ? 0 : (paginationPage - 1) * paginationLimit + 1;
+  const showingTo =
+    paginationTotal === 0
+      ? 0
+      : Math.min(showingFrom + users.length - 1, paginationTotal);
 
-          const matchesStatus =
-            statusFilter === "all" ||
-            (statusFilter === "active" && user.isActive) ||
-            (statusFilter === "inactive" && !user.isActive);
+  const pageNumbers = useMemo(() => {
+    const maxButtons = 5;
+    const start = Math.max(
+      1,
+      Math.min(paginationPage - 2, totalPages - maxButtons + 1)
+    );
+    const end = Math.min(totalPages, start + maxButtons - 1);
 
-          const matchesRole = roleFilter === "all" || user.role === roleFilter;
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [paginationPage, totalPages]);
 
-          const matchesMembership = (() => {
-            if (membershipFilter === "all") return true;
-            if (membershipFilter === "blocked") return !user.isActive;
-            return (user.membership || "standard") === membershipFilter;
-          })();
+  useEffect(() => {
+    if (!isListLoading && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, isListLoading, totalPages]);
 
-          return matchesSearch && matchesStatus && matchesRole && matchesMembership;
-        })
-        .sort((a, b) => {
-          switch (sortMode) {
-            case "spent_desc":
-              return (
-                (b.relationship?.totalSpent || 0) - (a.relationship?.totalSpent || 0)
-              );
-            case "orders_desc":
-              return (
-                (b.relationship?.orderCount || 0) - (a.relationship?.orderCount || 0)
-              );
-            case "last_active": {
-              const aDate = new Date(a.relationship?.lastOrderAt || 0).getTime();
-              const bDate = new Date(b.relationship?.lastOrderAt || 0).getTime();
-              return bDate - aDate;
-            }
-            case "newest":
-            default:
-              return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-          }
-        }),
-    [membershipFilter, roleFilter, searchTerm, sortMode, statusFilter, users]
-  );
-
-  const bulk = useBulkSelection(filteredUsers);
+  const bulk = useBulkSelection(users);
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkTagDraft, setBulkTagDraft] = useState("vip");
   const runBulkUserTag = async (mode) => {
@@ -301,7 +301,7 @@ const UsersPage = () => {
         variant: "success",
       });
       bulk.clear();
-      dispatch(fetchAdminUsers());
+      await loadUsers().unwrap();
     } catch (err) {
       toast({
         title: "Bulk tag failed",
@@ -315,13 +315,13 @@ const UsersPage = () => {
 
   const handleRefresh = async () => {
     try {
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
       if (selectedUserId) {
         await dispatch(fetchAdminUserDetail(selectedUserId)).unwrap();
       }
       toast({
-        title: "User data refreshed",
-        description: "Latest account activity has been loaded.",
+        title: "Customer data refreshed",
+        description: "Latest customer activity has been loaded.",
         variant: "success",
       });
     } catch (refreshError) {
@@ -346,11 +346,11 @@ const UsersPage = () => {
         })
       ).unwrap();
       toast({
-        title: nextIsActive ? "User activated" : "User deactivated",
+        title: nextIsActive ? "Customer activated" : "Customer deactivated",
         description: `${selectedUser.email} is now ${nextIsActive ? "active" : "inactive"}.`,
         variant: "success",
       });
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
     } catch (statusError) {
       toast({
         title: "Status update failed",
@@ -430,7 +430,7 @@ const UsersPage = () => {
         description: `${selectedUser.email} is now ${nextMembership}.`,
         variant: "success",
       });
-      await dispatch(fetchAdminUsers()).unwrap();
+      await loadUsers().unwrap();
     } catch (membershipError) {
       toast({
         title: "Membership update failed",
@@ -465,12 +465,16 @@ const UsersPage = () => {
     try {
       await dispatch(deleteAdminUser(selectedUser._id)).unwrap();
       toast({
-        title: "User deleted",
+        title: "Customer deleted",
         description: `${selectedUser.email} has been removed from the system.`,
         variant: "success",
       });
       setSelectedUserId(null);
-      await dispatch(fetchAdminUsers()).unwrap();
+      const nextPage = users.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      if (nextPage !== currentPage) {
+        setCurrentPage(nextPage);
+      }
+      await loadUsers({ page: nextPage }).unwrap();
     } catch (deleteError) {
       toast({
         title: "Delete failed",
@@ -480,11 +484,6 @@ const UsersPage = () => {
     }
   };
 
-  const canManageSelectedUser =
-    selectedUser &&
-    selectedUser.role === "user" &&
-    selectedUser._id !== currentUser?._id;
-
   return (
     <motion.div
       variants={pageVariants}
@@ -492,870 +491,499 @@ const UsersPage = () => {
       animate="visible"
       className="w-full min-h-0"
     >
-    <AdminPage
-      eyebrow="Admin User Management"
-      title="Users"
-      description="Review account health, activity, and customer relationship details."
-    >
-      <div className="flex w-full flex-col gap-8">
-        <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <AdminPage
+        eyebrow="Customer Management"
+        title="Customer 360"
+        description="Review account health, activity, and customer relationship details."
+      >
+        <div className="flex w-full flex-col gap-8 text-white">
+          {/* Header & KPI Strip */}
+          <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">
-                Admin User Management
-              </p>
               <h1 className="mt-4 text-4xl font-serif font-semibold text-white">
-                See how every user is connected to Saga Elite.
+                Customer Intelligence
               </h1>
               <p className="mt-4 text-sm leading-7 text-gray-400">
-                Review account health, recent activity, orders, wishlist behavior, and system
-                relationship before deciding to deactivate or remove an account.
+                The clientele behind every drop. Profiles, intent signals, and bespoke actions — curated for the Saga Elite house.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isListLoading || isDetailLoading || isMutating}
-              className="inline-flex items-center justify-center gap-3 self-start rounded-full border border-[#D4AF37]/30 bg-black/70 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh data
-            </button>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {statCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.key}
-                className="rounded-[1.75rem] border border-white/10 bg-[#0d0d0d] p-5"
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isListLoading || isDetailLoading || isMutating}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37]/40 disabled:opacity-50"
               >
-                <div className="flex items-center justify-between">
-                  <div className="rounded-2xl border border-white/10 bg-black/60 p-3">
-                    <Icon className={`h-5 w-5 ${card.accent}`} />
+                <RefreshCcw className="h-4 w-4" /> Refresh
+              </button>
+            </div>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            {statCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.key} className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 transition hover:border-[#D4AF37]/30 group">
+                  <div className="flex items-start justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">{card.label}</span>
+                    <Icon className={`h-4 w-4 ${card.accent}`} />
                   </div>
-                  <span className="text-xs uppercase tracking-[0.22em] text-gray-500">
-                    Live
-                  </span>
+                  <div className="mt-4 text-3xl font-serif font-semibold text-white">
+                    {stats?.[card.key]?.toLocaleString() || "0"}
+                  </div>
+                  <div className="absolute -bottom-px left-0 w-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent transition-all duration-700 group-hover:w-full" />
                 </div>
-                <p className="mt-5 text-sm uppercase tracking-[0.22em] text-gray-500">
-                  {card.label}
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-white">
-                  {stats?.[card.key] ?? 0}
-                </p>
-              </div>
-            );
-          })}
-        </section>
+              );
+            })}
+             <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 transition hover:border-[#D4AF37]/30 group">
+                <div className="flex items-start justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Predicted Churn</span>
+                  <AlertTriangle className="h-4 w-4 text-rose-400" />
+                </div>
+                <div className="mt-4 text-3xl font-serif font-semibold text-white">Tracking</div>
+                <div className="absolute -bottom-px left-0 w-0 h-px bg-gradient-to-r from-transparent via-rose-500 to-transparent transition-all duration-700 group-hover:w-full" />
+             </div>
+          </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.05fr_1.4fr]">
-          <div className="rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-6">
+          {/* Filters + List (Full width) */}
+          <section className="rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-6">
             <div className="flex flex-col gap-4 border-b border-white/10 pb-5">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Accounts</h2>
-                <p className="mt-2 text-sm text-gray-400">
-                  Filter by status and open any user to inspect their activity and system
-                  relationship.
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                  <input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by email, role, or provider"
-                    className="w-full rounded-2xl border border-white/10 bg-black/70 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[#D4AF37]"
-                  />
-                </label>
-
-                <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex gap-2 flex-wrap">
+                  {MEMBERSHIP_FILTER_TABS.map((tab) => (
+                    <button
+                      key={tab.value}
+                      onClick={() => {
+                        setMembershipFilter(tab.value);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 text-xs rounded-sm border transition-all ${
+                        membershipFilter === tab.value
+                          ? "border-[#D4AF37]/60 bg-[#D4AF37]/10 text-[#D4AF37]"
+                          : "border-white/10 bg-black/40 text-gray-400 hover:border-white/30 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                      placeholder="Search customers..."
+                      className="h-9 w-64 rounded-sm border border-white/10 bg-black/60 pl-9 pr-3 text-xs text-white outline-none focus:border-[#D4AF37]/50 transition"
+                    />
+                  </label>
                   <select
                     value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
+                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                    className="h-9 rounded-sm border border-white/10 bg-black/60 px-3 text-xs text-white outline-none focus:border-[#D4AF37]/50"
                   >
-                    <option value="all">All statuses</option>
-                    <option value="active">Active only</option>
-                    <option value="inactive">Inactive only</option>
+                    <option value="all">Any Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                   </select>
-
-                  <select
-                    value={roleFilter}
-                    onChange={(event) => setRoleFilter(event.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
-                  >
-                    <option value="all">All roles</option>
-                    <option value="user">Customers</option>
-                    <option value="admin">Admins</option>
-                    <option value="superadmin">Superadmins</option>
-                  </select>
-                </div>
-
-                <select
-                  value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none transition focus:border-[#D4AF37]"
-                >
-                  {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      Sort by — {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {MEMBERSHIP_FILTER_TABS.map((tab) => {
-                    const active = membershipFilter === tab.value;
-                    return (
-                      <button
-                        key={tab.value}
-                        type="button"
-                        onClick={() => setMembershipFilter(tab.value)}
-                        className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
-                          active
-                            ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                            : "border-white/10 text-white/60 hover:text-white hover:border-white/30"
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-5">
               {isListLoading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <SkeletonCard key={index} className="h-28" />
-                  ))}
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
-                  No users matched the current filters.
-                </div>
+                 <div className="space-y-3">
+                   {Array.from({ length: 5 }).map((_, index) => (
+                     <SkeletonCard key={index} className="h-16" />
+                   ))}
+                 </div>
+              ) : users.length === 0 ? (
+                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
+                   No customers matched the current filters.
+                 </div>
               ) : (
-                <motion.div
-                  className="space-y-3"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-5 py-3">
-                  <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all visible customers"
-                      checked={bulk.isAllSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = bulk.isSomeSelected;
-                      }}
-                      onChange={bulk.toggleAll}
-                      className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
-                      data-testid="admin-bulk-select-all"
-                    />
-                    Select all
-                  </label>
-                  <span className="text-[10px] uppercase tracking-widest text-white/40">Tag:</span>
-                  <select
-                    value={bulkTagDraft}
-                    onChange={(e) => setBulkTagDraft(e.target.value)}
-                    className="rounded-md border border-white/10 bg-black px-2 py-1 text-xs text-white"
-                  >
-                    {BULK_USER_TAGS.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-                {filteredUsers.map((user) => (
-                  <div key={user._id} className="relative">
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${user.email}`}
-                      checked={bulk.isSelected(user._id)}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        bulk.toggle(user._id);
-                      }}
-                      className="absolute top-4 left-4 z-10 h-4 w-4 cursor-pointer accent-[#D4AF37]"
-                      data-testid="admin-bulk-row-select"
-                    />
-                  <motion.button
-                    type="button"
-                    variants={itemVariants}
-                    whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => setSelectedUserId(user._id)}
-                    className={`w-full rounded-[1.5rem] border p-5 pl-12 text-left transition ${
-                      bulk.isSelected(user._id)
-                        ? "border-[#D4AF37]/60 bg-[#15120a]"
-                        : selectedUserId === user._id
-                        ? "border-[#D4AF37] bg-[#15120a]"
-                        : "border-white/10 bg-[#101010] hover:border-[#D4AF37]/40 hover:bg-[#131313]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusBadge status={user.isActive ? "active" : "inactive"} />
-                          <span
-                            className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${roleBadgeClasses(user.role)}`}
-                          >
-                            {user.role}
-                          </span>
-                          <span
-                            className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${providerBadgeClasses(user.provider)}`}
-                          >
-                            {user.provider}
-                          </span>
-                          {user.membership && user.membership !== "standard" ? (
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(user.membership)}`}
-                            >
-                              {user.membership === "vip" ? (
-                                <Crown className="h-3 w-3" />
-                              ) : null}
-                              {user.membership}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-4 flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#9a7a1e] text-xs font-bold text-black">
-                            {(user.email || "?").slice(0, 2).toUpperCase()}
-                          </div>
-                          <p className="truncate text-base font-semibold text-white">{user.email}</p>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-4 text-xs uppercase tracking-[0.18em] text-gray-500">
-                          <span>{user.relationship.orderCount} orders</span>
-                          <span>{user.relationship.wishlistCount} wishlist</span>
-                          <span>{user.relationship.cartCount} cart</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-xs uppercase tracking-[0.22em] text-gray-500">
-                          Spent
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-[#D4AF37]">
-                          {formatMoney(user.relationship.totalSpent)}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
-                  </div>
-                ))}
-                </motion.div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-6">
-            {isDetailLoading && selectedUser ? (
-              <div className="space-y-4">
-                <div className="h-28 animate-pulse rounded-[1.5rem] bg-[#111111]" />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="h-52 animate-pulse rounded-[1.5rem] bg-[#111111]" />
-                  <div className="h-52 animate-pulse rounded-[1.5rem] bg-[#111111]" />
-                </div>
-                <div className="h-72 animate-pulse rounded-[1.5rem] bg-[#111111]" />
-              </div>
-            ) : selectedUser ? (
-              <div className="space-y-6">
-                <section className="rounded-[1.75rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,_rgba(212,175,55,0.08),_rgba(0,0,0,0.15))] p-6">
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${statusBadgeClasses(selectedUser.isActive)}`}
-                        >
-                          {selectedUser.isActive ? "Active" : "Inactive"}
-                        </span>
-                        <span
-                          className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${roleBadgeClasses(selectedUser.role)}`}
-                        >
-                          {selectedUser.role}
-                        </span>
-                        <span
-                          className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${providerBadgeClasses(selectedUser.provider)}`}
-                        >
-                          {selectedUser.provider}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-black/50 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-gray-300">
-                          {selectedUser.isVerified ? "Verified" : "Unverified"}
-                        </span>
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em] ${membershipBadgeClasses(selectedUser.membership)}`}
-                        >
-                          {selectedUser.membership === "vip" ? (
-                            <Crown className="h-3 w-3" />
-                          ) : null}
-                          {selectedUser.membership || "standard"}
-                        </span>
-                      </div>
-
-                      <h2 className="mt-5 break-all text-3xl font-serif font-semibold text-white">
-                        {selectedUser.email}
-                      </h2>
-
-                      <div className="mt-5 grid gap-3 text-sm text-gray-300 md:grid-cols-2">
-                        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
-                          <Mail className="h-4 w-4 text-[#D4AF37]" />
-                          <span className="truncate">{selectedUser.email}</span>
-                        </div>
-                        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
-                          <Clock3 className="h-4 w-4 text-[#D4AF37]" />
-                          <span>Joined {formatDate(selectedUser.createdAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
-                      <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
-                        <button
-                          type="button"
-                          onClick={handleStatusToggle}
-                          disabled={!canManageSelectedUser || isMutating}
-                          className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {selectedUser.isActive ? "Deactivate User" : "Activate User"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setResetConfirmOpen(true)}
-                          disabled={!canManageSelectedUser || isMutating}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-5 py-3 text-sm font-semibold text-[#D4AF37] transition hover:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <KeyRound className="h-4 w-4" />
-                          Reset Password
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteConfirmOpen(true)}
-                          disabled={!canManageSelectedUser || isMutating}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:border-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete User
-                        </button>
-                        <select
-                          value={selectedUser.membership || "standard"}
-                          onChange={(e) => handleMembershipChange(e.target.value)}
-                          disabled={!canManageSelectedUser || isMutating}
-                          className="rounded-2xl border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition focus:border-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="standard">Membership: Standard</option>
-                          <option value="elite">Membership: Elite</option>
-                          <option value="rare">Membership: Rare</option>
-                          <option value="legend">Membership: Legend</option>
-                          <option value="vip">Membership: VIP</option>
-                        </select>
-                      </div>
-                      <ConfirmInline
-                        show={deleteConfirmOpen && !!selectedUser}
-                        message={
-                          selectedUser
-                            ? `Delete ${selectedUser.email}? This removes the customer account and related notifications.`
-                            : ""
-                        }
-                        onCancel={() => setDeleteConfirmOpen(false)}
-                        onConfirm={executeDeleteConfirmed}
-                        className="w-full max-w-md"
-                      />
-                      <ConfirmInline
-                        show={resetConfirmOpen && !!selectedUser}
-                        message={
-                          selectedUser
-                            ? `Send a password reset OTP to ${selectedUser.email}?`
-                            : ""
-                        }
-                        onCancel={() => setResetConfirmOpen(false)}
-                        onConfirm={executeResetPasswordConfirmed}
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <p className="text-xs uppercase tracking-[0.22em] text-gray-500">Total spent</p>
-                    <p className="mt-3 text-2xl font-semibold text-[#D4AF37]">
-                      {formatMoney(selectedUser.relationship.totalSpent)}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <p className="text-xs uppercase tracking-[0.22em] text-gray-500">Orders</p>
-                    <p className="mt-3 text-2xl font-semibold text-white">
-                      {selectedUser.relationship.orderCount}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <p className="text-xs uppercase tracking-[0.22em] text-gray-500">Wishlist items</p>
-                    <p className="mt-3 text-2xl font-semibold text-white">
-                      {selectedUser.relationship.wishlistCount}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <p className="text-xs uppercase tracking-[0.22em] text-gray-500">Unread alerts</p>
-                    <p className="mt-3 text-2xl font-semibold text-white">
-                      {selectedUser.relationship.unreadNotifications}
-                    </p>
-                  </div>
-                </section>
-
-                <section className="grid gap-4 xl:grid-cols-2">
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <TagIcon className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Customer Tags</h3>
-                      </div>
-                      {(selectedUser.tags?.length || 0) > 0 ? (
-                        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
-                          {selectedUser.tags.length} active
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-gray-500">
-                      Internal segmentation. Used by Marketing for targeted notifications and Recommendations for cohort analysis.
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {CUSTOMER_TAGS.map((tag) => {
-                        const isActive = (selectedUser.tags || []).includes(tag.key);
-                        const isPending = tagSubmitting === tag.key;
+                <div className="overflow-x-auto scrollbar-thin rounded-xl border border-white/10">
+                  <table className="w-full text-sm text-left whitespace-nowrap">
+                    <thead className="bg-[#111111] uppercase tracking-[0.18em] text-[10px] text-gray-400 border-b border-white/10">
+                      <tr>
+                        <th className="px-5 py-4 w-12">
+                          <input
+                            type="checkbox"
+                            checked={bulk.isAllSelected}
+                            onChange={bulk.toggleAll}
+                            className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                          />
+                        </th>
+                        <th className="px-4 py-4 font-semibold">Customer</th>
+                        <th className="px-4 py-4 font-semibold">Membership</th>
+                        <th className="px-4 py-4 font-semibold text-right">Spent</th>
+                        <th className="px-4 py-4 font-semibold text-center">Orders</th>
+                        <th className="px-4 py-4 font-semibold">Tags</th>
+                        <th className="px-4 py-4 font-semibold">Joined / Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(user => {
+                        const isSelectedRow = selectedUserId === user._id;
                         return (
-                          <button
-                            key={tag.key}
-                            type="button"
-                            onClick={() => handleTagToggle(tag.key)}
-                            disabled={isPending}
-                            title={tag.description}
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                              isActive
-                                ? tag.accent
-                                : "border-white/10 bg-white/[0.03] text-gray-400 hover:border-white/20 hover:text-white"
+                          <tr
+                            key={user._id}
+                            onClick={() => setSelectedUserId(user._id)}
+                            className={`border-b border-white/5 cursor-pointer transition-colors ${
+                              isSelectedRow ? "bg-[#181510] border-l-2 border-l-[#D4AF37]" : "hover:bg-[#151515] border-l-2 border-l-transparent"
                             }`}
                           >
-                            {isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  isActive ? "bg-current" : "bg-white/20"
-                                }`}
+                            <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={bulk.isSelected(user._id)}
+                                onChange={() => bulk.toggle(user._id)}
+                                className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
                               />
-                            )}
-                            {tag.label}
-                          </button>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-white/10 text-xs font-bold text-[#D4AF37]">
+                                  {(user.email || "?").slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-white tracking-wide text-[13px]">{user.email}</span>
+                                  <span className="text-[10px] font-mono text-gray-500 mt-0.5">{user._id}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] ${membershipBadgeClasses(user.membership)}`}
+                              >
+                                {user.membership === "vip" && <Crown className="h-2.5 w-2.5" />}
+                                {user.membership || "standard"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-right font-mono text-[13px] text-[#D4AF37]">
+                              {formatMoney(user.relationship.totalSpent)}
+                            </td>
+                            <td className="px-4 py-4 text-center font-mono text-[13px] text-gray-300">
+                              {user.relationship.orderCount}
+                            </td>
+                            <td className="px-4 py-4 min-w-[200px]">
+                              <div className="flex flex-wrap gap-1.5 max-w-[240px]">
+                                {user.tags?.slice(0, 3).map(tag => (
+                                  <span key={tag} className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-sm text-[9px] uppercase text-gray-400">
+                                    {tag.replace('_', ' ')}
+                                  </span>
+                                ))}
+                                {(user.tags?.length || 0) > 3 && (
+                                  <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-sm text-[9px] text-gray-500">
+                                    +{user.tags.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col items-start gap-1">
+                                <StatusBadge status={user.isActive ? "active" : "inactive"} />
+                                <span className="text-[10px] text-gray-500">{formatDate(user.createdAt)}</span>
+                              </div>
+                            </td>
+                          </tr>
                         );
                       })}
-                    </div>
-                  </div>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                 Showing {showingFrom}-{showingTo} of {paginationTotal}
+               </div>
+               <div className="flex items-center gap-2">
+                 <button
+                   type="button"
+                   disabled={paginationPage <= 1 || isListLoading}
+                   onClick={() => setCurrentPage(Math.max(1, paginationPage - 1))}
+                   className="h-8 px-3 rounded-sm border border-white/10 bg-transparent text-gray-400 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:pointer-events-none transition"
+                 >
+                   Prev
+                 </button>
+                 <span className="text-gray-500 font-mono text-[11px] px-2">{paginationPage} / {totalPages}</span>
+                 <button
+                   type="button"
+                   disabled={paginationPage >= totalPages || isListLoading}
+                   onClick={() => setCurrentPage(Math.min(totalPages, paginationPage + 1))}
+                   className="h-8 px-3 rounded-sm border border-white/10 bg-transparent text-gray-400 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:pointer-events-none transition"
+                 >
+                   Next
+                 </button>
+               </div>
+            </div>
+          </section>
 
-                  <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                    <div className="flex items-center gap-3">
-                      <StickyNote className="h-5 w-5 text-[#D4AF37]" />
-                      <h3 className="text-lg font-semibold text-white">Admin Notes</h3>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-gray-500">
-                      Append-only. Captures who said what for support escalations.
-                    </p>
+          {/* 360 Detail View below the list */}
+          {selectedUser && (
+             <>
+             <div className="flex items-center gap-4 py-2">
+                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent flex-1" />
+                <span className="font-serif text-[#D4AF37] text-xl">Customer 360</span>
+                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent flex-1" />
+             </div>
+             
+             {isDetailLoading ? (
+               <div className="flex items-center justify-center p-12">
+                 <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+               </div>
+             ) : (
+               <section className="grid grid-cols-12 gap-5">
+                 {/* LEFT PANE - Profile, Actions, Notes */}
+                 <aside className="col-span-12 lg:col-span-3 space-y-5">
+                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-6 relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: "radial-gradient(circle at top, rgba(212,175,55,0.15), transparent 70%)" }} />
+                      <div className="relative text-center flex flex-col items-center">
+                        <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] mb-4 ${membershipBadgeClasses(selectedUser.membership)}`}>
+                          {selectedUser.membership === "vip" && <Crown className="h-2.5 w-2.5" />}
+                          {selectedUser.membership || "standard"}
+                        </span>
+                        
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#050505] text-xl font-serif text-[#D4AF37]">
+                          {(selectedUser.email || "?").slice(0, 2).toUpperCase()}
+                        </div>
+                        
+                        <div className="mt-4 flex items-center justify-center gap-2 w-full">
+                           <h2 className="text-xl font-semibold text-white break-all">{selectedUser.email.split('@')[0]}</h2>
+                           {selectedUser.isVerified && <ShieldCheck className="h-4 w-4 text-[#D4AF37]" />}
+                        </div>
+                        <div className="text-[11px] font-mono text-gray-500 mt-1">{selectedUser.email}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-2">Member via {selectedUser.provider}</div>
+                      </div>
+                      
+                      <div className="h-px bg-white/10 w-full my-5" />
+                      
+                      <ul className="space-y-3 text-xs">
+                        <li className="flex items-center gap-3 text-gray-400">
+                          <MapPin className="h-3.5 w-3.5 text-[#D4AF37]" />
+                          <span className="truncate">{selectedUser.addresses?.[0]?.city || "No saved city"}, {selectedUser.addresses?.[0]?.country || "LK"}</span>
+                        </li>
+                        <li className="flex items-center gap-3 text-gray-400">
+                          <Clock3 className="h-3.5 w-3.5 text-[#D4AF37]" />
+                          <span>Joined {formatDate(selectedUser.createdAt)}</span>
+                        </li>
+                      </ul>
+                      
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {selectedUser.tags?.map((t) => (
+                           <span key={t} className="px-2 py-1 bg-white/5 border border-white/10 text-gray-300 rounded-sm text-[9px] uppercase tracking-wider">{t.replace('_', ' ')}</span>
+                        ))}
+                      </div>
+                   </div>
 
-                    <div className="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
-                      {(selectedUser.adminNotes || []).length === 0 ? (
-                        <p className="rounded-xl border border-dashed border-white/10 bg-black/40 px-3 py-4 text-center text-xs text-gray-500">
-                          No admin notes yet.
-                        </p>
-                      ) : (
-                        [...selectedUser.adminNotes]
-                          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                          .map((note, idx) => (
-                            <div
-                              key={note._id || idx}
-                              className="rounded-xl border border-white/5 bg-black/40 px-3 py-2"
-                            >
-                              <p className="text-xs leading-5 text-gray-200">{note.note}</p>
-                              <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-gray-500">
-                                {note.author?.email || note.author?.name || "Admin"} ·{" "}
-                                {formatDate(note.createdAt, true)}
-                              </p>
+                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                     <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 block mb-4">Quick Actions</span>
+                     <div className="grid grid-cols-2 gap-2">
+                       <button onClick={handleStatusToggle} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-[#D4AF37]/30 transition group text-left">
+                         <UserCog className="h-4 w-4 text-gray-400 group-hover:text-[#D4AF37]" />
+                         <span className="text-[11px]">{selectedUser.isActive ? "Deactivate" : "Activate"}</span>
+                       </button>
+                       <button onClick={() => setResetConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-[#D4AF37]/30 transition group text-left">
+                         <KeyRound className="h-4 w-4 text-gray-400 group-hover:text-[#D4AF37]" />
+                         <span className="text-[11px]">Reset Pass</span>
+                       </button>
+                       <button onClick={() => setDeleteConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-red-400/30 transition group text-left col-span-2">
+                         <Trash2 className="h-4 w-4 text-gray-400 group-hover:text-red-400" />
+                         <span className="text-[11px] text-rose-200">Delete Account</span>
+                       </button>
+                     </div>
+                   </div>
+                   
+                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Admin Notes</span>
+                        <StickyNote className="h-3.5 w-3.5 text-[#D4AF37]" />
+                      </div>
+                      <div className="space-y-3 max-h-[220px] overflow-y-auto pr-2 scrollbar-thin">
+                        {(selectedUser.adminNotes || []).length === 0 ? (
+                          <div className="text-[11px] text-gray-500 italic">No internal notes</div>
+                        ) : (
+                          [...selectedUser.adminNotes].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map((note, idx) => (
+                            <div key={idx} className="bg-black/40 border border-white/5 p-3 rounded-xl">
+                              <p className="text-xs text-gray-300 leading-snug">{note.note}</p>
+                              <div className="text-[9px] uppercase text-gray-600 mt-2">{note.author?.email?.split('@')[0] || "Admin"} · {formatDate(note.createdAt)}</div>
                             </div>
                           ))
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-2">
-                      <textarea
-                        value={noteDraft}
-                        onChange={(e) => setNoteDraft(e.target.value.slice(0, 2000))}
-                        placeholder="Add an internal note about this customer…"
-                        rows={3}
-                        className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
-                      />
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-gray-500">
-                          {noteDraft.length} / 2000
-                        </span>
+                        )}
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <input
+                          value={noteDraft}
+                          onChange={(e) => setNoteDraft(e.target.value)}
+                          placeholder="Type a note..."
+                          className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#D4AF37]/50"
+                        />
                         <button
-                          type="button"
                           onClick={handleAddNote}
                           disabled={!noteDraft.trim() || noteSubmitting}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20 disabled:opacity-50"
                         >
-                          {noteSubmitting ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Plus className="h-3 w-3" />
-                          )}
-                          Add note
+                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
-                    </div>
-                  </div>
-                </section>
+                   </div>
+                 </aside>
 
-                <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                  <div className="space-y-6">
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <UserCog className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Relationship Summary</h3>
-                      </div>
-                      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Last order
-                          </p>
-                          <p className="mt-2 text-sm font-medium text-white">
-                            {formatDate(selectedUser.relationship.lastOrderAt, true)}
-                          </p>
-                          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">
-                            {selectedUser.relationship.lastOrderStatus || "No order yet"}
-                          </p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Saved payment
-                          </p>
-                          <p className="mt-2 text-sm font-medium text-white">
-                            {selectedUser.savedPaymentMethod || "Not saved"}
-                          </p>
-                          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Preferred checkout
-                          </p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Cart snapshot
-                          </p>
-                          <p className="mt-2 text-sm font-medium text-white">
-                            {selectedUser.relationship.cartCount} item references
-                          </p>
-                          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Current cart depth
-                          </p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Notification trail
-                          </p>
-                          <p className="mt-2 text-sm font-medium text-white">
-                            {selectedUser.relationship.notificationCount} messages
-                          </p>
-                          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">
-                            Last update {formatDate(selectedUser.relationship.lastNotificationAt, true)}
-                          </p>
+                 {/* CENTER PANE - Activity, View Products, Orders */}
+                 <div className="col-span-12 lg:col-span-6 space-y-5">
+                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010]">
+                      <div className="px-6 py-5 border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-[#D4AF37]" />
+                          <h3 className="font-serif text-xl tracking-tight text-white">Activity Timeline</h3>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <MapPin className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Addresses</h3>
-                      </div>
-                      <div className="mt-5 space-y-3">
-                        {selectedUser.addresses?.length ? (
-                          selectedUser.addresses.map((address, index) => (
-                            <div
-                              key={`${address.street}-${index}`}
-                              className="rounded-2xl border border-white/10 bg-black/50 p-4"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold text-white">
-                                  {address.label || `Address ${index + 1}`}
-                                </p>
-                                {address.isDefault ? (
-                                  <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-[#D4AF37]">
-                                    Default
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="mt-3 text-sm leading-6 text-gray-400">
-                                {address.street}, {address.city}, {address.postalCode},{" "}
-                                {address.country}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-white/10 bg-black/40 p-5 text-sm text-gray-400">
-                            No saved addresses on this account yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Recent Orders</h3>
-                      </div>
-                      <div className="mt-5 space-y-3">
-                        {selectedUser.recentOrders?.length ? (
-                          selectedUser.recentOrders.map((order) => (
-                            <div
-                              key={order._id}
-                              className="rounded-2xl border border-white/10 bg-black/50 p-4"
-                            >
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                  <p className="text-sm font-semibold text-white">{order.status}</p>
-                                  <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gray-500">
-                                    {formatDate(order.createdAt, true)}
-                                  </p>
-                                </div>
-                                <div className="text-left sm:text-right">
-                                  <p className="text-sm font-semibold text-[#D4AF37]">
-                                    {formatMoney(order.totalAmount)}
-                                  </p>
-                                  <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gray-500">
-                                    {order.paymentMethod} / {order.paymentStatus}
-                                  </p>
-                                </div>
-                              </div>
-                              <p className="mt-3 text-xs uppercase tracking-[0.2em] text-gray-500">
-                                {order.items?.length || 0} item(s)
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-white/10 bg-black/40 p-5 text-sm text-gray-400">
-                            No orders linked to this user yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <Clock3 className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Activity Timeline</h3>
-                      </div>
-                      <div className="mt-5 space-y-3">
+                      <ol className="px-8 py-6 relative">
+                        <div className="absolute left-[40px] top-8 bottom-8 w-px bg-white/10" />
                         {selectedUser.activityTimeline?.length ? (
-                          selectedUser.activityTimeline.map((activity) => {
-                            const Icon = activityIconMap[activity.type] || Clock3;
+                          selectedUser.activityTimeline.map((activity, idx) => {
+                            const ActivityIcon = activityIconMap[activity.type] || Activity;
                             return (
-                              <div
-                                key={activity.id}
-                                className="flex gap-4 rounded-2xl border border-white/10 bg-black/50 p-4"
-                              >
-                                <div className="mt-1 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-3">
-                                  <Icon className="h-4 w-4 text-[#D4AF37]" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                      <p className="text-sm font-semibold text-white">
-                                        {activity.title}
-                                      </p>
-                                      <p className="mt-2 text-sm leading-6 text-gray-400">
-                                        {activity.description}
-                                      </p>
-                                    </div>
-                                    <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                                      {formatDate(activity.createdAt, true)}
-                                    </p>
+                              <li key={idx} className="relative pl-12 pb-6 last:pb-0">
+                                <span className="absolute left-0 top-0.5 h-6 w-6 rounded-md border border-white/10 bg-[#111] flex items-center justify-center text-[#D4AF37]">
+                                  <ActivityIcon className="h-3 w-3" />
+                                </span>
+                                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
+                                  <div>
+                                    <div className="text-sm text-gray-200">{activity.title}</div>
+                                    <div className="text-[11px] text-gray-500 mt-1">{activity.description}</div>
                                   </div>
+                                  <span className="text-[10px] font-mono whitespace-nowrap text-gray-500">{formatDate(activity.createdAt, true)}</span>
                                 </div>
-                              </div>
+                              </li>
                             );
                           })
                         ) : (
-                          <div className="rounded-2xl border border-dashed border-white/10 bg-black/40 p-5 text-sm text-gray-400">
-                            No recent activity has been recorded for this account.
-                          </div>
+                          <div className="text-sm text-gray-500 pl-12">No activity recorded for this account.</div>
                         )}
+                      </ol>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-6">
+                      <div className="flex items-center gap-2 mb-5">
+                        <Package className="h-4 w-4 text-[#D4AF37]" />
+                        <h3 className="font-serif text-xl tracking-tight text-white">Order History</h3>
                       </div>
+                      <table className="w-full text-left text-sm">
+                        <thead className="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/10">
+                           <tr>
+                             <th className="pb-3 px-2">Order</th>
+                             <th className="pb-3 px-2">Date</th>
+                             <th className="pb-3 px-2 text-right">Items</th>
+                             <th className="pb-3 px-2 text-right">Total</th>
+                             <th className="pb-3 px-2 pl-6">Status</th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                          {selectedUser.recentOrders?.length ? (
+                            selectedUser.recentOrders.map(o => (
+                              <tr key={o._id} className="border-b border-white/5 last:border-0 hover:bg-black/30 transition">
+                                <td className="py-3 px-2 font-mono text-[11px] text-gray-300">{o.referenceNumber || o._id.slice(-6).toUpperCase()}</td>
+                                <td className="py-3 px-2 text-[11px] text-gray-500">{formatDate(o.createdAt)}</td>
+                                <td className="py-3 px-2 text-right text-[12px]">{o.items?.length || 0}</td>
+                                <td className="py-3 px-2 text-right font-mono text-[12px] text-[#D4AF37]">{formatMoney(o.totalAmount)}</td>
+                                <td className="py-3 px-2 pl-6"><StatusBadge status={o.status || "processing"} /></td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr><td colSpan="5" className="py-6 text-center text-[12px] text-gray-500">No orders placed yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                 </div>
+
+                 {/* RIGHT PANE - Insights, Churn */}
+                 <aside className="col-span-12 lg:col-span-3 space-y-5">
+                    <div className="rounded-[1.5rem] border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-5 relative overflow-hidden">
+                       <span className="text-[10px] uppercase tracking-[0.18em] text-[#D4AF37]/80 block mb-2">Lifetime Value</span>
+                       <div className="font-serif text-3xl text-white tracking-tight">{formatMoney(selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent)}</div>
+                       <div className="text-[11px] text-gray-400 mt-2">Across {selectedUser.relationship?.orderCount || 0} orders</div>
+                       <div className="h-px bg-[#D4AF37]/20 w-full my-4" />
+                       <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">Predicted 12m</span>
+                          <span className="text-gray-300 font-mono">
+                            {formatMoney((selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent) * 0.6)}
+                          </span>
+                       </div>
                     </div>
 
                     <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <ShieldCheck className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Login Activity</h3>
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Last 15 attempts. New IPs and devices are flagged for review.
-                      </p>
-                      <div className="mt-4 max-h-[280px] space-y-2 overflow-y-auto pr-1">
-                        {selectedUser.recentLogins?.length ? (
-                          selectedUser.recentLogins.map((login) => (
-                            <div
-                              key={login._id}
-                              className={`rounded-xl border p-3 text-sm ${
-                                login.success
-                                  ? login.newIp || login.newDevice
-                                    ? "border-amber-400/30 bg-amber-400/5"
-                                    : "border-white/5 bg-black/40"
-                                  : "border-rose-400/30 bg-rose-400/5"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span
-                                    className={`font-mono text-[9px] uppercase tracking-[0.22em] ${
-                                      login.success ? "text-emerald-300" : "text-rose-300"
-                                    }`}
-                                  >
-                                    {login.success
-                                      ? "Success"
-                                      : login.failureReason?.replace(/_/g, " ") || "Failed"}
-                                  </span>
-                                  {login.newIp ? (
-                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
-                                      · new IP
-                                    </span>
-                                  ) : null}
-                                  {login.newDevice ? (
-                                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-amber-300">
-                                      · new device
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <span className="font-mono text-[10px] text-gray-400">
-                                  {formatDate(login.createdAt, true)}
-                                </span>
+                       <div className="flex items-center justify-between mb-4">
+                         <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Viewed Categories</span>
+                         <Eye className="h-3.5 w-3.5 text-[#D4AF37]" />
+                       </div>
+                       <div className="flex flex-col gap-3">
+                          {selectedUser.intelligence?.preferredCategories?.length ? (
+                            selectedUser.intelligence.preferredCategories.map(cat => (
+                              <div key={cat} className="flex justify-between text-xs">
+                                <span className="text-gray-300">{cat}</span>
                               </div>
-                              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
-                                    IP
-                                  </span>
-                                  <span className="font-mono text-[11px] text-gray-300">
-                                    {login.ip || "—"}
-                                  </span>
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
-                                    Device
-                                  </span>
-                                  <span className="text-[11px] text-gray-300">
-                                    {login.deviceHint || "Unknown"}
-                                  </span>
-                                </span>
-                                {login.provider !== "local" ? (
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
-                                      Via
-                                    </span>
-                                    <span className="text-[11px] text-gray-300">{login.provider}</span>
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-white/10 bg-black/40 p-4 text-sm text-gray-400">
-                            No login activity recorded yet.
-                          </div>
-                        )}
-                      </div>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-gray-500 italic">No browse history</span>
+                          )}
+                       </div>
                     </div>
 
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
-                      <div className="flex items-center gap-3">
-                        <BellRing className="h-5 w-5 text-[#D4AF37]" />
-                        <h3 className="text-lg font-semibold text-white">Recent Notifications</h3>
-                      </div>
-                      <div className="mt-5 space-y-3">
-                        {selectedUser.recentNotifications?.length ? (
-                          selectedUser.recentNotifications.map((notification) => (
-                            <div
-                              key={notification._id}
-                              className="rounded-2xl border border-white/10 bg-black/50 p-4"
-                            >
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                  <p className="text-sm font-semibold text-white">
-                                    {notification.title}
-                                  </p>
-                                  <p className="mt-2 text-sm leading-6 text-gray-400">
-                                    {notification.message}
-                                  </p>
-                                </div>
-                                <span className="rounded-full border border-white/10 bg-black/70 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-gray-300">
-                                  {notification.isRead ? "Read" : "Unread"}
-                                </span>
-                              </div>
-                              <div className="mt-3 flex flex-wrap gap-3 text-xs uppercase tracking-[0.2em] text-gray-500">
-                                <span>{notification.type}</span>
-                                <span>{formatDate(notification.createdAt, true)}</span>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-white/10 bg-black/40 p-5 text-sm text-gray-400">
-                            No notifications found for this account.
-                          </div>
-                        )}
-                      </div>
+                    <div className="rounded-[1.5rem] border border-red-500/10 bg-red-500/5 p-5">
+                       <div className="flex items-center justify-between mb-3">
+                         <span className="text-[10px] uppercase tracking-[0.18em] text-rose-300">Churn Risk</span>
+                         <AlertTriangle className="h-4 w-4 text-rose-400" />
+                       </div>
+                       <div className="font-serif text-4xl text-white">{selectedUser.intelligence?.predictedChurnRisk || 0}<span className="text-lg text-gray-500">/100</span></div>
+                       <div className="mt-3 text-[11px] text-rose-200/60 leading-relaxed">
+                         {selectedUser.intelligence?.predictedChurnRisk > 70 
+                           ? "High risk of abandonment. Consider an exclusive re-engagement offer."
+                           : "Customer engagement is stable."}
+                       </div>
                     </div>
-                  </div>
-                </section>
-              </div>
-            ) : (
-              <div className="flex min-h-[24rem] items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-black/30 p-8 text-center">
-                <div className="max-w-md">
-                  <Users className="mx-auto h-10 w-10 text-[#D4AF37]" />
-                  <h2 className="mt-4 text-2xl font-semibold text-white">Choose a user</h2>
-                  <p className="mt-3 text-sm leading-7 text-gray-400">
-                    Pick an account from the left to review its activity, order relationship, and
-                    admin actions.
-                  </p>
-                </div>
-              </div>
-            )}
+                 </aside>
+               </section>
+             )}
+             </>
+          )}
 
-            {error ? (
-              <div className="mt-6 rounded-[1.5rem] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
-                {error}
-              </div>
-            ) : null}
-          </div>
-        </section>
-      </div>
-      <BulkActionBar
-        count={bulk.count}
-        onClear={bulk.clear}
-        pending={bulkPending}
-        label="customers selected"
-        actions={[
-          { label: `Add "${bulkTagDraft}"`, onClick: () => runBulkUserTag("add") },
-          { label: `Remove "${bulkTagDraft}"`, onClick: () => runBulkUserTag("remove") },
-        ]}
-      />
-    </AdminPage>
+          {error && (
+            <div className="rounded-[1.5rem] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <ConfirmInline
+          show={deleteConfirmOpen && !!selectedUser}
+          message={`Delete ${selectedUser?.email}? This removes the customer account.`}
+          onCancel={() => setDeleteConfirmOpen(false)}
+          onConfirm={executeDeleteConfirmed}
+          className="w-full max-w-md fixed bottom-4 right-4 z-50 shadow-2xl"
+        />
+        <ConfirmInline
+          show={resetConfirmOpen && !!selectedUser}
+          message={`Send a password reset OTP to ${selectedUser?.email}?`}
+          onCancel={() => setResetConfirmOpen(false)}
+          onConfirm={executeResetPasswordConfirmed}
+          className="w-full max-w-md fixed bottom-4 right-4 z-50 shadow-2xl"
+        />
+
+        <BulkActionBar
+          count={bulk.count}
+          onClear={bulk.clear}
+          pending={bulkPending}
+          label="customers selected"
+          actions={[
+            { label: `Add "${bulkTagDraft}"`, onClick: () => runBulkUserTag("add") },
+            { label: `Remove "${bulkTagDraft}"`, onClick: () => runBulkUserTag("remove") },
+          ]}
+        />
+      </AdminPage>
     </motion.div>
   );
 };

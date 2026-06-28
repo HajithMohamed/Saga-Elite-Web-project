@@ -2,11 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, Flame, ChevronRight, ArrowRight, TicketPercent } from "lucide-react";
+import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, ArrowRight, TicketPercent } from "lucide-react";
 import axios from "axios";
 import { logoutUserAction } from "@/store/auth-slice";
-import { fetchUpcomingDrop } from "@/services/landing-api";
-import { getRemainingTime } from "@/utils/time";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
 import { API_V1_URL as API_BASE } from "@/lib/api";
@@ -19,7 +17,7 @@ const buildCategoryUrl = (path = []) => {
   return `/shopping/product-list?${params.toString()}`;
 };
 
-const MegaMenuPanel = ({ category, onNavigate = () => {} }) => {
+const MegaMenuPanel = ({ category, onNavigate = () => { } }) => {
   const subcategories = Array.isArray(category.children) ? category.children : [];
   if (!subcategories.length) return null;
 
@@ -28,7 +26,7 @@ const MegaMenuPanel = ({ category, onNavigate = () => {} }) => {
       <div className="bg-[#0e0e0e]/95 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden rounded-sm">
         {/* Gold accent top border */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
-        
+
         <div className="p-8">
           {/* Category header */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#2a2a2a]">
@@ -107,51 +105,6 @@ const CategoryMobileList = ({ categories = [], path = [], onNavigate }) => {
   );
 };
 
-const AnnouncementBar = ({ items, nextDrop, countdown }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % items.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [items]);
-
-  return (
-    <div className="bg-[#131313] text-[#e5e2e1] border-b border-[#2a2a2a] text-center text-[11px] uppercase tracking-[0.2em] py-2 relative overflow-hidden">
-      {/* Subtle glow pulse effect behind the bar */}
-      <div className="absolute inset-0 bg-[#f2ca50]/5 animate-pulse" />
-      
-      <div className="relative z-10 flex flex-col items-center justify-center">
-        {nextDrop && nextDrop.releaseDate && new Date(nextDrop.releaseDate) > new Date() ? (
-          <span className="text-[#f2ca50] mb-1 font-mono text-[10px]">
-            <Flame className="inline w-3 h-3 text-[#ffb4ab] mb-0.5" /> DROP DROPS IN {countdown.d}D {countdown.h}H {countdown.m}M
-          </span>
-        ) : nextDrop && nextDrop.releaseDate ? (
-          <span className="text-[#ffb4ab] mb-1 font-mono text-[10px] animate-pulse">
-            🔴 LIVE NOW — SHOP BEFORE IT CLOSES
-          </span>
-        ) : null}
-        
-        <div className="h-[16px] overflow-hidden w-full max-w-lg mx-auto">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-[#d0c5af]"
-            >
-              {items[currentIndex]}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const AnimatedBadge = ({ count }) => {
   if (!count || count <= 0) return null;
   return (
@@ -162,7 +115,6 @@ const AnimatedBadge = ({ count }) => {
 };
 
 const MotionAside = motion.aside;
-const EMPTY_COUNTDOWN = { d: 0, h: "00", m: "00" };
 
 const MainHeader = () => {
   const location = useLocation();
@@ -170,14 +122,12 @@ const MainHeader = () => {
   const dispatch = useDispatch();
   const { open: openAuthDrawer } = useAuthDrawer();
   const homePath = "/shopping/home";
-  
+
   const isAdminView = location.pathname.startsWith("/admin");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [nextDrop, setNextDrop] = useState(null);
-  const [countdown, setCountdown] = useState(EMPTY_COUNTDOWN);
   const [menuCategories, setMenuCategories] = useState([]);
   const userMenuRef = useRef(null);
 
@@ -206,20 +156,6 @@ const MainHeader = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const loadNextDrop = async () => {
-      try {
-        const drop = await fetchUpcomingDrop();
-        if (!cancelled) setNextDrop(drop);
-      } catch {
-        if (!cancelled) setNextDrop(null);
-      }
-    };
-    loadNextDrop();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
 
     const loadCategories = async () => {
       try {
@@ -239,14 +175,6 @@ const MainHeader = () => {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!nextDrop?.releaseDate) return undefined;
-    const tick = () => setCountdown(getRemainingTime(nextDrop.releaseDate));
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [nextDrop?.releaseDate]);
 
   const handleLogout = async () => {
     try {
@@ -278,26 +206,15 @@ const MainHeader = () => {
 
   return (
     <>
-      <AnnouncementBar
-        nextDrop={nextDrop}
-        countdown={countdown}
-        items={[
-          "🎁 MYSTERY GIFT ON EVERY ORDER OVER LKR 10,000",
-          "⚡ LIMITED STOCK AVAILABLE ON NEW DROPS",
-          "🚀 ISLANDWIDE EXPRESS DELIVERY",
-        ]}
-      />
-
       <header
         role="banner"
-        className={`sticky top-0 z-50 w-full transition-all duration-500 ${
-          scrolled
+        className={`sticky top-0 z-50 w-full transition-all duration-500 ${scrolled
             ? "bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-[#4d4635]/50 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
             : "bg-transparent border-b border-transparent py-5"
-        }`}
+          }`}
       >
         <div className="max-w-[1600px] w-full mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
-          
+
           {/* LEFT: Branding */}
           <Link to={homePath} className="flex items-center gap-4 group">
             <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain opacity-90 group-hover:opacity-100 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -499,14 +416,14 @@ const MainHeader = () => {
                 </motion.div>
               ))}
             </div>
-            
+
             <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
-               <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Support & Service</p>
-               <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
-                  <Link to="/about">Brand Story</Link>
-                  <Link to="/contact">Reach Out</Link>
-                  <Link to="/shopping/order-tracking">Track Order</Link>
-               </div>
+              <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Support & Service</p>
+              <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
+                <Link to="/about">Brand Story</Link>
+                <Link to="/contact">Reach Out</Link>
+                <Link to="/shopping/order-tracking">Track Order</Link>
+              </div>
             </div>
           </MotionAside>
         ) : null}

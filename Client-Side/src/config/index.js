@@ -1,7 +1,5 @@
 import { SOCKET_URL as SERVER_URL } from "@/lib/api";
 
-export const RETURN_WINDOW_DAYS = 30;
-
 /* ================== CONTACT INFO ================== */
 export const CONTACT_INFO = {
   email: "sagaaelite@gmail.com",

@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
+const {
+  isValidSriLankanMobile,
+  normalizeSriLankanMobile,
+} = require("../Utils/phone-validator");
 
 const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
@@ -99,6 +103,31 @@ const sanitizeOptionalPlainText = (
 
   return normalized;
 };
+
+const sanitizeSriLankanPhone = (value, field, { required = true } = {}) => {
+  const phone = sanitizeOptionalPlainText(value, field, { maxLength: 50 });
+
+  if (!phone) {
+    if (required) fail(`${field} is required`);
+    return undefined;
+  }
+
+  if (!isValidSriLankanMobile(phone)) {
+    fail(`Please provide a valid ${field}`);
+  }
+
+  return phone;
+};
+
+const sanitizeOptionalSriLankanPhone = (value, field) => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return sanitizeSriLankanPhone(value, field, { required: false });
+};
+
+const normalizePhoneForMatch = (value) => normalizeSriLankanMobile(value) || "";
 
 const sanitizeEmail = (
   value,
@@ -308,6 +337,76 @@ const sanitizePermissions = (
   }
 
   return normalized;
+};
+
+const sanitizeOrderItems = (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    fail("items must be a non-empty array");
+  }
+
+  return items.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      fail(`items[${index}] must be an object`);
+    }
+
+    return {
+      productId: sanitizeObjectId(item.productId, `items[${index}].productId`),
+      variantSku: sanitizeString(item.variantSku, `items[${index}].variantSku`, {
+        required: true,
+        maxLength: 100,
+      }),
+      size: sanitizeOptionalPlainText(item.size, `items[${index}].size`, {
+        maxLength: 20,
+      }),
+      color: sanitizeOptionalPlainText(item.color, `items[${index}].color`, {
+        maxLength: 30,
+      }),
+      quantity: sanitizeNumber(item.quantity, `items[${index}].quantity`, {
+        required: true,
+        min: 1,
+        integer: true,
+      }),
+    };
+  });
+};
+
+const sanitizeStructuredAddress = (input) => {
+  if (input === undefined || input === null || input === "") {
+    return undefined;
+  }
+
+  if (typeof input !== "object" || Array.isArray(input)) {
+    fail("structuredAddress must be an object");
+  }
+
+  const street = sanitizeOptionalPlainText(input.street, "structuredAddress.street", {
+    maxLength: 200,
+  });
+  const city = sanitizeOptionalPlainText(input.city, "structuredAddress.city", {
+    maxLength: 120,
+  });
+  const postalCode = sanitizeOptionalPlainText(
+    input.postalCode,
+    "structuredAddress.postalCode",
+    { maxLength: 32 }
+  );
+
+  if (!street || !city || !postalCode) {
+    return undefined;
+  }
+
+  return {
+    label: sanitizeOptionalPlainText(input.label, "structuredAddress.label", {
+      maxLength: 120,
+    }),
+    street,
+    city,
+    postalCode,
+    country:
+      sanitizeOptionalPlainText(input.country, "structuredAddress.country", {
+        maxLength: 120,
+      }) || "Sri Lanka",
+  };
 };
 
 const validateObjectIdParam = (
@@ -690,72 +789,31 @@ const validateDropUpdate = createValidationMiddleware((req) => {
 });
 
 const validateOrderCreate = createValidationMiddleware((req) => {
-  if (!Array.isArray(req.body.items) || req.body.items.length === 0) {
-    fail("items must be a non-empty array");
+  const contactNumber = sanitizeSriLankanPhone(
+    req.body.contactNumber,
+    "contactNumber"
+  );
+  const alternativePhone = sanitizeOptionalSriLankanPhone(
+    req.body.alternativePhone,
+    "alternativePhone"
+  );
+
+  if (
+    alternativePhone &&
+    normalizePhoneForMatch(contactNumber) === normalizePhoneForMatch(alternativePhone)
+  ) {
+    fail("alternativePhone must be different from contactNumber");
   }
 
-  const items = req.body.items.map((item, index) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      fail(`items[${index}] must be an object`);
-    }
-
-    return {
-      productId: sanitizeObjectId(item.productId, `items[${index}].productId`),
-      variantSku: sanitizeString(item.variantSku, `items[${index}].variantSku`, {
-        required: true,
-        maxLength: 100,
-      }),
-      quantity: sanitizeNumber(item.quantity, `items[${index}].quantity`, {
-        required: true,
-        min: 1,
-        integer: true,
-      }),
-    };
-  });
-
-  const structuredAddress =
-    req.body.structuredAddress &&
-    typeof req.body.structuredAddress === "object" &&
-    !Array.isArray(req.body.structuredAddress)
-      ? {
-          label: sanitizeOptionalPlainText(
-            req.body.structuredAddress.label,
-            "structuredAddress.label",
-            { maxLength: 120 }
-          ),
-          street: sanitizeOptionalPlainText(
-            req.body.structuredAddress.street,
-            "structuredAddress.street",
-            { maxLength: 200 }
-          ),
-          city: sanitizeOptionalPlainText(
-            req.body.structuredAddress.city,
-            "structuredAddress.city",
-            { maxLength: 120 }
-          ),
-          postalCode: sanitizeOptionalPlainText(
-            req.body.structuredAddress.postalCode,
-            "structuredAddress.postalCode",
-            { maxLength: 32 }
-          ),
-          country: sanitizeOptionalPlainText(
-            req.body.structuredAddress.country,
-            "structuredAddress.country",
-            { maxLength: 120 }
-          ),
-        }
-      : undefined;
-
   req.body = {
-    items,
+    items: sanitizeOrderItems(req.body.items),
     shippingAddress: sanitizeString(req.body.shippingAddress, "shippingAddress", {
       required: true,
+      minLength: 8,
       maxLength: 1000,
     }),
-    contactNumber: sanitizeString(req.body.contactNumber, "contactNumber", {
-      required: true,
-      maxLength: 40,
-    }),
+    contactNumber,
+    alternativePhone,
     paymentMethod: sanitizeEnum(
       req.body.paymentMethod,
       PAYMENT_METHODS,
@@ -771,7 +829,7 @@ const validateOrderCreate = createValidationMiddleware((req) => {
     couponCode: sanitizeOptionalPlainText(req.body.couponCode, "couponCode", {
       maxLength: 64,
     }),
-    structuredAddress,
+    structuredAddress: sanitizeStructuredAddress(req.body.structuredAddress),
     checkoutMode: sanitizeEnum(
       req.body.checkoutMode,
       ["cart", "buyNow"],
@@ -780,6 +838,10 @@ const validateOrderCreate = createValidationMiddleware((req) => {
     ),
     guestEmail: sanitizeEmail(req.body.guestEmail, "guestEmail", {
       required: false,
+    }),
+    shippingFee: sanitizeNumber(req.body.shippingFee, "shippingFee", {
+      required: false,
+      min: 0,
     }),
     dropId:
       req.body.dropId !== undefined && req.body.dropId !== null && req.body.dropId !== ""

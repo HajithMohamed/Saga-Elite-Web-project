@@ -4,13 +4,6 @@ const { requireAdmin, requireSuperAdmin, requirePermission } = require("../Middl
 const { exportCustomersCsv } = require("../Controllers/user-controller");
 const { getAgingProducts, getProductAnalytics } = require("../Controllers/product-controller");
 const { getOrderInvoice } = require("../Controllers/order-controller");
-const {
-  salesAnalytics,
-  productsAnalytics,
-  dropsAnalytics,
-  customersAnalytics,
-  reviewsAnalytics,
-} = require("../Controllers/analytics-controller");
 const { validateObjectIdParam } = require("../Middlewares/request-validation");
 const { globalSearch } = require("../Controllers/admin-search-controller");
 const {
@@ -47,48 +40,12 @@ router.get(
     getOrderInvoice
 );
 
-router.get(
-    "/analytics/sales",
-    authMiddleware,
-    requireAdmin,
-    requirePermission("viewAnalytics"),
-    salesAnalytics
-);
-router.get(
-    "/analytics/products",
-    authMiddleware,
-    requireAdmin,
-    requirePermission("viewAnalytics"),
-    productsAnalytics
-);
-router.get(
-    "/analytics/drops",
-    authMiddleware,
-    requireAdmin,
-    requirePermission("viewAnalytics"),
-    dropsAnalytics
-);
-router.get(
-    "/analytics/customers",
-    authMiddleware,
-    requireAdmin,
-    requirePermission("viewAnalytics"),
-    customersAnalytics
-);
-router.get(
-    "/analytics/reviews",
-    authMiddleware,
-    requireAdmin,
-    requirePermission("viewAnalytics"),
-    reviewsAnalytics
-);
-
 // Admin category management
 router.post(
     "/categories",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     createCategory
 );
 
@@ -96,7 +53,7 @@ router.put(
     "/categories/:id",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     validateObjectIdParam("id", "category id"),
     updateCategory
 );
@@ -105,7 +62,7 @@ router.delete(
     "/categories/:id",
     authMiddleware,
     requireAdmin,
-    requirePermission("categories"),
+    requirePermission("products"),
     validateObjectIdParam("id", "category id"),
     deleteCategory
 );

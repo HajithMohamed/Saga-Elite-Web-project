@@ -7,7 +7,11 @@ const ManualPayment = require("../Models/ManualPayment");
 const Notification = require("../Models/Notification");
 const LoginActivity = require("../Models/LoginActivity");
 const UserActivityLog = require("../Models/UserActivityLog");
-const { isAdminRole } = require("../Utils/admin-roles");
+const Customer = require("../Models/Customer");
+const {
+  CUSTOMER_ACCOUNT_ROLES,
+  isCustomerRole,
+} = require("../Utils/admin-roles");
 const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const {
@@ -25,6 +29,10 @@ const USER_TAG_ENUM = Object.freeze([
   "refund_risk",
   "early_supporter",
 ]);
+
+const customerAccountFilter = () => ({
+  role: { $in: CUSTOMER_ACCOUNT_ROLES },
+});
 
 const normalizeCartItem = (item) => {
   const product = item.product;
@@ -100,7 +108,7 @@ const normalizeWishlistItem = (product) => ({
   image: product.images?.[0]?.url || null,
 });
 
-const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) => ({
+const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}, customerStats = {}) => ({
   _id: user._id,
   email: user.email,
   role: user.role,
@@ -114,6 +122,10 @@ const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}) =>
   savedPaymentMethod: user.savedPaymentMethod || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
+  intelligence: {
+    predictedChurnRisk: customerStats.predictedChurnRisk || 0,
+    customerLifetimeValue: customerStats.customerLifetimeValue || orderStats.totalSpent || user.totalSpent || 0,
+  },
   relationship: {
     cartCount: user.cart?.length || 0,
     wishlistCount: user.wishlist?.length || 0,
@@ -135,10 +147,11 @@ const getUserInsightMaps = async (userIds = []) => {
     return {
       orderStatsMap: new Map(),
       notificationStatsMap: new Map(),
+      customerStatsMap: new Map(),
     };
   }
 
-  const [orderStats, notificationStats] = await Promise.all([
+  const [orderStats, notificationStats, customerStats] = await Promise.all([
     Order.aggregate([
       { $match: { user: { $in: userIds } } },
       { $sort: { createdAt: -1 } },
@@ -187,6 +200,9 @@ const getUserInsightMaps = async (userIds = []) => {
         },
       },
     ]),
+    Customer.find({ userId: { $in: userIds } })
+      .select("userId predictedChurnRisk customerLifetimeValue")
+      .lean(),
   ]);
 
   return {
@@ -195,6 +211,9 @@ const getUserInsightMaps = async (userIds = []) => {
     ),
     notificationStatsMap: new Map(
       notificationStats.map((entry) => [entry._id.toString(), entry])
+    ),
+    customerStatsMap: new Map(
+      customerStats.map((entry) => [entry.userId.toString(), entry])
     ),
   };
 };
@@ -263,57 +282,111 @@ const escapeCsvValue = (value) => {
   return `"${normalized.replace(/"/g, '""')}"`;
 };
 
+const getAdminUserStats = async () => {
+  const customerFilter = customerAccountFilter();
+  const [userStatsResult, customerIds] = await Promise.all([
+    User.aggregate([
+      { $match: customerFilter },
+      {
+        $group: {
+          _id: null,
+          totalUsers: { $sum: 1 },
+          activeUsers: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] },
+          },
+          inactiveUsers: {
+            $sum: { $cond: [{ $eq: ["$isActive", true] }, 0, 1] },
+          },
+          verifiedUsers: {
+            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+          },
+          googleUsers: {
+            $sum: { $cond: [{ $eq: ["$provider", "google"] }, 1, 0] },
+          },
+          localUsers: {
+            $sum: { $cond: [{ $eq: ["$provider", "local"] }, 1, 0] },
+          },
+          adminUsers: {
+            $sum: {
+              $cond: [{ $in: ["$role", CUSTOMER_ACCOUNT_ROLES] }, 0, 1],
+            },
+          },
+        },
+      },
+    ]),
+    User.distinct("_id", customerFilter),
+  ]);
+
+  const orderStatsResult = customerIds.length
+    ? await Order.aggregate([
+      { $match: { user: { $in: customerIds } } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+        },
+      },
+    ])
+    : [];
+
+  const userStats = userStatsResult[0] || {};
+  const orderStats = orderStatsResult[0] || {};
+
+  return {
+    totalUsers: userStats.totalUsers || 0,
+    activeUsers: userStats.activeUsers || 0,
+    inactiveUsers: userStats.inactiveUsers || 0,
+    verifiedUsers: userStats.verifiedUsers || 0,
+    googleUsers: userStats.googleUsers || 0,
+    localUsers: userStats.localUsers || 0,
+    adminUsers: userStats.adminUsers || 0,
+    totalOrders: orderStats.totalOrders || 0,
+    totalRevenue: orderStats.totalRevenue || 0,
+  };
+};
+
 const getAdminUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find()
-    .select(
-      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
-    )
-    .sort({ createdAt: -1 })
-    .lean();
+  const paginated = res.paginatedResults || {
+    total: 0,
+    page: 1,
+    limit: 10,
+    results: 0,
+    totalPages: 1,
+    data: [],
+  };
+  const users = paginated.data || [];
 
   const userIds = users.map((user) => user._id);
-  const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps(userIds);
+  const [{ orderStatsMap, notificationStatsMap, customerStatsMap }, stats] = await Promise.all([
+    getUserInsightMaps(userIds),
+    getAdminUserStats(),
+  ]);
 
   const mappedUsers = users.map((user) =>
     buildAdminUserSummary(
       user,
       orderStatsMap.get(user._id.toString()),
-      notificationStatsMap.get(user._id.toString())
+      notificationStatsMap.get(user._id.toString()),
+      customerStatsMap.get(user._id.toString())
     )
-  );
-
-  const stats = mappedUsers.reduce(
-    (accumulator, user) => {
-      accumulator.totalUsers += 1;
-      accumulator.activeUsers += user.isActive ? 1 : 0;
-      accumulator.inactiveUsers += user.isActive ? 0 : 1;
-      accumulator.verifiedUsers += user.isVerified ? 1 : 0;
-      accumulator.googleUsers += user.provider === "google" ? 1 : 0;
-      accumulator.localUsers += user.provider === "local" ? 1 : 0;
-      accumulator.adminUsers += user.role === "user" ? 0 : 1;
-      accumulator.totalOrders += user.relationship.orderCount;
-      accumulator.totalRevenue += user.relationship.totalSpent;
-      return accumulator;
-    },
-    {
-      totalUsers: 0,
-      activeUsers: 0,
-      inactiveUsers: 0,
-      verifiedUsers: 0,
-      googleUsers: 0,
-      localUsers: 0,
-      adminUsers: 0,
-      totalOrders: 0,
-      totalRevenue: 0,
-    }
   );
 
   res.status(200).json({
     success: true,
-    message: "Admin users fetched successfully",
+    message: "Customer accounts fetched successfully",
     data: {
       stats,
       users: mappedUsers,
+      pagination: {
+        total: paginated.total || 0,
+        page: paginated.page || 1,
+        limit: paginated.limit || 10,
+        results: paginated.results || mappedUsers.length,
+        totalPages: paginated.totalPages || 1,
+        next: paginated.next || null,
+        previous: paginated.previous || null,
+      },
     },
   });
 });
@@ -330,9 +403,13 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
 
+  if (!isCustomerRole(user.role)) {
+    return next(new AppError("Customer account not found", 404));
+  }
+
   const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
 
-  const [recentOrders, recentNotifications, recentLogins] = await Promise.all([
+  const [recentOrders, recentNotifications, recentLogins, customerIntelligence] = await Promise.all([
     Order.find({ user: user._id })
       .sort({ createdAt: -1 })
       .limit(10)
@@ -347,6 +424,9 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(15)
       .select("success failureReason provider ip deviceHint userAgent createdAt")
+      .lean(),
+    Customer.findOne({ userId: user._id })
+      .populate("viewedProducts.product", "name images basePrice slug discountPercent category")
       .lean(),
   ]);
 
@@ -371,18 +451,35 @@ const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const summary = buildAdminUserSummary(
     user,
     orderStatsMap.get(user._id.toString()),
-    notificationStatsMap.get(user._id.toString())
+    notificationStatsMap.get(user._id.toString()),
+    customerIntelligence || {}
   );
 
   res.status(200).json({
     success: true,
-    message: "Admin user detail fetched successfully",
+    message: "Customer account detail fetched successfully",
     data: {
       ...summary,
       addresses: user.addresses || [],
       recentOrders,
       recentNotifications,
       recentLogins: decoratedLogins,
+      intelligence: customerIntelligence ? {
+        behavioralScore: customerIntelligence.behavioralScore || 0,
+        customerLifetimeValue: customerIntelligence.customerLifetimeValue || 0,
+        predictedChurnRisk: customerIntelligence.predictedChurnRisk || 0,
+        preferredCategories: customerIntelligence.preferredCategories || [],
+        viewedProducts: (customerIntelligence.viewedProducts || []).map(vp => ({
+          ...vp,
+          product: vp.product ? normalizeWishlistItem(vp.product) : null
+        })).filter(vp => vp.product),
+      } : {
+        behavioralScore: 0,
+        customerLifetimeValue: 0,
+        predictedChurnRisk: 0,
+        preferredCategories: [],
+        viewedProducts: []
+      },
       activityTimeline: buildActivityTimeline({
         user,
         recentOrders,
@@ -419,7 +516,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     return next(new AppError("You cannot change your own account status here", 400));
   }
 
-  if (isAdminRole(user.role)) {
+  if (!isCustomerRole(user.role)) {
     return next(new AppError("Only customer accounts can be updated from user management", 403));
   }
 
@@ -453,7 +550,7 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const { orderStatsMap, notificationStatsMap } = await getUserInsightMaps([user._id]);
+  const { orderStatsMap, notificationStatsMap, customerStatsMap } = await getUserInsightMaps([user._id]);
 
   res.status(200).json({
     success: true,
@@ -461,7 +558,8 @@ const updateAdminUserStatus = catchAsync(async (req, res, next) => {
     data: buildAdminUserSummary(
       user.toObject(),
       orderStatsMap.get(user._id.toString()),
-      notificationStatsMap.get(user._id.toString())
+      notificationStatsMap.get(user._id.toString()),
+      customerStatsMap.get(user._id.toString())
     ),
   });
 });
@@ -479,7 +577,7 @@ const bulkTagUsers = catchAsync(async (req, res) => {
 
   const filter = {
     _id: { $in: ids },
-    role: { $in: ["user", "customer"] },
+    role: { $in: CUSTOMER_ACCOUNT_ROLES },
   };
   const update =
     mode === "add"
@@ -531,10 +629,10 @@ const triggerAdminPasswordReset = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
 
-  if (isAdminRole(user.role)) {
+  if (!isCustomerRole(user.role)) {
     return next(
       new AppError(
-        "Admin accounts must reset their password through the auth flow",
+        "Only customer accounts can be reset from user management",
         403
       )
     );
@@ -591,7 +689,7 @@ const deleteAdminUser = catchAsync(async (req, res, next) => {
     return next(new AppError("You cannot delete your own account here", 400));
   }
 
-  if (isAdminRole(user.role)) {
+  if (!isCustomerRole(user.role)) {
     return next(new AppError("Only customer accounts can be deleted from user management", 403));
   }
 
@@ -1036,13 +1134,15 @@ const getAllUsers = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 50;
   const skip = (page - 1) * limit;
 
-  const users = await User.find({ role: 'customer' })
-    .select('email firstName lastName isActive createdAt updatedAt')
+  const filter = customerAccountFilter();
+
+  const users = await User.find(filter)
+    .select("email username phoneNumber isActive createdAt updatedAt")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  const totalUsers = await User.countDocuments({ role: 'customer' });
+  const totalUsers = await User.countDocuments(filter);
 
   res.status(200).json({
     status: "success",
@@ -1060,8 +1160,8 @@ const getAllUsers = catchAsync(async (req, res, next) => {
 });
 
 const exportCustomersCsv = catchAsync(async (_req, res) => {
-  const customers = await User.find({ role: { $in: ["customer", "user"] } })
-    .select("email name createdAt")
+  const customers = await User.find(customerAccountFilter())
+    .select("email username createdAt")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -1086,7 +1186,7 @@ const exportCustomersCsv = catchAsync(async (_req, res) => {
       const stats = statsMap.get(String(customer._id)) || {};
       return [
         customer.email || "",
-        customer.name || "",
+        customer.username || "",
         stats.orderCount || 0,
         stats.totalSpend || 0,
         customer.createdAt ? new Date(customer.createdAt).toISOString() : "",
@@ -1106,7 +1206,7 @@ const exportCustomersCsv = catchAsync(async (_req, res) => {
 // permissions never leak through here.
 const getMyProfile = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.userInfo._id || req.userInfo.id).select(
-    "email name phoneNumber profilePicture provider isVerified membership createdAt"
+    "email username phoneNumber profilePicture provider isVerified membership createdAt"
   );
 
   if (!user) {
@@ -1118,7 +1218,8 @@ const getMyProfile = catchAsync(async (req, res, next) => {
     data: {
       _id: user._id,
       email: user.email,
-      name: user.name || "",
+      username: user.username || "",
+      name: user.username || "",
       phoneNumber: user.phoneNumber || "",
       profilePicture: user.profilePicture || null,
       provider: user.provider,
@@ -1129,20 +1230,21 @@ const getMyProfile = catchAsync(async (req, res, next) => {
   });
 });
 
-// Self-service profile update. Customers can edit only their own name and
+// Self-service profile update. Customers can edit only their own username and
 // phone number through this endpoint. Phone is validated + normalized to
 // canonical "+947XXXXXXXX" form before persist.
 const updateMyProfile = catchAsync(async (req, res, next) => {
-  const { name, phoneNumber } = req.body || {};
+  const { name, username, phoneNumber } = req.body || {};
 
   const update = {};
 
-  if (name !== undefined) {
-    const trimmed = String(name).trim();
+  const incomingUsername = username !== undefined ? username : name;
+  if (incomingUsername !== undefined) {
+    const trimmed = String(incomingUsername).trim();
     if (trimmed.length > 120) {
-      return next(new AppError("Name cannot exceed 120 characters", 400));
+      return next(new AppError("Username cannot exceed 120 characters", 400));
     }
-    update.name = trimmed || null;
+    update.username = trimmed || null;
   }
 
   if (phoneNumber !== undefined) {
@@ -1186,7 +1288,7 @@ const updateMyProfile = catchAsync(async (req, res, next) => {
     req.userInfo._id || req.userInfo.id,
     { $set: update },
     { new: true, runValidators: true }
-  ).select("email name phoneNumber profilePicture provider isVerified membership");
+  ).select("email username phoneNumber profilePicture provider isVerified membership");
 
   if (!updated) {
     return next(new AppError("User not found", 404));
@@ -1198,7 +1300,8 @@ const updateMyProfile = catchAsync(async (req, res, next) => {
     data: {
       _id: updated._id,
       email: updated.email,
-      name: updated.name || "",
+      username: updated.username || "",
+      name: updated.username || "",
       phoneNumber: updated.phoneNumber || "",
       profilePicture: updated.profilePicture || null,
       provider: updated.provider,

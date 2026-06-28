@@ -28,6 +28,8 @@ import FilterSidebar from "@/components/listing/FilterSidebar";
 import LoadMoreSentinel from "@/components/listing/LoadMoreSentinel";
 
 import EditorialProductGrid from "@/components/listing/EditorialProductGrid";
+import Pagination from "@/components/common-components/Pagination";
+import usePagination from "@/hooks/use-pagination";
 import ProductGridSkeleton from "@/components/listing/ProductGridSkeleton";
 
 // category slugs are passed via `?category=<slug>`; backend resolves slug or legacy string
@@ -69,7 +71,6 @@ const ProductListing = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [refineOpen, setRefineOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -256,16 +257,20 @@ const ProductListing = () => {
     priceMaxParam,
   ]);
 
-  const visibleProducts = useMemo(
-    () => filteredProducts.slice(0, visibleCount),
-    [filteredProducts, visibleCount]
-  );
-  const hasMore = visibleCount < filteredProducts.length;
+  const {
+    page,
+    setPage,
+    pageCount,
+    total: totalProducts,
+    pageItems: visibleProducts,
+    pageSize: productPageSize,
+  } = usePagination(filteredProducts, PAGE_SIZE);
 
-  // Reset visible window whenever the result set changes.
+  // Reset to the first page whenever the result set changes.
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
+    setPage(1);
   }, [
+    setPage,
     categoryParam,
     filterParam,
     inStockOnly,
@@ -560,20 +565,16 @@ const ProductListing = () => {
                 
 
 
-                {hasMore && (
-                  <div className="mt-16 text-center">
-                    <button
-                      onClick={() =>
-                        setVisibleCount((c) =>
-                          Math.min(c + PAGE_SIZE, filteredProducts.length)
-                        )
-                      }
-                      className="px-12 py-4 bg-transparent border border-[#D4AF37] text-[#D4AF37] font-semibold tracking-[0.2em] text-xs uppercase hover:bg-[#D4AF37] hover:text-black transition-colors"
-                    >
-                      Load More
-                    </button>
-                  </div>
-                )}
+                <div className="mt-12">
+                  <Pagination
+                    page={page}
+                    pageCount={pageCount}
+                    onPageChange={setPage}
+                    total={totalProducts}
+                    pageSize={productPageSize}
+                    label="products"
+                  />
+                </div>
               </div>
             )}
           </div>

@@ -103,6 +103,11 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 50,
     },
+    alternativePhone: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+    },
     paymentMethod: {
       type: String,
       enum: ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"],
@@ -199,6 +204,11 @@ const orderSchema = new mongoose.Schema(
     couponDiscount: {
       type: Number,
       default: 0,
+    },
+    shippingFee: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     expiresAt: {
       type: Date,

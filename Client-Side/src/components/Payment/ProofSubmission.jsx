@@ -84,7 +84,11 @@ const ProofSubmission = ({ onSubmitProof, isSubmitting, title = "Upload Transfer
       await onSubmitProof(selectedFile);
       clearFile();
     } catch (error) {
-      setLocalError(error?.message || "Failed to submit proof.");
+      const message =
+        typeof error === "string"
+          ? error
+          : error?.response?.data?.message || error?.message || "Failed to submit proof.";
+      setLocalError(message);
     }
   };
 

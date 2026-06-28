@@ -30,6 +30,7 @@ const logger = require("../Utils/logger");
 const runInTransaction = require("../Utils/safe-transaction");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
+const ONLINE_PAYMENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const escapeHtml = (str = "") =>
     String(str)
@@ -126,6 +127,7 @@ const createOrder = catchAsync(async (req, res, next) => {
         items,
         shippingAddress,
         contactNumber,
+        alternativePhone,
         paymentMethod,
         paymentProofUrl,
         notes,
@@ -133,12 +135,15 @@ const createOrder = catchAsync(async (req, res, next) => {
         structuredAddress,
         checkoutMode,
         guestEmail,
+        shippingFee: rawShippingFee,
     } = req.body;
 
     const user = req.userInfo || null;
     const guestEmailNormalized = user ? null : String(guestEmail || "").trim().toLowerCase();
     const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
     const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
+    const isCardPayment = paymentMethod === "card";
+    const isPendingOnlinePayment = isBankTransferPayment || isCardPayment;
     const isLegacyManualPayment = paymentMethod === "manual";
     let guest = null;
 
@@ -289,6 +294,9 @@ const createOrder = catchAsync(async (req, res, next) => {
             }
         }
 
+        const shippingFee = Math.max(0, Number(rawShippingFee) || 0);
+        totalAmount = Math.max(0, totalAmount + shippingFee);
+
         // ✅ Single, complete orderPayload declaration (duplicate removed)
         const orderPayload = {
             user: user ? user._id : undefined,
@@ -296,8 +304,10 @@ const createOrder = catchAsync(async (req, res, next) => {
             guestEmail: guestEmailNormalized,
             items: orderItems,
             totalAmount,
+            shippingFee,
             shippingAddress: shippingAddress.trim(),
             contactNumber: contactNumber.trim(),
+            alternativePhone: alternativePhone?.trim(),
             paymentMethod,
             paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
             referenceNumber: isLegacyManualPayment
@@ -306,19 +316,21 @@ const createOrder = catchAsync(async (req, res, next) => {
             notes: notes?.trim(),
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             couponDiscount: appliedDiscount || 0,
-            status: isBankTransferPayment
+            status: isPendingOnlinePayment
                 ? "pending_payment"
                 : ["manual", "cash"].includes(paymentMethod)
                     ? "verification_pending"
                     : "confirmed",
             paymentStatus:
-                isBankTransferPayment || ["manual", "cash"].includes(paymentMethod)
+                isPendingOnlinePayment || ["manual", "cash"].includes(paymentMethod)
                     ? "pending"
                     : "paid",
             expiresAt:
-                isLegacyManualPayment || paymentMethod === "cash"
-                    ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
-                    : undefined,
+                isPendingOnlinePayment
+                    ? new Date(Date.now() + ONLINE_PAYMENT_EXPIRY_MS)
+                    : isLegacyManualPayment || paymentMethod === "cash"
+                        ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
+                        : undefined,
         };
 
         const [orderDocument] = await Order.create([orderPayload], { session });
@@ -450,23 +462,55 @@ const createOrder = catchAsync(async (req, res, next) => {
         });
     }
 
-    // Customer-facing order-placed WhatsApp. The bank-transfer branch below
-    // sends its own (with payment instructions), so we only fire this for
-    // other payment methods (card, gpay, payhere, cash, etc.).
+    // Customer-facing order-placed WhatsApp. Bank-transfer branch sends its own
+    // instructions below; card orders get a link to the demo gateway page.
     if (!isBankTransferPayment) {
         const customerOrderPhone = cleanPhoneNumber(contactNumber);
         if (customerOrderPhone) {
+            const cardPaymentLink = isCardPayment
+                ? `${clientShopUrl()}/shopping/card-payment/${createdOrder._id}${
+                      guestEmailNormalized
+                          ? `?email=${encodeURIComponent(guestEmailNormalized)}`
+                          : ""
+                  }`
+                : null;
+
             sendWhatsAppMessage({
                 to: customerOrderPhone,
-                message:
-                    `Saga Elite: your order #${createdOrder._id} has been placed. ` +
-                    `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
-                    `We'll message you when it ships.`,
+                message: isCardPayment
+                    ? `Saga Elite: order #${createdOrder._id} placed. ` +
+                      `Complete card payment (LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}): ${cardPaymentLink}`
+                    : `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+                      `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+                      `We'll message you when it ships.`,
             }).catch((err) =>
                 logger.error("Customer order-placed WhatsApp failed", {
                     error: err?.message,
                 })
             );
+        }
+
+        if (isCardPayment) {
+            const customerEmail = user?.email || guestEmailNormalized;
+            const cardPaymentLink = `${clientShopUrl()}/shopping/card-payment/${createdOrder._id}${
+                guestEmailNormalized ? `?email=${encodeURIComponent(guestEmailNormalized)}` : ""
+            }`;
+
+            if (customerEmail) {
+                sendEmail({
+                    email: customerEmail,
+                    subject: "Complete your Saga Elite card payment",
+                    html: buildEmailTemplate(
+                        "Complete your card payment",
+                        `<p>Your order <strong>${createdOrder._id}</strong> is waiting for payment.</p>
+                         <p><strong>Amount:</strong> LKR ${createdOrder.totalAmount.toLocaleString()}</p>
+                         <p><a href="${cardPaymentLink}">Complete card payment →</a></p>
+                         <p>You have 24 hours to complete payment before the order expires.</p>`
+                    ),
+                }).catch((err) =>
+                    logger.error("Card payment link email failed", { error: err.message })
+                );
+            }
         }
     }
 

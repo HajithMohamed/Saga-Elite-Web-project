@@ -454,7 +454,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
             </p>
           </div>
           <div className="flex flex-col items-end shrink-0">
-            <p className="text-[#f2ca50] font-mono text-sm tracking-wider font-semibold tabular-nums">
+            <p className="text-[#f2ca50] font-mono text-sm tracking-wider font-semibold tabular-nums transition-all duration-500 group-hover:[text-shadow:0_0_14px_rgba(242,202,80,0.55)]">
               {formatLKR(price)}
             </p>
             {discountPct > 0 && basePrice > 0 && (

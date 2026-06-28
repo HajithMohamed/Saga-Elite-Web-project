@@ -3,12 +3,14 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import MainHeader from '@/components/common-components/MainHeader';
 import MainFooter from '@/components/common-components/MainFooter';
+import AnnouncementBar from '@/components/common-components/AnnouncementBar';
 
 const PublicLayout = () => {
   const location = useLocation();
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface">
+      <AnnouncementBar />
       <MainHeader />
       <main className="flex-1 flex flex-col w-full relative">
         <AnimatePresence mode="wait">
