@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Gift, CreditCard, Lock, Zap, ArrowRight, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
