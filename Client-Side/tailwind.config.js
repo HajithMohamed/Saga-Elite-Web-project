@@ -21,9 +21,11 @@ export default {
 
       /* ── Radius System ───────────────────────── */
       borderRadius: {
-        lg: '20px',
-        md: '16px',
         sm: '8px',
+        md: '12px',
+        lg: '16px',
+        xl: '20px',
+        xxl: '24px',
         full: '9999px',
         hero: '24px',
       },
