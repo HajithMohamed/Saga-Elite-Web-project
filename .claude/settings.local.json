@@ -43,7 +43,23 @@
       "Bash(git remote *)",
       "mcp__71c08203-98d6-43c2-8a12-e2e8f3f92df7__netlify-user-services-reader",
       "Bash(git add *)",
-      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('railway.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")"
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('railway.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")",
+      "mcp__71c08203-98d6-43c2-8a12-e2e8f3f92df7__netlify-team-services-reader",
+      "Bash(curl -sS -m 25 -w \"\\\\n[http_status: %{http_code}]\\\\n\" https://server-side-production-619d.up.railway.app/health)",
+      "mcp__71c08203-98d6-43c2-8a12-e2e8f3f92df7__netlify-project-services-updater",
+      "mcp__71c08203-98d6-43c2-8a12-e2e8f3f92df7__netlify-deploy-services-updater",
+      "Bash(npx -y @netlify/mcp@latest --site-id 834b1ad6-1165-40ba-8dda-2893c3187266 --proxy-path \"https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..e-2sX3dQgCgosdd_.y9SN1ZmVG73KRJy8DG-CBNNYzIHBdZdWcpOVBgkdi2iUJEeARdBnl92_E_ZG0fkNBPNw3IuSPBTzcQkB8BLTy7DrNS7WHZTLPFmtfm8GMy6UA2etRxL4sMNNdK8A-X-NKAhMQsGfBFHbazcdVGL99wz29WhpR8HggM5jePvCDYzLO3zIwnpp-50I_nJYRKCjlRWa-1DTbJ43oshkd1E9fyO7qsy72imz_TKgJ3WWjumng6dd7gcOJaUOvur-QNoriy_bxm1lrTM4bNiwCgqSInif5Ugx-_N7uuQL-q4-y_YWflhfLE9uE6LERNdO_FUlMenO2Z8KVhEACW2NJg-lcGdH_B4T_PLFBdKyUYXy788G36j2Cqj2T5VzpKniaXgaSBLV4px2.EW_UycRu0cIr0c6lyGSWpQ\")",
+      "Bash(curl -sS -m 30 -w \"\\\\n[status: %{http_code}]\\\\n\" https://server-side-production-619d.up.railway.app/health)",
+      "Bash(curl -sS -m 30 -w \"\\\\n[status: %{http_code}]\\\\n\" https://server-side-production-19a7.up.railway.app/health)",
+      "Bash(npx -y @netlify/mcp@latest --site-id 834b1ad6-1165-40ba-8dda-2893c3187266 --proxy-path \"https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..tDCQLGLLa8k1ojA5.PAXq-sSY9gzyzTN1MXtxk9WQ8ESCzLj5r9xH5zl3rm2RB1jDtux30txJoxaCOpZR3GF5hVsEq-SnBz4U9-y3_QHiOIQqYZBHWmfzAwaOjCihfVDiBpvokSSjH21B-MGHb0il-C7kO_KT7gsd2CsAmUAhM-PTLSeMuhyB__2uOYw4dy_MVbqm9cBvWTpaH0E_RzgZg3YeNI6zKUtcdRpDLgnt370iplO9IIb9QNDAnmdoMTXJDCE-G9vvEKCoeiGg_qWXXtg9l0-FcfxjrBw3KcxStyzXvGQamrFzIfhV8wY9bLujO_H4Ojw-RpI1oZwIilhPOne8KJh70YOpGvxsTlloeMLcx3dOPvjDTnQQSVvd4Y95vR59eNdQ6C4UV2Hwa72USPgY.6Gpm3gCDSl2Hm8yDNz6J0g\")",
+      "Bash(curl -sS -o /dev/null -D - -X OPTIONS -H 'Origin: https://saga-elite.netlify.app' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' https://server-side-production-19a7.up.railway.app/api/v1/auth/login -w '[status: %{http_code}]\\\\n')",
+      "Bash(curl -sS -D - -o /tmp/prod.json -H 'Origin: https://saga-elite.netlify.app' https://server-side-production-19a7.up.railway.app/api/v1/products?limit=1 -w '[status: %{http_code}]\\\\n')",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts,null,2\\)\\)\")",
+      "Bash(node -e \"const e=require\\('fs'\\).existsSync; console.log\\('.env exists:', e\\('.env'\\)\\); const fs=require\\('fs'\\); if\\(e\\('.env'\\)\\){const t=fs.readFileSync\\('.env','utf8'\\); const has=\\(k\\)=>new RegExp\\('^\\\\\\\\\\\\\\\\s*'+k+'\\\\\\\\\\\\\\\\s*=\\\\\\\\\\\\\\\\s*\\\\\\\\\\\\\\\\S','m'\\).test\\(t\\); console.log\\('VITE_GOOGLE_CLIENT_ID set:', has\\('VITE_GOOGLE_CLIENT_ID'\\)\\); console.log\\('VITE_FACEBOOK_APP_ID set:', has\\('VITE_FACEBOOK_APP_ID'\\)\\); console.log\\('VITE_API_URL set:', has\\('VITE_API_URL'\\)\\); console.log\\('MONGO_DB_URI set:', has\\('MONGO_DB_URI'\\)||has\\('MONGO_URI'\\)\\);}\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const names=\\(f\\)=>{ if\\(!fs.existsSync\\(f\\)\\) return f+': MISSING'; const ks=fs.readFileSync\\(f,'utf8'\\).split\\(/\\\\r?\\\\n/\\).map\\(l=>l.match\\(/^\\\\s*\\([A-Za-z_][A-Za-z0-9_]*\\)\\\\s*=/\\)\\).filter\\(Boolean\\).map\\(m=>m[1]\\); return f+' \\('+ks.length+' keys\\):\\\\n  '+ks.sort\\(\\).join\\('\\\\n  '\\); }; console.log\\(names\\('.env'\\)\\); console.log\\('---'\\); console.log\\(names\\('Client-Side/.env'\\)\\); console.log\\('---'\\); console.log\\(names\\('Server-side/.env'\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const t=fs.readFileSync\\('.env','utf8'\\).split\\(/\\\\r?\\\\n/\\); const want=['VITE_GOOGLE_CLIENT_ID','VITE_FACEBOOK_APP_ID','GOOGLE_CLIENT_ID','FACEBOOK_APP_ID','VITE_API_URL','MONGO_DB_URI','NODE_ENV']; for\\(const k of want\\){ const line=t.find\\(l=>l.match\\(new RegExp\\('^\\\\\\\\\\\\\\\\s*'+k+'\\\\\\\\\\\\\\\\s*='\\)\\)\\); if\\(!line\\){console.log\\(k,'-> \\(absent\\)'\\);continue;} let v=line.slice\\(line.indexOf\\('='\\)+1\\).trim\\(\\).replace\\(/^[\\\\\"']|[\\\\\"']$/g,''\\); console.log\\(k,'-> len',v.length, v.length?'\\(has value\\)':'\\(EMPTY\\)'\\); }\")",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(npm run build)"
     ]
   }
 }

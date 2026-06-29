@@ -165,13 +165,13 @@ const OrderTracking = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <main className="mx-auto max-w-screen-xl px-8 pb-24 pt-24">
-        <div className="mb-20 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+      <main className="mx-auto max-w-screen-xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+        <div className="mb-12 flex flex-col gap-8 md:mb-20 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
             <p className="text-xs font-medium uppercase tracking-widest text-gray-400">
               Tracking Narrative
             </p>
-            <h1 className="text-5xl font-extrabold tracking-tighter text-white md:text-7xl">
+            <h1 className="text-4xl font-extrabold tracking-tighter text-white sm:text-5xl md:text-7xl">
               {heroTitle}
             </h1>
             <p className="max-w-xl text-sm text-gray-400">
@@ -180,14 +180,14 @@ const OrderTracking = () => {
           </div>
           <div className="flex flex-col space-y-1 md:items-end">
             <div className="text-sm text-gray-400">Order Reference</div>
-            <div className="text-2xl font-bold text-[#D4AF37]">#{_id}</div>
+            <div className="break-all text-lg font-bold text-[#D4AF37] sm:text-2xl">#{_id}</div>
             <div className="text-sm text-gray-500">Placed {formatDate(createdAt)}</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
-          <div className="space-y-16 lg:col-span-7">
-            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-8">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16">
+          <div className="space-y-10 lg:col-span-7 lg:space-y-16">
+            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-5 sm:p-8">
               <div className="relative py-8">
                 <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-neutral-800"></div>
                 <div
@@ -236,7 +236,7 @@ const OrderTracking = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-8">
+            <div className="rounded-3xl border border-white/5 bg-[#0b0b0b] p-5 sm:p-8">
               <div className="mb-6">
                 <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-500">
                   Consignment Items
@@ -283,7 +283,7 @@ const OrderTracking = () => {
           </div>
 
           <div className="lg:col-span-5">
-            <div className="sticky top-32 space-y-8 rounded-3xl border border-white/5 bg-neutral-900/50 p-10 backdrop-blur-md">
+            <div className="space-y-8 rounded-3xl border border-white/5 bg-neutral-900/50 p-6 backdrop-blur-md sm:p-10 lg:sticky lg:top-32">
               <div className="space-y-4">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-400">
                   Shipping Destination

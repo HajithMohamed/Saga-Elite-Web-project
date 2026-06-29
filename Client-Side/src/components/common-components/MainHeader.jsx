@@ -154,6 +154,7 @@ const MainHeader = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+
   useEffect(() => {
     let cancelled = false;
 
@@ -420,9 +421,9 @@ const MainHeader = () => {
             <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
               <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Support & Service</p>
               <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
-                <Link to="/about">Brand Story</Link>
-                <Link to="/contact">Reach Out</Link>
-                <Link to="/shopping/order-tracking">Track Order</Link>
+                <Link to="/about" onClick={() => setMobileOpen(false)}>Brand Story</Link>
+                <Link to="/contact" onClick={() => setMobileOpen(false)}>Reach Out</Link>
+                <Link to="/shopping/order-tracking" onClick={() => setMobileOpen(false)}>Track Order</Link>
               </div>
             </div>
           </MotionAside>
