@@ -169,6 +169,8 @@ export function Newsletter() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full h-[56px] bg-[#131313] border border-white/10 rounded-[16px] pl-12 pr-4 text-[#e5e2e1] se-body text-[16px] placeholder:text-[#99907c] focus:outline-none focus:border-[#f2ca50] transition-colors"
+                  onInvalid={(e) => e.target.setCustomValidity('Please enter a valid email address.')}
+                  onInput={(e) => e.target.setCustomValidity('')}
                 />
               </div>
               <button 

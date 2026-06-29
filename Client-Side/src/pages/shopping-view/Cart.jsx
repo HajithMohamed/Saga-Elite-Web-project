@@ -239,7 +239,7 @@ const Cart = () => {
             <div className="mt-12 flex flex-wrap items-center justify-center gap-6">
               <Link to="/shopping/product-list">
                 <Btn variant="default" size="lg" iconRight={ArrowRight}>
-                  Discover the collection
+                  Continue Shopping
                 </Btn>
               </Link>
               <Link to="/shopping/wishlist">
@@ -607,11 +607,15 @@ const Cart = () => {
               <div className="mt-8 space-y-4">
                 <div className="flex items-center gap-3 text-[#99907c]">
                   <Lock size={14} strokeWidth={1.5} />
-                  <span className="se-label text-[9px] tracking-widest uppercase">Secure encrypted checkout</span>
+                  <span className="se-label text-[9px] tracking-widest uppercase">100% Secure Checkout</span>
                 </div>
                 <div className="flex items-center gap-3 text-[#99907c]">
                   <ShieldCheck size={14} strokeWidth={1.5} />
                   <span className="se-label text-[9px] tracking-widest uppercase">Authentic limited pieces</span>
+                </div>
+                <div className="flex items-center gap-3 text-[#99907c]">
+                  <Package size={14} strokeWidth={1.5} />
+                  <span className="se-label text-[9px] tracking-widest uppercase">Fast Islandwide Delivery</span>
                 </div>
                 <div className="flex items-center gap-3 text-[#99907c]">
                   <Gift size={14} strokeWidth={1.5} />

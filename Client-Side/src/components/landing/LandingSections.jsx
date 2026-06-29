@@ -157,7 +157,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
 
                   <div className="flex flex-col gap-4">
                     <Link to={`/shopping/drop/${liveDrop.slug}`} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
-                      <span className="relative z-10">SHOP THE DROP</span>
+                      <span className="relative z-10">SHOP NOW</span>
                       <div className="absolute inset-0 bg-[#FAF7F2] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                     </Link>
 

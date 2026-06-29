@@ -132,7 +132,7 @@ const Header = () => {
           
           {/* Mobile Menu Toggle */}
           <div className="md:hidden flex items-center">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="text-secondary-foreground hover:text-foreground transition-colors">
+            <button aria-label="Toggle navigation menu" onClick={() => setMenuOpen(!menuOpen)} className="text-secondary-foreground hover:text-foreground transition-colors">
               {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
@@ -190,6 +190,7 @@ const Header = () => {
                 )}
               </AnimatePresence>
               <button 
+                aria-label="Toggle search input"
                 onClick={() => setSearchExpanded(!searchExpanded)} 
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors z-20 ${searchExpanded ? 'text-accent' : 'text-secondary-foreground hover:text-foreground'}`}
               >
@@ -199,6 +200,7 @@ const Header = () => {
 
             {/* Mobile Search Icon */}
             <button 
+              aria-label="Open search"
               className="md:hidden w-8 h-8 rounded-full flex items-center justify-center text-secondary-foreground hover:text-foreground"
               onClick={() => navigate('/shopping/product-list')}
             >
@@ -206,7 +208,7 @@ const Header = () => {
             </button>
 
             {/* Wishlist */}
-            <Link to="/shopping/wishlist" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
+            <Link aria-label="View wishlist" to="/shopping/wishlist" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
               <Heart className="w-4 h-4" />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-accent text-primary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
@@ -216,7 +218,7 @@ const Header = () => {
             </Link>
 
             {/* Cart */}
-            <Link to="/shopping/cart" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
+            <Link aria-label="View cart" to="/shopping/cart" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
               <ShoppingCart className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 bg-accent text-primary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
                 {cartCount}
@@ -226,6 +228,7 @@ const Header = () => {
             {/* User Account */}
             <div className="relative" ref={userMenuRef}>
               <button
+                aria-label="User account menu"
                 onClick={() => isAuthenticated ? setUserMenuOpen(!userMenuOpen) : openAuthDrawer('login')}
                 className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all"
               >
