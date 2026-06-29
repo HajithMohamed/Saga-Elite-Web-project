@@ -12,6 +12,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
+import { HomeSkeleton } from "@/components/ui/skeleton";
 import {
   HeroCarousel,
   LiveDropCountdownXL,
@@ -139,17 +140,7 @@ const Home = () => {
   };
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background text-center">
-        <div className="pointer-events-none absolute inset-0 bg-grain opacity-40 mix-blend-overlay" />
-        <span className="font-display animate-pulse text-2xl uppercase tracking-[0.3em] text-foreground md:text-4xl">
-          Saga Elite
-        </span>
-        <span className="mt-4 font-sans text-[10px] uppercase tracking-[0.4em] text-accent font-bold">
-          Preparing Chapter
-        </span>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   return (

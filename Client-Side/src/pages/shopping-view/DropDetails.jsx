@@ -8,6 +8,7 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { EmptyState } from "@/components/admin-components/_shared/EmptyState";
 import usePageMeta from "@/hooks/use-page-meta";
 import ProductCard from "@/components/shopping-components/ProductCard";
+import { DropDetailsSkeleton } from "@/components/ui/skeleton";
 import {
   LiveDropCountdownXL,
 } from "@/components/landing/LandingSections";
@@ -133,11 +134,7 @@ const DropDetails = () => {
   }, [products]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-[80vh] w-full items-center justify-center bg-[#0a0a0a]">
-        <Loader2 className="h-12 w-12 animate-spin text-[#f2ca50]" />
-      </div>
-    );
+    return <DropDetailsSkeleton />;
   }
 
   if (error || !drop) {
