@@ -32,6 +32,8 @@ import {
   HomeFAQ,
   NewsletterSignup,
 } from "@/components/landing/HomeSections";
+import { GlobalStatusBar, LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
+import { EcosystemGrid, LiveActivityOverlay, ArchiveCarousel } from "@/components/landing/LuxuryEcosystemSections";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -149,21 +151,31 @@ const Home = () => {
 
   return (
     <div className="relative min-h-screen bg-[#0e0e0e] text-[#e5e2e1]">
-      {/* 1. Hero — cinematic carousel (banners + active/next drop) */}
-      <HeroCarousel activeDrops={payload.activeDrops} nextDrop={nextDrop} />
+      <GlobalStatusBar />
+      <LiveActivityOverlay />
+      
+      {/* 1. New Luxury Hero Section */}
+      <LuxuryDropSlider activeDrops={payload.activeDrops || []} nextDrop={nextDrop} />
 
-      {/* 2. Offers & campaigns (admin-managed) */}
+      {/* 2. The Ecosystem Grid */}
+      <EcosystemGrid />
+
+      {/* 3. Offers & campaigns (admin-managed) */}
       {payload.offers && payload.offers.length > 0 && (
         <SeasonalCampaignSlider offers={payload.offers} />
       )}
 
-      {/* 3. Shop by category */}
+      {/* 4. Shop by category */}
       <Reveal>
         <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
       </Reveal>
 
-      {/* 4. How shopping works (first-timer guidance) */}
-      <HowItWorks />
+      {/* 5. The Vault / Past Drops */}
+      <ArchiveCarousel pastDrops={[
+        { id: 1, name: "Nocturne Cargo", chapter: "01", image: "https://images.unsplash.com/photo-1550639525-c97d455acf70?q=80" },
+        { id: 2, name: "Phantom Windbreaker", chapter: "02", image: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80" },
+        { id: 3, name: "Obsidian Boots", chapter: "03", image: "https://images.unsplash.com/photo-1618085222100-85f0e9df2528?q=80" },
+      ]} />
 
       {/* 5. Why Saga Elite */}
       <WhyChooseSaga />
