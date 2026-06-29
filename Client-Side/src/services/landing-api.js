@@ -51,6 +51,25 @@ const fetchProducts = async (params = {}) => {
   return (Array.isArray(list) ? list : []).map(normalizeProduct);
 };
 
+// Sorted feeds for the homepage product grids. `/products/get-all-products`
+// supports a `sort` param (proven in ProductDetails: -createdAt / -wishCount /
+// -soldCount). Returns normalized products so they drop straight into ProductCard.
+const fetchSortedProducts = async (sort, limit = 8) => {
+  try {
+    const res = await axios.get(`${API_BASE}/products/get-all-products`, {
+      params: { sort, limit },
+    });
+    const list = res?.data?.data || [];
+    return (Array.isArray(list) ? list : []).map(normalizeProduct);
+  } catch {
+    return [];
+  }
+};
+
+export const fetchBestSellers = (limit = 8) => fetchSortedProducts("-soldCount", limit);
+export const fetchMostWished = (limit = 8) => fetchSortedProducts("-wishCount", limit);
+export const fetchNewArrivals = (limit = 8) => fetchSortedProducts("-createdAt", limit);
+
 const fetchActiveDeals = async (limit = 8) => {
   const res = await axios.get(`${API_BASE}/deals/active`);
   const deals = res?.data?.data?.deals || [];
