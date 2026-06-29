@@ -263,3 +263,131 @@ export const getLandingData = async () => {
     socialImages: adImages,
   };
 };
+
+// Featured reviews → testimonials. Backed by the real public endpoint
+// `/reviews/featured` (approved reviews, sorted by helpful + recency). Maps the
+// review/user/product shape into the flat fields the testimonial cards read.
+const mapFeaturedReview = (r) => {
+  const u = r.user || r.userId || {};
+  const first = String(u.firstName || "").trim();
+  const last = String(u.lastName || "").trim();
+  const full = `${first} ${last}`.trim();
+  const name =
+    full || (u.email ? String(u.email).split("@")[0] : "Verified Buyer");
+  const product = r.product || r.productId || null;
+  return {
+    _id: r._id,
+    rating: Number(r.rating) || 0,
+    title: r.title || "",
+    content: r.content || r.comment || "",
+    createdAt: r.createdAt || r.approvedAt || null,
+    helpfulCount: Number(r.helpfulCount) || 0,
+    verifiedPurchase: Boolean(r.verifiedPurchase),
+    customer: { name, avatar: u.profilePicture || null },
+    product: product?.name || null,
+  };
+};
+
+export const fetchTopReviews = async (limit = 5) => {
+  try {
+    const res = await axios.get(`${API_BASE}/reviews/featured`, { params: { limit } });
+    const list = res?.data?.data || [];
+    return (Array.isArray(list) ? list : []).map(mapFeaturedReview);
+  } catch (err) {
+    console.warn("Could not fetch top reviews", err);
+    return [];
+  }
+};
+
+// Live, computed store statistics. Hits the public `/stats/public` endpoint;
+// consumers hide any card whose metric is falsy, so we pass values through raw.
+export const fetchStoreStats = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/stats/public`);
+    return res?.data?.data || null;
+  } catch (err) {
+    console.warn("Could not fetch store stats", err);
+    return null;
+  }
+};
+
+// Admin-managed site settings (contact / social / footer) sourced from the
+// public `/site-config/about` payload. The raw config is keyed with `shop_*` /
+// `footer_*` prefixes; this flattens it into the shape the footer + social
+// sections consume. Returns null on failure so callers fall back gracefully.
+const joinAddress = (a) =>
+  [
+    a.shop_address_line1,
+    a.shop_address_line2,
+    a.shop_address_city,
+    a.shop_address_postal,
+    a.shop_address_country,
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(", ");
+
+export const fetchSiteSettings = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/site-config/about`);
+    const a = res?.data?.data || {};
+    return {
+      brandName: a.shop_brand_name || "",
+      phone: a.shop_contact_phone || "",
+      email: a.shop_contact_email || a.shop_support_email || "",
+      whatsapp: a.shop_whatsapp_number || "",
+      address: joinAddress(a),
+      hours: a.shop_hours || "",
+      mapEmbedUrl: a.shop_map_embed_url || "",
+      instagramUrl: a.shop_social_instagram || "",
+      facebookUrl: a.shop_social_facebook || "",
+      youtubeUrl: a.shop_social_youtube || "",
+      twitterUrl: a.shop_social_twitter || "",
+      tiktokUrl: a.shop_social_tiktok || "",
+      brandDescription: a.footer_brand_description || "",
+      copyright: a.footer_copyright || "",
+      quickLinks: Array.isArray(a.footer_quick_links) ? a.footer_quick_links : [],
+      shopLinks: Array.isArray(a.footer_shop_links) ? a.footer_shop_links : [],
+      supportLinks: Array.isArray(a.footer_support_links) ? a.footer_support_links : [],
+      paymentMethods: Array.isArray(a.footer_payment_methods)
+        ? a.footer_payment_methods
+        : [],
+    };
+  } catch (err) {
+    console.warn("Could not fetch site settings", err);
+    return null;
+  }
+};
+
+// Homepage "Shop by Category" tiles, driven by the real Category collection.
+// Prefers top-level active categories flagged `showOnHome`; falls back to
+// featured, then any active top-level. Each carries its own admin image
+// (populated `imageRef.url`); missing images fall back to a category-logo match
+// and finally a branded placeholder so a tile never renders broken.
+export const fetchHomeCategories = async (limit = 6) => {
+  try {
+    const [catRes, logos] = await Promise.all([
+      axios.get(`${API_BASE}/categories`),
+      fetchCategoryLogoImages().catch(() => []),
+    ]);
+    const all = Array.isArray(catRes?.data?.data) ? catRes.data.data : [];
+    const topLevel = all.filter((c) => c?.isActive && !c?.parentCategory);
+
+    let chosen = topLevel.filter((c) => c.showOnHome);
+    if (chosen.length === 0) chosen = topLevel.filter((c) => c.isFeatured);
+    if (chosen.length === 0) chosen = topLevel;
+
+    return chosen.slice(0, limit).map((c) => ({
+      name: c.name,
+      slug: c.slug,
+      href: `/shopping/product-list?category=${encodeURIComponent(c.slug)}`,
+      img:
+        c.imageRef?.url ||
+        findImageForCategory(logos, c.name, c.slug) ||
+        "/placeholder.jpg",
+    }));
+  } catch (err) {
+    console.warn("Could not fetch home categories", err);
+    return [];
+  }
+};

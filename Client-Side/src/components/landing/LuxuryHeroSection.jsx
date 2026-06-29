@@ -1,55 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Clock, Users } from "lucide-react";
+import { ChevronRight, ShieldCheck, Truck, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const GlobalStatusBar = () => {
-  return (
-    <div className="sticky top-0 z-50 w-full bg-[#050505]/80 backdrop-blur-md border-b border-[#1f1f1f]">
-      <div className="w-full overflow-hidden whitespace-nowrap py-2 px-4 flex items-center justify-center">
-        <div className="flex items-center gap-4 text-xs font-mono tracking-widest text-[#d0c5af] uppercase animate-marquee md:animate-none">
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-            142 Users Online
-          </span>
-          <span className="hidden md:inline text-[#f2ca50]">•</span>
-          <span>Next Drop in 48:00:00</span>
-          <span className="hidden md:inline text-[#f2ca50]">•</span>
-          <span className="hidden md:inline">Global Delivery Available</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const LuxuryDropSlider = ({ activeDrops = [], nextDrop = null }) => {
+export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const slides = [
+  // Use prop slides if available (from API), otherwise fall back to defaults
+  const DEFAULT_SLIDES = [
     {
-      id: "hook",
-      title: "The Art of the Drop.",
-      subtitle: "Exclusive, limited-run pieces. Once they are gone, they are archived forever.",
-      image: "https://images.unsplash.com/photo-1618085222100-85f0e9df2528?q=80&w=2000&auto=format&fit=crop",
-      type: "editorial"
+      id: "hero-1",
+      image: "https://images.unsplash.com/photo-1618085222100-85f0e9df2528?q=80&w=2000&auto=format&fit=crop"
     },
-    ...(activeDrops.length > 0 ? [{
-      id: "live",
-      title: activeDrops[0].name,
-      subtitle: activeDrops[0].description,
-      image: activeDrops[0].images?.[0]?.url || activeDrops[0].coverImageUrl || "https://images.unsplash.com/photo-1550639525-c97d455acf70?q=80&w=2000&auto=format&fit=crop",
-      endDate: activeDrops[0].endDate,
-      slug: activeDrops[0].slug,
-      type: "live"
-    }] : []),
-    ...(nextDrop ? [{
-      id: "teaser",
-      title: "Classified Intel",
-      subtitle: "The next chapter is forming. Prepare for deployment.",
-      image: nextDrop.images?.[0]?.url || nextDrop.coverImageUrl || "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=2000&auto=format&fit=crop",
-      type: "teaser"
-    }] : [])
+    {
+      id: "hero-2",
+      image: "https://images.unsplash.com/photo-1550639525-c97d455acf70?q=80&w=2000&auto=format&fit=crop"
+    },
+    {
+      id: "hero-3",
+      image: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=2000&auto=format&fit=crop"
+    }
   ];
+
+  const slides = propSlides.length > 0
+    ? propSlides.map((s, i) => ({
+        id: s.id || s._id || `hero-${i}`,
+        image: s.imageUrl || s.url || s.image || DEFAULT_SLIDES[i % DEFAULT_SLIDES.length].image,
+      }))
+    : DEFAULT_SLIDES;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -58,108 +36,159 @@ export const LuxuryDropSlider = ({ activeDrops = [], nextDrop = null }) => {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  const slide = slides[currentSlide];
-
   return (
-    <section className="relative w-full h-[75vh] md:h-[90vh] bg-[#050505] overflow-hidden">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={slide.id}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.19, 1, 0.22, 1] }}
-          className="absolute inset-0 w-full h-full"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={(e, { offset }) => {
-            if (offset.x < -50) setCurrentSlide((p) => (p + 1) % slides.length);
-            if (offset.x > 50) setCurrentSlide((p) => (p - 1 + slides.length) % slides.length);
-          }}
-        >
-          {/* Background Image */}
-          <div className="absolute inset-0">
+    <section className="relative w-full overflow-hidden bg-primary h-[500px] md:h-[560px] lg:h-[620px] xl:h-[680px] 2xl:h-[720px] group">
+      
+      {/* Background Slider */}
+      <div className="absolute inset-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, scale: 1.05 }}
+            exit={{ opacity: 0 }}
+            transition={{ opacity: { duration: 0.7, ease: "easeInOut" }, scale: { duration: 6, ease: "linear" } }}
+            className="absolute inset-0 w-full h-full"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(e, { offset }) => {
+              if (offset.x < -50) setCurrentSlide((p) => (p + 1) % slides.length);
+              if (offset.x > 50) setCurrentSlide((p) => (p - 1 + slides.length) % slides.length);
+            }}
+          >
             <img 
-              src={slide.image} 
-              alt={slide.title} 
-              className={`w-full h-full object-cover ${slide.type === 'teaser' ? 'blur-md brightness-50' : 'opacity-80'}`}
+              src={slides[currentSlide].image} 
+              alt="Luxury Fashion"
+              className="w-full h-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
-            <div className="absolute inset-0 bg-black/20" />
-            <div className="absolute inset-0 bg-grain mix-blend-overlay opacity-30 pointer-events-none" />
-          </div>
+            {/* Dark overlay gradient to ensure text readability */}
+            <div 
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.15) 100%)"
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-          {/* Content */}
-          <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-16 lg:p-24 pb-24 md:pb-32">
-            <div className="max-w-3xl">
-              {slide.type === 'live' && (
-                <span className="inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-6">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                  Live Drop
-                </span>
-              )}
-              {slide.type === 'teaser' && (
-                <span className="inline-block font-mono text-[10px] tracking-[0.3em] uppercase text-[#8c8577] mb-6 border border-[#8c8577]/30 px-3 py-1">
-                  Classified
-                </span>
-              )}
+      {/* Hero Content Container */}
+      <div className="relative h-full max-w-[1280px] mx-auto flex flex-col justify-center px-[24px] md:px-[48px] lg:px-[80px]">
+        <div className="w-full md:w-[480px] lg:w-[560px] ml-0 lg:ml-[10%]">
+          
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="font-display text-[40px] md:text-[56px] lg:text-[64px] text-white font-bold leading-[1.1] mb-4"
+          >
+            Luxury Fashion for Men, Women & Unisex
+          </motion.h1>
 
-              <motion.h1 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="font-display text-5xl md:text-7xl lg:text-8xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-6 drop-shadow-2xl"
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="font-sans text-[16px] md:text-[18px] text-[#e0e0e0] leading-relaxed mb-[32px]"
+          >
+            Discover premium clothing, footwear and accessories curated for modern lifestyles.
+          </motion.p>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 mb-[48px]"
+          >
+            <Link 
+              to="/shopping/product-list"
+              className="flex items-center justify-center bg-accent text-primary h-[56px] min-w-[180px] px-8 font-sans text-[16px] font-bold rounded-[16px] hover:-translate-y-[2px] transition-transform duration-250 shadow-medium"
+            >
+              Shop Now
+            </Link>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.35 }}
+            >
+              <Link 
+                to="#categories"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="flex items-center justify-center bg-transparent border border-accent text-accent h-[52px] min-w-[180px] px-8 font-sans text-[16px] font-bold rounded-[16px] hover:-translate-y-[2px] transition-transform duration-250"
               >
-                {slide.title}
-              </motion.h1>
+                Browse Categories
+              </Link>
+            </motion.div>
+          </motion.div>
 
-              <motion.p 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
-                className="font-sans text-sm md:text-lg text-[#d0c5af] leading-relaxed max-w-xl mb-10"
-              >
-                {slide.subtitle}
-              </motion.p>
-
-              {slide.type === 'live' && (
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.8 }}
-                >
-                  <Link 
-                    to={`/shopping/drop/${slide.slug}`}
-                    className="inline-flex items-center gap-4 bg-[#f2ca50] text-[#050505] px-8 py-4 font-mono text-xs uppercase tracking-[0.2em] font-bold hover:bg-[#FAF7F2] transition-colors"
-                  >
-                    Acquire Now <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </motion.div>
-              )}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.45 }}
+            className="flex items-center gap-6"
+          >
+            <div className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-accent" />
+              <span className="font-sans text-[12px] text-[#b5b5b5] font-bold uppercase tracking-wider">Islandwide Delivery</span>
             </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+            <div className="hidden sm:flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-accent" />
+              <span className="font-sans text-[12px] text-[#b5b5b5] font-bold uppercase tracking-wider">Secure Checkout</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <Star className="w-5 h-5 text-accent" />
+              <span className="font-sans text-[12px] text-[#b5b5b5] font-bold uppercase tracking-wider">Premium Quality</span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
 
-      {/* Progress Indicators (Bottom Right) */}
-      <div className="absolute bottom-8 right-8 md:bottom-12 md:right-16 flex gap-3 z-20">
+      {/* Navigation Arrows (Desktop / Tablet only) */}
+      <div className="hidden md:flex absolute top-1/2 -translate-y-1/2 left-4 lg:left-8 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <button 
+          onClick={() => setCurrentSlide((p) => (p - 1 + slides.length) % slides.length)}
+          className="w-[40px] h-[40px] lg:w-[48px] lg:h-[48px] rounded-full bg-black/40 border border-accent flex items-center justify-center text-accent hover:bg-black/60 transition-colors backdrop-blur-sm"
+        >
+          <ChevronRight className="w-6 h-6 rotate-180" />
+        </button>
+      </div>
+      <div className="hidden md:flex absolute top-1/2 -translate-y-1/2 right-4 lg:right-8 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <button 
+          onClick={() => setCurrentSlide((p) => (p + 1) % slides.length)}
+          className="w-[40px] h-[40px] lg:w-[48px] lg:h-[48px] rounded-full bg-black/40 border border-accent flex items-center justify-center text-accent hover:bg-black/60 transition-colors backdrop-blur-sm"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Carousel Indicators */}
+      <div className="absolute bottom-[16px] left-1/2 -translate-x-1/2 flex items-center gap-3 z-20">
         {slides.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentSlide(idx)}
-            className="relative h-1 w-12 md:w-16 bg-[#FAF7F2]/20 overflow-hidden"
+            className="group relative flex items-center justify-center h-[20px]"
           >
-            {currentSlide === idx && (
-              <motion.div
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 6, ease: "linear" }}
-                className="absolute top-0 left-0 h-full bg-[#f2ca50]"
-              />
-            )}
+            <div 
+              className={`rounded-full transition-all duration-300 ${currentSlide === idx ? 'w-[12px] h-[12px] bg-accent' : 'w-[10px] h-[10px] bg-gray-500'}`} 
+            />
           </button>
         ))}
       </div>
+
+      {/* Scroll Indicator */}
+      <motion.div 
+        animate={{ y: [0, 8, 0] }} 
+        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+        className="absolute bottom-[32px] right-[50px] lg:right-[80px] z-20 hidden md:block opacity-70"
+      >
+        <div className="w-[24px] h-[40px] border-2 border-white/50 rounded-full flex justify-center pt-2">
+          <div className="w-[4px] h-[8px] bg-white rounded-full" />
+        </div>
+      </motion.div>
     </section>
   );
 };

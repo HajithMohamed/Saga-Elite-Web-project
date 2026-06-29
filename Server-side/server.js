@@ -75,6 +75,7 @@ const guestTrackingMiddleware = require("./Middlewares/guest-tracking-middleware
 const { initGuestPromoJob } = require("./Utils/guest-promo-job");
 const customerRoutes = require("./Routes/customerRoutes");
 const eventRoutes = require("./Routes/eventRoutes");
+const statsRoutes = require("./Routes/stats-routes");
 const { identifyCustomer } = require("./Middlewares/customer-middleware");
 const { initCartAbandonmentJob } = require("./Utils/cart-abandonment-job");
 const { seedAboutSiteDefaults } = require("./Utils/seed-site-about-defaults");
@@ -164,6 +165,7 @@ app.use("/api/v1/influencers", influencerRoutes);
 app.use("/api/v1/shipping-zones", shippingZoneRoutes);
 app.use("/api/v1/customer", customerRoutes);
 app.use("/api/v1/events", eventRoutes);
+app.use("/api/v1/stats", statsRoutes);
 
 app.use(globalErrorController);
 

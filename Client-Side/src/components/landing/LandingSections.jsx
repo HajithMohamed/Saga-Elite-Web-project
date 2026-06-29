@@ -43,6 +43,23 @@ const seededRandom = (seed) => {
 const sectionContainer = "max-w-[1440px] mx-auto px-6";
 
 // ⏱ INLINE DROP COUNTDOWN
+const FlipNumber = ({ value }) => (
+  <div className="relative inline-block overflow-hidden" style={{ height: '1.2em' }}>
+    <AnimatePresence mode="popLayout">
+      <motion.span
+        key={value}
+        initial={{ y: "100%", opacity: 0 }}
+        animate={{ y: "0%", opacity: 1 }}
+        exit={{ y: "-100%", opacity: 0 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        className="block text-[#f2ca50] font-bold text-lg md:text-xl drop-shadow-[0_0_8px_rgba(242,202,80,0.15)]"
+      >
+        {value}
+      </motion.span>
+    </AnimatePresence>
+  </div>
+);
+
 export const InlineDropCountdown = ({ endDate }) => {
   const [timeLeft, setTimeLeft] = useState(() => getRemainingTime(endDate));
 
@@ -54,10 +71,8 @@ export const InlineDropCountdown = ({ endDate }) => {
   return (
     <div className="flex items-center gap-4 text-[#e5e2e1] font-mono text-[11px] md:text-[13px] tracking-widest mt-4">
       {[['D', timeLeft.days ?? timeLeft.d], ['H', timeLeft.hh ?? timeLeft.h], ['M', timeLeft.mm ?? timeLeft.m], ['S', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
-        <div key={label} className="flex items-baseline gap-1">
-          <span className="text-[#f2ca50] font-bold text-lg md:text-xl">
-            {value !== undefined ? value.toString().padStart(2, '0') : '00'}
-          </span>
+        <div key={label} className="flex items-center gap-1">
+          <FlipNumber value={value !== undefined ? value.toString().padStart(2, '0') : '00'} />
           <span className="text-[#99907c]">{label}</span>
         </div>
       ))}
@@ -84,26 +99,29 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
 
   return (
     <section className="w-full bg-[#050505] border-b border-[#1f1f1f]">
-      {/* Container: 70vh desktop, 65vh tablet, auto mobile */}
-      <div className="w-full h-auto md:h-[65vh] lg:h-[70vh] flex flex-col lg:flex-row">
+      {/* Container: Strict Heights from Prompt 07 */}
+      <div className="w-full h-[480px] sm:h-[500px] md:h-[560px] lg:h-[620px] xl:h-[680px] flex flex-col lg:flex-row">
 
         {/* LEFT SECTION (75%) */}
-        <div className="relative w-full lg:w-[75%] h-[60vh] md:h-full bg-[#111] overflow-hidden">
+        <div className="relative w-full lg:w-[75%] h-[60%] md:h-full bg-[#111] overflow-hidden">
           <AnimatePresence mode="wait">
             {liveDrop ? (
               <motion.div
                 key={liveDrop._id || currentSlide}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.7, ease: "easeInOut" }}
                 className="w-full h-full grid grid-cols-1 md:grid-cols-[65%_35%] relative"
               >
                 {/* Image Area (65%) */}
                 <div className="w-full h-full relative overflow-hidden bg-[#0a0a0a]">
-                  <img
+                  <motion.img
                     src={liveDrop.images?.[0]?.url || liveDrop.coverImageUrl || "https://images.unsplash.com/photo-1549439602-43ebca2327af?w=1920&q=80"}
                     alt={liveDrop.name}
+                    initial={{ scale: 1 }}
+                    animate={{ scale: 1.05 }}
+                    transition={{ duration: 6, ease: "linear" }}
                     className="w-full h-full object-contain object-center opacity-80"
                   />
                   <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none" />
@@ -119,17 +137,27 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     LIVE DROP
                   </span>
 
-                  <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md">
+                  <motion.h1 
+                    initial={{ y: 20, opacity: 0 }} 
+                    animate={{ y: 0, opacity: 1 }} 
+                    transition={{ delay: 0.2, duration: 0.6 }}
+                    className="font-display text-4xl md:text-5xl lg:text-6xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md"
+                  >
                     {liveDrop.name}
-                  </h1>
+                  </motion.h1>
 
-                  <p className="font-sans text-sm md:text-base text-[#d0c5af] leading-relaxed mb-8 max-w-sm line-clamp-3">
+                  <motion.p 
+                    initial={{ y: 15, opacity: 0 }} 
+                    animate={{ y: 0, opacity: 1 }} 
+                    transition={{ delay: 0.35, duration: 0.6 }}
+                    className="font-sans text-sm md:text-base text-[#d0c5af] leading-relaxed mb-8 max-w-sm line-clamp-3"
+                  >
                     {liveDrop.description}
-                  </p>
+                  </motion.p>
 
                   <div className="flex flex-col gap-4">
                     <Link to={`/shopping/drop/${liveDrop.slug}`} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
-                      <span className="relative z-10">SHOP THE DROP</span>
+                      <span className="relative z-10">SHOP NOW</span>
                       <div className="absolute inset-0 bg-[#FAF7F2] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                     </Link>
 
@@ -1290,68 +1318,7 @@ const COMMUNITY_FALLBACK = [
   { url: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=80", span: "" },
 ];
 
-export const CommunityFeed = ({ images = [] }) => {
-  const tiles = images.length > 0
-    ? images.map((url, i) => ({ url, span: COMMUNITY_FALLBACK[i % COMMUNITY_FALLBACK.length].span }))
-    : COMMUNITY_FALLBACK;
 
-  return (
-    <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
-      <div className="max-w-[1440px] mx-auto px-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
-          <div>
-            <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.4em]">
-              COMMUNITY · THE STREETS SPEAK
-            </p>
-            <h2 className="se-serif text-[#e5e2e1] text-4xl md:text-6xl mt-3">
-              Worn by the bold.
-            </h2>
-            <p className="font-sans text-sm text-[#99907c] mt-3 max-w-lg">
-              Tag us. The best fits get featured here and on our story.
-            </p>
-          </div>
-          <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 border border-[#4d4635] hover:border-[#f2ca50] text-[#d0c5af] hover:text-[#f2ca50] px-6 py-3 font-mono text-[10px] tracking-[0.28em] uppercase transition-colors shrink-0"
-          >
-            <Instagram className="w-4 h-4" />
-            Follow on Instagram
-          </a>
-        </div>
-
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
-          {tiles.slice(0, 6).map((tile, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ delay: i * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="break-inside-avoid group relative overflow-hidden cursor-pointer"
-              style={{
-                aspectRatio: i % 5 === 0 ? '3/4' : i % 5 === 1 ? '1/1' : i % 5 === 2 ? '2/3' : i % 5 === 3 ? '4/5' : '3/5',
-              }}
-            >
-              <img
-                src={tile.url || tile}
-                alt={`Community look ${i + 1}`}
-                loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-[#0a0a0a]/0 group-hover:bg-[#0a0a0a]/30 transition-all duration-400 flex items-end p-3">
-                <span className="se-label text-[9px] tracking-[0.3em] text-white/0 group-hover:text-white/70 transition-all duration-300">
-                  SAGA ELITE
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
 /* ──────────────────────────────────────────────────────────────────────────
    VIP MEMBERSHIP — full-bleed gradient CTA.
