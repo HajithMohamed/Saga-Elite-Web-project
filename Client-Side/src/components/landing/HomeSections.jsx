@@ -94,7 +94,7 @@ export function ProductRailGrid({
       <div className="relative w-full">
         {loading ? (
           /* Loading State: Skeletons (4 Desktop, 3 Tablet, 2 Mobile) */
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
@@ -126,13 +126,20 @@ export function ProductRailGrid({
             <div
               className={cn(
                 layout === "grid" 
-                  ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]" 
+                  ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]" 
                   : "flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-[24px]"
               )}
             >
               {products.slice(0, 8).map((p, idx) => (
-                <div key={p._id || p.id || idx} className={cn(layout === "carousel" && "snap-start shrink-0 lg:shrink")}>
-                  <ProductCard product={p} index={idx} />
+                <div 
+                  key={p._id || p.id || idx} 
+                  className={cn(
+                    layout === "carousel" 
+                      ? "w-[85vw] sm:w-[260px] snap-start shrink-0 lg:w-auto lg:shrink" 
+                      : "w-full"
+                  )}
+                >
+                  <ProductCard product={p} index={idx} className={layout === "carousel" ? "w-full" : ""} />
                 </div>
               ))}
             </div>
@@ -233,7 +240,7 @@ export function ShopByCategory({ categories = [], loading = false }) {
     return (
       <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
         <div className="mb-10 h-9 w-64 rounded-lg bg-[#131313] animate-pulse" />
-        <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="aspect-[4/5] rounded-[20px] bg-[#131313] animate-pulse" />
           ))}
@@ -263,8 +270,8 @@ export function ShopByCategory({ categories = [], loading = false }) {
         </div>
       </div>
 
-      {/* Grid: Mobile 2-col, Tablet/Desktop 3-col. Fixed aspect ratio → equal heights, no overflow. */}
-      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
+      {/* Grid: Mobile 1-col, Tablet/Desktop 3-col. Fixed aspect ratio → equal heights, no overflow. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
         {categories.map((c, i) => (
           <Reveal key={c.slug || c.name} delay={i * 0.05}>
             <Link

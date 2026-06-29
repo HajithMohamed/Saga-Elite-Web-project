@@ -252,7 +252,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     <div
       className={cn(
         "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:scale-[1.03] hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
-        "w-[170px] md:w-[260px] lg:w-[290px]",
+        "w-full sm:w-[220px] md:w-[260px] lg:w-[290px]",
         className
       )}
     >

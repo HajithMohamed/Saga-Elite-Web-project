@@ -269,19 +269,19 @@ export function InstagramSection() {
               Discover daily fashion inspiration, exclusive drops, and behind-the-scenes content.
             </p>
 
-            <div className="flex min-w-0 overflow-x-auto lg:grid lg:grid-cols-2 gap-4 pb-4 hide-scrollbar snap-x">
+            <div className="flex flex-wrap lg:grid lg:grid-cols-2 gap-4 pb-4">
               {socialLinks.map((link, i) => (
                 <a
                   key={i}
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center gap-4 p-4 rounded-[16px] bg-[#131313] border border-white/5 transition-all duration-250 hover:border-[#f2ca50]/50 shrink-0 w-[240px] lg:w-auto snap-start"
+                  className="group flex items-center gap-4 p-2 lg:p-4 rounded-full lg:rounded-[16px] bg-[#131313] border border-white/5 transition-all duration-250 hover:border-[#f2ca50]/50 shrink-0 lg:w-auto"
                 >
                   <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#1A1A1A] text-[#e5e2e1] transition-all duration-250 group-hover:bg-[#f2ca50] group-hover:text-[#0a0a0a]">
                     <link.icon className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="hidden lg:block min-w-0">
                     <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] group-hover:text-[#f2ca50] transition-colors">{link.name}</h4>
                     <p className="text-[12px] text-[#99907c] truncate">{link.desc}</p>
                   </div>
