@@ -36,7 +36,10 @@
   --se-danger-solid: #FF453A;
   --se-new: #34C759;
   --se-info: #a4d2e2;
+  --se-info-accent: #38BDF8;
   --se-success: #34C759;
+  --se-urgent: #FF6B35;
+  --se-vip: #a855f7;
 
   /* Radius */
   --se-radius-sm: 8px;

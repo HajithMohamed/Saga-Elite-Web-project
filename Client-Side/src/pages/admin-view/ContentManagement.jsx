@@ -9,6 +9,7 @@ import {
   FileText,
   Bell,
   MessageSquare,
+  ImageIcon,
 } from "lucide-react";
 
 // Single "Content Management" shell that hosts the existing SiteConfig manager
@@ -16,6 +17,7 @@ import {
 // their internals, just mount the active one. The active tab is mirrored to a
 // `?tab=` query param so the legacy /admin/<page> routes can redirect deep-link.
 const AboutSiteConfig = lazy(() => import("./AboutSiteConfig"));
+const HomepageImageManager = lazy(() => import("./HomepageImageManager"));
 const PoliciesManager = lazy(() => import("./PoliciesManager"));
 const FooterManager = lazy(() => import("./FooterManager"));
 const AnnouncementBar = lazy(() => import("./AnnouncementBar"));
@@ -23,6 +25,7 @@ const ContactPageManager = lazy(() => import("./ContactPageManager"));
 
 const TABS = [
   { id: "about", label: "Brand & About", icon: Layout, Component: AboutSiteConfig },
+  { id: "images", label: "Homepage Images", icon: ImageIcon, Component: HomepageImageManager },
   { id: "policies", label: "Policies", icon: ScrollText, Component: PoliciesManager },
   { id: "footer", label: "Footer", icon: FileText, Component: FooterManager },
   { id: "announcement", label: "Announcement", icon: Bell, Component: AnnouncementBar },

@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ShieldCheck, Truck, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const LuxuryDropSlider = () => {
+export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const slides = [
+  // Use prop slides if available (from API), otherwise fall back to defaults
+  const DEFAULT_SLIDES = [
     {
       id: "hero-1",
       image: "https://images.unsplash.com/photo-1618085222100-85f0e9df2528?q=80&w=2000&auto=format&fit=crop"
@@ -20,6 +21,13 @@ export const LuxuryDropSlider = () => {
       image: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=2000&auto=format&fit=crop"
     }
   ];
+
+  const slides = propSlides.length > 0
+    ? propSlides.map((s, i) => ({
+        id: s.id || s._id || `hero-${i}`,
+        image: s.imageUrl || s.url || s.image || DEFAULT_SLIDES[i % DEFAULT_SLIDES.length].image,
+      }))
+    : DEFAULT_SLIDES;
 
   useEffect(() => {
     const timer = setInterval(() => {

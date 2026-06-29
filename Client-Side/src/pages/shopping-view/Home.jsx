@@ -25,15 +25,12 @@ import ForYouRail from "@/components/landing/ForYouRail";
 import {
   ProductRailGrid,
   HowItWorks,
-  FeaturedCollections,
   PromoBanner,
   Testimonials,
-  AboutTeaser,
   HomeFAQ,
-  NewsletterSignup,
 } from "@/components/landing/HomeSections";
 import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
-import { EcosystemGrid, LiveActivityOverlay, ArchiveCarousel } from "@/components/landing/LuxuryEcosystemSections";
+import { EcosystemGrid, LiveActivityOverlay } from "@/components/landing/LuxuryEcosystemSections";
 import { ExclusiveDropsBanner } from "@/components/landing/ExclusiveDropsBanner";
 
 const Home = () => {
@@ -155,7 +152,7 @@ const Home = () => {
       <LiveActivityOverlay />
       
       {/* 1. New Luxury Hero Section */}
-      <LuxuryDropSlider />
+      <LuxuryDropSlider slides={payload.heroSlides} />
 
       {/* 2. The Ecosystem Grid */}
       <EcosystemGrid />
@@ -170,18 +167,11 @@ const Home = () => {
         <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
       </Reveal>
 
-      {/* 5. The Vault / Past Drops */}
-      <ArchiveCarousel pastDrops={[
-        { id: 1, name: "Nocturne Cargo", chapter: "01", image: "https://images.unsplash.com/photo-1550639525-c97d455acf70?q=80" },
-        { id: 2, name: "Phantom Windbreaker", chapter: "02", image: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80" },
-        { id: 3, name: "Obsidian Boots", chapter: "03", image: "https://images.unsplash.com/photo-1618085222100-85f0e9df2528?q=80" },
-      ]} />
+      {/* 5. Exclusive Drops Banner */}
+      <ExclusiveDropsBanner nextDrop={nextDrop} />
 
-      {/* 5. Why Saga Elite */}
+      {/* 6. Why Saga Elite */}
       <WhyChooseSaga />
-
-      {/* 6. Featured collections */}
-      <FeaturedCollections categoryImages={payload.categoryImages} />
 
       {/* 7. Trending now */}
       <ProductRailGrid
@@ -224,10 +214,7 @@ const Home = () => {
         ctaHref="/shopping/product-list"
       />
 
-      {/* 12. Exclusive Drops Banner */}
-      <ExclusiveDropsBanner nextDrop={nextDrop} />
-
-      {/* 13. Personalized rails (kept) */}
+      {/* 12. Personalized rails (kept) */}
       <ForYouRail variant="for-you" />
       <ForYouRail variant="recently-viewed" />
       <ForYouRail variant="trending-style" />
@@ -240,17 +227,11 @@ const Home = () => {
         <CommunityFeed images={payload.socialImages} />
       )}
 
-      {/* 16. Testimonials */}
+      {/* 15. Testimonials */}
       <Testimonials />
 
-      {/* 17. About teaser */}
-      <AboutTeaser />
-
-      {/* 18. FAQ */}
+      {/* 16. FAQ */}
       <HomeFAQ />
-
-      {/* 19. Newsletter */}
-      <NewsletterSignup />
 
       {/* Footer comes from the shared layout (MainFooter). */}
     </div>
