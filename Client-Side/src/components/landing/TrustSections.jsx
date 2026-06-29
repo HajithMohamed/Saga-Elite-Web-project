@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal, Eyebrow } from "@/components/ui/editorial";
+import { fetchTopReviews, fetchStoreStats } from "@/services/landing-api";
 
 const SECTION_CONTAINER = "mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]";
 
@@ -60,7 +61,10 @@ export function WhyChooseSaga() {
         {TRUST_CARDS.map((card, i) => (
           <Reveal key={i} delay={i * 0.1}>
             <div className="group flex flex-col items-start rounded-[20px] bg-[#1A1A1A] p-6 md:p-8 border border-white/10 transition-all duration-250 hover:border-[#f2ca50] hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(242,202,80,0.1)] w-full h-[220px]">
-              <card.icon className="w-12 h-12 text-[#f2ca50] mb-6 transition-transform group-hover:scale-110" strokeWidth={1.5} />
+              {/* Fixed icon box → equal visual weight across all four cards */}
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-[#f2ca50]/10">
+                <card.icon className="h-7 w-7 text-[#f2ca50] transition-transform group-hover:scale-110" strokeWidth={1.5} />
+              </div>
               <h3 className="font-sans font-semibold text-[18px] md:text-[20px] text-[#e5e2e1] mb-2">
                 {card.title}
               </h3>
@@ -153,80 +157,131 @@ export function HowShoppingWorks() {
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. Customer Testimonials & Trust Indicators
 // ─────────────────────────────────────────────────────────────────────────────
-const TESTIMONIALS = [
-  {
-    name: "Aisha M.",
-    location: "Colombo",
-    quote: "Amazing quality, fast delivery, and exactly what I expected. I'll definitely order again!",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150&h=150",
-  },
-  {
-    name: "Daniel R.",
-    location: "Kandy",
-    quote: "Quality you can feel. The boots are now my everyday go-to — quick delivery and beautiful packaging.",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150&h=150",
-  },
-  {
-    name: "Priya S.",
-    location: "Galle",
-    quote: "It feels like having a personal stylist guiding me to pieces that actually suit my life. 10/10 service.",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150&h=150",
-  },
-];
-
 export function CustomerTestimonials() {
+  const [reviews, setReviews] = React.useState([]);
+  const [stats, setStats] = React.useState(null);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([fetchTopReviews(6), fetchStoreStats()]).then(([r, s]) => {
+      if (!active) return;
+      setReviews(Array.isArray(r) ? r : []);
+      setStats(s);
+      setLoaded(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Trust indicators are built ONLY from real, present metrics — any absent
+  // metric simply doesn't render a card (no fabricated numbers, no padding).
+  const trustIndicators = [];
+  if (stats?.happyCustomers)
+    trustIndicators.push({ label: "Happy Customers", value: `${Number(stats.happyCustomers).toLocaleString()}+` });
+  if (stats?.totalOrders)
+    trustIndicators.push({ label: "Orders Delivered", value: `${Number(stats.totalOrders).toLocaleString()}+` });
+  if (stats?.totalProducts)
+    trustIndicators.push({ label: "Products", value: Number(stats.totalProducts).toLocaleString() });
+  if (stats?.averageRating)
+    trustIndicators.push({ label: "Average Rating", value: `${Number(stats.averageRating).toFixed(1)}/5` });
+
+  // Still loading → reserve space with a light skeleton to avoid layout shift.
+  if (!loaded) {
+    return (
+      <section className={SECTION_CONTAINER}>
+        <div className="mx-auto mb-12 h-10 w-72 rounded-lg bg-[#131313] animate-pulse" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[240px] rounded-[20px] bg-[#131313] animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Nothing real to show → hide the section entirely.
+  if (reviews.length === 0 && trustIndicators.length === 0) return null;
+
   return (
     <section className={SECTION_CONTAINER}>
-      <div className="text-center mb-12 md:mb-16">
-        <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
-          What Our Customers Say
-        </h2>
-        <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-2xl mx-auto">
-          Thousands of customers trust Saga Elite for premium fashion.
-        </p>
-      </div>
-
-      {/* Testimonials Grid/Carousel */}
-      <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0">
-        {TESTIMONIALS.map((t, i) => (
-          <Reveal key={i} delay={i * 0.1}>
-            <div className="flex flex-col justify-between rounded-[20px] bg-[#131313] border border-[#f2ca50]/20 p-8 w-[85vw] sm:w-[320px] md:w-auto md:max-w-[340px] lg:max-w-[390px] h-full min-h-[240px] lg:min-h-[260px] snap-center shrink-0">
-              <div>
-                <div className="flex gap-1 text-[#f2ca50] mb-4">
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Star key={s} className="w-4 h-4 fill-current" />
-                  ))}
-                </div>
-                <p className="se-body text-[16px] leading-relaxed text-[#e5e2e1] line-clamp-4 italic">
-                  "{t.quote}"
-                </p>
-              </div>
-              <div className="flex items-center gap-4 mt-6">
-                <img src={t.avatar} alt={t.name} className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#1a1a1a]" loading="lazy" />
-                <div>
-                  <h4 className="font-sans font-semibold text-[16px] md:text-[18px] text-[#e5e2e1]">{t.name}</h4>
-                  <p className="text-[12px] md:text-[14px] text-[#99907c]">{t.location}</p>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        ))}
-      </div>
-
-      {/* Trust Indicators */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-12 md:mt-16 border-t border-white/5 pt-12 md:pt-16">
-        {[
-          { label: "Average Rating", value: "4.9/5" },
-          { label: "Orders Delivered", value: "25,000+" },
-          { label: "Happy Customers", value: "12,000+" },
-          { label: "Delivery", value: "Islandwide" },
-        ].map((stat, i) => (
-          <div key={i} className="text-center p-4 bg-[#0a0a0a] rounded-[16px] border border-white/5">
-            <div className="font-serif text-[24px] md:text-[32px] text-[#f2ca50] mb-1">{stat.value}</div>
-            <div className="se-label text-[11px] md:text-[12px] text-[#99907c] uppercase tracking-wider">{stat.label}</div>
+      {reviews.length > 0 && (
+        <>
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+              What Our Customers Say
+            </h2>
+            <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-2xl mx-auto">
+              Real reviews from verified Saga Elite customers.
+            </p>
           </div>
-        ))}
-      </div>
+
+          {/* Testimonials Grid/Carousel */}
+          <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0">
+            {reviews.map((t, i) => (
+              <Reveal key={t._id || i} delay={i * 0.1}>
+                <div className="flex flex-col justify-between rounded-[20px] bg-[#131313] border border-[#f2ca50]/20 p-8 w-[85vw] sm:w-[320px] md:w-auto md:max-w-[340px] lg:max-w-[390px] h-full min-h-[240px] lg:min-h-[260px] snap-center shrink-0">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex gap-1 text-[#f2ca50]">
+                        {Array.from({ length: 5 }).map((_, s) => (
+                          <Star key={s} className={cn("w-4 h-4", s < Math.round(t.rating) ? "fill-current" : "text-white/20")} />
+                        ))}
+                      </div>
+                      {t.verifiedPurchase && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f2ca50]/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#f2ca50]">
+                          <Check className="w-3 h-3" /> Verified
+                        </span>
+                      )}
+                    </div>
+                    <p className="se-body text-[16px] leading-relaxed text-[#e5e2e1] line-clamp-4 italic">
+                      &ldquo;{t.content}&rdquo;
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 mt-6">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center border-2 border-[#f2ca50]/30 shrink-0">
+                      {t.customer?.avatar ? (
+                        <img
+                          src={t.customer.avatar}
+                          alt={t.customer.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="se-serif text-[#f2ca50] text-xl">
+                          {(t.customer?.name || "A").charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-sans font-semibold text-[16px] md:text-[18px] text-[#e5e2e1] truncate">
+                        {t.customer?.name || "Verified Buyer"}
+                      </h4>
+                      <p className="text-[12px] md:text-[14px] text-[#99907c] truncate">
+                        {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Recently"}
+                        {t.product ? ` · ${t.product}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Trust Indicators (real metrics only) */}
+      {trustIndicators.length > 0 && (
+        <div className={cn("grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6", reviews.length > 0 && "mt-12 md:mt-16 border-t border-white/5 pt-12 md:pt-16")}>
+          {trustIndicators.map((stat, i) => (
+            <div key={i} className="text-center p-4 bg-[#0a0a0a] rounded-[16px] border border-white/5">
+              <div className="font-serif text-[24px] md:text-[32px] text-[#f2ca50] mb-1">{stat.value}</div>
+              <div className="se-label text-[11px] md:text-[12px] text-[#99907c] uppercase tracking-wider">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

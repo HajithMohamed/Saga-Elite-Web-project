@@ -163,6 +163,7 @@ const Drops = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [dropImages, setDropImages] = useState([]);
+  const [bannerImages, setBannerImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
   const [currentEditedId, setCurrentEditedId] = useState(null);
   const [dropGalleryImages, setDropGalleryImages] = useState([]);
@@ -194,6 +195,7 @@ const Drops = () => {
     setCurrentEditedSlug(null);
     setCurrentEditedId(null);
     setDropImages([]);
+    setBannerImages([]);
   };
 
   const openNewDropForm = () => {
@@ -202,6 +204,7 @@ const Drops = () => {
     setCurrentEditedSlug(null);
     setCurrentEditedId(null);
     setDropImages([]);
+    setBannerImages([]);
     setShowForm(true);
     if (draft) {
       toast({
@@ -296,6 +299,45 @@ const Drops = () => {
     }
   }
 
+  // 21:9 homepage banner (Image.type === "dropBanner"), kept separate from the
+  // portrait campaign gallery above.
+  async function uploadPendingBannerImages(refId) {
+    const pending = bannerImages.filter((img) => !img.isUploaded && img.file);
+    if (!pending.length || !refId) return true;
+
+    const fd = new FormData();
+    fd.append("refModel", "Drop");
+    fd.append("refId", refId);
+    fd.append("type", "dropBanner");
+    pending.forEach((img) => fd.append("images", img.file));
+
+    try {
+      const response = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+      if (!response.data?.success)
+        throw new Error(response.data?.message || "Banner upload failed");
+
+      setBannerImages((prev) => {
+        const existing = prev.filter((img) => !img.file);
+        const uploaded = (response.data.images || []).map((img) => ({
+          ...img,
+          isUploaded: true,
+        }));
+        return [...existing, ...uploaded];
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Drop saved but banner upload failed",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }
+
   const fetchDropImages = async (id) => {
     try {
       const res = await axios.get(`${API_BASE}/image/get-drop-images/${id}`);
@@ -380,10 +422,12 @@ const Drops = () => {
           updateDrop({ slug: currentEditedSlug, formData })
         ).unwrap();
         await uploadPendingDropImages(currentEditedId);
+        await uploadPendingBannerImages(currentEditedId);
       } else {
         result = await dispatch(createDrop(formData)).unwrap();
         const newId = result._id;
         await uploadPendingDropImages(newId);
+        await uploadPendingBannerImages(newId);
         setCurrentEditedId(newId);
         setCurrentEditedSlug(result.slug);
       }
@@ -645,35 +689,100 @@ const Drops = () => {
               Save the drop to upload images
             </p>
             <p className="mt-2 text-[11px] text-white/40">
-              Recommended hero size: 1600×2000 · JPG / WEBP · Max 5 MB
+              Drop-page gallery 1600×2000 (4:5) · Homepage banner 1280×420 (21:9) · JPG / PNG / WEBP · Max 5 MB
             </p>
           </div>
         ) : (
-          <>
-            <ImageUpload
-              images={dropImages}
-              setImages={setDropImages}
-              isMultiple
-              refModel="Drop"
-              refId={currentEditedId}
-              type="drop"
-            />
-            {dropImages.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  openDropGallery({
-                    name: formData.name,
-                    _id: currentEditedId,
-                    images: dropImages,
-                  })
-                }
-                className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
-              >
-                View all images
-              </button>
-            )}
-          </>
+          <div className="space-y-8">
+            {/* Portrait campaign gallery — drop page */}
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  Drop-page gallery
+                </h4>
+                <span className="text-[10px] text-white/40">Portrait · 4:5 · 1600×2000</span>
+              </div>
+              <ImageUpload
+                images={dropImages}
+                setImages={setDropImages}
+                isMultiple
+                refModel="Drop"
+                refId={currentEditedId}
+                type="drop"
+              />
+              {dropImages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openDropGallery({
+                      name: formData.name,
+                      _id: currentEditedId,
+                      images: dropImages,
+                    })
+                  }
+                  className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+                >
+                  View all images
+                </button>
+              )}
+            </div>
+
+            {/* 21:9 homepage banner — separate dedicated slot */}
+            <div className="rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  Homepage banner (21:9)
+                </h4>
+                <span className="text-[10px] text-white/40">1280×420 · Cover</span>
+              </div>
+              <ul className="mb-3 space-y-1 text-[11px] leading-relaxed text-white/50">
+                <li>• Recommended 1280 × 420 px (21:9). Minimum 1280 × 420.</li>
+                <li>• JPG / PNG / WEBP · Max 5 MB.</li>
+                <li>• Keep models, logos &amp; key subjects within the centre 60% — edges get cropped on wide screens.</li>
+                <li>• Don&rsquo;t bake headings or buttons into the image; the site overlays those.</li>
+              </ul>
+              <ImageUpload
+                images={bannerImages}
+                setImages={setBannerImages}
+                isMultiple={false}
+                refModel="Drop"
+                refId={currentEditedId}
+                type="dropBanner"
+                requiredRatio={21 / 9}
+                minWidth={1280}
+                minHeight={420}
+              />
+
+              {/* Responsive preview — three 21:9 frames + centre safe-area guide */}
+              {bannerImages[0]?.url && (
+                <div className="mt-4">
+                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    Preview across devices
+                  </p>
+                  <div className="flex flex-wrap items-start gap-4">
+                    {[
+                      { label: "Desktop", w: "w-[280px]" },
+                      { label: "Tablet", w: "w-[200px]" },
+                      { label: "Mobile", w: "w-[130px]" },
+                    ].map((d) => (
+                      <div key={d.label} className="space-y-1">
+                        <div className={`${d.w} relative aspect-[1280/420] overflow-hidden rounded-lg border border-white/10 bg-black`}>
+                          <img
+                            src={bannerImages[0].url}
+                            alt={`${d.label} banner preview`}
+                            className="absolute inset-0 h-full w-full object-cover object-center"
+                          />
+                          {/* centre 60% safe-area guide */}
+                          <div className="pointer-events-none absolute inset-y-0 left-[20%] right-[20%] border-x border-dashed border-[#D4AF37]/40" />
+                        </div>
+                        <p className="text-center text-[9px] uppercase tracking-wider text-white/40">{d.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </FormSection>
 
@@ -994,7 +1103,11 @@ const Drops = () => {
                               isPublished: drop.isPublished,
                               isArchived: drop.isArchived,
                             });
-                            setDropImages(drop.images || []);
+                            {
+                              const imgs = drop.images || [];
+                              setDropImages(imgs.filter((im) => im.type !== "dropBanner"));
+                              setBannerImages(imgs.filter((im) => im.type === "dropBanner"));
+                            }
                             setShowForm(true);
                           }}
                           className="p-2 text-white/40 hover:text-[#D4AF37] transition-colors"

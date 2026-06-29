@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
 import {
   ArrowRight,
   Star,
@@ -15,10 +14,8 @@ import {
   RefreshCcw,
   Gem,
 } from "lucide-react";
-import { Reveal, Eyebrow, Btn, Disclosure } from "@/components/ui/editorial";
+import { Reveal, Eyebrow, Btn } from "@/components/ui/editorial";
 import ProductCard from "@/components/shopping-components/ProductCard";
-import { toast } from "@/hooks/use-toast";
-import { API_V1_URL as API_BASE } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,67 +223,72 @@ export function WhyUsCompact() {
   );
 }
 
-// ── CATEGORY FILTER QUICK LINKS & SHOP BY CATEGORY (Prompt 03) ───────────────
-export function ShopByCategory({ categoryImages = {} }) {
-  const categories = [
-    { name: "Women", desc: "Elegant styles for every occasion.", img: categoryImages?.ladies?.main || FALLBACK_IMG, href: "/shopping/product-list?category=ladies" },
-    { name: "Men", desc: "Sharp tailoring & luxury staples.", img: categoryImages?.gents?.main || FALLBACK_IMG, href: "/shopping/product-list?category=gents" },
-    { name: "Unisex", desc: "Staples for everyone.", img: categoryImages?.unisex?.main || FALLBACK_IMG, href: "/shopping/product-list?category=unisex" },
-    { name: "Shoes", desc: "Luxury footwear for modern lifestyles.", img: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80", href: "/shopping/product-list?category=shoes" },
-    { name: "Bags", desc: "Statement pieces & everyday luxury.", img: "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80", href: "/shopping/product-list?category=bags" },
-    { name: "Accessories", desc: "Complete your signature look.", img: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80", href: "/shopping/product-list?category=accessories" },
-  ];
+// ── SHOP BY CATEGORY (DB-driven) ─────────────────────────────────────────────
+// Tiles come from the real Category collection (see fetchHomeCategories). Equal
+// heights via a fixed aspect ratio, `min-w-0` truncation so names never push the
+// arrow out of bounds, and no horizontal scroll at any breakpoint. Hidden when
+// there are no categories to show; skeletons while the parent is still loading.
+export function ShopByCategory({ categories = [], loading = false }) {
+  if (loading) {
+    return (
+      <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
+        <div className="mb-10 h-9 w-64 rounded-lg bg-[#131313] animate-pulse" />
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="aspect-[4/5] rounded-[20px] bg-[#131313] animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
-  const quickLinks = ["Women", "Men", "Unisex", "Shoes", "Accessories", "Bags"];
+  if (!categories || categories.length === 0) return null;
 
   return (
     <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
       <div className="mb-10 md:mb-14">
         <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1]">Shop by Category</h2>
-        
-        {/* Quick Links */}
+
+        {/* Quick-link chips (same real categories) */}
         <div className="mt-6 flex flex-wrap gap-3">
-          {quickLinks.map((link) => (
+          {categories.map((c) => (
             <Link
-              key={link}
-              to={`/shopping/product-list?category=${link.toLowerCase()}`}
+              key={`chip-${c.slug || c.name}`}
+              to={c.href}
               className="flex h-[40px] items-center justify-center rounded-full border border-[#f2ca50] bg-transparent px-6 se-body text-sm text-[#e5e2e1] transition-colors hover:bg-[#f2ca50] hover:text-[#0a0a0a]"
             >
-              {link}
+              {c.name}
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Grid: Desktop 3x2, Tablet 3x2, Mobile 2x3 */}
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-3">
+      {/* Grid: Mobile 2-col, Tablet/Desktop 3-col. Fixed aspect ratio → equal heights, no overflow. */}
+      <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
         {categories.map((c, i) => (
-          <Reveal key={c.name} delay={i * 0.05}>
+          <Reveal key={c.slug || c.name} delay={i * 0.05}>
             <Link
               to={c.href}
-              className="group relative block overflow-hidden rounded-[20px] bg-[#131313] 
-                         h-[220px] md:h-[340px] lg:h-[460px] cursor-pointer 
+              className="group relative flex flex-col overflow-hidden rounded-[20px] bg-[#131313]
+                         aspect-[4/5] cursor-pointer
                          transition-transform duration-250 hover:scale-[1.03] hover:shadow-[0_0_15px_rgba(242,202,80,0.15)]"
             >
-              {/* Image Area (Top 80%) */}
-              <div className="absolute inset-x-0 top-0 h-[80%] overflow-hidden rounded-t-[20px]">
+              {/* Image Area */}
+              <div className="relative flex-1 w-full overflow-hidden rounded-t-[20px]">
                 <img
-                  src={c.img}
+                  src={c.img || FALLBACK_IMG}
                   alt={c.name}
                   loading="lazy"
                   onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
-                  className="h-full w-full object-cover object-center transition-transform duration-250 group-hover:scale-[1.05]"
+                  className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-250 group-hover:scale-[1.05]"
                 />
               </div>
-              
-              {/* Content Area (Bottom 20%) */}
-              <div className="absolute inset-x-0 bottom-0 flex h-[20%] items-center justify-between bg-[#131313] px-4 md:px-6">
-                <div>
-                  <h3 className="se-headline text-[16px] md:text-[18px] text-[#e5e2e1]">{c.name}</h3>
-                  <p className="hidden se-body text-[12px] md:text-[14px] text-[#99907c] sm:block">{c.desc}</p>
-                </div>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-[#f2ca50] transition-colors group-hover:border-[#f2ca50] group-hover:bg-[#f2ca50]/10">
-                  <ArrowRight className="h-4 w-4" />
+
+              {/* Content Area */}
+              <div className="flex shrink-0 items-center justify-between bg-[#131313] p-4 md:p-6">
+                <h3 className="se-headline min-w-0 flex-1 truncate pr-2 text-[14px] sm:text-[16px] md:text-[18px] text-[#e5e2e1]">{c.name}</h3>
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full border border-white/10 text-[#f2ca50] transition-colors group-hover:border-[#f2ca50] group-hover:bg-[#f2ca50]/10">
+                  <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
                 </div>
               </div>
 
@@ -300,75 +302,7 @@ export function ShopByCategory({ categoryImages = {} }) {
   );
 }
 
-// ── FEATURED COLLECTIONS (Prompt 03) ─────────────────────────────────────────
-export function FeaturedCollections() {
-  const collections = [
-    {
-      title: "Summer Collection",
-      desc: "Luxury essentials for the warm season.",
-      img: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80",
-      href: "/shopping/product-list",
-    },
-    {
-      title: "New Season",
-      desc: "Fresh arrivals straight from the atelier.",
-      img: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80",
-      href: "/shopping/product-list",
-    },
-    {
-      title: "Editor's Picks",
-      desc: "Curated styles selected by our fashion editors.",
-      img: "https://images.unsplash.com/photo-1485230895905-31d044820f51?q=80",
-      href: "/shopping/product-list",
-    },
-  ];
 
-  return (
-    <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px] overflow-hidden">
-      <div className="mb-10 md:mb-14">
-        <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1]">Featured Collections</h2>
-      </div>
-
-      {/* Horizontal Scroll on Mobile, Grid on Desktop */}
-      <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 hide-scrollbar">
-        {collections.map((c, i) => (
-          <Reveal key={c.title} delay={i * 0.08} className="min-w-[85vw] snap-center sm:min-w-[320px] md:min-w-0">
-            <Link
-              to={c.href}
-              className="group relative block w-full overflow-hidden rounded-[24px] bg-[#131313] 
-                         h-[380px] md:h-[420px] lg:h-[500px] cursor-pointer 
-                         transition-transform duration-250 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(242,202,80,0.1)]"
-            >
-              <img
-                src={c.img}
-                alt={c.title}
-                loading="lazy"
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-250 group-hover:scale-[1.04]"
-              />
-              {/* Dark Gradient Overlay (Bottom 60%) */}
-              <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
-              
-              <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-6 md:p-8">
-                <h3 className="se-serif text-2xl md:text-3xl text-[#e5e2e1]">{c.title}</h3>
-                <p className="mt-2 max-w-[90%] se-body text-sm text-[#d0c5af]">{c.desc}</p>
-                <div className="mt-6 flex items-center gap-2">
-                  <span className="se-label text-[11px] tracking-[0.18em] text-[#f2ca50] relative after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-0 after:bg-[#f2ca50] after:transition-all after:duration-250 group-hover:after:w-full">
-                    Explore Collection
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-[#f2ca50] transition-transform duration-250 group-hover:translate-x-1" />
-                </div>
-              </div>
-
-              {/* Hover Glow Border */}
-              <div className="pointer-events-none absolute inset-0 rounded-[24px] border border-transparent transition-colors duration-250 group-hover:border-[#f2ca50]/50" />
-            </Link>
-          </Reveal>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 // ── PROMOTIONAL BANNER (Prompt 03) ───────────────────────────────────────────
 export function PromoBanner() {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Heart, ShoppingBag, X, Tag } from "lucide-react";
+import { Eye, Heart, ShoppingBag, X, Tag, Star } from "lucide-react";
 import { useProductOffers } from "@/hooks/use-product-offers";
 import {
   addToCartAction,
@@ -329,9 +329,18 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
             </h3>
           </Link>
           
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[#f2ca50] text-[12px] md:text-[14px] lg:text-[16px]">★★★★★</span>
-            <span className="text-[#99907c] text-[10px] md:text-[12px] lg:text-[14px]">(124)</span>
+          <div className="flex items-center gap-1.5 mt-1">
+            {(product?.reviewCount || product?.numReviews || 0) > 0 ? (
+              <>
+                <div className="flex items-center text-[#f2ca50] text-[12px] md:text-[14px]">
+                  <Star className="w-3 h-3 md:w-3.5 md:h-3.5 fill-current" />
+                  <span className="ml-1 font-semibold">{Number(product?.averageRating || product?.rating || 5).toFixed(1)}</span>
+                </div>
+                <span className="text-[#99907c] text-[10px] md:text-[12px]">({product?.reviewCount || product?.numReviews})</span>
+              </>
+            ) : (
+              <span className="text-[#99907c] text-[10px] md:text-[11px] italic">No Reviews Yet</span>
+            )}
           </div>
         </div>
 

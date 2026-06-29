@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { 
-  Instagram, 
-  Facebook, 
-  Youtube, 
-  Twitter, 
+import { Link, useLocation } from "react-router-dom";
+import {
+  Instagram,
+  Facebook,
+  Youtube,
+  Twitter,
   ArrowUp,
   MapPin,
   Mail,
@@ -12,9 +12,12 @@ import {
   ShieldCheck,
   Lock,
   BadgeCheck,
-  ChevronDown
+  ChevronDown,
+  Banknote,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchSiteSettings } from "@/services/landing-api";
 
 // lucide ships no WhatsApp brand glyph
 const WhatsAppIcon = ({ className }) => (
@@ -23,7 +26,8 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
-const QUICK_LINKS = [
+// ── Built-in fallback link columns (used until an admin configures them) ─────
+const DEFAULT_QUICK_LINKS = [
   { label: "Home", url: "/" },
   { label: "New Arrivals", url: "/shopping/product-list?sort=new" },
   { label: "Women", url: "/shopping/product-list?category=women" },
@@ -33,7 +37,7 @@ const QUICK_LINKS = [
   { label: "Sale", url: "/shopping/product-list?sale=true" },
 ];
 
-const SUPPORT_LINKS = [
+const DEFAULT_SUPPORT_LINKS = [
   { label: "Contact Us", url: "/contact" },
   { label: "FAQs", url: "/contact" },
   { label: "Shipping", url: "/legal/delivery-policy" },
@@ -42,7 +46,7 @@ const SUPPORT_LINKS = [
   { label: "Size Guide", url: "/size-guide" },
 ];
 
-const COMPANY_LINKS = [
+const DEFAULT_COMPANY_LINKS = [
   { label: "About", url: "/about" },
   { label: "Careers", url: "/careers" },
   { label: "Privacy Policy", url: "/legal/privacy-policy" },
@@ -50,65 +54,163 @@ const COMPANY_LINKS = [
   { label: "Cookie Policy", url: "/legal/privacy-policy" },
 ];
 
-const SOCIAL_LINKS = [
-  { Icon: Instagram, url: "https://instagram.com" },
-  { Icon: Facebook, url: "https://facebook.com" },
-  { Icon: Twitter, url: "https://twitter.com" },
-  { Icon: Youtube, url: "https://youtube.com" },
-];
+const DEFAULT_BRAND_DESC =
+  "Premium fashion marketplace delivering luxury clothing, footwear and accessories across Sri Lanka.";
 
-const PAYMENT_METHODS = ["Visa", "Mastercard", "American Express", "Apple Pay", "Google Pay", "Cash on Delivery", "Bank Transfer"];
+// Payment methods Saga Elite actually supports.
+const DEFAULT_PAYMENTS = [
+  { name: "Visa" },
+  { name: "Mastercard" },
+  { name: "Cash on Delivery" },
+  { name: "Bank Transfer" },
+];
 
 const SECURITY_BADGES = [
   { icon: Lock, label: "SSL Secure" },
   { icon: ShieldCheck, label: "Encrypted Checkout" },
   { icon: BadgeCheck, label: "Verified Business" },
-  { icon: ShieldCheck, label: "Secure Payments" }
+  { icon: ShieldCheck, label: "Secure Payments" },
 ];
 
+// Responsive sizing: 32px mobile · 36px tablet · 40px desktop.
+const PAY_CHIP = "h-8 md:h-9 lg:h-10";
+
+const VisaMark = () => (
+  <svg viewBox="0 0 48 16" className="h-full w-auto" role="img" aria-label="Visa">
+    <text x="24" y="13" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontStyle="italic" fontSize="13" fill="#1A1F71">VISA</text>
+  </svg>
+);
+
+const MastercardMark = () => (
+  <svg viewBox="0 0 40 24" className="h-full w-auto" role="img" aria-label="Mastercard">
+    <circle cx="16" cy="12" r="9" fill="#EB001B" />
+    <circle cx="24" cy="12" r="9" fill="#F79E1B" fillOpacity="0.9" />
+  </svg>
+);
+
+// One payment-method chip. Admin-uploaded icons win; otherwise we render a
+// recognizable inline mark for known brands and a labelled chip for the rest.
+function PaymentChip({ method }) {
+  const name = method?.name || "";
+  const key = name.toLowerCase().replace(/[^a-z]/g, "");
+
+  if (method?.iconUrl) {
+    return (
+      <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}>
+        <img src={method.iconUrl} alt={name} className="h-full w-auto object-contain py-1.5" loading="lazy" />
+      </div>
+    );
+  }
+  if (key.includes("visa")) {
+    return <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}><VisaMark /></div>;
+  }
+  if (key.includes("mastercard") || key === "mc") {
+    return <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}><MastercardMark /></div>;
+  }
+  if (key.includes("cash") || key === "cod") {
+    return (
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
+        <Banknote className="w-4 h-4 text-[#f2ca50]" /> Cash on Delivery
+      </div>
+    );
+  }
+  if (key.includes("bank")) {
+    return (
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
+        <Landmark className="w-4 h-4 text-[#f2ca50]" /> Bank Transfer
+      </div>
+    );
+  }
+  return (
+    <div className={cn("flex items-center justify-center rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] font-semibold text-[#e5e2e1]", PAY_CHIP)}>
+      {name}
+    </div>
+  );
+}
+
+const linkClass =
+  "text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200";
+
+// Internal routes use <Link>; external (http/https) use <a>.
+function FooterLink({ link }) {
+  const url = link?.url || "#";
+  const isExternal = /^https?:\/\//i.test(url);
+  if (isExternal) {
+    return (
+      <a href={url} target={link.openInNewTab ? "_blank" : undefined} rel="noopener noreferrer" className={linkClass}>
+        {link.label}
+      </a>
+    );
+  }
+  return (
+    <Link to={url} target={link.openInNewTab ? "_blank" : undefined} className={linkClass}>
+      {link.label}
+    </Link>
+  );
+}
+
 export default function MainFooter() {
+  const location = useLocation();
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState(null);
+  const [settings, setSettings] = useState(null);
+
+  // The app-wide Mystery Gift FAB also sits bottom-right (h-14). Stack the
+  // back-to-top button directly above it so the two never overlap. The gift
+  // FAB is lifted to bottom-24 on /shopping mobile (clears the bottom nav),
+  // so mirror that and add the gift's height + a gap on top.
+  const onShopping = location.pathname.startsWith("/shopping");
+  const backToTopPos = onShopping
+    ? "bottom-[10.5rem] right-6 md:bottom-24 md:right-6"
+    : "bottom-24 right-6 md:bottom-24 md:right-6";
 
   useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 800);
-    };
+    fetchSiteSettings().then(setSettings);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 800);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const toggleAccordion = (index) => setActiveAccordion(activeAccordion === index ? null : index);
 
-  const toggleAccordion = (index) => {
-    setActiveAccordion(activeAccordion === index ? null : index);
-  };
+  // Admin-managed content with graceful fallbacks.
+  const brandDesc = settings?.brandDescription || DEFAULT_BRAND_DESC;
+  const copyright = (settings?.copyright || "© {year} Saga Elite. All rights reserved.").replace(
+    "{year}",
+    String(new Date().getFullYear())
+  );
+  const quickLinks = settings?.quickLinks?.length ? settings.quickLinks : DEFAULT_QUICK_LINKS;
+  const supportLinks = settings?.supportLinks?.length ? settings.supportLinks : DEFAULT_SUPPORT_LINKS;
+  const companyLinks = settings?.shopLinks?.length ? settings.shopLinks : DEFAULT_COMPANY_LINKS;
+  const payments = settings?.paymentMethods?.length ? settings.paymentMethods : DEFAULT_PAYMENTS;
+
+  const socials = [
+    settings?.instagramUrl && { Icon: Instagram, url: settings.instagramUrl },
+    settings?.facebookUrl && { Icon: Facebook, url: settings.facebookUrl },
+    settings?.twitterUrl && { Icon: Twitter, url: settings.twitterUrl },
+    settings?.youtubeUrl && { Icon: Youtube, url: settings.youtubeUrl },
+  ].filter(Boolean);
 
   const renderAccordion = (title, links, index) => {
     const isOpen = activeAccordion === index;
     return (
       <div className="md:hidden border-b border-white/10">
-        <button 
+        <button
           onClick={() => toggleAccordion(index)}
           className="w-full h-[60px] flex items-center justify-between text-[#e5e2e1] font-sans font-semibold text-[15px]"
         >
           {title}
           <ChevronDown className={cn("w-5 h-5 transition-transform duration-250", isOpen && "rotate-180")} />
         </button>
-        <div 
-          className={cn(
-            "overflow-hidden transition-all duration-250",
-            isOpen ? "max-h-[400px] pb-6" : "max-h-0"
-          )}
-        >
+        <div className={cn("overflow-hidden transition-all duration-250", isOpen ? "max-h-[400px] pb-6" : "max-h-0")}>
           <ul className="flex flex-col gap-4">
             {links.map((link, i) => (
               <li key={i}>
-                <Link to={link.url} className="text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200">
-                  {link.label}
-                </Link>
+                <FooterLink link={link} />
               </li>
             ))}
           </ul>
@@ -120,30 +222,24 @@ export default function MainFooter() {
   return (
     <footer className="bg-[#0E0E0E] border-t border-white/5 relative">
       <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
-        
+
         {/* Desktop Layout: 5 Columns */}
         <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12 mb-16">
-          
+
           {/* Column 1: Brand */}
           <div className="lg:col-span-1">
             <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-6">
-              SAGA ELITE
+              {settings?.brandName || "SAGA ELITE"}
             </Link>
-            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">
-              Premium fashion marketplace delivering luxury clothing, footwear and accessories across Sri Lanka.
-            </p>
+            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div>
             <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Quick Links</h4>
             <ul className="flex flex-col gap-4">
-              {QUICK_LINKS.map((link, i) => (
-                <li key={i}>
-                  <Link to={link.url} className="text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200">
-                    {link.label}
-                  </Link>
-                </li>
+              {quickLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
               ))}
             </ul>
           </div>
@@ -152,12 +248,8 @@ export default function MainFooter() {
           <div>
             <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Customer Support</h4>
             <ul className="flex flex-col gap-4">
-              {SUPPORT_LINKS.map((link, i) => (
-                <li key={i}>
-                  <Link to={link.url} className="text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200">
-                    {link.label}
-                  </Link>
-                </li>
+              {supportLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
               ))}
             </ul>
           </div>
@@ -166,44 +258,38 @@ export default function MainFooter() {
           <div>
             <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Company</h4>
             <ul className="flex flex-col gap-4">
-              {COMPANY_LINKS.map((link, i) => (
-                <li key={i}>
-                  <Link to={link.url} className="text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200">
-                    {link.label}
-                  </Link>
-                </li>
+              {companyLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
               ))}
             </ul>
           </div>
 
-          {/* Column 5: Contact */}
+          {/* Column 5: Contact (only fields that exist) */}
           <div>
             <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Contact</h4>
             <ul className="flex flex-col gap-4 text-[14px] text-[#99907c]">
-              <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-[#f2ca50]" />
-                +94 77 123 4567
-              </li>
-              <li className="flex items-center gap-3">
-                <WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />
-                +94 77 123 4567
-              </li>
-              <li className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-[#f2ca50]" />
-                support@sagaelite.com
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-[#f2ca50] shrink-0 mt-1" />
-                <span>123 Fashion Avenue,<br/>Colombo 03, Sri Lanka</span>
-              </li>
+              {settings?.phone && (
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
+              )}
+              {settings?.whatsapp && (
+                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />{settings.whatsapp}</li>
+              )}
+              {settings?.email && (
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+              )}
+              {settings?.address && (
+                <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-[#f2ca50] shrink-0 mt-1" /><span>{settings.address}</span></li>
+              )}
             </ul>
-            <div className="flex gap-4 mt-6">
-              {SOCIAL_LINKS.map((social, i) => (
-                <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" className="text-[#99907c] hover:text-[#f2ca50] transition-colors hover:rotate-6">
-                  <social.Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
+            {socials.length > 0 && (
+              <div className="flex gap-4 mt-6">
+                {socials.map((social, i) => (
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                    <social.Icon className="w-5 h-5" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
@@ -212,30 +298,34 @@ export default function MainFooter() {
         <div className="md:hidden mb-12">
           <div className="mb-8">
             <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-4">
-              SAGA ELITE
+              {settings?.brandName || "SAGA ELITE"}
             </Link>
-            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">
-              Premium fashion marketplace delivering luxury clothing, footwear and accessories across Sri Lanka.
-            </p>
+            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
           </div>
-          
-          {renderAccordion("Quick Links", QUICK_LINKS, 1)}
-          {renderAccordion("Support", SUPPORT_LINKS, 2)}
-          {renderAccordion("Company", COMPANY_LINKS, 3)}
-          
+
+          {renderAccordion("Quick Links", quickLinks, 1)}
+          {renderAccordion("Support", supportLinks, 2)}
+          {renderAccordion("Company", companyLinks, 3)}
+
           <div className="border-b border-white/10 py-6">
             <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-4">Contact</h4>
             <ul className="flex flex-col gap-3 text-[14px] text-[#99907c] mb-6">
-              <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />+94 77 123 4567</li>
-              <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />support@sagaelite.com</li>
+              {settings?.phone && (
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
+              )}
+              {settings?.email && (
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+              )}
             </ul>
-            <div className="flex gap-4">
-              {SOCIAL_LINKS.map((social, i) => (
-                <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
-                  <social.Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
+            {socials.length > 0 && (
+              <div className="flex gap-4">
+                {socials.map((social, i) => (
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                    <social.Icon className="w-5 h-5" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -243,17 +333,15 @@ export default function MainFooter() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 py-8 border-y border-white/10 mb-8">
           <div>
             <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4">Payment Methods</div>
-            <div className="flex flex-wrap gap-4">
-              {PAYMENT_METHODS.map((method, i) => (
-                <div key={i} className="h-10 px-4 rounded-[8px] bg-[#131313] border border-white/5 flex items-center justify-center text-[12px] text-[#99907c] font-semibold hover:text-[#f2ca50] hover:border-[#f2ca50]/50 transition-colors">
-                  {method}
-                </div>
+            <div className="flex flex-wrap items-center gap-3">
+              {payments.map((method, i) => (
+                <PaymentChip key={i} method={method} />
               ))}
             </div>
           </div>
-          
+
           <div>
-            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4 lg:text-right">Security & Trust</div>
+            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4 lg:text-right">Security &amp; Trust</div>
             <div className="flex flex-wrap gap-4 lg:justify-end">
               {SECURITY_BADGES.map((badge, i) => (
                 <div key={i} className="flex items-center gap-2 text-[#99907c]">
@@ -267,7 +355,7 @@ export default function MainFooter() {
 
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-[#99907c]">
-          <p>© {new Date().getFullYear()} Saga Elite. All Rights Reserved.</p>
+          <p>{copyright}</p>
           <div className="flex items-center gap-6">
             <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Privacy Policy</Link>
             <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50] transition-colors">Terms</Link>
@@ -277,13 +365,14 @@ export default function MainFooter() {
       </div>
 
       {/* Back to Top */}
-      <div 
+      <div
         className={cn(
-          "fixed bottom-6 right-6 md:bottom-12 md:right-12 z-50 transition-all duration-500",
+          "fixed z-50 transition-all duration-500",
+          backToTopPos,
           showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
         )}
       >
-        <button 
+        <button
           onClick={scrollToTop}
           className="w-12 h-12 rounded-full bg-[#f2ca50] text-[#0a0a0a] flex items-center justify-center hover:scale-105 transition-transform shadow-[0_4px_24px_rgba(242,202,80,0.3)]"
           aria-label="Back to top"

@@ -88,7 +88,11 @@
       "Bash(node -e \"console.log\\('docx version:', require\\('docx/package.json'\\).version\\)\")",
       "Bash(node convert.cjs \"/c/Fullstack development course/Saga-Elite-Web-Project/DESIGN_SPEC.md\" \"/c/Fullstack development course/Saga-Elite-Web-Project/DESIGN_SPEC.docx\")",
       "Bash(python /c/Users/Admin/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/f3e50276-4818-4495-9ae3-a0835479a276/0bff76b4-2e22-4748-ad28-f5643c677490/skills/docx/scripts/office/validate.py '/c/Fullstack development course/Saga-Elite-Web-Project/DESIGN_SPEC.docx')",
-      "Bash(python -)"
+      "Bash(python -)",
+      "Bash(node --check Server-side/Controllers/stats-controller.js)",
+      "Bash(node --check Server-side/Routes/stats-routes.js)",
+      "Bash(node --check Server-side/Controllers/category-controller.js)",
+      "Bash(node --check Server-side/server.js)"
     ]
   }
 }

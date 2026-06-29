@@ -8,6 +8,7 @@ import {
   fetchBestSellers,
   fetchMostWished,
   fetchNewArrivals,
+  fetchHomeCategories,
 } from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
@@ -32,7 +33,6 @@ import {
   HowItWorks,
   PromoBanner,
   ShopByCategory,
-  FeaturedCollections,
 } from "@/components/landing/HomeSections";
 import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
 import { EcosystemGrid, LiveActivityOverlay } from "@/components/landing/LuxuryEcosystemSections";
@@ -57,21 +57,24 @@ const Home = () => {
     mostWished: [],
     newArrivals: [],
   });
+  const [categories, setCategories] = useState([]);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
-      const [data, upcomingDrop, bestSellers, mostWished, newArrivals] =
+      const [data, upcomingDrop, bestSellers, mostWished, newArrivals, homeCategories] =
         await Promise.all([
           getLandingData(),
           fetchUpcomingDrop().catch(() => null),
           fetchBestSellers(8),
           fetchMostWished(8),
           fetchNewArrivals(8),
+          fetchHomeCategories(6),
         ]);
       setPayload(data);
       setNextDrop(upcomingDrop);
       setGrids({ bestSellers, mostWished, newArrivals });
+      setCategories(homeCategories);
     } catch (error) {
       console.error(error);
       if (!silent) {
@@ -123,21 +126,18 @@ const Home = () => {
     return [...(payload.ladiesArrivals || []), ...(payload.gentsArrivals || [])];
   }, [grids.newArrivals, payload.ladiesArrivals, payload.gentsArrivals]);
 
-  const fallbackImage = "/placeholder.jpg";
-  const normalizedCategories = {
-    ladies: {
-      main: payload.categoryImages?.ladies?.main || payload.categoryImages?.ladies?.Dresses || fallbackImage,
-      Dresses: payload.categoryImages?.ladies?.Dresses || fallbackImage,
-    },
-    gents: {
-      main: payload.categoryImages?.gents?.main || payload.categoryImages?.gents?.Shirts || fallbackImage,
-      Shirts: payload.categoryImages?.gents?.Shirts || fallbackImage,
-    },
-    unisex: {
-      main: payload.categoryImages?.unisex?.main || payload.categoryImages?.unisex?.Unisex || fallbackImage,
-      Unisex: payload.categoryImages?.unisex?.Unisex || fallbackImage,
-    },
-  };
+  // Exclusive Drops feed: currently-live drops + the next upcoming drop, deduped.
+  // ExclusiveDropsBanner computes Upcoming/Live/Ended status per drop.
+  const exclusiveDrops = useMemo(() => {
+    const combined = [...(payload.activeDrops || []), nextDrop].filter(Boolean);
+    const seen = new Set();
+    return combined.filter((d) => {
+      const id = String(d?._id || d?.id || d?.slug || "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [payload.activeDrops, nextDrop]);
 
   if (loading) {
     return <HomeSkeleton />;
@@ -158,13 +158,11 @@ const Home = () => {
         <SeasonalCampaignSlider offers={payload.offers} />
       )}
 
-      {/* 4. Shop by category (Prompt 03) */}
-      <ShopByCategory categoryImages={normalizedCategories} />
+      {/* 4. Shop by category — DB-driven from the Category collection */}
+      <ShopByCategory categories={categories} />
 
       {/* --- PROMPT 04 HOMEPAGE PRODUCT FLOW --- */}
 
-      {/* 5. Featured Collections */}
-      <FeaturedCollections />
 
       {/* 6. Trending Products */}
       <ProductRailGrid
@@ -191,7 +189,7 @@ const Home = () => {
       />
 
       {/* 8. Exclusive Drops */}
-      <ExclusiveDropsBanner nextDrop={nextDrop} />
+      <ExclusiveDropsBanner drops={exclusiveDrops} />
 
       {/* 9. Best Sellers */}
       <ProductRailGrid
