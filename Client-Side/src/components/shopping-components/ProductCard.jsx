@@ -251,13 +251,13 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   return (
     <div
       className={cn(
-        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:scale-[1.03] hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0",
-        "w-[170px] h-[320px] md:w-[260px] md:h-[420px] lg:w-[290px] lg:h-[460px]",
+        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:scale-[1.03] hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
+        "w-[170px] md:w-[260px] lg:w-[290px]",
         className
       )}
     >
-      {/* 1. Image Area (65% height) */}
-      <div className="relative w-full h-[65%] bg-[#131313] overflow-hidden">
+      {/* 1. Image Area (1:1 Aspect Ratio) */}
+      <div className="relative w-full aspect-square bg-[#131313] overflow-hidden shrink-0">
         {/* Loading State Skeleton */}
         {!imgLoaded && (
           <div className="absolute inset-0 bg-[#1a1a1a] animate-pulse" />
@@ -314,8 +314,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         </div>
       </div>
 
-      {/* 2. Content Area (35% height) */}
-      <div className="flex flex-col justify-between h-[35%] p-3 md:p-4 bg-[#0E0E0E]">
+      {/* 2. Content Area (Flex Grow) */}
+      <div className="flex flex-col justify-between flex-1 p-3 md:p-4 bg-[#0E0E0E]">
         
         {/* Top: Category & Title & Rating */}
         <div className="flex flex-col gap-1">
