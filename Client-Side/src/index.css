@@ -9,48 +9,48 @@
    remain the primary API — keep these in sync with the config. */
 :root {
   /* Core / surfaces */
-  --se-bg: #0e0e0e;
-  --se-fg: #e5e2e1;
-  --se-surface: #131313;
-  --se-surface-1: #1f1f1f;
+  --se-bg: #121212;
+  --se-fg: #FFFFFF;
+  --se-surface: #1A1A1A;
+  --se-surface-1: #202020;
   --se-surface-2: #2a2a2a;
   --se-surface-3: #393939;
-  --se-page: #0a0a0a; /* storefront / checkout page bg */
+  --se-page: #121212;
 
   /* Brand / accent */
-  --se-gold: #f2ca50;
-  --se-gold-deep: #d4af37;
-  --se-gold-light: #ffe088;
-  --se-on-gold: #0e0e0e;
-  --se-on-gold-editorial: #3c2f00;
+  --se-gold: #F2CA50;
+  --se-gold-deep: #FFD86A;
+  --se-gold-light: #FFD86A;
+  --se-on-gold: #0E0E0E;
+  --se-on-gold-editorial: #0E0E0E;
 
   /* Muted / lines */
-  --se-muted: #d0c5af;
+  --se-muted: #B5B5B5;
   --se-muted-2: #99907c;
-  --se-faint: #574500;
-  --se-border: #4d4635;
-  --se-ring: #f2ca50;
+  --se-faint: #333333;
+  --se-border: rgba(255, 255, 255, 0.08);
+  --se-ring: #F2CA50;
 
   /* Semantic */
-  --se-danger: #ffb4ab;
-  --se-danger-solid: #93000a;
-  --se-new: #1d9e75;
+  --se-danger: #FF453A;
+  --se-danger-solid: #FF453A;
+  --se-new: #34C759;
   --se-info: #a4d2e2;
-  --se-success: #a8d8b6;
+  --se-success: #34C759;
 
   /* Radius */
-  --se-radius-sm: 4px;
-  --se-radius-md: 6px;
-  --se-radius-lg: 8px;
-  --se-radius-xl: 12px;
-  --se-radius-2xl: 16px;
+  --se-radius-sm: 8px;
+  --se-radius-md: 16px;
+  --se-radius-lg: 20px;
+  --se-radius-xl: 24px;
+  --se-radius-2xl: 24px;
   --se-radius-3xl: 24px;
   --se-radius-full: 9999px;
 
   /* Elevation */
   --se-shadow-gold: 0 0 40px rgba(242, 202, 80, 0.15);
-  --se-shadow-elegant: 0 4px 60px rgba(0, 0, 0, 0.4);
-  --se-focus-ring: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
+  --se-shadow-elegant: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --se-focus-ring: 0 0 0 2px #121212, 0 0 0 4px #F2CA50;
 
   /* Motion — easing */
   --se-ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
@@ -68,10 +68,10 @@
 
 @layer components {
   /* ── Editorial type system ────────────────────────────────
-     Display / Brand: Cinzel
+     Display / Brand: Playfair Display
      Headlines: Playfair Display
-     Body / labels: Inter
-     Numerics: JetBrains Mono */
+     Body / labels / numerics: Inter
+  */
 
   .se-serif {
     font-family: 'Playfair Display', Georgia, serif;
@@ -88,17 +88,17 @@
   }
 
   .se-display {
-    font-family: 'Cinzel', serif;
+    font-family: 'Playfair Display', serif;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     font-style: normal !important;
   }
 
   .se-wordmark {
-    font-family: 'Cinzel', serif;
+    font-family: 'Playfair Display', serif;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     font-style: normal !important;
   }
@@ -111,7 +111,7 @@
   }
 
   .se-mono {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 

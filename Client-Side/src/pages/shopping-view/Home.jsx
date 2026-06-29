@@ -32,8 +32,9 @@ import {
   HomeFAQ,
   NewsletterSignup,
 } from "@/components/landing/HomeSections";
-import { GlobalStatusBar, LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
+import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
 import { EcosystemGrid, LiveActivityOverlay, ArchiveCarousel } from "@/components/landing/LuxuryEcosystemSections";
+import { ExclusiveDropsBanner } from "@/components/landing/ExclusiveDropsBanner";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -137,12 +138,12 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505] text-center">
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background text-center">
         <div className="pointer-events-none absolute inset-0 bg-grain opacity-40 mix-blend-overlay" />
-        <span className="font-display animate-pulse text-2xl uppercase tracking-[0.3em] text-[#FAF7F2] md:text-4xl">
+        <span className="font-display animate-pulse text-2xl uppercase tracking-[0.3em] text-foreground md:text-4xl">
           Saga Elite
         </span>
-        <span className="mt-4 font-mono text-[10px] uppercase tracking-[0.4em] text-[#f2ca50]">
+        <span className="mt-4 font-sans text-[10px] uppercase tracking-[0.4em] text-accent font-bold">
           Preparing Chapter
         </span>
       </div>
@@ -150,12 +151,11 @@ const Home = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0e0e0e] text-[#e5e2e1]">
-      <GlobalStatusBar />
+    <div className="relative min-h-screen bg-background text-foreground">
       <LiveActivityOverlay />
       
       {/* 1. New Luxury Hero Section */}
-      <LuxuryDropSlider activeDrops={payload.activeDrops || []} nextDrop={nextDrop} />
+      <LuxuryDropSlider />
 
       {/* 2. The Ecosystem Grid */}
       <EcosystemGrid />
@@ -224,14 +224,8 @@ const Home = () => {
         ctaHref="/shopping/product-list"
       />
 
-      {/* 12. Next drop countdown (kept) */}
-      {!payload.activeDrop && nextDrop?.releaseDate ? (
-        <LiveDropCountdownXL
-          targetDate={nextDrop.releaseDate}
-          title={nextDrop.name}
-          description="The next chapter opens soon. Members enter first."
-        />
-      ) : null}
+      {/* 12. Exclusive Drops Banner */}
+      <ExclusiveDropsBanner nextDrop={nextDrop} />
 
       {/* 13. Personalized rails (kept) */}
       <ForYouRail variant="for-you" />
