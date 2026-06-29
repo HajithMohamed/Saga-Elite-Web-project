@@ -420,40 +420,6 @@ export function PromoBanner() {
   );
 }
 
-// ── Testimonials (static) ────────────────────────────────────────────────────
-export function Testimonials() {
-  const items = [
-    { name: "Aisha M.", role: "First-time shopper", quote: "I was nervous to shop online but Saga Elite made it effortless. Every step was explained and my dress arrived perfectly." },
-    { name: "Daniel R.", role: "Verified buyer", quote: "Quality you can feel. The boots are now my everyday go-to — quick delivery and beautiful packaging." },
-    { name: "Priya S.", role: "Verified buyer", quote: "It feels like having a personal stylist guiding me to pieces that actually suit my life." },
-  ];
-  return (
-    <section className="border-y border-white/5 bg-[#0b0b0b] py-16 md:py-24">
-      <div className={CONTAINER}>
-        <SectionHeading kicker="Loved by our community" title="What our shoppers say" />
-        <div className="grid gap-5 md:grid-cols-3 md:gap-6">
-          {items.map((t, i) => (
-            <Reveal key={t.name} delay={i * 0.06}>
-              <figure className="h-full rounded-2xl border border-[#4d4635]/40 bg-[#131313] p-7">
-                <div className="flex gap-1 text-[#f2ca50]">
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Star key={s} className="h-4 w-4 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="mt-4 se-serif text-lg leading-snug text-[#e5e2e1]">“{t.quote}”</blockquote>
-                <figcaption className="mt-6 text-sm">
-                  <div className="font-medium text-[#e5e2e1]">{t.name}</div>
-                  <div className="text-[#99907c]">{t.role}</div>
-                </figcaption>
-              </figure>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ── About teaser (static, links to /about) ───────────────────────────────────
 export function AboutTeaser() {
   const stats = [
@@ -491,34 +457,6 @@ export function AboutTeaser() {
           </div>
         </div>
       </Reveal>
-    </section>
-  );
-}
-
-// ── FAQ (static, Disclosure accordion) ───────────────────────────────────────
-export function HomeFAQ() {
-  const faqs = [
-    { q: "How do I place my first order?", a: "Browse a category, open any product, choose your size and colour, then tap 'Add to Bag'. Open the bag icon at the top right and follow the simple checkout. You'll get an email confirmation right away." },
-    { q: "What payment methods do you accept?", a: "We accept major cards and direct bank transfer (with quick receipt verification). All payments are processed over a secure, encrypted connection." },
-    { q: "How long does delivery take?", a: "Most islandwide orders arrive within 2–4 business days. You'll receive a tracking link by email and WhatsApp as soon as your order ships." },
-    { q: "Can I return or exchange an item?", a: "Yes — you have 14 days from delivery to request a return or exchange on unworn items in their original packaging." },
-    { q: "Are the products authentic?", a: "Every piece is hand-selected and quality-checked by our team before it's listed. We stand behind the craft of everything we sell." },
-    { q: "How do I contact support?", a: "Our concierge is available by WhatsApp, email and phone. We usually reply within minutes during opening hours." },
-  ];
-  return (
-    <section className={`${CONTAINER} py-16 md:py-24`}>
-      <SectionHeading
-        kicker="Help Centre"
-        title="Frequently asked questions"
-        subtitle="Everything you need to know before your first order — and after."
-      />
-      <div className="mx-auto max-w-3xl">
-        {faqs.map((f, i) => (
-          <Disclosure key={i} title={f.q}>
-            {f.a}
-          </Disclosure>
-        ))}
-      </div>
     </section>
   );
 }

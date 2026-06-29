@@ -16,17 +16,21 @@ import {
   HeroCarousel,
   LiveDropCountdownXL,
   SeasonalCampaignSlider,
-  WhyChooseSaga,
   TrendingFitsMarquee,
   CommunityFeed,
 } from "@/components/landing/LandingSections";
 import ForYouRail from "@/components/landing/ForYouRail";
 import {
+  WhyChooseSaga,
+  HowShoppingWorks,
+  CustomerTestimonials,
+  FAQPreview,
+  TrustBadgesStrip,
+} from "@/components/landing/TrustSections";
+import {
   ProductRailGrid,
   HowItWorks,
   PromoBanner,
-  Testimonials,
-  HomeFAQ,
   ShopByCategory,
   FeaturedCollections,
 } from "@/components/landing/HomeSections";
@@ -212,31 +216,26 @@ const Home = () => {
       {/* 10. Recommended For You */}
       <ForYouRail variant="for-you" />
 
-      {/* 11. Why Choose Saga Elite */}
+      {/* --- PROMPT 05 TRUST SECTIONS --- */}
       <WhyChooseSaga />
+      <HowShoppingWorks />
+      <CustomerTestimonials />
+      <FAQPreview />
+      <TrustBadgesStrip />
+      {/* --- END PROMPT 05 --- */}
 
-      {/* --- END PROMPT 04 FLOW --- */}
-
-      {/* 12. Promotional Banner (Prompt 03) */}
-      <PromoBanner />
-
-      {/* 13. Personalized rails (kept) */}
-      <ForYouRail variant="recently-viewed" />
-      <ForYouRail variant="trending-style" />
-
-      {/* 14. Trending fits marquee */}
-      {trendingFeed.length > 0 && <TrendingFitsMarquee products={trendingFeed} />}
-
-      {/* 15. Community / social proof */}
+      {/* 16. Community Gallery */}
       {payload.socialImages.length > 0 && (
         <CommunityFeed images={payload.socialImages} />
       )}
 
-      {/* 15. Testimonials */}
-      <Testimonials />
+      {/* 17. Newsletter / Promotional Banner */}
+      <PromoBanner />
 
-      {/* 16. FAQ */}
-      <HomeFAQ />
+      {/* Additional Rails & Marquee kept at the bottom to avoid breaking flow */}
+      <ForYouRail variant="recently-viewed" />
+      <ForYouRail variant="trending-style" />
+      {trendingFeed.length > 0 && <TrendingFitsMarquee products={trendingFeed} />}
 
       {/* Footer comes from the shared layout (MainFooter). */}
     </div>
