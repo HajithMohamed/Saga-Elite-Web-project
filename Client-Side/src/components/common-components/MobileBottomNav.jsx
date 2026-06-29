@@ -1,91 +1,90 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, LayoutGrid, Heart, User } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, Search, Heart, ShoppingCart, User } from 'lucide-react';
 import { useSelector } from 'react-redux';
-import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
-
-const AnimatedBadge = ({ count }) => {
-  if (!count || count <= 0) return null;
-  return (
-    <AnimatePresence mode="wait">
-      <motion.span
-        key={count}
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
-        exit={{ scale: 0.6, opacity: 0 }}
-        className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-[#f2ca50] text-[#1b1c1c] se-mono text-[9px] font-semibold z-10"
-      >
-        {count > 99 ? '99+' : count}
-      </motion.span>
-    </AnimatePresence>
-  );
-};
 
 const MobileBottomNav = () => {
   const location = useLocation();
-  const { user } = useSelector((state) => state.auth);
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
-  const wishlistCount = wishlistItems?.length || 0;
+  const navigate = useNavigate();
   const { open: openAuthDrawer } = useAuthDrawer();
+  
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { totalQuantity } = useSelector((state) => state.cart.cart || {});
+  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
+  
+  const cartCount = totalQuantity || 0;
+  const wishlistCount = wishlistItems?.length || 0;
 
-  // Cart, Checkout and the order-success page each render their own fixed
-  // mobile bottom action bar. Hide this global tab bar there so two fixed
-  // bottom bars don't stack on top of each other.
-  const hidesForPageActionBar =
-    location.pathname.startsWith("/shopping/cart") ||
-    location.pathname.startsWith("/shopping/checkout");
-  if (hidesForPageActionBar) return null;
-
-  const tabs = [
-    { id: 'home', to: '/shopping/home', icon: Home, label: 'Home' },
-    { id: 'search', to: '/shopping/product-list', icon: Search, label: 'Search' },
-    { id: 'categories', to: '/shopping/product-list', icon: LayoutGrid, label: 'Categories' },
-    { id: 'wishlist', to: '/shopping/wishlist', icon: Heart, label: 'Wishlist', badge: wishlistCount },
-    { id: 'account', to: user ? '/shopping/account' : null, icon: User, label: 'Account' },
+  const NAV_ITEMS = [
+    { label: 'Home', icon: Home, path: '/shopping/home' },
+    { label: 'Search', icon: Search, action: () => navigate('/shopping/product-list') },
+    { label: 'Wishlist', icon: Heart, path: '/shopping/wishlist', badge: wishlistCount },
+    { label: 'Cart', icon: ShoppingCart, path: '/shopping/cart', badge: cartCount },
+    { label: 'Profile', icon: User, action: () => isAuthenticated ? navigate('/account/profile') : openAuthDrawer('login') },
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-[#4d4635] pb-safe">
-      <div className="flex items-center justify-around h-16 px-2">
-        {tabs.map((tab) => {
-          const isActive = location.pathname === tab.to || (tab.id === 'categories' && location.pathname.includes('/product-list'));
-          const Icon = tab.icon;
+    <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-[#0a0a0a]/90 backdrop-blur-[16px] border-t border-white/10 pb-safe">
+      <nav className="flex items-center justify-between px-2 h-[64px]">
+        {NAV_ITEMS.map((item, i) => {
+          const isActive = item.path ? location.pathname === item.path : false;
+          
+          const content = (
+            <div className="relative flex flex-col items-center justify-center w-[48px] h-[48px]">
+              <item.icon 
+                className={cn(
+                  "w-6 h-6 transition-colors duration-250",
+                  isActive ? "text-[#f2ca50]" : "text-[#99907c]"
+                )} 
+                strokeWidth={isActive ? 2.5 : 1.5}
+              />
+              <span 
+                className={cn(
+                  "text-[10px] mt-1 font-medium transition-colors duration-250",
+                  isActive ? "text-[#f2ca50]" : "text-[#99907c]"
+                )}
+              >
+                {item.label}
+              </span>
+              
+              {/* Badge */}
+              {item.badge > 0 && (
+                <span className="absolute top-0 right-1 bg-[#f2ca50] text-[#0a0a0a] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-[0_0_8px_rgba(242,202,80,0.4)]">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+          );
 
-          // Account tab — open drawer if guest
-          if (tab.id === 'account' && !user) {
+          if (item.action) {
             return (
               <button
-                key={tab.id}
-                onClick={() => openAuthDrawer('login')}
-                className="relative flex flex-col items-center justify-center w-full h-full transition-colors text-[#d0c5af] hover:text-[#e5e2e1]"
+                key={i}
+                onClick={item.action}
+                className="flex-1 flex justify-center items-center"
+                aria-label={item.label}
               >
-                <div className="relative"><Icon size={20} strokeWidth={1.5} /></div>
-                <span className="se-label mt-1 text-[9px] tracking-[0.15em]">{tab.label}</span>
+                {content}
               </button>
             );
           }
 
           return (
-            <Link
-              key={tab.id}
-              to={tab.to}
-              className={`relative flex flex-col items-center justify-center w-full h-full transition-colors ${
-                isActive ? 'text-[#f2ca50]' : 'text-[#d0c5af] hover:text-[#e5e2e1]'
-              }`}
+            <Link 
+              key={i} 
+              to={item.path} 
+              className="flex-1 flex justify-center items-center"
+              aria-label={item.label}
             >
-              <div className="relative">
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                {tab.badge !== undefined && <AnimatedBadge count={tab.badge} />}
-              </div>
-              <span className="se-label mt-1 text-[9px] tracking-[0.15em]">{tab.label}</span>
+              {content}
             </Link>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
 
 export default MobileBottomNav;
-

@@ -126,7 +126,7 @@ const Header = () => {
       <AnnouncementBar />
       <header 
         className={`w-full transition-all duration-300 bg-black/80 backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.08)]
-        ${scrolled ? 'h-[64px] md:h-[72px]' : 'h-[72px] md:h-[80px]'}`}
+        ${scrolled ? 'h-[64px] md:h-[68px] lg:h-[72px]' : 'h-[72px] md:h-[76px] lg:h-[80px]'}`}
       >
         <div className={`h-full max-w-[1280px] mx-auto flex items-center justify-between px-[16px] md:px-[32px] lg:px-[80px]`}>
           

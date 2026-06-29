@@ -84,11 +84,11 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
 
   return (
     <section className="w-full bg-[#050505] border-b border-[#1f1f1f]">
-      {/* Container: 70vh desktop, 65vh tablet, auto mobile */}
-      <div className="w-full h-auto md:h-[65vh] lg:h-[70vh] flex flex-col lg:flex-row">
+      {/* Container: Strict Heights from Prompt 07 */}
+      <div className="w-full h-[480px] sm:h-[500px] md:h-[560px] lg:h-[620px] xl:h-[680px] flex flex-col lg:flex-row">
 
         {/* LEFT SECTION (75%) */}
-        <div className="relative w-full lg:w-[75%] h-[60vh] md:h-full bg-[#111] overflow-hidden">
+        <div className="relative w-full lg:w-[75%] h-[60%] md:h-full bg-[#111] overflow-hidden">
           <AnimatePresence mode="wait">
             {liveDrop ? (
               <motion.div
