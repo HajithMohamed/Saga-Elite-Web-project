@@ -6,6 +6,7 @@ import { ArrowRight, Sparkles, History, Flame, Info } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import ProductCard from "@/components/shopping-components/ProductCard";
 import { Eyebrow } from "@/components/ui/editorial";
+import { cn } from "@/lib/utils";
 
 /*
  * Personalized rail on the landing page. Three variants:
@@ -86,21 +87,30 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
     };
   }, [user, config.apiContext]);
 
-  if (!user || products.length === 0) return null;
+  if (products.length === 0 && !loading) return null;
   if (config.hideWhenMode.includes(mode)) return null;
 
   const Icon = config.icon;
+  // Prompt 04 overrides for the main variant
+  const displayTitle = variant === "for-you" 
+    ? (user ? "Recommended For You" : "Editor's Picks") 
+    : config.title;
+  const displayDesc = variant === "for-you"
+    ? (user ? "Products selected based on your browsing." : "Curated styles selected by our fashion editors.")
+    : null;
 
   return (
-    <section className="px-5 md:px-12 max-w-7xl mx-auto py-12 md:py-16">
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
+    <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px] overflow-hidden">
+      {/* Header Area */}
+      <div className="mb-8 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 text-[#f2ca50]" />
           <div>
             <Eyebrow tone="muted" size="xs">{config.eyebrow}</Eyebrow>
-            <h2 className="se-serif text-[#e5e2e1] text-3xl md:text-4xl mt-1">
-              {config.title}
+            <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1] leading-tight">
+              {displayTitle}
             </h2>
+            {displayDesc && <p className="mt-2 se-body text-[16px] md:text-[18px] text-[#99907c]">{displayDesc}</p>}
           </div>
           {config.infoText ? (
             <button
@@ -131,14 +141,36 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
       </div>
 
       {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#4d4635] border-t-[#f2ca50]" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "bg-[#131313] rounded-[20px] animate-[pulse_1.5s_ease-in-out_infinite]",
+                "w-[170px] h-[320px] md:w-[260px] md:h-[420px] lg:w-[290px] lg:h-[460px]",
+                i === 2 && "hidden md:block",
+                i === 3 && "hidden lg:block"
+              )}
+            />
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product, idx) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-[24px]">
+          {products.slice(0, 8).map((product, idx) => (
             <ProductCard key={product._id} product={product} index={idx} />
           ))}
+        </div>
+      )}
+      
+      {/* Mobile View All Button */}
+      {!loading && products.length > 0 && config.seeAllTo && (
+        <div className="mt-10 flex justify-center md:hidden">
+          <Link
+            to={config.seeAllTo}
+            className="flex h-[52px] w-full items-center justify-center rounded-[16px] border border-[#f2ca50] bg-transparent px-8 se-body text-sm font-semibold text-[#f2ca50] transition-colors hover:bg-[#f2ca50] hover:text-[#0a0a0a]"
+          >
+            {config.seeAllLabel}
+          </Link>
         </div>
       )}
     </section>

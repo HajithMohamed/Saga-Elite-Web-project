@@ -20,7 +20,6 @@ import {
   TrendingFitsMarquee,
   CommunityFeed,
 } from "@/components/landing/LandingSections";
-import { AsymmetricCategoryGrid } from "@/components/landing/CinematicLanding";
 import ForYouRail from "@/components/landing/ForYouRail";
 import {
   ProductRailGrid,
@@ -28,6 +27,8 @@ import {
   PromoBanner,
   Testimonials,
   HomeFAQ,
+  ShopByCategory,
+  FeaturedCollections,
 } from "@/components/landing/HomeSections";
 import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
 import { EcosystemGrid, LiveActivityOverlay } from "@/components/landing/LuxuryEcosystemSections";
@@ -162,60 +163,64 @@ const Home = () => {
         <SeasonalCampaignSlider offers={payload.offers} />
       )}
 
-      {/* 4. Shop by category */}
-      <Reveal>
-        <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
-      </Reveal>
+      {/* 4. Shop by category (Prompt 03) */}
+      <ShopByCategory categoryImages={normalizedCategories} />
 
-      {/* 5. Exclusive Drops Banner */}
-      <ExclusiveDropsBanner nextDrop={nextDrop} />
+      {/* --- PROMPT 04 HOMEPAGE PRODUCT FLOW --- */}
 
-      {/* 6. Why Saga Elite */}
-      <WhyChooseSaga />
+      {/* 5. Featured Collections */}
+      <FeaturedCollections />
 
-      {/* 7. Trending now */}
+      {/* 6. Trending Products */}
       <ProductRailGrid
         id="trending"
-        kicker="Trending Now"
-        title="What everyone is wearing"
-        subtitle="Our most-wanted pieces this week."
+        title="Trending Now"
+        subtitle="Most loved by our customers."
         products={payload.trending}
-        ctaHref="/shopping/product-list"
+        ctaHref="/shopping/product-list?sort=trending"
+        ctaLabel="View All Trending"
+        layout="grid"
+        filters={["Trending", "Popular", "Men", "Women"]}
       />
 
-      {/* 8. Best sellers */}
-      <ProductRailGrid
-        id="best"
-        kicker="Best Sellers"
-        title="The pieces we can't keep in stock"
-        products={grids.bestSellers}
-        ctaHref="/shopping/product-list"
-      />
-
-      {/* 9. Editor's selection (most wished) */}
-      <ProductRailGrid
-        id="featured"
-        kicker="Featured"
-        title="Editor's selection"
-        products={grids.mostWished}
-        ctaHref="/shopping/product-list"
-      />
-
-      {/* 10. Promo */}
-      <PromoBanner />
-
-      {/* 11. New arrivals */}
+      {/* 7. New Arrivals */}
       <ProductRailGrid
         id="new"
-        kicker="Just In"
         title="New Arrivals"
-        subtitle="Fresh drops added every week. Be first to wear what's next."
+        subtitle="Fresh styles just added."
         products={newArrivalsGrid}
-        ctaHref="/shopping/product-list"
+        ctaHref="/shopping/product-list?sort=new"
+        ctaLabel="View All New"
+        layout="carousel"
+        filters={["New", "Sale", "Shoes", "Accessories"]}
       />
 
-      {/* 12. Personalized rails (kept) */}
+      {/* 8. Exclusive Drops */}
+      <ExclusiveDropsBanner nextDrop={nextDrop} />
+
+      {/* 9. Best Sellers */}
+      <ProductRailGrid
+        id="best"
+        title="Best Sellers"
+        subtitle="Most purchased products."
+        products={grids.bestSellers}
+        ctaHref="/shopping/product-list?sort=bestselling"
+        ctaLabel="View All Best Sellers"
+        layout="grid"
+      />
+
+      {/* 10. Recommended For You */}
       <ForYouRail variant="for-you" />
+
+      {/* 11. Why Choose Saga Elite */}
+      <WhyChooseSaga />
+
+      {/* --- END PROMPT 04 FLOW --- */}
+
+      {/* 12. Promotional Banner (Prompt 03) */}
+      <PromoBanner />
+
+      {/* 13. Personalized rails (kept) */}
       <ForYouRail variant="recently-viewed" />
       <ForYouRail variant="trending-style" />
 
