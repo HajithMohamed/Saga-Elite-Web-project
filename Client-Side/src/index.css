@@ -2,6 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens (CSS variables) ─────────────────────────────
+   Canonical Saga Elite tokens, mirroring tailwind.config.js + DESIGN_SPEC.md.
+   Exposed as CSS custom properties so they can be consumed outside Tailwind
+   (inline styles, third-party widgets, future theming). Tailwind classes
+   remain the primary API — keep these in sync with the config. */
+:root {
+  /* Core / surfaces */
+  --se-bg: #0e0e0e;
+  --se-fg: #e5e2e1;
+  --se-surface: #131313;
+  --se-surface-1: #1f1f1f;
+  --se-surface-2: #2a2a2a;
+  --se-surface-3: #393939;
+  --se-page: #0a0a0a; /* storefront / checkout page bg */
+
+  /* Brand / accent */
+  --se-gold: #f2ca50;
+  --se-gold-deep: #d4af37;
+  --se-gold-light: #ffe088;
+  --se-on-gold: #0e0e0e;
+  --se-on-gold-editorial: #3c2f00;
+
+  /* Muted / lines */
+  --se-muted: #d0c5af;
+  --se-muted-2: #99907c;
+  --se-faint: #574500;
+  --se-border: #4d4635;
+  --se-ring: #f2ca50;
+
+  /* Semantic */
+  --se-danger: #ffb4ab;
+  --se-danger-solid: #93000a;
+  --se-new: #1d9e75;
+  --se-info: #a4d2e2;
+  --se-success: #a8d8b6;
+
+  /* Radius */
+  --se-radius-sm: 4px;
+  --se-radius-md: 6px;
+  --se-radius-lg: 8px;
+  --se-radius-xl: 12px;
+  --se-radius-2xl: 16px;
+  --se-radius-3xl: 24px;
+  --se-radius-full: 9999px;
+
+  /* Elevation */
+  --se-shadow-gold: 0 0 40px rgba(242, 202, 80, 0.15);
+  --se-shadow-elegant: 0 4px 60px rgba(0, 0, 0, 0.4);
+  --se-focus-ring: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
+
+  /* Motion — easing */
+  --se-ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --se-ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
+  --se-ease-payment: cubic-bezier(0.16, 1, 0.3, 1);
+  --se-ease-image: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Motion — duration */
+  --se-dur-micro: 180ms;
+  --se-dur-standard: 250ms;
+  --se-dur-reveal: 550ms;
+  --se-dur-image: 650ms;
+  --se-dur-cinematic: 1000ms;
+}
+
 @layer components {
   /* ── Editorial type system ────────────────────────────────
      Display / Brand: Cinzel

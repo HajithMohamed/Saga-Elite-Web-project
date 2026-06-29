@@ -1,32 +1,37 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import Reveal from "@/components/common-components/Reveal";
-import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
+import {
+  fetchUpcomingDrop,
+  getLandingData,
+  fetchBestSellers,
+  fetchMostWished,
+  fetchNewArrivals,
+} from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import {
   HeroCarousel,
-  HeroBackdropFX,
   LiveDropCountdownXL,
-  ProductSlider,
   SeasonalCampaignSlider,
   WhyChooseSaga,
   TrendingFitsMarquee,
   CommunityFeed,
-  VipMembership,
 } from "@/components/landing/LandingSections";
-import {
-  BrandManifesto,
-  AsymmetricCategoryGrid,
-  CinematicFooter
-} from "@/components/landing/CinematicLanding";
+import { AsymmetricCategoryGrid } from "@/components/landing/CinematicLanding";
 import ForYouRail from "@/components/landing/ForYouRail";
-import { ReactLenis } from "lenis/react";
-
+import {
+  ProductRailGrid,
+  HowItWorks,
+  FeaturedCollections,
+  PromoBanner,
+  Testimonials,
+  AboutTeaser,
+  HomeFAQ,
+  NewsletterSignup,
+} from "@/components/landing/HomeSections";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -41,22 +46,32 @@ const Home = () => {
     categoryImages: { ladies: {}, gents: {}, unisex: {} },
     socialImages: [],
   });
+  const [grids, setGrids] = useState({
+    bestSellers: [],
+    mostWished: [],
+    newArrivals: [],
+  });
 
   const load = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
-      const [data, upcomingDrop] = await Promise.all([
-        getLandingData(),
-        fetchUpcomingDrop().catch(() => null),
-      ]);
+      const [data, upcomingDrop, bestSellers, mostWished, newArrivals] =
+        await Promise.all([
+          getLandingData(),
+          fetchUpcomingDrop().catch(() => null),
+          fetchBestSellers(8),
+          fetchMostWished(8),
+          fetchNewArrivals(8),
+        ]);
       setPayload(data);
       setNextDrop(upcomingDrop);
+      setGrids({ bestSellers, mostWished, newArrivals });
     } catch (error) {
       console.error(error);
       if (!silent) {
         toast({
           title: "Failed to load",
-          description: "Could not fetch the latest drops.",
+          description: "Could not fetch the latest pieces.",
         });
       }
     } finally {
@@ -68,7 +83,7 @@ const Home = () => {
     load();
   }, [load]);
 
-  // Real-time refetch on product/drop CRUD (Fix #3 + #4) — debounced.
+  // Real-time refetch on product/drop/offer CRUD — debounced to coalesce bursts.
   const refetchTimer = useRef(null);
   const debouncedRefetch = useCallback(() => {
     if (refetchTimer.current) clearTimeout(refetchTimer.current);
@@ -86,13 +101,6 @@ const Home = () => {
 
   usePageMeta({ title: "Saga Elite — Own The Drop.", fullTitle: true });
 
-  const heroSlides = useMemo(() => {
-    if (payload.heroSlides && payload.heroSlides.length > 0) {
-      return payload.heroSlides;
-    }
-    return [];
-  }, [payload.heroSlides]);
-
   // Combine arrivals + trending into a single marquee feed.
   const trendingFeed = useMemo(
     () => [
@@ -102,6 +110,12 @@ const Home = () => {
     ],
     [payload.gentsArrivals, payload.ladiesArrivals, payload.trending]
   );
+
+  // New-arrivals grid prefers the sorted feed; falls back to the gendered arrivals.
+  const newArrivalsGrid = useMemo(() => {
+    if (grids.newArrivals.length) return grids.newArrivals;
+    return [...(payload.ladiesArrivals || []), ...(payload.gentsArrivals || [])];
+  }, [grids.newArrivals, payload.ladiesArrivals, payload.gentsArrivals]);
 
   const fallbackImage = "/placeholder.jpg";
   const normalizedCategories = {
@@ -121,93 +135,119 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center text-center">
-        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
-        <span className="font-display text-2xl md:text-4xl text-[#FAF7F2] uppercase tracking-[0.3em] animate-pulse">Saga Elite</span>
-        <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mt-4">Preparing Chapter</span>
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505] text-center">
+        <div className="pointer-events-none absolute inset-0 bg-grain opacity-40 mix-blend-overlay" />
+        <span className="font-display animate-pulse text-2xl uppercase tracking-[0.3em] text-[#FAF7F2] md:text-4xl">
+          Saga Elite
+        </span>
+        <span className="mt-4 font-mono text-[10px] uppercase tracking-[0.4em] text-[#f2ca50]">
+          Preparing Chapter
+        </span>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
-        {/* Ambient Three.js particle backdrop */}
-        <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
-          <HeroBackdropFX />
-        </div>
+    <div className="relative min-h-screen bg-[#0e0e0e] text-[#e5e2e1]">
+      {/* 1. Hero — cinematic carousel (banners + active/next drop) */}
+      <HeroCarousel activeDrops={payload.activeDrops} nextDrop={nextDrop} />
 
-        <motion.div
-          className="relative z-10"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* 1. Hero — cinematic */}
-          <HeroCarousel
-            activeDrops={payload.activeDrops}
-            nextDrop={nextDrop}
-          />
+      {/* 2. Offers & campaigns (admin-managed) */}
+      {payload.offers && payload.offers.length > 0 && (
+        <SeasonalCampaignSlider offers={payload.offers} />
+      )}
 
-          {/* 2. Offers & Campaigns Slider */}
-          {payload.offers && payload.offers.length > 0 && (
-            <SeasonalCampaignSlider offers={payload.offers} />
-          )}
+      {/* 3. Shop by category */}
+      <Reveal>
+        <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
+      </Reveal>
 
-          {/* 3. Collection selector — Asymmetric */}
-          <Reveal>
-            <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
-          </Reveal>
+      {/* 4. How shopping works (first-timer guidance) */}
+      <HowItWorks />
 
-          {/* 4. Featured / Rare Pieces */}
-          {payload.trending && payload.trending.length > 0 && (
-            <ProductSlider
-              title="Rare Pieces"
-              subtitle="Elite Picks · Most Wanted"
-              products={payload.trending}
-            />
-          )}
+      {/* 5. Why Saga Elite */}
+      <WhyChooseSaga />
 
-          {/* 5. Personalized rails */}
-          <ForYouRail variant="for-you" />
-          <ForYouRail variant="recently-viewed" />
-          <ForYouRail variant="trending-style" />
+      {/* 6. Featured collections */}
+      <FeaturedCollections categoryImages={payload.categoryImages} />
 
-          {/* 7. Next drop countdown */}
-          {!payload.activeDrop && nextDrop?.releaseDate ? (
-            <LiveDropCountdownXL
-              targetDate={nextDrop.releaseDate}
-              title={nextDrop.name}
-              description="The next chapter opens soon. Members enter first."
-            />
-          ) : null}
+      {/* 7. Trending now */}
+      <ProductRailGrid
+        id="trending"
+        kicker="Trending Now"
+        title="What everyone is wearing"
+        subtitle="Our most-wanted pieces this week."
+        products={payload.trending}
+        ctaHref="/shopping/product-list"
+      />
 
-          {/* 8. Brand Manifesto */}
-          <BrandManifesto />
+      {/* 8. Best sellers */}
+      <ProductRailGrid
+        id="best"
+        kicker="Best Sellers"
+        title="The pieces we can't keep in stock"
+        products={grids.bestSellers}
+        ctaHref="/shopping/product-list"
+      />
 
-          {/* 9. Why Saga Elite */}
-          <WhyChooseSaga />
+      {/* 9. Editor's selection (most wished) */}
+      <ProductRailGrid
+        id="featured"
+        kicker="Featured"
+        title="Editor's selection"
+        products={grids.mostWished}
+        ctaHref="/shopping/product-list"
+      />
 
-          {/* 11. Trending fits */}
-          {trendingFeed.length > 0 && (
-            <TrendingFitsMarquee products={trendingFeed} />
-          )}
+      {/* 10. Promo */}
+      <PromoBanner />
 
-          {/* 12. Community / social proof */}
-          {payload.socialImages.length > 0 && (
-            <CommunityFeed images={payload.socialImages} />
-          )}
+      {/* 11. New arrivals */}
+      <ProductRailGrid
+        id="new"
+        kicker="Just In"
+        title="New Arrivals"
+        subtitle="Fresh drops added every week. Be first to wear what's next."
+        products={newArrivalsGrid}
+        ctaHref="/shopping/product-list"
+      />
 
-          {/* 13. VIP / membership CTA */}
-          <Reveal>
-            <VipMembership />
-          </Reveal>
+      {/* 12. Next drop countdown (kept) */}
+      {!payload.activeDrop && nextDrop?.releaseDate ? (
+        <LiveDropCountdownXL
+          targetDate={nextDrop.releaseDate}
+          title={nextDrop.name}
+          description="The next chapter opens soon. Members enter first."
+        />
+      ) : null}
 
-          {/* 15. Cinematic Footer */}
-          <CinematicFooter />
-        </motion.div>
-      </div>
-    </>
+      {/* 13. Personalized rails (kept) */}
+      <ForYouRail variant="for-you" />
+      <ForYouRail variant="recently-viewed" />
+      <ForYouRail variant="trending-style" />
+
+      {/* 14. Trending fits marquee */}
+      {trendingFeed.length > 0 && <TrendingFitsMarquee products={trendingFeed} />}
+
+      {/* 15. Community / social proof */}
+      {payload.socialImages.length > 0 && (
+        <CommunityFeed images={payload.socialImages} />
+      )}
+
+      {/* 16. Testimonials */}
+      <Testimonials />
+
+      {/* 17. About teaser */}
+      <AboutTeaser />
+
+      {/* 18. FAQ */}
+      <HomeFAQ />
+
+      {/* 19. Newsletter */}
+      <NewsletterSignup />
+
+      {/* Footer comes from the shared layout (MainFooter). */}
+    </div>
   );
 };
 

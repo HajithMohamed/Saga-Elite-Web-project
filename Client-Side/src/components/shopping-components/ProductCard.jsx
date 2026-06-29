@@ -445,7 +445,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       {/* Metadata */}
       <Link to={productHref} className="block transition-all duration-500 p-2 mt-2">
         <div className="flex justify-between items-start gap-3">
-          <div className="flex flex-col flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
             <h3 className="text-[#e5e2e1] font-sans text-[13px] font-bold uppercase tracking-widest leading-snug line-clamp-1">
               {product?.name || "Untitled piece"}
             </h3>

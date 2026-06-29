@@ -610,7 +610,7 @@ const ProductDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pt-20 pb-12">
+    <div className="min-h-screen bg-[#0a0a0a] text-white pt-20 pb-36 md:pb-28 lg:pb-12">
       <div className="max-w-[1440px] mx-auto px-4 md:px-8">
         <button
           onClick={() => navigate(-1)}
@@ -1247,6 +1247,48 @@ const ProductDetails = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Mobile / tablet sticky add-to-cart bar — keeps the primary action
+          reachable while scrolling the long page. Sits above the global
+          MobileBottomNav (h-16) on phones; flush at the bottom on tablet where
+          that nav is hidden (md:). Desktop (lg+) uses the in-column panel. */}
+      <div className="fixed inset-x-0 bottom-16 z-40 border-t border-[#1c1b1b] bg-[#0a0a0a]/95 p-4 backdrop-blur-md md:bottom-0 lg:hidden">
+        <div className="mx-auto flex max-w-[1440px] items-center gap-4">
+          <div className="flex flex-col leading-none">
+            <span className="se-instrument text-lg text-[#f2ca50]">
+              {formatLKR(price * quantity)}
+            </span>
+            {hasVariants && selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 5 ? (
+              <span className="se-label mt-1 text-[9px] tracking-[0.28em] text-[#ffb4ab]">
+                Only {selectedVariant.stock} left
+              </span>
+            ) : (selectedSize || selectedColor) ? (
+              <span className="se-label mt-1 text-[9px] tracking-[0.28em] text-[#99907c]">
+                {[selectedSize, selectedColor].filter(Boolean).join(" · ")}
+              </span>
+            ) : null}
+          </div>
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={handleAddToCart}
+            disabled={hasVariants && selectedVariant && selectedVariant.stock === 0}
+            className="ml-auto flex h-12 flex-1 max-w-[62%] items-center justify-center rounded-full bg-[#f2ca50] text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {cartAddedPulse ? (
+              <>
+                <Check className="mr-2 h-5 w-5" /> Added
+              </>
+            ) : !selectedVariant && hasVariants ? (
+              "Select Size / Colour"
+            ) : selectedVariant?.stock === 0 ? (
+              "Sold Out"
+            ) : (
+              "Add to Bag"
+            )}
+          </motion.button>
+        </div>
       </div>
     </div>
   );
