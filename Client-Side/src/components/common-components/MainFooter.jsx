@@ -152,7 +152,7 @@ const MainFooter = () => {
       <div className="absolute top-0 left-1/4 w-1/2 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent z-0"></div>
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-      <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-6 lg:px-12 py-16">
+      <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-6 lg:px-12 pt-16 pb-28 md:pb-16">
 
         {/* 🔥 1️⃣ VIP CTA SECTION & 2️⃣ NEWSLETTER */}
         <motion.div

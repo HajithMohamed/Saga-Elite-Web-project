@@ -20,10 +20,29 @@ const MysteryGiftButton = () => {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  // Storefront only — never on the admin dashboard.
-  if (location.pathname.startsWith("/admin")) {
+  // Storefront only — never on the admin dashboard, and never during the
+  // standalone checkout / payment flow (those pages are intentionally
+  // distraction-free, with no surrounding chrome).
+  const CHECKOUT_FLOW_PATHS = [
+    "/shopping/checkout",
+    "/shopping/manual-payment",
+    "/shopping/card-payment",
+    "/shopping/find-payment",
+  ];
+  const inCheckoutFlow = CHECKOUT_FLOW_PATHS.some((p) =>
+    location.pathname.startsWith(p)
+  );
+  if (location.pathname.startsWith("/admin") || inCheckoutFlow) {
     return null;
   }
+
+  // The shopping layout renders a fixed mobile bottom nav (h-16, `md:hidden`)
+  // on `/shopping/*`. Lift the button above it on small screens so they don't
+  // overlap; on md+ (no bottom nav) and on public pages keep the default offset.
+  const onShopping = location.pathname.startsWith("/shopping");
+  const positionClass = onShopping
+    ? "bottom-24 right-6 md:bottom-6"
+    : "bottom-6 right-6";
 
   return (
     <>
@@ -42,7 +61,7 @@ const MysteryGiftButton = () => {
         }}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.94 }}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-[#D4AF37]/40 bg-[#0d0d0d]/80 text-[#f2ca50] shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-md transition-shadow hover:shadow-[0_0_28px_rgba(212,175,55,0.45)] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/60"
+        className={`fixed ${positionClass} z-50 flex h-14 w-14 items-center justify-center rounded-full border border-[#D4AF37]/40 bg-[#0d0d0d]/80 text-[#f2ca50] shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-md transition-shadow hover:shadow-[0_0_28px_rgba(212,175,55,0.45)] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/60`}
       >
         {/* Pulsing gold ring */}
         <motion.span

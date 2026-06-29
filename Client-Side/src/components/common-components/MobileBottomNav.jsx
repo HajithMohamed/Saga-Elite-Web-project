@@ -29,6 +29,14 @@ const MobileBottomNav = () => {
   const wishlistCount = wishlistItems?.length || 0;
   const { open: openAuthDrawer } = useAuthDrawer();
 
+  // Cart, Checkout and the order-success page each render their own fixed
+  // mobile bottom action bar. Hide this global tab bar there so two fixed
+  // bottom bars don't stack on top of each other.
+  const hidesForPageActionBar =
+    location.pathname.startsWith("/shopping/cart") ||
+    location.pathname.startsWith("/shopping/checkout");
+  if (hidesForPageActionBar) return null;
+
   const tabs = [
     { id: 'home', to: '/shopping/home', icon: Home, label: 'Home' },
     { id: 'search', to: '/shopping/product-list', icon: Search, label: 'Search' },

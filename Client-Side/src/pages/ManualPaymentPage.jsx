@@ -928,7 +928,7 @@ const ManualPaymentPage = () => {
                 <div>
                   <p className="se-serif text-sm italic text-[#d0c5af]">Your exclusive transaction identity</p>
                   <div className="mt-4 flex items-center gap-4">
-                    <p className="se-mono text-4xl font-bold tracking-[0.15em] text-[#f2ca50] sm:text-5xl">
+                    <p className="se-mono break-all text-3xl font-bold tracking-[0.12em] text-[#f2ca50] sm:text-5xl sm:tracking-[0.15em]">
                       {activeReferenceNumber || "—"}
                     </p>
                   </div>

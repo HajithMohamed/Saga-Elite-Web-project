@@ -57,6 +57,7 @@ import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
 // shopping page imports
 import ShoppinLayout from "./components/shopping-components/Layout";
+import CheckoutLayout from "./components/shopping-components/CheckoutLayout";
 import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
 import Account from "./pages/shopping-view/Account";
@@ -267,21 +268,33 @@ function App() {
               <Route path="orders" element={<Orders />} />
               <Route path="rewards" element={<MyRewards />} />
               <Route path="cart" element={<Cart />} />
-              <Route path="checkout" element={<Checkout />} />
               <Route path="product-list" element={<ProductListing />} />
               <Route path="product/:slug" element={<ProductDetails />} />
               <Route path="drops" element={<DropsIndex />} />
               <Route path="drop/:slug" element={<DropDetails />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="checkout-success" element={<OrderSuccess />} />
-              <Route path="manual-payment" element={<ManualPaymentPage />} />
-              <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
-              <Route path="card-payment/:orderId" element={<CardPaymentPage />} />
-              <Route path="find-payment" element={<FindPaymentPage />} />
               <Route path="wishlist" element={<Wishlist />} />
               <Route path="for-you" element={<ForYou />} />
               <Route path="order-tracking" element={<OrderTracking />} />
               <Route path="account/my-reviews" element={<MyReviewsPage />} />
+            </Route>
+
+            {/* CHECKOUT FLOW — standalone, no storefront chrome (own secure-checkout
+                header only). URLs stay under /shopping/* so existing links work. */}
+            <Route
+              path="/shopping"
+              element={
+                <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+                  <CheckoutLayout />
+                </CheckAuth>
+              }
+            >
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="manual-payment" element={<ManualPaymentPage />} />
+              <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+              <Route path="card-payment/:orderId" element={<CardPaymentPage />} />
+              <Route path="find-payment" element={<FindPaymentPage />} />
             </Route>
 
             {/* OTHER */}
