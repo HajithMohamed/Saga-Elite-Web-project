@@ -10,8 +10,8 @@ import usePageMeta from "@/hooks/use-page-meta";
 import ProductCard from "@/components/shopping-components/ProductCard";
 import {
   LiveDropCountdownXL,
-  CommunityFeed,
 } from "@/components/landing/LandingSections";
+import { CommunityGallery } from "@/components/landing/CommunitySections";
 import DropHeroCinematic from "@/components/listing/DropHeroCinematic";
 import DropStory from "@/components/listing/DropStory";
 import DropAvailabilityBar from "@/components/listing/DropAvailabilityBar";
@@ -272,7 +272,7 @@ const DropDetails = () => {
       <DropTimeline drop={drop} />
 
       {/* 8. Community reactions */}
-      <CommunityFeed />
+      <CommunityGallery />
     </div>
   );
 };

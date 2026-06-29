@@ -17,7 +17,6 @@ import {
   LiveDropCountdownXL,
   SeasonalCampaignSlider,
   TrendingFitsMarquee,
-  CommunityFeed,
 } from "@/components/landing/LandingSections";
 import ForYouRail from "@/components/landing/ForYouRail";
 import {
@@ -37,6 +36,7 @@ import {
 import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
 import { EcosystemGrid, LiveActivityOverlay } from "@/components/landing/LuxuryEcosystemSections";
 import { ExclusiveDropsBanner } from "@/components/landing/ExclusiveDropsBanner";
+import { CommunityGallery, Newsletter, InstagramSection } from "@/components/landing/CommunitySections";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -224,13 +224,11 @@ const Home = () => {
       <TrustBadgesStrip />
       {/* --- END PROMPT 05 --- */}
 
-      {/* 16. Community Gallery */}
-      {payload.socialImages.length > 0 && (
-        <CommunityFeed images={payload.socialImages} />
-      )}
-
-      {/* 17. Newsletter / Promotional Banner */}
-      <PromoBanner />
+      {/* --- PROMPT 06 COMMUNITY SECTIONS --- */}
+      <CommunityGallery />
+      <Newsletter />
+      <InstagramSection />
+      {/* --- END PROMPT 06 --- */}
 
       {/* Additional Rails & Marquee kept at the bottom to avoid breaking flow */}
       <ForYouRail variant="recently-viewed" />

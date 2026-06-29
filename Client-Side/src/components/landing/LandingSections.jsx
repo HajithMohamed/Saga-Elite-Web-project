@@ -1290,68 +1290,7 @@ const COMMUNITY_FALLBACK = [
   { url: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=80", span: "" },
 ];
 
-export const CommunityFeed = ({ images = [] }) => {
-  const tiles = images.length > 0
-    ? images.map((url, i) => ({ url, span: COMMUNITY_FALLBACK[i % COMMUNITY_FALLBACK.length].span }))
-    : COMMUNITY_FALLBACK;
 
-  return (
-    <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
-      <div className="max-w-[1440px] mx-auto px-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
-          <div>
-            <p className="se-label text-[#f2ca50] text-[10px] tracking-[0.4em]">
-              COMMUNITY · THE STREETS SPEAK
-            </p>
-            <h2 className="se-serif text-[#e5e2e1] text-4xl md:text-6xl mt-3">
-              Worn by the bold.
-            </h2>
-            <p className="font-sans text-sm text-[#99907c] mt-3 max-w-lg">
-              Tag us. The best fits get featured here and on our story.
-            </p>
-          </div>
-          <a
-            href="https://instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 border border-[#4d4635] hover:border-[#f2ca50] text-[#d0c5af] hover:text-[#f2ca50] px-6 py-3 font-mono text-[10px] tracking-[0.28em] uppercase transition-colors shrink-0"
-          >
-            <Instagram className="w-4 h-4" />
-            Follow on Instagram
-          </a>
-        </div>
-
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-2 space-y-2">
-          {tiles.slice(0, 6).map((tile, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ delay: i * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="break-inside-avoid group relative overflow-hidden cursor-pointer"
-              style={{
-                aspectRatio: i % 5 === 0 ? '3/4' : i % 5 === 1 ? '1/1' : i % 5 === 2 ? '2/3' : i % 5 === 3 ? '4/5' : '3/5',
-              }}
-            >
-              <img
-                src={tile.url || tile}
-                alt={`Community look ${i + 1}`}
-                loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-[#0a0a0a]/0 group-hover:bg-[#0a0a0a]/30 transition-all duration-400 flex items-end p-3">
-                <span className="se-label text-[9px] tracking-[0.3em] text-white/0 group-hover:text-white/70 transition-all duration-300">
-                  SAGA ELITE
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
 /* ──────────────────────────────────────────────────────────────────────────
    VIP MEMBERSHIP — full-bleed gradient CTA.
