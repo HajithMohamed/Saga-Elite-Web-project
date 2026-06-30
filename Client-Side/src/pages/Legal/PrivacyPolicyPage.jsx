@@ -18,8 +18,21 @@ const PrivacyPolicyPage = () => {
 
   usePageMeta({ title: metaTitle, description: metaDescription });
 
+  const summary = [
+    "What information we collect",
+    "How we use your data",
+    "How we protect your information",
+    "Your privacy rights",
+    "Contact information",
+  ];
+
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated={lastUpdated}>
+    <LegalLayout 
+      title="Privacy Policy" 
+      subtitle="Learn how Saga Elite collects, protects, and uses your information."
+      lastUpdated={lastUpdated}
+      summary={summary}
+    >
       <PolicyBody html={html} loading={loading} />
     </LegalLayout>
   );
