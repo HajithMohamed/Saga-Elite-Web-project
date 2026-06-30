@@ -192,6 +192,16 @@ const formatSriLankanPhoneInput = (value) => {
   return `${display.slice(0, 3)} ${display.slice(3, 6)} ${display.slice(6, 10)}`;
 };
 
+// Light, non-destructive sanitizer for live typing: keeps digits / "+" / spaces,
+// never re-prepends a leading "0" and never restructures the value — so backspace
+// works naturally and the cursor stays put. Full formatting + validation happens
+// on blur / submit via formatSriLankanPhoneInput + isValidSriLankanMobile.
+const sanitizePhoneInput = (value) =>
+  String(value || "")
+    .replace(/[^\d+\s]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .slice(0, 18);
+
 const useCheckoutPersistence = (initialValue) => {
   const [val, setVal] = useState(() => {
     if (typeof window === "undefined") return initialValue;
@@ -642,14 +652,56 @@ const Checkout = () => {
   };
 
   const handlePhoneChange = (e) => {
-    const val = formatSriLankanPhoneInput(e.target.value);
+    const val = sanitizePhoneInput(e.target.value);
     setFormData((prev) => ({ ...prev, phone: val }));
     setErrors((prev) => ({ ...prev, phone: undefined, alternativePhone: undefined }));
   };
 
   const handleAlternativePhoneChange = (e) => {
-    const val = formatSriLankanPhoneInput(e.target.value);
+    const val = sanitizePhoneInput(e.target.value);
     setFormData((prev) => ({ ...prev, alternativePhone: val }));
+    setErrors((prev) => ({ ...prev, alternativePhone: undefined }));
+  };
+
+  // Validate + tidy formatting only once the user leaves the field. A valid
+  // number is reformatted to the canonical "0XX XXX XXXX" display; an invalid
+  // one is left as typed so it can be corrected.
+  const handlePhoneBlur = () => {
+    const trimmed = formData.phone.trim();
+    if (!trimmed) {
+      setErrors((prev) => ({ ...prev, phone: undefined }));
+      return;
+    }
+    if (isValidSriLankanMobile(trimmed)) {
+      setFormData((prev) => ({ ...prev, phone: formatSriLankanPhoneInput(trimmed) }));
+      setErrors((prev) => ({ ...prev, phone: undefined }));
+    } else {
+      setErrors((prev) => ({ ...prev, phone: "Enter a valid Sri Lankan mobile number" }));
+    }
+  };
+
+  const handleAlternativePhoneBlur = () => {
+    const trimmed = formData.alternativePhone.trim();
+    if (!trimmed) {
+      setErrors((prev) => ({ ...prev, alternativePhone: undefined }));
+      return;
+    }
+    if (!isValidSriLankanMobile(trimmed)) {
+      setErrors((prev) => ({ ...prev, alternativePhone: "Enter a valid Sri Lankan mobile number" }));
+      return;
+    }
+    if (
+      formData.phone.trim() &&
+      normalizeSriLankanPhoneForMatch(formData.phone) ===
+        normalizeSriLankanPhoneForMatch(trimmed)
+    ) {
+      setErrors((prev) => ({
+        ...prev,
+        alternativePhone: "Alternative phone must be different from the primary phone",
+      }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, alternativePhone: formatSriLankanPhoneInput(trimmed) }));
     setErrors((prev) => ({ ...prev, alternativePhone: undefined }));
   };
 
@@ -1112,8 +1164,8 @@ const Checkout = () => {
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Phone Number *</label>
-                        <input type="tel" value={formData.phone}
-                          onChange={handlePhoneChange} placeholder="07X XXX XXXX"
+                        <input type="tel" value={formData.phone} inputMode="tel"
+                          onChange={handlePhoneChange} onBlur={handlePhoneBlur} placeholder="07X XXX XXXX"
                           className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.phone ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         />
                         {errors.phone && <span className="text-[10px] text-[#ffb4ab]">{errors.phone}</span>}
@@ -1122,8 +1174,8 @@ const Checkout = () => {
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">
                           Alt. Phone <span className="normal-case font-normal text-[#4d4635]">(Optional)</span>
                         </label>
-                        <input type="tel" value={formData.alternativePhone}
-                          onChange={handleAlternativePhoneChange} placeholder="07X XXX XXXX"
+                        <input type="tel" value={formData.alternativePhone} inputMode="tel"
+                          onChange={handleAlternativePhoneChange} onBlur={handleAlternativePhoneBlur} placeholder="07X XXX XXXX"
                           className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.alternativePhone ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         />
                         {errors.alternativePhone && <span className="text-[10px] text-[#ffb4ab]">{errors.alternativePhone}</span>}

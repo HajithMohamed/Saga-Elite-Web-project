@@ -16,8 +16,15 @@ const EditorialProductGrid = ({
   products = [],
   featuredEvery = 7,
   motionKey,
+  filtersOpen = false,
 }) => {
   if (!products.length) return null;
+
+  // When the filter sidebar occupies desktop width, drop from 4 → 3 columns so
+  // tiles keep equal spacing and never overflow horizontally.
+  const gridCols = filtersOpen
+    ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
+    : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
 
   return (
     <AnimatePresence mode="wait">
@@ -27,7 +34,7 @@ const EditorialProductGrid = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
-        className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        className={`grid gap-6 ${gridCols}`}
       >
         {products.map((product, idx) => (
           <div key={product._id || idx}>

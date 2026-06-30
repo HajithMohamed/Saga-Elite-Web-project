@@ -42,6 +42,7 @@ import { compressImageFile } from "@/lib/image-compression";
 
 const TABS = [
   { id: "brand", label: "Brand", icon: Building2 },
+  { id: "aboutpage", label: "About Page", icon: ImageIcon },
   { id: "founder", label: "Founder", icon: UserIcon },
   { id: "contact", label: "Contact", icon: Phone },
   { id: "social", label: "Socials", icon: Share2 },
@@ -64,6 +65,14 @@ const TAB_KEYS = {
     "shop_hero_eyebrow",
     "shop_hero_headline",
     "about_brand_story",
+  ],
+  aboutpage: [
+    "about_hero_image",
+    "about_hero_title",
+    "about_hero_subtitle",
+    "about_hero_cta_label",
+    "about_hero_cta_url",
+    "about_story_image",
   ],
   founder: [
     "shop_founder_name",
@@ -107,6 +116,12 @@ const DEFAULT_VALUES = {
   shop_hero_eyebrow: "",
   shop_hero_headline: "",
   about_brand_story: [],
+  about_hero_image: "",
+  about_hero_title: "",
+  about_hero_subtitle: "",
+  about_hero_cta_label: "",
+  about_hero_cta_url: "",
+  about_story_image: "",
   shop_founder_name: "",
   shop_founder_title: "",
   shop_founder_bio: "",
@@ -539,6 +554,74 @@ const AboutSiteConfig = () => {
             />
           )}
         />
+      </div>
+    </div>
+  );
+
+  const AboutPageTab = (
+    <div className="grid gap-6">
+      <div className="grid gap-5 rounded-xl border border-white/10 bg-black/30 p-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+          Hero banner
+        </p>
+        <FieldShell
+          label="Hero image"
+          hint="Recommended 1920 × 720 px · 21:9 · object-fit cover · ≤ 2 MB · JPG / PNG / WEBP. Keep key subjects centred."
+        >
+          <ImagePicker
+            value={values.about_hero_image}
+            onChange={(v) => setField("about_hero_image", v)}
+            label="Upload hero image"
+          />
+        </FieldShell>
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            label="Hero title"
+            value={values.about_hero_title}
+            onChange={(v) => setField("about_hero_title", v)}
+            placeholder="About Saga Elite"
+          />
+          <TextField
+            label="Hero subtitle"
+            value={values.about_hero_subtitle}
+            onChange={(v) => setField("about_hero_subtitle", v)}
+            placeholder="Premium Fashion Designed for Modern Sri Lanka"
+          />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            label="CTA label (optional)"
+            value={values.about_hero_cta_label}
+            onChange={(v) => setField("about_hero_cta_label", v)}
+            placeholder="Shop Collection"
+          />
+          <TextField
+            label="CTA link (optional)"
+            value={values.about_hero_cta_url}
+            onChange={(v) => setField("about_hero_cta_url", v)}
+            placeholder="/shopping/product-list"
+            error={values.about_hero_cta_url && !/^(https?:\/\/|\/)/.test(values.about_hero_cta_url) ? "Use a full URL or a path starting with /" : null}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-5 rounded-xl border border-white/10 bg-black/30 p-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+          Our Story
+        </p>
+        <FieldShell
+          label="Story image"
+          hint="Recommended 900 × 1200 px · 3:4 portrait · object-fit cover · ≤ 2 MB · JPG / PNG / WEBP."
+        >
+          <ImagePicker
+            value={values.about_story_image}
+            onChange={(v) => setField("about_story_image", v)}
+            label="Upload story image"
+          />
+        </FieldShell>
+        <p className="text-[10px] text-gray-500">
+          Story text is edited under the <span className="text-[#D4AF37]">Brand</span> tab (Brand story paragraphs).
+        </p>
       </div>
     </div>
   );
@@ -995,6 +1078,7 @@ const AboutSiteConfig = () => {
 
   const tabContent = {
     brand: BrandTab,
+    aboutpage: AboutPageTab,
     founder: FounderTab,
     contact: ContactTab,
     social: SocialTab,

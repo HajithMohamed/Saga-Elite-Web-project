@@ -28,6 +28,12 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    // Snapshot of the product/variant image at order time so the order summary
+    // always renders a thumbnail, even if the product is later edited/deleted.
+    productImage: {
+      type: String,
+      trim: true,
+    },
     size: {
       type: String,
       trim: true,

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
+import { CONTACT_INFO } from "@/config";
 
 
 
@@ -339,11 +340,11 @@ export const fetchSiteSettings = async () => {
       address: joinAddress(a),
       hours: a.shop_hours || "",
       mapEmbedUrl: a.shop_map_embed_url || "",
-      instagramUrl: a.shop_social_instagram || "",
-      facebookUrl: a.shop_social_facebook || "",
+      instagramUrl: a.shop_social_instagram || CONTACT_INFO.socials.instagram || "",
+      facebookUrl: a.shop_social_facebook || CONTACT_INFO.socials.facebook || "",
       youtubeUrl: a.shop_social_youtube || "",
       twitterUrl: a.shop_social_twitter || "",
-      tiktokUrl: a.shop_social_tiktok || "",
+      tiktokUrl: a.shop_social_tiktok || CONTACT_INFO.socials.tiktok || "",
       brandDescription: a.footer_brand_description || "",
       copyright: a.footer_copyright || "",
       quickLinks: Array.isArray(a.footer_quick_links) ? a.footer_quick_links : [],

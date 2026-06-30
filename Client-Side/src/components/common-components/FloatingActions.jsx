@@ -1,58 +1,68 @@
-import React, { useState, useEffect } from "react";
-import { ArrowUp, MessageCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "@/hooks/use-toast";
+import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CONTACT_INFO } from "@/config";
+import { fetchSiteSettings } from "@/services/landing-api";
+import { WhatsAppIcon } from "@/components/common-components/BrandIcons";
+
+const CHECKOUT_FLOW_PATHS = [
+  "/shopping/checkout",
+  "/shopping/manual-payment",
+  "/shopping/card-payment",
+  "/shopping/find-payment",
+];
+
+const getWhatsAppDigits = (value) => String(value || "").replace(/\D/g, "");
+const MotionAnchor = motion.a;
 
 const FloatingActions = () => {
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const location = useLocation();
+  const [whatsappNumber, setWhatsappNumber] = useState(CONTACT_INFO.whatsapp);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 600) {
-        setShowBackToTop(true);
-      } else {
-        setShowBackToTop(false);
+    let active = true;
+    fetchSiteSettings().then((settings) => {
+      if (active && settings?.whatsapp) {
+        setWhatsappNumber(settings.whatsapp);
       }
+    });
+    return () => {
+      active = false;
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const inCheckoutFlow = CHECKOUT_FLOW_PATHS.some((path) =>
+    location.pathname.startsWith(path)
+  );
+  if (location.pathname.startsWith("/admin") || inCheckoutFlow) {
+    return null;
+  }
 
-  const openSupportChat = () => {
-    toast({ title: "Support Chat", description: "Connecting to a style advisor..." });
-  };
+  const digits =
+    getWhatsAppDigits(whatsappNumber) || getWhatsAppDigits(CONTACT_INFO.whatsapp);
+  if (!digits) return null;
+
+  const onShopping = location.pathname.startsWith("/shopping");
+  const positionClass = onShopping
+    ? "bottom-[10.5rem] right-6 md:bottom-24"
+    : "bottom-24 right-6";
+  const message = encodeURIComponent("Hi Saga Elite, I need help.");
 
   return (
-    <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50 flex flex-col gap-4">
-      <AnimatePresence>
-        {showBackToTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            onClick={scrollToTop}
-            className="w-12 h-12 bg-[#1A1A1A] border border-white/10 text-[#fafafa] rounded-full flex items-center justify-center shadow-elegant hover:bg-white/5 hover:border-[#F2CA50] hover:text-[#F2CA50] transition-colors"
-            aria-label="Back to top"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        onClick={openSupportChat}
-        className="w-14 h-14 bg-[#F2CA50] text-[#0e0e0e] rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(242,202,80,0.3)] hover:scale-110 transition-transform"
-        aria-label="Support Chat"
-      >
-        <MessageCircle className="w-6 h-6" />
-      </motion.button>
-    </div>
+    <MotionAnchor
+      href={`https://wa.me/${digits}?text=${message}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.94 }}
+      className={`fixed ${positionClass} z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-shadow hover:shadow-[0_0_28px_rgba(37,211,102,0.35)] focus:outline-none focus:ring-2 focus:ring-[#25D366]/60 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]`}
+      aria-label="Chat with Saga Elite on WhatsApp"
+      title="Chat on WhatsApp"
+    >
+      <WhatsAppIcon className="h-7 w-7" />
+    </MotionAnchor>
   );
 };
 

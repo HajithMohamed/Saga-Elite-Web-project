@@ -59,6 +59,7 @@ const ProductListing = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true); // desktop inline sidebar visibility
 
   const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -79,8 +80,62 @@ const ProductListing = () => {
   // Refinements
   const colorsParam = useMemo(() => (searchParams.get("colors") || "").split(",").map((c) => c.trim().toLowerCase()).filter(Boolean), [searchParams]);
   const sizesParam = useMemo(() => (searchParams.get("sizes") || "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean), [searchParams]);
-  const priceMinParam = Number(searchParams.get("min") || PRICE_MIN);
-  const priceMaxParam = Number(searchParams.get("max") || PRICE_MAX);
+  const brandsParam = useMemo(() => (searchParams.get("brands") || "").split(",").map((b) => b.trim().toLowerCase()).filter(Boolean), [searchParams]);
+
+  // ── Facets derived from the loaded catalog (no hardcoded options) ──
+  const availableColors = useMemo(() => {
+    const map = new Map(); // lowercase key → original display casing
+    for (const p of products) for (const v of p.variants || []) {
+      const c = String(v?.color || "").trim();
+      if (c && !map.has(c.toLowerCase())) map.set(c.toLowerCase(), c);
+    }
+    return [...map.values()];
+  }, [products]);
+
+  const availableSizes = useMemo(() => {
+    const set = new Set();
+    for (const p of products) for (const v of p.variants || []) {
+      const s = String(v?.size || "").trim().toUpperCase();
+      if (s) set.add(s);
+    }
+    const ORDER = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+    return [...set].sort((a, b) => {
+      const ia = ORDER.indexOf(a);
+      const ib = ORDER.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [products]);
+
+  const availableBrands = useMemo(() => {
+    const map = new Map();
+    for (const p of products) {
+      const b = String(p?.brand?.name || p?.brand || "").trim();
+      if (b && !map.has(b.toLowerCase())) map.set(b.toLowerCase(), b);
+    }
+    return [...map.values()];
+  }, [products]);
+
+  const priceBounds = useMemo(() => {
+    if (!products.length) return { min: PRICE_MIN, max: PRICE_MAX };
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const p of products) {
+      const price = Number(p.basePrice || 0);
+      if (price < lo) lo = price;
+      if (price > hi) hi = price;
+    }
+    if (!Number.isFinite(lo)) lo = PRICE_MIN;
+    if (!Number.isFinite(hi) || hi <= lo) hi = lo + 500;
+    lo = Math.max(0, Math.floor(lo / 500) * 500);
+    hi = Math.ceil(hi / 500) * 500;
+    return { min: lo, max: hi };
+  }, [products]);
+
+  const priceMinParam = searchParams.get("min") !== null ? Number(searchParams.get("min")) : priceBounds.min;
+  const priceMaxParam = searchParams.get("max") !== null ? Number(searchParams.get("max")) : priceBounds.max;
 
   useEffect(() => {
     if (categoryParam === "drops" || filterParam === "drops") {
@@ -105,6 +160,10 @@ const ProductListing = () => {
         const next = sizesParam.filter(s => s !== value);
         if (next.length) p.set("sizes", next.join(",")); else p.delete("sizes");
       }
+      if (type === "brand") {
+        const next = brandsParam.filter(b => b !== value);
+        if (next.length) p.set("brands", next.join(",")); else p.delete("brands");
+      }
       if (type === "price") {
         p.delete("min");
         p.delete("max");
@@ -115,7 +174,7 @@ const ProductListing = () => {
   const clearAllFilters = () =>
     updateParams((p) => {
       p.delete("stock"); p.delete("limited"); p.delete("colors");
-      p.delete("sizes"); p.delete("min"); p.delete("max");
+      p.delete("sizes"); p.delete("brands"); p.delete("min"); p.delete("max");
     });
 
   const unitPrice = (product, variant) => {
@@ -148,14 +207,19 @@ const ProductListing = () => {
         return (p.variants || []).some((v) => sizesParam.includes(String(v?.size || "").toUpperCase()));
       })
       .filter((p) => {
+        if (!brandsParam.length) return true;
+        const b = String(p?.brand?.name || p?.brand || "").toLowerCase();
+        return brandsParam.includes(b);
+      })
+      .filter((p) => {
         const price = Number(p.basePrice || 0);
         return price >= priceMinParam && price <= priceMaxParam;
       });
-  }, [sortedProducts, inStockOnly, limitedOnly, colorsParam, sizesParam, priceMinParam, priceMaxParam]);
+  }, [sortedProducts, inStockOnly, limitedOnly, colorsParam, sizesParam, brandsParam, priceMinParam, priceMaxParam]);
 
   const { page, setPage, pageCount, total: totalProducts, pageItems: visibleProducts, pageSize: productPageSize } = usePagination(filteredProducts, PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [setPage, categoryParam, filterParam, inStockOnly, limitedOnly, colorsParam.join(","), sizesParam.join(","), priceMinParam, priceMaxParam]);
+  useEffect(() => { setPage(1); }, [setPage, categoryParam, filterParam, inStockOnly, limitedOnly, colorsParam.join(","), sizesParam.join(","), brandsParam.join(","), priceMinParam, priceMaxParam]);
 
   useLiveProductUpdates((payload = {}) => products.some((product) => String(product._id) === String(payload.productId || "")));
 
@@ -231,7 +295,7 @@ const ProductListing = () => {
   }, [liveProductUpdates, products]);
 
   const totalCount = sortedProducts.length;
-  const hasFilterActive = inStockOnly || limitedOnly || colorsParam.length > 0 || sizesParam.length > 0 || priceMinParam > PRICE_MIN || priceMaxParam < PRICE_MAX;
+  const hasFilterActive = inStockOnly || limitedOnly || colorsParam.length > 0 || sizesParam.length > 0 || brandsParam.length > 0 || priceMinParam > priceBounds.min || priceMaxParam < priceBounds.max;
 
   const categoryTrail = useMemo(() => {
     if (isOffersListing) return [{ value: "offers", label: "Offers" }];
@@ -246,15 +310,10 @@ const ProductListing = () => {
   return (
     <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen pt-[64px] md:pt-[72px]">
 
-      {/* ── HERO BANNER ── */}
-      <section className="relative h-[240px] md:h-[320px] lg:h-[420px] overflow-hidden flex items-end justify-center w-full border-b border-white/5">
-        <div className="absolute inset-0">
-          <img src="/LOGO.png" alt={heroTitle} className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-[#0e0e0e]/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
-        </div>
-        <div className="relative z-10 w-full max-w-[1440px] px-4 md:px-8 pb-10">
-          <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
+      {/* ── PAGE HEADER (text-only; no placeholder banner) ── */}
+      <section className="w-full border-b border-white/5">
+        <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-10 md:pt-14 pb-8 md:pb-10">
+          <nav className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
             <Link to="/" className="hover:text-[#F2CA50] transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
             <Link to="/shopping/product-list" className="hover:text-[#F2CA50] transition-colors">Shop</Link>
@@ -267,10 +326,10 @@ const ProductListing = () => {
               </React.Fragment>
             ))}
           </nav>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-4xl md:text-5xl lg:text-[56px] mb-3">
+          <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-3xl md:text-4xl lg:text-[44px] leading-tight">
             {heroTitle}
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-[#99907c] text-base md:text-lg max-w-2xl mb-6">
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="se-body text-[#99907c] text-sm md:text-base max-w-2xl mt-3">
             {heroSubtitle}
           </motion.p>
         </div>
@@ -280,31 +339,42 @@ const ProductListing = () => {
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-8 lg:py-16">
         <div className="flex flex-col lg:flex-row gap-12 items-start relative">
           
-          {/* ── LEFT SIDEBAR (Filters) ── */}
-          <div className="hidden lg:block w-[280px] shrink-0 sticky top-24 self-start">
-             <FilterSidebar
-                selectedColors={colorsParam}
-                selectedSizes={sizesParam}
-                priceRange={[priceMinParam, priceMaxParam]}
-                onToggleColor={(c) => updateParams((p) => {
-                  let arr = [...colorsParam];
-                  if (arr.includes(c)) arr = arr.filter((x) => x !== c); else arr.push(c);
-                  if (arr.length) p.set("colors", arr.join(",")); else p.delete("colors");
-                })}
-                onToggleSize={(s) => updateParams((p) => {
-                  let arr = [...sizesParam];
-                  if (arr.includes(s)) arr = arr.filter((x) => x !== s); else arr.push(s);
-                  if (arr.length) p.set("sizes", arr.join(",")); else p.delete("sizes");
-                })}
-                onChangePrice={(v) => updateParams((p) => {
-                  if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
-                  if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
-                })}
-                onClearAll={clearAllFilters}
-                priceMin={PRICE_MIN}
-                priceMax={PRICE_MAX}
-             />
-          </div>
+          {/* ── LEFT SIDEBAR (Filters) — toggleable on desktop ── */}
+          {filtersOpen && (
+            <div className="hidden lg:block w-[280px] shrink-0 sticky top-24 self-start">
+               <FilterSidebar
+                  selectedColors={colorsParam}
+                  selectedSizes={sizesParam}
+                  selectedBrands={brandsParam}
+                  availableColors={availableColors}
+                  availableSizes={availableSizes}
+                  availableBrands={availableBrands}
+                  priceRange={[priceMinParam, priceMaxParam]}
+                  onToggleColor={(c) => updateParams((p) => {
+                    let arr = [...colorsParam];
+                    if (arr.includes(c)) arr = arr.filter((x) => x !== c); else arr.push(c);
+                    if (arr.length) p.set("colors", arr.join(",")); else p.delete("colors");
+                  })}
+                  onToggleSize={(s) => updateParams((p) => {
+                    let arr = [...sizesParam];
+                    if (arr.includes(s)) arr = arr.filter((x) => x !== s); else arr.push(s);
+                    if (arr.length) p.set("sizes", arr.join(",")); else p.delete("sizes");
+                  })}
+                  onToggleBrand={(b) => updateParams((p) => {
+                    let arr = [...brandsParam];
+                    if (arr.includes(b)) arr = arr.filter((x) => x !== b); else arr.push(b);
+                    if (arr.length) p.set("brands", arr.join(",")); else p.delete("brands");
+                  })}
+                  onChangePrice={(v) => updateParams((p) => {
+                    if (v[0] > priceBounds.min) p.set("min", v[0]); else p.delete("min");
+                    if (v[1] < priceBounds.max) p.set("max", v[1]); else p.delete("max");
+                  })}
+                  onClearAll={clearAllFilters}
+                  priceMin={priceBounds.min}
+                  priceMax={priceBounds.max}
+               />
+            </div>
+          )}
 
           {/* ── RIGHT PANE (Product Grid) ── */}
           <div className="flex-1 w-full min-w-0">
@@ -328,7 +398,12 @@ const ProductListing = () => {
                          Size {s} <X className="w-3 h-3 text-[#99907c]" />
                        </button>
                     ))}
-                    {(priceMinParam > PRICE_MIN || priceMaxParam < PRICE_MAX) && (
+                    {brandsParam.map(b => (
+                       <button key={`b-${b}`} onClick={() => removeFilterChip('brand', b)} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
+                         {b} <X className="w-3 h-3 text-[#99907c]" />
+                       </button>
+                    ))}
+                    {(priceMinParam > priceBounds.min || priceMaxParam < priceBounds.max) && (
                        <button onClick={() => removeFilterChip('price')} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
                          Rs {priceMinParam} - {priceMaxParam} <X className="w-3 h-3 text-[#99907c]" />
                        </button>
@@ -338,6 +413,15 @@ const ProductListing = () => {
                 )}
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  aria-pressed={filtersOpen}
+                  className="hidden lg:flex items-center gap-2 h-[42px] px-4 rounded-full border border-white/10 text-[#e5e2e1] hover:border-[#F2CA50]/50 hover:text-[#F2CA50] transition-colors text-[11px] uppercase tracking-widest font-bold"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-[#F2CA50]" />
+                  {filtersOpen ? "Hide Filters" : "Show Filters"}
+                </button>
                 <SortDropdown
                   options={SORT_OPTIONS}
                   value={sortParam}
@@ -358,11 +442,14 @@ const ProductListing = () => {
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">
                       <FilterSidebar
-                        selectedColors={colorsParam} selectedSizes={sizesParam} priceRange={[priceMinParam, priceMaxParam]}
+                        selectedColors={colorsParam} selectedSizes={sizesParam} selectedBrands={brandsParam}
+                        availableColors={availableColors} availableSizes={availableSizes} availableBrands={availableBrands}
+                        priceRange={[priceMinParam, priceMaxParam]}
                         onToggleColor={(c) => updateParams((p) => { let arr = [...colorsParam]; if (arr.includes(c)) arr = arr.filter((x) => x !== c); else arr.push(c); if (arr.length) p.set("colors", arr.join(",")); else p.delete("colors"); })}
                         onToggleSize={(s) => updateParams((p) => { let arr = [...sizesParam]; if (arr.includes(s)) arr = arr.filter((x) => x !== s); else arr.push(s); if (arr.length) p.set("sizes", arr.join(",")); else p.delete("sizes"); })}
-                        onChangePrice={(v) => updateParams((p) => { if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min"); if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max"); })}
-                        onClearAll={clearAllFilters} priceMin={PRICE_MIN} priceMax={PRICE_MAX}
+                        onToggleBrand={(b) => updateParams((p) => { let arr = [...brandsParam]; if (arr.includes(b)) arr = arr.filter((x) => x !== b); else arr.push(b); if (arr.length) p.set("brands", arr.join(",")); else p.delete("brands"); })}
+                        onChangePrice={(v) => updateParams((p) => { if (v[0] > priceBounds.min) p.set("min", v[0]); else p.delete("min"); if (v[1] < priceBounds.max) p.set("max", v[1]); else p.delete("max"); })}
+                        onClearAll={clearAllFilters} priceMin={priceBounds.min} priceMax={priceBounds.max}
                       />
                     </div>
                     <div className="p-4 border-t border-white/5 bg-[#0e0e0e] flex gap-3 sticky bottom-0">
@@ -395,6 +482,7 @@ const ProductListing = () => {
                 <EditorialProductGrid
                   products={visibleProducts}
                   featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
+                  filtersOpen={filtersOpen}
                   motionKey={[categoryParam, subCategoryParam, categoryPathParam, filterParam, sortParam].join("|")}
                 />
                 <div className="mt-12">

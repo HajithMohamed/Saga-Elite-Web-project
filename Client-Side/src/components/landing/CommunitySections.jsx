@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   Instagram,
   Facebook,
@@ -13,6 +14,7 @@ import { Reveal } from "@/components/ui/editorial";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { fetchSiteSettings, fetchStoreStats } from "@/services/landing-api";
+import { TikTokIcon } from "@/components/common-components/BrandIcons";
 
 const SECTION_CONTAINER = "mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]";
 
@@ -119,7 +121,9 @@ const NEWSLETTER_BENEFITS = [
 ];
 
 export function Newsletter() {
-  const [email, setEmail] = useState("");
+  const user = useSelector((state) => state.auth?.user);
+  // Pre-fill with the signed-in user's email so they don't have to retype it.
+  const [email, setEmail] = useState(() => user?.email || "");
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -236,6 +240,8 @@ export function InstagramSection() {
     socialLinks.push({ icon: Instagram, name: "Instagram", desc: "Daily style inspiration", href: settings.instagramUrl });
   if (settings?.facebookUrl)
     socialLinks.push({ icon: Facebook, name: "Facebook", desc: "Community updates", href: settings.facebookUrl });
+  if (settings?.tiktokUrl)
+    socialLinks.push({ icon: TikTokIcon, name: "TikTok", desc: "Style edits & drops", href: settings.tiktokUrl });
   if (settings?.youtubeUrl)
     socialLinks.push({ icon: Youtube, name: "YouTube", desc: "Behind the scenes", href: settings.youtubeUrl });
   if (settings?.twitterUrl)

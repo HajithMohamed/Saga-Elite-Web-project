@@ -50,6 +50,13 @@ const ABOUT_KEYS = [
   // Phase 1 CMS expansion — About page
   "about_timeline",
   "about_studio_gallery",
+  // About page hero + story imagery (admin-managed; replaces hardcoded assets)
+  "about_hero_image",
+  "about_hero_title",
+  "about_hero_subtitle",
+  "about_hero_cta_label",
+  "about_hero_cta_url",
+  "about_story_image",
   // Policies (rich-text via Tiptap, stored as { html, plainText, lastUpdated, metaTitle, metaDescription })
   "policy_terms",
   "policy_privacy",

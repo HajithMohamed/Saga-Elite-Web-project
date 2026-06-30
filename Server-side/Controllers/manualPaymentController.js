@@ -1572,7 +1572,10 @@ const sendPaymentLink = catchAsync(async (req, res, next) => {
     ? payment.orderId
     : null;
   const phone = cleanPhoneNumber(order?.contactNumber);
-  const link = `${clientShopUrl()}/shopping/manual-payment/${payment.slug}`;
+  // Include the order email so guests opening the link skip the email gate.
+  const link =
+    `${clientShopUrl()}/shopping/manual-payment/${payment.slug}` +
+    (recipientEmail ? `?email=${encodeURIComponent(recipientEmail)}` : "");
   const amount = Number(payment.amount || 0).toLocaleString("en-LK", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

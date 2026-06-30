@@ -267,11 +267,25 @@ const ManualPaymentPage = () => {
     storedPlainRefFallback ||
     "";
 
+  // A previously-confirmed email is remembered so returning guests aren't
+  // re-prompted for the same payment session.
+  const storedEmailFallback = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return (window.localStorage.getItem("saga_manual_payment_email") || "").trim().toLowerCase();
+    } catch {
+      return "";
+    }
+  }, []);
+
   const resolvedEmail =
     paymentContext?.email ||
     (emailParam ? emailParam.trim().toLowerCase() : "") ||
+    (authState.user?.email ? String(authState.user.email).trim().toLowerCase() : "") ||
+    storedEmailFallback ||
     "";
 
+  // Authenticated users always have a known email, so they never see the gate.
   const guestNeedsEmail = !isAuthenticated && !resolvedEmail;
 
   useEffect(() => {
@@ -404,6 +418,14 @@ const ManualPaymentPage = () => {
         })
       )
         .unwrap()
+        .then(() => {
+          // Remember the verified email so this gate isn't shown again on revisit.
+          try {
+            window.localStorage.setItem("saga_manual_payment_email", email);
+          } catch {
+            /* ignore storage failures */
+          }
+        })
         .catch((err) => {
           toast({
             title: "Could not verify",

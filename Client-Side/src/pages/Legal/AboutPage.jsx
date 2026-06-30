@@ -66,7 +66,14 @@ const AboutPage = () => {
     fetchStoreStats().then((res) => setStats(res)).catch(() => {});
   }, []);
 
-  const heroImage = about?.shop_logo_url || HERO_BG;
+  // Hero / story imagery is admin-managed (SiteConfig). Fall back to the bundled
+  // editorial background only when no hero image is set — never the bare logo.
+  const heroImage = about?.about_hero_image || HERO_BG;
+  const heroTitle = about?.about_hero_title?.trim() || "About Saga Elite";
+  const heroSubtitle = about?.about_hero_subtitle?.trim() || "Premium Fashion Designed for Modern Sri Lanka";
+  const heroCtaLabel = about?.about_hero_cta_label?.trim() || "Shop Collection";
+  const heroCtaUrl = about?.about_hero_cta_url?.trim() || "/shopping/product-list";
+  const storyImage = about?.about_story_image?.trim() || "";
   const brandName = about?.shop_brand_name?.trim() || "Saga Elite";
 
   const timeline = useMemo(() => {
@@ -109,21 +116,21 @@ const AboutPage = () => {
         </div>
         
         <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 pb-12 text-center flex flex-col items-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="se-serif text-[#fafafa] text-4xl md:text-5xl lg:text-[48px] leading-tight mb-4"
           >
-            About Saga Elite
+            {heroTitle}
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="se-body text-[#F2CA50] text-lg md:text-xl max-w-2xl"
           >
-            Premium Fashion Designed for Modern Sri Lanka
+            {heroSubtitle}
           </motion.p>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -139,9 +146,9 @@ const AboutPage = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-8"
           >
-            <Link to="/shopping/product-list">
+            <Link to={heroCtaUrl}>
               <button className="h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] transition-transform duration-250 hover:-translate-y-1">
-                Shop Collection
+                {heroCtaLabel}
               </button>
             </Link>
           </motion.div>
@@ -165,16 +172,19 @@ const AboutPage = () => {
               </p>
             </div>
           </Reveal>
-          <Reveal delay={0.2}>
-            <div className="relative aspect-[4/5] rounded-[20px] overflow-hidden bg-[#1A1A1A]">
-              <img 
-                src="https://images.unsplash.com/photo-1550614000-4b95d466bcbe?w=800&q=80" 
-                alt="Saga Elite Story" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 border border-white/10 rounded-[20px] pointer-events-none" />
-            </div>
-          </Reveal>
+          {storyImage ? (
+            <Reveal delay={0.2}>
+              <div className="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-[#1A1A1A]">
+                <img
+                  src={storyImage}
+                  alt={`${brandName} story`}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 border border-white/10 rounded-[20px] pointer-events-none" />
+              </div>
+            </Reveal>
+          ) : null}
         </div>
       </section>
 

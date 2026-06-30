@@ -146,8 +146,8 @@ const Orders = () => {
                           {order.items?.slice(0, 3).map((item, idx) => (
                              <div key={idx} className="flex gap-4">
                                 <div className="w-16 h-20 bg-[#131313] rounded-[12px] border border-white/5 overflow-hidden shrink-0">
-                                   {item.image || item.product?.images?.[0]?.url ? (
-                                      <img src={item.image || item.product?.images?.[0]?.url} alt="Product" className="w-full h-full object-cover" />
+                                   {item.productImage || item.image || item.product?.images?.[0]?.url ? (
+                                      <img src={item.productImage || item.image || item.product?.images?.[0]?.url} alt={item.productName || item.title || "Product"} className="w-full h-full object-cover" />
                                    ) : (
                                       <div className="w-full h-full flex items-center justify-center"><Package className="w-5 h-5 text-[#99907c]" /></div>
                                    )}

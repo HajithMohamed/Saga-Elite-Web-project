@@ -28,6 +28,7 @@ import {
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import ProductCard from "@/components/shopping-components/ProductCard";
+import EmptyState from "@/components/ui/EmptyState";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useAllOffers } from "@/hooks/use-product-offers";

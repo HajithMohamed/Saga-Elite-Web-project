@@ -190,10 +190,8 @@ const MainHeader = () => {
     { key: "home", label: "Home", to: "/shopping/home" },
     { key: "products", label: "Products", to: "/shopping/product-list" },
     { key: "drops", label: "Drops", to: "/shopping/drops" },
-    { key: "offers", label: "Offers", to: "/shopping/offers" },
     { key: "about", label: "About", to: "/about" },
     { key: "contact", label: "Contact", to: "/contact" },
-    { key: "track", label: "Track Order", to: "/shopping/order-tracking" },
   ];
 
   const activeMenuCategories = menuCategories;

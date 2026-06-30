@@ -421,14 +421,14 @@ const OrderTracking = () => {
                  {items?.map((item, i) => (
                     <div key={i} className="flex gap-4">
                        <div className="w-16 h-20 bg-[#131313] rounded-[12px] border border-white/5 overflow-hidden shrink-0">
-                          {item.image || item.product?.images?.[0]?.url ? (
-                             <img src={item.image || item.product?.images?.[0]?.url} alt={item.title || item.product?.name} className="w-full h-full object-cover" />
+                          {item.productImage || item.image || item.product?.images?.[0]?.url ? (
+                             <img src={item.productImage || item.image || item.product?.images?.[0]?.url} alt={item.title || item.productName || item.product?.name} className="w-full h-full object-cover" />
                           ) : (
                              <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-[#99907c]" /></div>
                           )}
                        </div>
                        <div className="flex-1 py-1">
-                          <p className="font-sans font-semibold text-[13px] text-[#fafafa] line-clamp-1">{item.title || item.product?.name}</p>
+                          <p className="font-sans font-semibold text-[13px] text-[#fafafa] line-clamp-1">{item.title || item.productName || item.product?.name}</p>
                           <p className="text-[11px] text-[#99907c] mt-1">
                              {item.color && `Color: ${item.color} | `}{item.size && `Size: ${item.size}`}
                           </p>
