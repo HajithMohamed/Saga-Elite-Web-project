@@ -72,6 +72,8 @@ export default {
         small: '0 4px 12px rgba(0,0,0,0.08)',
         medium: '0 8px 24px rgba(0,0,0,0.12)',
         large: '0 16px 40px rgba(0,0,0,0.16)',
+        elegant: '0 16px 40px rgba(0,0,0,0.16)',
+        gold: '0 0 40px rgba(242,202,80,0.15)',
         focus: '0 0 0 4px #f2ca50',
       },
     },

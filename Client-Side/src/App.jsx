@@ -93,6 +93,8 @@ import UnauthPage from "./pages/unauth-page/UnauthPage";
 import CheckAuth from "./components/common-components/CheckAuth";
 import SocketBridge from "./components/common-components/SocketBridge";
 import MysteryGiftButton from "./components/common-components/MysteryGiftButton";
+import MobileBottomNav from "./components/common-components/MobileBottomNav";
+import FloatingActions from "./components/common-components/FloatingActions";
 
 
 const ROUTE_META = [
@@ -165,6 +167,8 @@ function App() {
       <RouteMetaManager />
       <ScrollToTop />
       <RegisterPromptModal guestToken={guestToken} isAuthenticated={isAuthenticated} />
+      <FloatingActions />
+      <MobileBottomNav />
 
       <ErrorBoundary>
         <Suspense fallback={<AppLoader />}>

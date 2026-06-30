@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { addToCartAction, removeFromWishlistAction } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import { Heart } from "lucide-react";
+import EmptyState from "@/components/ui/EmptyState";
 
 const Wishlist = () => {
   const dispatch = useDispatch();
@@ -58,19 +59,12 @@ const Wishlist = () => {
 
       {/* ── WISHLIST ITEMS ── */}
       {wishlistItems.length === 0 ? (
-        <div className="bg-[#1A1A1A] border border-white/5 rounded-[24px] p-12 flex flex-col items-center justify-center text-center">
-           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <Heart className="w-8 h-8 text-[#99907c]" />
-           </div>
-           <h3 className="font-sans font-bold text-lg text-[#fafafa] mb-2">Your wishlist is empty</h3>
-           <p className="text-[14px] text-[#99907c] max-w-sm mb-6">Discover the latest luxury collections and save your favorites here.</p>
-           <button 
-             onClick={() => navigate('/shopping/product-list')}
-             className="h-[48px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[12px] font-sans font-bold uppercase tracking-wider text-[11px] hover:-translate-y-1 transition-transform"
-           >
-             Start Exploring
-           </button>
-        </div>
+        <EmptyState 
+          iconType="heart" 
+          title="Your wishlist is empty" 
+          description="Discover the latest luxury collections and save your favorites here." 
+          actionLabel="Start Exploring"
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {wishlistItems.map((item) => (

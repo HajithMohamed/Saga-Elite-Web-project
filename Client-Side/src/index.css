@@ -112,6 +112,14 @@
     letter-spacing: -0.005em;
     line-height: 1.6;
   }
+  
+  /* Global Layout Standard */
+  .se-section {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+  .se-container {
+    @apply w-full max-w-[1280px] mx-auto px-4 md:px-8;
+  }
 
   .se-mono {
     font-family: 'Inter', system-ui, sans-serif;
@@ -166,6 +174,35 @@
   .se-focus:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
+  }
+
+  /* ── GLOBAL COMPONENTS ──────────────────────────────── */
+  .se-btn {
+    @apply inline-flex items-center justify-center font-sans font-bold uppercase tracking-wider text-[11px] md:text-[12px] transition-all duration-200 ease-out hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0;
+  }
+  .se-btn-primary {
+    @apply h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] hover:shadow-[0_0_24px_rgba(242,202,80,0.3)];
+  }
+  .se-btn-secondary {
+    @apply h-[52px] px-6 bg-[#131313] border border-white/10 text-[#fafafa] rounded-[16px] hover:border-[#F2CA50] hover:bg-white/5;
+  }
+  .se-btn-ghost {
+    @apply h-[48px] px-6 bg-transparent text-[#99907c] hover:text-[#fafafa] hover:bg-white/5 rounded-[16px];
+  }
+  .se-btn-icon {
+    @apply w-[48px] h-[48px] rounded-[16px] flex items-center justify-center shrink-0 bg-white/5 text-[#fafafa] hover:bg-[#F2CA50] hover:text-[#0e0e0e];
+  }
+
+  .se-card {
+    @apply bg-[#1A1A1A] border border-white/5 rounded-[20px] p-6 shadow-elegant transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-[#F2CA50]/30;
+  }
+
+  .se-input {
+    @apply w-full h-[56px] bg-[#131313] border border-white/10 rounded-[16px] px-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors;
+  }
+  
+  .se-textarea {
+    @apply w-full h-[160px] bg-[#131313] border border-white/10 rounded-[16px] p-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors resize-none;
   }
 
   /* ── Contact page glass / gold system ─────────────── */
@@ -355,4 +392,29 @@
 * {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* ── Reduced Motion ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Safe Area (Mobile Bottom Nav) ───────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Mobile Bottom Nav Spacer ────────────────────── */
+@media (max-width: 768px) {
+  main,
+  .se-main-content {
+    padding-bottom: 80px;
+  }
 }

@@ -6,6 +6,7 @@ import { Package, ChevronRight, Download, Upload, AlertCircle } from "lucide-rea
 import { fetchUserOrders } from "@/store/order-slice";
 import { fetchMyPendingManualPayments } from "@/store/manualPaymentSlice";
 import AppLoader from "@/components/ui/AppLoader";
+import EmptyState from "@/components/ui/EmptyState";
 
 const FILTER_TABS = [
   { id: "all", label: "All Orders" },
@@ -89,19 +90,12 @@ const Orders = () => {
 
       {/* ── ORDERS LIST ── */}
       {filteredOrders.length === 0 ? (
-        <div className="bg-[#1A1A1A] border border-white/5 rounded-[24px] p-12 flex flex-col items-center justify-center text-center">
-           <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <Package className="w-8 h-8 text-[#99907c]" />
-           </div>
-           <h3 className="font-sans font-bold text-lg text-[#fafafa] mb-2">No Orders Found</h3>
-           <p className="text-[14px] text-[#99907c] max-w-sm mb-6">You don't have any orders matching the current filter.</p>
-           <button 
-             onClick={() => navigate('/shopping/product-list')}
-             className="h-[48px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[12px] font-sans font-bold uppercase tracking-wider text-[11px] hover:-translate-y-1 transition-transform"
-           >
-             Start Shopping
-           </button>
-        </div>
+        <EmptyState 
+          iconType="package" 
+          title="No Orders Found" 
+          description="You don't have any orders matching the current filter." 
+          actionLabel="Start Shopping"
+        />
       ) : (
         <div className="space-y-6">
            {filteredOrders.map((order, i) => {

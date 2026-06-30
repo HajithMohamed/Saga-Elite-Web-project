@@ -233,29 +233,15 @@ const Cart = () => {
   if (items.length === 0) {
     return (
       <section className="relative min-h-screen bg-[#0a0a0a] text-white pt-32 pb-24 flex items-center justify-center">
-        <div className="absolute inset-0 z-0 bg-[url('/cart-empty-cinematic.jpg')] bg-cover bg-center bg-no-repeat opacity-20 filter grayscale blur-[2px]" />
-        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent" />
-        <div className="relative z-10 text-center max-w-2xl px-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <div className="w-24 h-24 rounded-full bg-[#131313] border border-[#1c1b1b] mx-auto flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(242,202,80,0.1)]">
-              <Package className="w-10 h-10 text-[#f2ca50]" />
-            </div>
-            <h1 className="font-sans text-4xl md:text-5xl font-bold tracking-tight text-[#e5e2e1] mb-4">
-              Your Shopping Cart is Empty
-            </h1>
-            <p className="text-[#99907c] text-sm md:text-base leading-relaxed mb-10 max-w-lg mx-auto">
-              Looks like you haven't added any products yet. Take your time to discover garments designed for long-term wear and timeless styling.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/shopping/product-list" className="w-full sm:w-auto px-8 py-4 bg-[#f2ca50] text-[#0a0a0a] font-bold text-xs uppercase tracking-widest rounded-xl hover:brightness-110 transition-all">
-                Browse Products
-              </Link>
-              <Link to="/shopping/wishlist" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-[#4d4635] text-[#e5e2e1] font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white/5 transition-all">
-                View Saved Pieces
-              </Link>
-            </div>
-          </motion.div>
-        </div>
+         <div className="w-full max-w-2xl px-4">
+            <EmptyState 
+              iconType="cart" 
+              title="Your Shopping Cart is Empty" 
+              description="Looks like you haven't added any products yet. Take your time to discover garments designed for long-term wear and timeless styling." 
+              actionLabel="Browse Products"
+              actionTo="/shopping/product-list"
+            />
+         </div>
       </section>
     );
   }
