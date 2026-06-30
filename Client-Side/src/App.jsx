@@ -278,6 +278,9 @@ function App() {
               <Route path="for-you" element={<ForYou />} />
               <Route path="order-tracking" element={<OrderTracking />} />
               <Route path="account/my-reviews" element={<MyReviewsPage />} />
+              <Route path="manual-payment" element={<ManualPaymentPage />} />
+              <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+              <Route path="find-payment" element={<FindPaymentPage />} />
             </Route>
 
             {/* CHECKOUT FLOW — standalone, no storefront chrome (own secure-checkout
@@ -291,10 +294,7 @@ function App() {
               }
             >
               <Route path="checkout" element={<Checkout />} />
-              <Route path="manual-payment" element={<ManualPaymentPage />} />
-              <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
               <Route path="card-payment/:orderId" element={<CardPaymentPage />} />
-              <Route path="find-payment" element={<FindPaymentPage />} />
             </Route>
 
             {/* OTHER */}
