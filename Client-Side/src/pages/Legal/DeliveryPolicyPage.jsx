@@ -18,8 +18,30 @@ const DeliveryPolicyPage = () => {
 
   usePageMeta({ title: metaTitle, description: metaDescription });
 
+  const summary = [
+    "Delivery timeframes & processing",
+    "Shipping coverage (Islandwide)",
+    "Tracking your order in real-time",
+    "Accepted payment methods upon delivery",
+    "How to report delivery delays",
+  ];
+
+  const processSteps = [
+    "Order Confirmed",
+    "Packed",
+    "Shipped",
+    "Out for Delivery",
+    "Delivered"
+  ];
+
   return (
-    <LegalLayout title="Delivery Policy" lastUpdated={lastUpdated}>
+    <LegalLayout 
+      title="Shipping & Delivery" 
+      subtitle="Information on shipping times, coverage, and order tracking across Sri Lanka."
+      lastUpdated={lastUpdated}
+      summary={summary}
+      processSteps={processSteps}
+    >
       <PolicyBody html={html} loading={loading} />
     </LegalLayout>
   );

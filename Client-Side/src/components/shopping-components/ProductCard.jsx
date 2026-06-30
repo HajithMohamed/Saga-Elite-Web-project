@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, Heart, ShoppingBag, X, Tag, Star } from "lucide-react";
+import { Eye, Heart, ShoppingBag, X, Tag, Star, Loader2 } from "lucide-react";
 import { useProductOffers } from "@/hooks/use-product-offers";
 import {
   addToCartAction,
@@ -164,28 +164,29 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
   const { bestOffer } = useProductOffers(product);
 
-  // Stacked badges — up to 2 visible, top-left.
   const badges = [];
   if (isSoldOut) badges.push({ key: "sold", label: "SOLD OUT", tone: "dead" });
   else if (totalStock > 0 && totalStock <= 5)
-    badges.push({ key: "low", label: `${totalStock} LEFT`, tone: "alert" });
-  if (isLimited) badges.push({ key: "lim", label: "LIMITED", tone: "bone" });
-  if (isRare) badges.push({ key: "rare", label: "RARE", tone: "bone" });
+    badges.push({ key: "low", label: "LIMITED STOCK", tone: "alert" });
+  
+  if (isLimited && totalStock > 5) badges.push({ key: "lim", label: "LIMITED STOCK", tone: "bone" });
+  
   if (dropBadge && !isSoldOut)
     badges.push({
       key: "drop",
-      label: dropBadge.label.toUpperCase(),
+      label: "EXCLUSIVE DROP",
       tone: dropBadge.color === "gold" ? "gold" : "bone",
     });
-  if (isNew && !isSoldOut) badges.push({ key: "new", label: "NEW DROP", tone: "gold" });
-  if (isBestseller) badges.push({ key: "best", label: "BESTSELLER", tone: "gold" });
-  if (isMostWished) badges.push({ key: "wish", label: "MOST WISHED", tone: "goldOutline" });
+  
+  if (isNew && !isSoldOut) badges.push({ key: "new", label: "NEW ARRIVAL", tone: "gold" });
+  if (isBestseller) badges.push({ key: "best", label: "BEST SELLER", tone: "gold" });
+  if (isMostWished) badges.push({ key: "wish", label: "TRENDING", tone: "goldOutline" });
   if (showDealBadge && discountPct > 0)
-    badges.push({ key: "deal", label: `${discountPct}% OFF`, tone: "bone" });
+    badges.push({ key: "deal", label: "SALE", tone: "bone" });
   if (bestOffer && !isSoldOut && !badges.some((b) => b.key === "deal"))
     badges.push({
       key: "offer",
-      label: bestOffer.badgeText || bestOffer.name || "OFFER",
+      label: bestOffer.badgeText || bestOffer.name || "SALE",
       tone: "gold",
     });
   const visibleBadges = badges.slice(0, 2);
@@ -199,6 +200,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
   // Quick Add overlay state.
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const overlayRef = useRef(null);
   const inStockVariants = useMemo(
     () => variants.filter((v) => Number(v?.stock || 0) > 0),
@@ -225,7 +227,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   const handleQuickAdd = (e, variantId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!product?._id) return;
+    if (!product?._id || adding) return; // guard against duplicate dispatches
     if (isSoldOut) {
       toast({ title: "Sold out", variant: "destructive" });
       return;
@@ -236,23 +238,31 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     }
     const vId = variantId || (singleVariant ? inStockVariants[0]._id : null);
     if (!vId) {
+      // Multiple in-stock variants: surface the picker overlay instead of failing silently.
       setQuickAddOpen(true);
       return;
     }
+    setAdding(true);
     dispatch(addToCartAction({ productId: product._id, variantId: vId, quantity: 1 }))
       .unwrap()
       .then(() => toast({ title: "Added to bag", variant: "success" }))
       .catch((msg) =>
         toast({ title: msg || "Couldn't add to bag", variant: "destructive" })
-      );
-    setQuickAddOpen(false);
+      )
+      .finally(() => {
+        setAdding(false);
+        setQuickAddOpen(false);
+      });
   };
+
+  const variantChipLabel = (v) =>
+    [v?.size, v?.color].filter(Boolean).join(" · ") || "Add";
 
   return (
     <div
       className={cn(
-        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:scale-[1.03] hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
-        "w-full sm:w-[220px] md:w-[260px] lg:w-[290px]",
+        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
+        "w-full",
         className
       )}
     >
@@ -281,12 +291,24 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           />
         </Link>
 
-        {/* Discount Badge (Top Left) */}
-        {discountPct > 0 && (
-          <div className="absolute top-3 left-3 bg-[#f2ca50] text-[#0E0E0E] px-2 py-1 rounded-[12px] se-label text-[10px] tracking-wider font-bold shadow-sm">
-            {discountPct}% OFF
-          </div>
-        )}
+        {/* Badges (Top Left) */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          {visibleBadges.map((b) => (
+            <div
+              key={b.key}
+              className={cn(
+                "px-2 py-1 rounded-[12px] se-label text-[10px] tracking-wider font-bold shadow-sm backdrop-blur-md",
+                b.tone === "dead" ? "bg-[#ffb4ab] text-[#93000a]" :
+                b.tone === "alert" ? "bg-[#ffb4ab] text-[#93000a]" :
+                b.tone === "gold" ? "bg-[#f2ca50] text-[#0E0E0E]" :
+                b.tone === "goldOutline" ? "bg-[#0E0E0E]/80 text-[#f2ca50] border border-[#f2ca50]" :
+                "bg-[#0E0E0E]/80 text-[#e5e2e1] border border-[#f2ca50]/50"
+              )}
+            >
+              {b.label}
+            </div>
+          ))}
+        </div>
 
         {/* Wishlist Button (Top Right) */}
         <button
@@ -359,12 +381,62 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           
           <button
             onClick={handleQuickAdd}
-            className="w-full h-[36px] md:h-[40px] lg:h-[48px] bg-[#f2ca50] text-[#0a0a0a] rounded-[16px] font-sans font-bold text-[12px] md:text-[13px] lg:text-[14px] transition-transform duration-200 hover:-translate-y-[2px] flex items-center justify-center gap-2"
+            disabled={adding || isSoldOut}
+            aria-label={isSoldOut ? "Sold out" : "Add to bag"}
+            className="w-full h-[36px] md:h-[40px] lg:h-[48px] bg-[#f2ca50] text-[#0a0a0a] rounded-[16px] font-sans font-bold text-[12px] md:text-[13px] lg:text-[14px] transition-transform duration-200 hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Add to Bag
+            {adding ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Adding…
+              </>
+            ) : isSoldOut ? (
+              "Sold Out"
+            ) : (
+              "Add to Bag"
+            )}
           </button>
         </div>
       </div>
+
+      {/* Quick-add variant picker — shown when a product has multiple in-stock
+          variants and no single one can be auto-selected. */}
+      {quickAddOpen && inStockVariants.length > 0 && (
+        <div
+          ref={overlayRef}
+          className="absolute inset-x-0 bottom-0 z-20 border-t border-[#f2ca50]/30 bg-[#0E0E0E]/95 p-3 backdrop-blur-md md:p-4"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <span className="se-label text-[10px] uppercase tracking-widest text-[#99907c]">
+              Select an option
+            </span>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuickAddOpen(false);
+              }}
+              className="text-[#99907c] transition-colors hover:text-[#f2ca50]"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="flex max-h-[120px] flex-wrap gap-2 overflow-y-auto">
+            {inStockVariants.map((v) => (
+              <button
+                key={v._id}
+                type="button"
+                disabled={adding}
+                onClick={(e) => handleQuickAdd(e, v._id)}
+                className="rounded-full border border-[#4d4635] px-3 py-1.5 text-[11px] text-[#e5e2e1] transition-colors hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-50"
+              >
+                {variantChipLabel(v)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -177,7 +177,9 @@ const createOrder = catchAsync(async (req, res, next) => {
                 );
             }
 
-            const product = await Product.findById(productId).session(session);
+            const product = await Product.findById(productId)
+                .populate({ path: "images", select: "url colorTag" })
+                .session(session);
 
             if (!product || !product.isActive) {
                 throw new AppError("Product not found or unavailable", 404);
@@ -236,12 +238,24 @@ const createOrder = catchAsync(async (req, res, next) => {
 
             await product.save({ session, validateModifiedOnly: true });
 
+            // Resolve a thumbnail for this line: prefer an image tagged with the
+            // chosen variant's colour, else fall back to the product's first image.
+            const productImages = Array.isArray(product.images) ? product.images : [];
+            const colorKey = String(variant.color || "").trim().toLowerCase();
+            const matchedImage = colorKey
+                ? productImages.find(
+                    (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+                )
+                : null;
+            const productImage = matchedImage?.url || productImages[0]?.url || "";
+
             orderItems.push({
                 product: product._id,
                 productName: product.name,
                 productArtNo: product.artNo,
                 productSlug: product.slug,
                 variantSku: variant.sku,
+                productImage,
                 size: variant.size,
                 color: variant.color,
                 quantity,
@@ -532,8 +546,12 @@ const createOrder = catchAsync(async (req, res, next) => {
         });
 
         const manualPayment = createdManualPayment;
-        const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
         const customerEmail = user?.email || guestEmailNormalized;
+        // Carry the order email in the link so guests skip the "confirm your email"
+        // gate when opening it (the page auto-verifies against this address).
+        const paymentLink =
+            `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}` +
+            (customerEmail ? `?email=${encodeURIComponent(customerEmail)}` : "");
         const customerPhone = cleanPhoneNumber(contactNumber);
 
         if (customerEmail) {

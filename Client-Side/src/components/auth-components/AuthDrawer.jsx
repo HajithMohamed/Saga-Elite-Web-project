@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { LoginForm, JoinOptions, RegisterForm, OtpPanel } from "./AuthForms";
 import {
   ForgotPasswordForm,
@@ -41,6 +42,7 @@ export const AuthDrawerProvider = ({ children }) => {
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [recoveryOtp, setRecoveryOtp] = useState("");
   const [loginPrefillEmail, setLoginPrefillEmail] = useState("");
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const { isAuthenticated } = useSelector(s => s.auth);
 
   const open = useCallback((startView = "login") => {
@@ -86,11 +88,11 @@ export const AuthDrawerProvider = ({ children }) => {
             {/* Panel */}
             <motion.div
               key="panel"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              initial={isMobile ? { y: "100%" } : { x: "100%" }}
+              animate={isMobile ? { y: 0 } : { x: 0 }}
+              exit={isMobile ? { y: "100%" } : { x: "100%" }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-              className={`fixed top-0 right-0 z-[201] h-full w-full ${isRecoveryView ? "sm:w-[460px]" : "sm:w-[420px]"} bg-[#0a0a0a] border-l border-[#2a2a2a] flex flex-col shadow-2xl`}
+              className={`fixed ${isMobile ? 'bottom-0 left-0 w-full h-[85vh] rounded-t-[28px]' : `top-0 right-0 h-full w-full ${isRecoveryView ? "sm:w-[460px]" : "sm:w-[420px]"} border-l border-[#2a2a2a]`} z-[201] bg-[#0a0a0a] flex flex-col shadow-2xl`}
             >
               {/* Gold left accent */}
               <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-[#f2ca50]/70 via-[#D4AF37]/20 to-transparent pointer-events-none" />

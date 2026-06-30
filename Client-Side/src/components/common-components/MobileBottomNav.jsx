@@ -1,89 +1,77 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, Heart, ShoppingCart, User } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { cn } from '@/lib/utils';
-import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Home, Search, Grid, Heart, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const MobileBottomNav = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { open: openAuthDrawer } = useAuthDrawer();
-  
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { totalQuantity } = useSelector((state) => state.cart.cart || {});
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
-  
-  const cartCount = totalQuantity || 0;
-  const wishlistCount = wishlistItems?.length || 0;
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
 
-  const NAV_ITEMS = [
-    { label: 'Home', icon: Home, path: '/shopping/home' },
-    { label: 'Search', icon: Search, action: () => navigate('/shopping/product-list') },
-    { label: 'Wishlist', icon: Heart, path: '/shopping/wishlist', badge: wishlistCount },
-    { label: 'Cart', icon: ShoppingCart, path: '/shopping/cart', badge: cartCount },
-    { label: 'Profile', icon: User, action: () => isAuthenticated ? navigate('/account/profile') : openAuthDrawer('login') },
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false); // scrolling down
+      } else {
+        setIsVisible(true);  // scrolling up
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  const navItems = [
+    { key: "home", label: "Home", icon: Home, to: "/shopping/home" },
+    { key: "search", label: "Search", icon: Search, to: "/shopping/product-list" },
+    { key: "categories", label: "Categories", icon: Grid, to: "/shopping/product-list" },
+    { key: "wishlist", label: "Wishlist", icon: Heart, to: "/shopping/account/wishlist" },
+    { key: "account", label: "Account", icon: User, to: "/shopping/account" },
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-[#0a0a0a]/90 backdrop-blur-[16px] border-t border-white/10 pb-safe">
-      <nav className="flex items-center justify-between px-2 h-[64px]">
-        {NAV_ITEMS.map((item, i) => {
-          const isActive = item.path ? location.pathname === item.path : false;
-          
-          const content = (
-            <div className="relative flex flex-col items-center justify-center w-[48px] h-[48px]">
-              <item.icon 
-                className={cn(
-                  "w-6 h-6 transition-colors duration-250",
-                  isActive ? "text-[#f2ca50]" : "text-[#99907c]"
-                )} 
-                strokeWidth={isActive ? 2.5 : 1.5}
-              />
-              <span 
-                className={cn(
-                  "text-[10px] mt-1 font-medium transition-colors duration-250",
-                  isActive ? "text-[#f2ca50]" : "text-[#99907c]"
-                )}
-              >
-                {item.label}
-              </span>
-              
-              {/* Badge */}
-              {item.badge > 0 && (
-                <span className="absolute top-0 right-1 bg-[#f2ca50] text-[#0a0a0a] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-[0_0_8px_rgba(242,202,80,0.4)]">
-                  {item.badge}
-                </span>
-              )}
-            </div>
-          );
-
-          if (item.action) {
-            return (
-              <button
-                key={i}
-                onClick={item.action}
-                className="flex-1 flex justify-center items-center"
-                aria-label={item.label}
-              >
-                {content}
-              </button>
-            );
-          }
-
-          return (
-            <Link 
-              key={i} 
-              to={item.path} 
-              className="flex-1 flex justify-center items-center"
-              aria-label={item.label}
-            >
-              {content}
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    <AnimatePresence>
+      {isVisible && (
+        <motion.nav
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          exit={{ y: 100 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="md:hidden fixed bottom-0 left-0 w-full z-40 pb-safe"
+          aria-label="Mobile navigation"
+        >
+          <div className="bg-[#0e0e0e]/95 backdrop-blur-[16px] border-t border-white/5 flex items-center justify-around h-[72px] px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.4)]">
+            {navItems.map((item) => {
+              const isActive = location.pathname.includes(item.to) || (item.key === 'home' && location.pathname === '/shopping/home');
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  aria-label={item.label}
+                  className="flex flex-col items-center justify-center w-full h-full gap-1 group relative"
+                >
+                  <item.icon 
+                    className={`w-6 h-6 transition-all duration-250 ${isActive ? 'text-[#F2CA50]' : 'text-[#99907c] group-hover:text-[#fafafa]'}`} 
+                    strokeWidth={isActive ? 2 : 1.5}
+                  />
+                  <span className={`text-[10px] font-sans transition-colors ${isActive ? 'text-[#F2CA50] font-bold' : 'text-[#99907c] group-hover:text-[#fafafa]'}`}>
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <motion.div 
+                      layoutId="bottomNavIndicator"
+                      className="absolute -top-[1px] w-8 h-[2px] bg-[#F2CA50] rounded-full shadow-[0_0_10px_#F2CA50]"
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </motion.nav>
+      )}
+    </AnimatePresence>
   );
 };
 

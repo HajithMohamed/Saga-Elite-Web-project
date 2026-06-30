@@ -12,14 +12,27 @@ const TermsConditionsPage = () => {
       fallbackHtml: TERMS_POLICY_FALLBACK_HTML,
       defaultTitle: "Terms & Conditions",
       defaultDescription:
-        "Read the terms and conditions for using Saga Elite and placing orders on our store.",
+        "Read the terms and conditions for shopping with Saga Elite.",
     }
   );
 
   usePageMeta({ title: metaTitle, description: metaDescription });
 
+  const summary = [
+    "Customer Responsibilities",
+    "Payment Rules",
+    "Order Cancellation",
+    "Warranty Information",
+    "Intellectual Property",
+  ];
+
   return (
-    <LegalLayout title="Terms & Conditions" lastUpdated={lastUpdated}>
+    <LegalLayout 
+      title="Terms & Conditions" 
+      subtitle="The rules and guidelines for using the Saga Elite platform."
+      lastUpdated={lastUpdated}
+      summary={summary}
+    >
       <PolicyBody html={html} loading={loading} />
     </LegalLayout>
   );

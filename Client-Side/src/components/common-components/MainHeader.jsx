@@ -188,8 +188,10 @@ const MainHeader = () => {
 
   const navItems = [
     { key: "home", label: "Home", to: "/shopping/home" },
+    { key: "products", label: "Products", to: "/shopping/product-list" },
     { key: "drops", label: "Drops", to: "/shopping/drops" },
     { key: "about", label: "About", to: "/about" },
+    { key: "contact", label: "Contact", to: "/contact" },
   ];
 
   const activeMenuCategories = menuCategories;
@@ -209,10 +211,7 @@ const MainHeader = () => {
     <>
       <header
         role="banner"
-        className={`sticky top-0 z-50 w-full transition-all duration-500 ${scrolled
-            ? "bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-[#4d4635]/50 py-3 shadow-[0_4px_30px_rgba(0,0,0,0.5)]"
-            : "bg-transparent border-b border-transparent py-5"
-          }`}
+        className={`sticky top-0 z-50 w-full transition-all duration-500 h-[72px] md:h-[80px] lg:h-[88px] flex items-center bg-[#0e0e0e]/95 backdrop-blur-[16px] border-b ${scrolled ? 'border-white/5 shadow-elegant' : 'border-transparent'}`}
       >
         <div className="max-w-[1600px] w-full mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
 
@@ -230,7 +229,7 @@ const MainHeader = () => {
           </Link>
 
           {/* CENTER: Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-8">
             {navItems.map((item) => (
               <Link
                 key={item.key}
@@ -272,7 +271,7 @@ const MainHeader = () => {
             <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
               <Search className="w-[18px] h-[18px]" />
             </button>
-            <Link to="/shopping/wishlist" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300 hidden sm:block">
+            <Link to="/shopping/account/wishlist" aria-label="Wishlist" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300 hidden sm:block">
               <Heart className="w-[18px] h-[18px]" />
               <AnimatedBadge count={wishlistCount} />
             </Link>
@@ -282,7 +281,7 @@ const MainHeader = () => {
                 <TicketPercent className="w-[18px] h-[18px]" />
               </Link>
             )}
-            <Link to="/shopping/cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+            <Link to="/shopping/cart" aria-label="Shopping cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
               <ShoppingBag className="w-[18px] h-[18px]" />
               <AnimatedBadge count={cartCount} />
             </Link>
@@ -312,10 +311,10 @@ const MainHeader = () => {
                         <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
                       </div>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/orders" onClick={() => setUserMenuOpen(false)}>My Fits</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account/orders" onClick={() => setUserMenuOpen(false)}>My Orders</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/rewards" onClick={() => setUserMenuOpen(false)}>My Rewards</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
+                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/account/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
                       <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
                       <div className="h-[1px] bg-[#2a2a2a] my-1" />
                       <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>

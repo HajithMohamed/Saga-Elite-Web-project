@@ -62,6 +62,7 @@ const NotificationsDropdown = () => {
       <div className="relative" ref={dropdownRef}>
       <button
         type="button"
+        aria-label="Notifications"
         className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300"
         onClick={handleToggle}
       >

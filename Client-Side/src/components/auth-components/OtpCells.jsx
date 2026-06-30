@@ -1,120 +1,113 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-export default function OtpCells({
-  length = 4,
-  value = "",
-  onChange,
-  autoFocus = true,
-  disabled = false,
-  ariaLabel = "One-time passcode",
-  success = false,
-}) {
-  const refs = useRef([]);
-  const [focusedIdx, setFocusedIdx] = useState(null);
+const OtpCells = ({ length = 6, value, onChange, disabled, success = false, error = false }) => {
+  const inputs = useRef([]);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
+  // Focus first empty on mount
   useEffect(() => {
-    if (autoFocus && !disabled) refs.current[0]?.focus();
-  }, [autoFocus, disabled]);
-
-  const digits = Array.from({ length }, (_, i) => value[i] || "");
-
-  const setDigit = (idx, ch) => {
-    const arr = digits.slice();
-    arr[idx] = ch;
-    onChange?.(arr.join("").slice(0, length));
-  };
-
-  const handleChange = (e, idx) => {
-    const raw = e.target.value.replace(/\D/g, "");
-    if (!raw) {
-      setDigit(idx, "");
-      return;
+    if (!disabled && value.length < length && inputs.current[value.length]) {
+      inputs.current[value.length].focus();
     }
-    if (raw.length === 1) {
-      setDigit(idx, raw);
-      if (idx < length - 1) refs.current[idx + 1]?.focus();
-    } else {
-      const next = raw.slice(0, length - idx);
-      const arr = digits.slice();
-      next.split("").forEach((c, k) => {
-        arr[idx + k] = c;
-      });
-      onChange?.(arr.join("").slice(0, length));
-      const focusIdx = Math.min(idx + next.length, length - 1);
-      refs.current[focusIdx]?.focus();
+  }, [disabled, length]); // Removed value from deps to avoid stealing focus on every stroke
+
+  const focusNext = (index) => {
+    if (index < length - 1) {
+      inputs.current[index + 1]?.focus();
     }
   };
 
-  const handleKeyDown = (e, idx) => {
+  const focusPrev = (index) => {
+    if (index > 0) {
+      inputs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleChange = (e, index) => {
+    const val = e.target.value.replace(/\D/g, "");
+    if (!val) return;
+
+    const char = val[val.length - 1]; // take last char if they typed fast
+    const newVal = value.substring(0, index) + char + value.substring(index + 1);
+    onChange(newVal.slice(0, length));
+    focusNext(index);
+  };
+
+  const handleKeyDown = (e, index) => {
     if (e.key === "Backspace") {
-      if (digits[idx]) {
-        setDigit(idx, "");
-      } else if (idx > 0) {
-        refs.current[idx - 1]?.focus();
-        const arr = digits.slice();
-        arr[idx - 1] = "";
-        onChange?.(arr.join("").slice(0, length));
+      e.preventDefault();
+      if (value[index]) {
+        // Delete current
+        onChange(value.substring(0, index) + value.substring(index + 1));
+      } else {
+        // Delete previous and move back
+        onChange(value.substring(0, index - 1) + value.substring(index));
+        focusPrev(index);
       }
-    } else if (e.key === "ArrowLeft" && idx > 0) {
-      refs.current[idx - 1]?.focus();
-    } else if (e.key === "ArrowRight" && idx < length - 1) {
-      refs.current[idx + 1]?.focus();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      focusPrev(index);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      focusNext(index);
     }
   };
 
   const handlePaste = (e) => {
-    const text = (e.clipboardData?.getData("text") || "").replace(/\D/g, "");
-    if (!text) return;
     e.preventDefault();
-    onChange?.(text.slice(0, length));
-    const focusIdx = Math.min(text.length, length - 1);
-    refs.current[focusIdx]?.focus();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
+    if (!pasted) return;
+
+    onChange(pasted);
+    
+    // Focus appropriate cell
+    const nextEmptyIndex = Math.min(pasted.length, length - 1);
+    inputs.current[nextEmptyIndex]?.focus();
   };
 
-  const cellClass = success
-    ? "h-14 w-12 sm:h-16 sm:w-14 text-center se-mono text-2xl sm:text-3xl text-[#a8d8b6] bg-[#1c1b1b] border border-[#a8d8b6] focus:outline-none ring-2 ring-[#a8d8b6]/40 transition-all caret-[#a8d8b6] placeholder:text-[#574500]"
-    : "h-14 w-12 sm:h-16 sm:w-14 text-center se-mono text-2xl sm:text-3xl text-[#e5e2e1] bg-[#1c1b1b] border border-[#4d4635] focus:border-[#f2ca50] focus:outline-none focus:ring-2 focus:ring-[#f2ca50]/40 transition-all caret-[#f2ca50] placeholder:text-[#574500]";
-
   return (
-    <div
-      className="flex items-center justify-center gap-2 sm:gap-3"
-      role="group"
-      aria-label={ariaLabel}
-    >
-      {digits.map((d, i) => (
-        <motion.div
-          key={i}
-          className="relative"
-          initial={success ? { scale: 0.9 } : false}
-          animate={success ? { scale: 1 } : {}}
-          transition={success ? { delay: i * 0.06, duration: 0.3 } : {}}
-        >
-          {focusedIdx === i && !success && (
-            <span
-              className="absolute inset-0 bg-[#f2ca50]/15 blur-md pointer-events-none"
-              aria-hidden="true"
+    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 justify-center" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, i) => {
+        const char = value[i] || "";
+        const isActive = focusedIndex === i;
+        
+        return (
+          <motion.div
+            key={i}
+            animate={{
+              scale: isActive ? 1.05 : 1,
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <input
+              ref={(el) => (inputs.current[i] = el)}
+              type="text"
+              inputMode="numeric"
+              pattern="\d*"
+              maxLength={2} // allow 2 to catch fast typing before replacing
+              value={char}
+              onChange={(e) => handleChange(e, i)}
+              onKeyDown={(e) => handleKeyDown(e, i)}
+              onFocus={() => setFocusedIndex(i)}
+              onBlur={() => setFocusedIndex(-1)}
+              disabled={disabled}
+              className={cn(
+                "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-center text-xl md:text-2xl font-mono rounded-[16px]",
+                "border border-white/10 bg-[#0a0a0a] text-[#e5e2e1] transition-colors duration-200",
+                "focus:outline-none focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50]/30 focus:shadow-[0_0_15px_rgba(242,202,80,0.15)]",
+                success && "border-[#34C759]/50 text-[#34C759] bg-[#34C759]/5",
+                error && "border-rose-500/50 text-rose-400 bg-rose-500/5",
+                disabled && "opacity-50 cursor-not-allowed"
+              )}
+              aria-label={`Digit ${i + 1}`}
             />
-          )}
-          <input
-            ref={(el) => (refs.current[i] = el)}
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={length}
-            value={d}
-            disabled={disabled}
-            onChange={(e) => handleChange(e, i)}
-            onKeyDown={(e) => handleKeyDown(e, i)}
-            onPaste={handlePaste}
-            onFocus={() => setFocusedIdx(i)}
-            onBlur={() => setFocusedIdx(null)}
-            aria-label={`Digit ${i + 1}`}
-            className={`relative ${cellClass}`}
-            placeholder="·"
-          />
-        </motion.div>
-      ))}
+          </motion.div>
+        );
+      })}
     </div>
   );
-}
+};
+
+export default OtpCells;

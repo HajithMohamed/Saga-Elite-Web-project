@@ -51,6 +51,7 @@ const ImageUpload = ({
   minWidth,
   minHeight,
   onValidationError,
+  uploadGuidelines,
 }) => {
   const inputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -322,6 +323,14 @@ const ImageUpload = ({
           Click or Drag to upload images
         </p>
       </div>
+      
+      {uploadGuidelines && (
+        <div className="text-xs text-[#99907c] mt-2 space-y-1">
+          {uploadGuidelines.map((guideline, i) => (
+             <p key={i}>• {guideline}</p>
+          ))}
+        </div>
+      )}
 
       {images.length > 0 && (
         <>

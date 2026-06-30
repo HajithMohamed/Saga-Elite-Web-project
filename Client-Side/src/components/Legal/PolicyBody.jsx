@@ -2,19 +2,20 @@ import React, { useMemo } from "react";
 import DOMPurify from "dompurify";
 
 const PolicyBody = ({ html, loading }) => {
-  // Sanitize admin-authored HTML before injecting it — defense-in-depth even
-  // though writes are super-admin-only; never trust stored HTML blindly.
+  // Sanitize admin-authored HTML before injecting it
   const cleanHtml = useMemo(() => DOMPurify.sanitize(html || ""), [html]);
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading policy">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="space-y-3">
-            <div className="h-6 w-48 rounded bg-white/10" />
-            <div className="h-4 w-full rounded bg-white/5" />
-            <div className="h-4 w-5/6 rounded bg-white/5" />
-            <div className="h-4 w-2/3 rounded bg-white/5" />
+      <div className="space-y-12 animate-pulse" aria-busy="true" aria-label="Loading policy">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-6">
+            <div className="h-8 w-64 rounded bg-[#1A1A1A]" />
+            <div className="space-y-4">
+              <div className="h-4 w-full rounded bg-white/5" />
+              <div className="h-4 w-5/6 rounded bg-white/5" />
+              <div className="h-4 w-3/4 rounded bg-white/5" />
+            </div>
           </div>
         ))}
       </div>
@@ -23,7 +24,34 @@ const PolicyBody = ({ html, loading }) => {
 
   return (
     <div
-      className="legal-policy-content space-y-8 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-white [&_h2]:mt-2 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_a]:text-[#D4AF37] [&_a]:hover:underline [&_strong]:text-white"
+      className="
+        legal-policy-content 
+        max-w-[960px] 
+        text-[#e5e2e1]
+        
+        /* Layout & Spacing */
+        space-y-12
+        [&>section]:py-8 [&>section]:border-t [&>section]:border-white/5
+        [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0
+        
+        /* Headings */
+        [&_h2]:se-serif [&_h2]:text-[28px] md:[&_h2]:text-[32px] [&_h2]:text-[#fafafa] [&_h2]:mb-8 [&_h2]:mt-10
+        [&_h3]:font-sans [&_h3]:font-semibold [&_h3]:text-[20px] md:[&_h3]:text-[24px] [&_h3]:text-[#fafafa] [&_h3]:mb-4 [&_h3]:mt-8
+        
+        /* Typography */
+        [&_p]:se-body [&_p]:text-[16px] [&_p]:leading-[1.7] [&_p]:text-[#99907c] [&_p]:mb-6 [&_p]:max-w-[800px]
+        
+        /* Lists */
+        [&_ul]:se-body [&_ul]:text-[16px] [&_ul]:leading-[1.7] [&_ul]:text-[#99907c] [&_ul]:list-none [&_ul]:space-y-4 [&_ul]:mb-6 [&_ul]:max-w-[800px]
+        [&_ul_li]:relative [&_ul_li]:pl-6
+        [&_ul_li::before]:content-[''] [&_ul_li::before]:absolute [&_ul_li::before]:left-0 [&_ul_li::before]:top-[10px] [&_ul_li::before]:w-1.5 [&_ul_li::before]:h-1.5 [&_ul_li::before]:rounded-full [&_ul_li::before]:bg-[#F2CA50]
+        
+        /* Links */
+        [&_a]:text-[#F2CA50] [&_a]:font-semibold [&_a]:transition-colors hover:[&_a]:text-[#ffd86a] hover:[&_a]:underline
+        
+        /* Bold Text */
+        [&_strong]:text-[#fafafa] [&_strong]:font-semibold
+      "
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   );
