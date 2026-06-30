@@ -60,8 +60,13 @@ import ShoppinLayout from "./components/shopping-components/Layout";
 import CheckoutLayout from "./components/shopping-components/CheckoutLayout";
 import NotFound from "./pages/Not-Found/Index";
 import Home from "./pages/shopping-view/Home";
-import Account from "./pages/shopping-view/Account";
 import Orders from "./pages/shopping-view/Orders";
+import AccountLayout from "./components/shopping-components/AccountLayout";
+import DashboardOverview from "./pages/shopping-view/account/DashboardOverview";
+import Profile from "./pages/shopping-view/account/Profile";
+import Addresses from "./pages/shopping-view/account/Addresses";
+import Security from "./pages/shopping-view/account/Security";
+import Settings from "./pages/shopping-view/account/Settings";
 import MyRewards from "./pages/shopping-view/MyRewards";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
@@ -210,8 +215,22 @@ function App() {
               {/* Shopping Routes */}
               <Route index element={<Navigate to="shopping/home" replace />} />
               <Route path="shopping/home" element={<Home />} />
-              <Route path="shopping/account" element={<Account />} />
-              <Route path="shopping/orders" element={<Orders />} />
+              
+              <Route element={<AccountLayout />}>
+                <Route path="shopping/account" element={<DashboardOverview />} />
+                <Route path="shopping/account/orders" element={<Orders />} />
+                <Route path="shopping/account/wishlist" element={<Wishlist />} />
+                <Route path="shopping/account/addresses" element={<Addresses />} />
+                <Route path="shopping/account/profile" element={<Profile />} />
+                <Route path="shopping/account/notifications" element={<NotificationsPage />} />
+                <Route path="shopping/account/security" element={<Security />} />
+                <Route path="shopping/account/settings" element={<Settings />} />
+              </Route>
+              
+              <Route path="shopping/orders" element={<Navigate to="/shopping/account/orders" replace />} />
+              <Route path="shopping/wishlist" element={<Navigate to="/shopping/account/wishlist" replace />} />
+              <Route path="shopping/notifications" element={<Navigate to="/shopping/account/notifications" replace />} />
+
               <Route path="shopping/rewards" element={<MyRewards />} />
               <Route path="shopping/cart" element={<Cart />} />
               <Route path="shopping/product-list" element={<ProductListing />} />
@@ -219,9 +238,7 @@ function App() {
               <Route path="shopping/drops" element={<DropsIndex />} />
               <Route path="shopping/offers" element={<OffersPage />} />
               <Route path="shopping/drop/:slug" element={<DropDetails />} />
-              <Route path="shopping/notifications" element={<NotificationsPage />} />
               <Route path="shopping/checkout-success" element={<OrderSuccess />} />
-              <Route path="shopping/wishlist" element={<Wishlist />} />
               <Route path="shopping/for-you" element={<ForYou />} />
               <Route path="shopping/order-tracking" element={<OrderTracking />} />
               <Route path="shopping/account/my-reviews" element={<MyReviewsPage />} />
