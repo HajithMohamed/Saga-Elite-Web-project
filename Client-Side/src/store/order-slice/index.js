@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 import { API_V1_URL as API_BASE, ORDERS_API_URL as ORDER_API_BASE } from "@/lib/api";
 
 const loadCartFromStorage = () => {
@@ -31,7 +31,7 @@ export const createOrder = createAsyncThunk(
   "/order/createOrder",
   async (orderData, thunkAPI) => {
     try {
-      const response = await axios.post(`${API_BASE}/orders/create-order`, orderData, {
+      const response = await axiosInstance.post(`${API_BASE}/orders/create-order`, orderData, {
         withCredentials: true,
         headers: {
           "Content-Type": "application/json",
@@ -50,7 +50,7 @@ export const fetchUserOrders = createAsyncThunk(
   "/order/fetchUserOrders",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/orders/user-orders`, {
+      const response = await axiosInstance.get(`${API_BASE}/orders/user-orders`, {
         withCredentials: true,
       });
       return response.data;
@@ -66,7 +66,7 @@ export const fetchAdminOrders = createAsyncThunk(
   "/order/fetchAdminOrders",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/orders/get-all-orders`, {
+      const response = await axiosInstance.get(`${API_BASE}/orders/get-all-orders`, {
         withCredentials: true,
       });
       return response.data;
@@ -82,7 +82,7 @@ export const fetchOrderById = createAsyncThunk(
   "/order/fetchOrderById",
   async (orderId, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/orders/get-order/${orderId}`, {
+      const response = await axiosInstance.get(`${API_BASE}/orders/get-order/${orderId}`, {
         withCredentials: true,
       });
       return response.data;
@@ -99,7 +99,7 @@ export const fetchDashboardStats = createAsyncThunk(
   "order/fetchDashboardStats",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_BASE}/orders/dashboard-stats`, { withCredentials: true });
+      const response = await axiosInstance.get(`${API_BASE}/orders/dashboard-stats`, { withCredentials: true });
       return response.data.data;
     } catch (error) {
       if (error.response && error.response.data.message) {
@@ -115,7 +115,7 @@ export const updateOrderStatus = createAsyncThunk(
   "/order/updateOrderStatus",
   async ({ orderId, status }, thunkAPI) => {
     try {
-      const response = await axios.put(
+      const response = await axiosInstance.put(
         `${ORDER_API_BASE}/${orderId}/status`,
         { status },
         {
@@ -138,7 +138,7 @@ export const refundOrder = createAsyncThunk(
   "/order/refundOrder",
   async ({ orderId, amount, reason, note }, thunkAPI) => {
     try {
-      const response = await axios.patch(
+      const response = await axiosInstance.patch(
         `${ORDER_API_BASE}/${orderId}/refund`,
         { amount, reason, note },
         {
@@ -161,7 +161,7 @@ export const bulkUpdateOrderStatus = createAsyncThunk(
   "/order/bulkUpdateStatus",
   async ({ ids, status, cancellationReason }, thunkAPI) => {
     try {
-      const response = await axios.patch(
+      const response = await axiosInstance.patch(
         `${ORDER_API_BASE}/bulk/status`,
         { ids, status, cancellationReason },
         { withCredentials: true }
