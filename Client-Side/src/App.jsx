@@ -20,7 +20,7 @@ import RefundPolicyPage from "./pages/Legal/RefundPolicyPage";
 import DeliveryPolicyPage from "./pages/Legal/DeliveryPolicyPage";
 import ContactPage from "./pages/Legal/ContactPage";
 import AboutPage from "./pages/Legal/AboutPage";
-import OffersPage from "./pages/user/OffersPage";
+// Removed conflicting OffersPage import
 // auth page imports — login/register are now in the sliding AuthDrawer
 // auth page imports — login/register are now in the sliding AuthDrawer
 import ForgotPassword from "./pages/auth/ForgotPassword";
@@ -66,8 +66,9 @@ import MyRewards from "./pages/shopping-view/MyRewards";
 import Checkout from "./pages/shopping-view/Checkout";
 import ProductListing from "./pages/shopping-view/ProductListing";
 import ProductDetails from "./pages/shopping-view/ProductDetails";
-import DropDetails from "./pages/shopping-view/DropDetails";
 import DropsIndex from "./pages/shopping-view/DropsIndex";
+import OffersPage from "./pages/shopping-view/OffersPage";
+import DropDetails from "./pages/shopping-view/DropDetails";
 import ProductReviewsPage from "./pages/ProductReviewsPage";
 import MyReviewsPage from "./pages/MyReviewsPage";
 import NotificationsPage from "./pages/common/NotificationsPage";
@@ -216,6 +217,7 @@ function App() {
               <Route path="shopping/product-list" element={<ProductListing />} />
               <Route path="shopping/product/:slug" element={<ProductDetails />} />
               <Route path="shopping/drops" element={<DropsIndex />} />
+              <Route path="shopping/offers" element={<OffersPage />} />
               <Route path="shopping/drop/:slug" element={<DropDetails />} />
               <Route path="shopping/notifications" element={<NotificationsPage />} />
               <Route path="shopping/checkout-success" element={<OrderSuccess />} />
