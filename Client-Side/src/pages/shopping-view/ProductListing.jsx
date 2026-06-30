@@ -53,8 +53,12 @@ const buildListingUrl = (segments = []) => {
 
 const SORT_OPTIONS = [
   { value: "new", label: "Newest" },
-  { value: "price_low", label: "Price · ascending" },
-  { value: "price_high", label: "Price · descending" },
+  { value: "best_selling", label: "Best Selling" },
+  { value: "highest_rated", label: "Highest Rated" },
+  { value: "price_low", label: "Price Low → High" },
+  { value: "price_high", label: "Price High → Low" },
+  { value: "most_popular", label: "Most Popular" },
+  { value: "discount", label: "Discount %" },
 ];
 
 
@@ -206,19 +210,19 @@ const ProductListing = () => {
   const sortedProducts = useMemo(() => {
     const list = [...products];
     if (sortParam === "price_low") {
-      list.sort(
-        (a, b) =>
-          unitPrice(a, a.variants?.[0]) - unitPrice(b, b.variants?.[0])
-      );
+      list.sort((a, b) => unitPrice(a, a.variants?.[0]) - unitPrice(b, b.variants?.[0]));
     } else if (sortParam === "price_high") {
-      list.sort(
-        (a, b) =>
-          unitPrice(b, b.variants?.[0]) - unitPrice(a, a.variants?.[0])
-      );
+      list.sort((a, b) => unitPrice(b, b.variants?.[0]) - unitPrice(a, a.variants?.[0]));
+    } else if (sortParam === "best_selling") {
+      list.sort((a, b) => (Number(b.soldCount) || 0) - (Number(a.soldCount) || 0));
+    } else if (sortParam === "highest_rated") {
+      list.sort((a, b) => (Number(b.averageRating || b.rating) || 0) - (Number(a.averageRating || a.rating) || 0));
+    } else if (sortParam === "most_popular") {
+      list.sort((a, b) => (Number(b.wishCount) || 0) - (Number(a.wishCount) || 0));
+    } else if (sortParam === "discount") {
+      list.sort((a, b) => (Number(b.discountPercent) || 0) - (Number(a.discountPercent) || 0));
     } else {
-      list.sort(
-        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-      );
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     }
     return list;
   }, [products, sortParam]);
@@ -430,36 +434,65 @@ const ProductListing = () => {
   return (
     <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen pt-20">
 
-      {/* STICKY FILTER RAIL */}
-      
-      {/* Editorial layout container: Grid with right filter sidebar */}
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8 pb-8 lg:pb-16 pt-0">
+      {/* Breadcrumb & Hero Container */}
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 mb-8">
+        {/* Breadcrumb */}
+        <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-widest text-[#99907c] mb-6 mt-4">
+          <Link to="/" className="hover:text-[#f2ca50] transition-colors">Home</Link>
+          <span className="text-[#4d4635]">{'>'}</span>
+          <Link to="/shopping/product-list" className="hover:text-[#f2ca50] transition-colors">Shop</Link>
+          {categoryTrail.map((segment, index) => (
+            <React.Fragment key={`${segment.value}-${index}`}>
+              <span className="text-[#4d4635]">{'>'}</span>
+              <Link
+                to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))}
+                className={index === categoryTrail.length - 1 ? "text-[#f2ca50] font-bold" : "hover:text-[#f2ca50] transition-colors"}
+              >
+                {segment.label}
+              </Link>
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Category Hero */}
+        <div className="relative w-full h-[220px] md:h-[260px] lg:h-[320px] rounded-[20px] overflow-hidden shadow-2xl mb-12">
+          {/* Banner Image */}
+          <img 
+            src="/LOGO.png" 
+            alt="Category Banner" 
+            className="absolute inset-0 w-full h-full object-contain opacity-10 blur-sm"
+          />
+          {/* Dark Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-[#0a0a0a]/30" />
+          
+          {/* Hero Content */}
+          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 lg:p-12">
+            <h1 className="font-sans font-bold text-3xl md:text-4xl lg:text-[48px] text-[#e5e2e1] mb-2 md:mb-4 tracking-tight uppercase">
+              {categoryTrail.length ? categoryTrail[categoryTrail.length - 1].label : "All Products"} Collection
+            </h1>
+            <p className="text-sm md:text-base lg:text-[18px] text-[#d0c5af] max-w-2xl leading-relaxed mb-4">
+              Discover premium {categoryTrail.length ? categoryTrail[categoryTrail.length - 1].label.toLowerCase() : "fashion"} curated for every occasion.
+            </p>
+            <div className="flex items-center gap-3 mt-auto lg:mt-4">
+              <span className="se-label text-[10px] md:text-[12px] text-[#f2ca50] font-bold tracking-[0.2em] uppercase bg-[#131313]/80 backdrop-blur-md px-4 py-2 rounded-full border border-[#f2ca50]/30">
+                Showing {totalCount} Products
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Layout container */}
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 pb-8 lg:pb-16 pt-0">
         <div className="flex flex-col lg:flex-row gap-12 items-start relative">
           
           {/* Main Product Grid (Left Pane) */}
           <div className="flex-1 w-full min-w-0">
-            <div className="mb-10 border-b border-white/5 pb-6">
-              <Eyebrow>{categoryTrail.length ? categoryTrail[categoryTrail.length - 1].label : "Catalogue"}</Eyebrow>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[#d0c5af]">
-                <Link to="/shopping/product-list" className="hover:text-[#f2ca50] transition-colors">
-                  Shop
-                </Link>
-                {categoryTrail.map((segment, index) => (
-                  <React.Fragment key={`${segment.value}-${index}`}>
-                    <span className="text-[#574500]">/</span>
-                    <Link
-                      to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))}
-                      className="hover:text-[#f2ca50] transition-colors"
-                    >
-                      {segment.label}
-                    </Link>
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-
             {/* Top Bar inside main pane */}
-            <div className="flex flex-col md:flex-row justify-end items-start md:items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-white/5 pb-6">
+              <div className="text-[#99907c] se-label text-[11px] uppercase tracking-widest">
+                {totalCount} Products Found
+              </div>
               <div className="flex items-center gap-4">
                 <SortDropdown
                   options={SORT_OPTIONS}
@@ -486,48 +519,78 @@ const ProductListing = () => {
             </div>
 
             {/* Mobile Filter Drawer / Inline content could go here, for now relying on right sidebar on desktop */}
+            {/* Mobile Filter Drawer */}
             <AnimatePresence>
               {refineOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="lg:hidden mb-8 overflow-hidden rounded-xl border border-[#4d4635]/30 bg-[#0a0a0a]"
-                >
-                  <FilterSidebar
-                    selectedColors={colorsParam}
-                    selectedSizes={sizesParam}
-                    priceRange={[priceMinParam, priceMaxParam]}
-                    onToggleColor={(c) => {
-                      // existing color logic
-                      const p = new URLSearchParams(searchParams);
-                      let arr = [...colorsParam];
-                      if (arr.includes(c)) arr = arr.filter((x) => x !== c);
-                      else arr.push(c);
-                      if (arr.length) p.set("colors", arr.join(","));
-                      else p.delete("colors");
-                      setSearchParams(p);
-                    }}
-                    onToggleSize={(s) => {
-                      const p = new URLSearchParams(searchParams);
-                      let arr = [...sizesParam];
-                      if (arr.includes(s)) arr = arr.filter((x) => x !== s);
-                      else arr.push(s);
-                      if (arr.length) p.set("sizes", arr.join(","));
-                      else p.delete("sizes");
-                      setSearchParams(p);
-                    }}
-                    onChangePrice={(v) => {
-                      const p = new URLSearchParams(searchParams);
-                      if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
-                      if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
-                      setSearchParams(p);
-                    }}
-                    onClearAll={() => clearAllFilters()}
-                    priceMin={PRICE_MIN}
-                    priceMax={PRICE_MAX}
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden"
+                    onClick={() => setRefineOpen(false)}
                   />
-                </motion.div>
+                  <motion.div
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed bottom-0 left-0 right-0 h-[90vh] bg-[#0a0a0a] border-t border-[#D4AF37]/20 z-[101] rounded-t-2xl lg:hidden flex flex-col"
+                  >
+                    <div className="flex justify-between items-center p-4 border-b border-white/5">
+                      <span className="text-white font-bold tracking-widest uppercase text-sm">Filters</span>
+                      <button onClick={() => setRefineOpen(false)} className="text-[#99907c] hover:text-white uppercase tracking-wider text-[10px]">Close</button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                      <FilterSidebar
+                        selectedColors={colorsParam}
+                        selectedSizes={sizesParam}
+                        priceRange={[priceMinParam, priceMaxParam]}
+                        onToggleColor={(c) => {
+                          const p = new URLSearchParams(searchParams);
+                          let arr = [...colorsParam];
+                          if (arr.includes(c)) arr = arr.filter((x) => x !== c);
+                          else arr.push(c);
+                          if (arr.length) p.set("colors", arr.join(","));
+                          else p.delete("colors");
+                          setSearchParams(p);
+                        }}
+                        onToggleSize={(s) => {
+                          const p = new URLSearchParams(searchParams);
+                          let arr = [...sizesParam];
+                          if (arr.includes(s)) arr = arr.filter((x) => x !== s);
+                          else arr.push(s);
+                          if (arr.length) p.set("sizes", arr.join(","));
+                          else p.delete("sizes");
+                          setSearchParams(p);
+                        }}
+                        onChangePrice={(v) => {
+                          const p = new URLSearchParams(searchParams);
+                          if (v[0] > PRICE_MIN) p.set("min", v[0]); else p.delete("min");
+                          if (v[1] < PRICE_MAX) p.set("max", v[1]); else p.delete("max");
+                          setSearchParams(p);
+                        }}
+                        onClearAll={() => clearAllFilters()}
+                        priceMin={PRICE_MIN}
+                        priceMax={PRICE_MAX}
+                      />
+                    </div>
+                    <div className="p-4 border-t border-white/5 bg-[#0a0a0a] flex gap-3 sticky bottom-0">
+                      <button 
+                        onClick={() => { clearAllFilters(); setRefineOpen(false); }}
+                        className="flex-1 py-4 border border-[#4d4635] text-[#e5e2e1] uppercase tracking-widest text-[11px] font-bold rounded-xl hover:bg-white/5 transition-colors"
+                      >
+                        Reset
+                      </button>
+                      <button 
+                        onClick={() => setRefineOpen(false)}
+                        className="flex-1 py-4 bg-[#f2ca50] text-[#0a0a0a] uppercase tracking-widest text-[11px] font-bold rounded-xl hover:brightness-110 transition-all"
+                      >
+                        Apply Options
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
               )}
             </AnimatePresence>
 

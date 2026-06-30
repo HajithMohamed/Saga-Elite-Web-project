@@ -4,6 +4,21 @@ import PriceRangeSlider from "./PriceRangeSlider";
 import axios from 'axios';
 import { API_V1_URL as API_BASE } from '@/lib/api';
 import { Link, useSearchParams } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
+
+const FilterAccordion = ({ title, children, defaultOpen = true }) => (
+  <details className="group border-b border-[#4d4635]/30 pb-2 mb-2" open={defaultOpen}>
+    <summary className="flex justify-between items-center cursor-pointer list-none py-2 text-[#e5e2e1] text-xs font-sans tracking-[0.1em] uppercase font-bold hover:text-[#f2ca50] transition-colors">
+      {title}
+      <span className="transition group-open:rotate-180">
+        <ChevronDown size={14} className="text-[#99907c]" />
+      </span>
+    </summary>
+    <div className="pt-4 pb-2 overflow-hidden">
+      {children}
+    </div>
+  </details>
+);
 
 const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const COMMON_COLORS = [
@@ -119,13 +134,10 @@ const FilterSidebar = ({
         )}
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-2">
         {/* Category drops */}
-        <div>
-          <Eyebrow tone="muted" size="xs" className="mb-4">
-            Collections
-          </Eyebrow>
-          <div className="space-y-2">
+        <FilterAccordion title="Exclusive Drops">
+          <div className="space-y-3">
             {Array.isArray(drops) && drops.map((d) => {
               const isSelected = currentCategory === (d.slug || d.name).toLowerCase();
               return (
@@ -138,23 +150,17 @@ const FilterSidebar = ({
               );
             })}
           </div>
-        </div>
+        </FilterAccordion>
 
         {/* Categories */}
         {categories.length > 0 && (
-          <div>
-            <Eyebrow tone="muted" size="xs" className="mb-4">
-              Categories
-            </Eyebrow>
+          <FilterAccordion title="Categories">
             {renderCategoryTree()}
-          </div>
+          </FilterAccordion>
         )}
 
         {/* Size */}
-        <div>
-          <Eyebrow tone="muted" size="xs" className="mb-4 flex justify-between items-center">
-            Size
-          </Eyebrow>
+        <FilterAccordion title="Size">
           <div className="flex flex-wrap gap-2">
             {COMMON_SIZES.map((s) => (
               <SizeChip
@@ -165,13 +171,10 @@ const FilterSidebar = ({
               />
             ))}
           </div>
-        </div>
+        </FilterAccordion>
 
         {/* Color */}
-        <div>
-          <Eyebrow tone="muted" size="xs" className="mb-4">
-            Color
-          </Eyebrow>
+        <FilterAccordion title="Color">
           <div className="flex flex-wrap gap-3">
             {COMMON_COLORS.map((c) => (
               <ColorSwatch
@@ -184,13 +187,10 @@ const FilterSidebar = ({
               />
             ))}
           </div>
-        </div>
+        </FilterAccordion>
 
         {/* Price */}
-        <div>
-          <Eyebrow tone="muted" size="xs" className="mb-4">
-            Price Range
-          </Eyebrow>
+        <FilterAccordion title="Price Range">
           <PriceRangeSlider
             min={priceMin}
             max={priceMax}
@@ -198,7 +198,7 @@ const FilterSidebar = ({
             value={priceRange}
             onChange={onChangePrice}
           />
-        </div>
+        </FilterAccordion>
       </div>
     </div>
   );

@@ -27,22 +27,13 @@ const EditorialProductGrid = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.25 }}
-        className="grid gap-4 md:gap-8 grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 [grid-auto-flow:dense] [grid-auto-rows:1fr]"
+        className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       >
-        {products.map((product, idx) => {
-          const isFeatured =
-            Number.isFinite(featuredEvery) &&
-            featuredEvery > 0 &&
-            (idx + 1) % featuredEvery === 0;
-          return (
-            <div
-              key={product._id || idx}
-              className={isFeatured ? "md:col-span-2 md:row-span-2" : undefined}
-            >
-              <ProductCard product={product} index={idx} tall={isFeatured} />
-            </div>
-          );
-        })}
+        {products.map((product, idx) => (
+          <div key={product._id || idx}>
+            <ProductCard product={product} index={idx} />
+          </div>
+        ))}
       </motion.div>
     </AnimatePresence>
   );

@@ -164,28 +164,29 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
   const { bestOffer } = useProductOffers(product);
 
-  // Stacked badges — up to 2 visible, top-left.
   const badges = [];
   if (isSoldOut) badges.push({ key: "sold", label: "SOLD OUT", tone: "dead" });
   else if (totalStock > 0 && totalStock <= 5)
-    badges.push({ key: "low", label: `${totalStock} LEFT`, tone: "alert" });
-  if (isLimited) badges.push({ key: "lim", label: "LIMITED", tone: "bone" });
-  if (isRare) badges.push({ key: "rare", label: "RARE", tone: "bone" });
+    badges.push({ key: "low", label: "LIMITED STOCK", tone: "alert" });
+  
+  if (isLimited && totalStock > 5) badges.push({ key: "lim", label: "LIMITED STOCK", tone: "bone" });
+  
   if (dropBadge && !isSoldOut)
     badges.push({
       key: "drop",
-      label: dropBadge.label.toUpperCase(),
+      label: "EXCLUSIVE DROP",
       tone: dropBadge.color === "gold" ? "gold" : "bone",
     });
-  if (isNew && !isSoldOut) badges.push({ key: "new", label: "NEW DROP", tone: "gold" });
-  if (isBestseller) badges.push({ key: "best", label: "BESTSELLER", tone: "gold" });
-  if (isMostWished) badges.push({ key: "wish", label: "MOST WISHED", tone: "goldOutline" });
+  
+  if (isNew && !isSoldOut) badges.push({ key: "new", label: "NEW ARRIVAL", tone: "gold" });
+  if (isBestseller) badges.push({ key: "best", label: "BEST SELLER", tone: "gold" });
+  if (isMostWished) badges.push({ key: "wish", label: "TRENDING", tone: "goldOutline" });
   if (showDealBadge && discountPct > 0)
-    badges.push({ key: "deal", label: `${discountPct}% OFF`, tone: "bone" });
+    badges.push({ key: "deal", label: "SALE", tone: "bone" });
   if (bestOffer && !isSoldOut && !badges.some((b) => b.key === "deal"))
     badges.push({
       key: "offer",
-      label: bestOffer.badgeText || bestOffer.name || "OFFER",
+      label: bestOffer.badgeText || bestOffer.name || "SALE",
       tone: "gold",
     });
   const visibleBadges = badges.slice(0, 2);
@@ -251,8 +252,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   return (
     <div
       className={cn(
-        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:scale-[1.03] hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
-        "w-full sm:w-[220px] md:w-[260px] lg:w-[290px]",
+        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
+        "w-full",
         className
       )}
     >
@@ -281,12 +282,24 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           />
         </Link>
 
-        {/* Discount Badge (Top Left) */}
-        {discountPct > 0 && (
-          <div className="absolute top-3 left-3 bg-[#f2ca50] text-[#0E0E0E] px-2 py-1 rounded-[12px] se-label text-[10px] tracking-wider font-bold shadow-sm">
-            {discountPct}% OFF
-          </div>
-        )}
+        {/* Badges (Top Left) */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          {visibleBadges.map((b) => (
+            <div
+              key={b.key}
+              className={cn(
+                "px-2 py-1 rounded-[12px] se-label text-[10px] tracking-wider font-bold shadow-sm backdrop-blur-md",
+                b.tone === "dead" ? "bg-[#ffb4ab] text-[#93000a]" :
+                b.tone === "alert" ? "bg-[#ffb4ab] text-[#93000a]" :
+                b.tone === "gold" ? "bg-[#f2ca50] text-[#0E0E0E]" :
+                b.tone === "goldOutline" ? "bg-[#0E0E0E]/80 text-[#f2ca50] border border-[#f2ca50]" :
+                "bg-[#0E0E0E]/80 text-[#e5e2e1] border border-[#f2ca50]/50"
+              )}
+            >
+              {b.label}
+            </div>
+          ))}
+        </div>
 
         {/* Wishlist Button (Top Right) */}
         <button
