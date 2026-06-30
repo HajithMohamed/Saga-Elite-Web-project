@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,7 +28,6 @@ import {
 } from "@/store/cart-slice";
 import { toast } from "@/hooks/use-toast";
 import ProductCard from "@/components/shopping-components/ProductCard";
-import { fetchAllFilteredProducts } from "@/store/shop/products-slice";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useAllOffers } from "@/hooks/use-product-offers";
@@ -87,12 +88,16 @@ const Cart = () => {
     useSelector((state) => state.cart.cart);
 
   const { offers } = useAllOffers();
-  const { productList = [] } = useSelector((state) => state.shopProducts || {});
+  const [productList, setProductList] = useState([]);
   useEffect(() => {
-    if (productList.length === 0) {
-      dispatch(fetchAllFilteredProducts({ filterParams: {}, sortParams: "price-lowtohigh" }));
-    }
-  }, [dispatch, productList.length]);
+    axios.get(`${API_BASE}/products/get-all-products?limit=4&sort=-soldCount`)
+      .then(res => {
+        if (res.data?.success) {
+          setProductList(res.data.data || []);
+        }
+      })
+      .catch(err => console.error(err));
+  }, []);
 
   const offerSavings = useMemo(() => {
     if (!offers.length || !items.length) return 0;

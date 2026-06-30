@@ -603,7 +603,10 @@ const ProductDetails = () => {
   };
 
   const renderShowcaseCard = (item) => {
-    return (
+    return <ProductCard key={item._id || item.id} product={item} />;
+  };
+
+  return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pt-24 pb-36 md:pb-28 lg:pb-12">
       {/* 1. Breadcrumb below header */}
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-6">
