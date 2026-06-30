@@ -260,6 +260,143 @@ function App() {
               <Route path="auth/verify-otp" element={<VerifyOtp />} />
             </Route>
 
+            {/* ADMIN */}
+            <Route
+              path="/admin"
+              element={
+                <CheckAuth isAuthenticated={isAuthenticated} user={user}>
+                  <AdminLayout />
+                </CheckAuth>
+              }
+            >
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="features" element={<AdminFeatures />} />
+              <Route
+                path="offers"
+                element={
+                  <PermissionGuard permission="products">
+                    <AdminOffers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="coupons"
+                element={
+                  <PermissionGuard permission="sendCampaigns">
+                    <AdminCoupons />
+                  </PermissionGuard>
+                }
+              />
+              <Route path="community" element={<AdminCommunity />} />
+              <Route
+                path="shipping"
+                element={
+                  <PermissionGuard permission="manageInventory">
+                    <AdminShipping />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="order"
+                element={
+                  <PermissionGuard permission="orders">
+                    <AdminOrders />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="product"
+                element={
+                  <PermissionGuard permission="products">
+                    <AdminProduct />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="categories"
+                element={
+                  <PermissionGuard permission="products">
+                    <AdminCategoriesList />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="drop"
+                element={
+                  <PermissionGuard permission="drops">
+                    <AdminDrops />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="drops"
+                element={
+                  <PermissionGuard permission="drops">
+                    <AdminDrops />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="manual-payments"
+                element={
+                  <PermissionGuard permission="verifyPayments">
+                    <PendingPaymentsPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="payments/pending"
+                element={
+                  <PermissionGuard permission="verifyPayments">
+                    <PendingPaymentsPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="payments/:paymentId"
+                element={
+                  <PermissionGuard permission="verifyPayments">
+                    <PaymentVerificationPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <PermissionGuard permission="users">
+                    <AdminUsers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="super-admin"
+                element={
+                  <PermissionGuard superAdminOnly>
+                    <SuperAdminDashboard />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="reviews"
+                element={
+                  <PermissionGuard permission="manageReviews">
+                    <ReviewModerationPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
+              <Route path="account" element={<AdminAccount />} />
+              <Route
+                path="content"
+                element={
+                  <PermissionGuard superAdminOnly>
+                    <ContentManagement />
+                  </PermissionGuard>
+                }
+              />
+            </Route>
+
             {/* CHECKOUT FLOW — standalone, no storefront chrome (own secure-checkout
                 header only). URLs stay under /shopping/* so existing links work. */}
             <Route

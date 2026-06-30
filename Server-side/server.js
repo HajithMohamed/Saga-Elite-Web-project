@@ -302,6 +302,14 @@ const runDeferredStartupTasks = async () => {
     });
   }
 
+  if (
+    process.env.DISABLE_BACKGROUND_JOBS === "true" ||
+    process.env.NODE_ENV === "test"
+  ) {
+    logger.info("Background jobs disabled for this environment");
+    return;
+  }
+
   startManualPaymentCleanupJob();
   startBankInboxWatcher();
   initAgingStockJob();
