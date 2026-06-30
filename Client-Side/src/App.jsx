@@ -22,7 +22,7 @@ import ContactPage from "./pages/Legal/ContactPage";
 import AboutPage from "./pages/Legal/AboutPage";
 import OffersPage from "./pages/user/OffersPage";
 // auth page imports — login/register are now in the sliding AuthDrawer
-import AuthLayout from "./components/auth-components/Layout";
+// auth page imports — login/register are now in the sliding AuthDrawer
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyResetOtp from "./pages/auth/VerifyResetOtp";
 import SetNewPassword from "./pages/auth/SetNewPassword";
@@ -197,90 +197,44 @@ function App() {
             </Route>
 
             {/* AUTH — login/register removed (now AuthDrawer); keep OTP/reset routes */}
+            {/* SHOPPING & AUTHENTICATION */}
             <Route
-              path="/auth"
-              element={
-                <CheckAuth isAuthenticated={isAuthenticated} user={user}>
-                  <AuthLayout />
-                </CheckAuth>
-              }
-            >
-              {/* Redirect old direct links to home */}
-              <Route index element={<Navigate to="/" replace />} />
-              <Route path="login" element={<Navigate to="/" replace />} />
-              <Route path="register" element={<Navigate to="/" replace />} />
-              <Route path="forgot-password" element={<ForgotPassword />} />
-              <Route path="verify-reset-otp" element={<VerifyResetOtp />} />
-              <Route path="reset-password-otp" element={<VerifyResetOtp />} />
-              <Route path="set-new-password" element={<SetNewPassword />} />
-              <Route path="verify-otp" element={<VerifyOtp />} />
-            </Route>
-
-            {/* ADMIN */}
-            <Route
-              path="/admin"
-              element={
-                <CheckAuth isAuthenticated={isAuthenticated} user={user}>
-                  <AdminLayout />
-                </CheckAuth>
-              }
-            >
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="categories" element={<PermissionGuard permission="products"><AdminCategoriesList /></PermissionGuard>} />
-              <Route path="feature" element={<PermissionGuard permission="products"><AdminFeatures /></PermissionGuard>} />
-              <Route path="offers" element={<PermissionGuard permission="products"><AdminOffers /></PermissionGuard>} />
-              <Route path="coupons" element={<PermissionGuard permission="sendCampaigns"><AdminCoupons /></PermissionGuard>} />
-              <Route path="community" element={<PermissionGuard permission="sendCampaigns"><AdminCommunity /></PermissionGuard>} />
-              <Route path="shipping" element={<PermissionGuard permission="manageInventory"><AdminShipping /></PermissionGuard>} />
-              <Route path="order" element={<PermissionGuard permission="orders"><AdminOrders /></PermissionGuard>} />
-              <Route path="product" element={<PermissionGuard permission="products"><AdminProduct /></PermissionGuard>} />
-              <Route path="users" element={<PermissionGuard permission="users"><AdminUsers /></PermissionGuard>} />
-              <Route path="super-admin" element={<PermissionGuard superAdminOnly><SuperAdminDashboard /></PermissionGuard>} />
-              <Route path="payments/pending" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
-              <Route path="manual-payments" element={<PermissionGuard permission="verifyPayments"><PendingPaymentsPage /></PermissionGuard>} />
-              <Route path="manual-payments/:paymentId" element={<PermissionGuard permission="verifyPayments"><PaymentVerificationPage /></PermissionGuard>} />
-              <Route path="reviews" element={<PermissionGuard permission="manageReviews"><ReviewModerationPage /></PermissionGuard>} />
-              <Route path="contact-inquiries" element={<ContactInquiriesPage />} />
-              <Route path="account" element={<AdminAccount />} />
-              <Route path="drop" element={<PermissionGuard permission="drops"><AdminDrops /></PermissionGuard>} />
-              <Route path="content" element={<PermissionGuard superAdminOnly><ContentManagement /></PermissionGuard>} />
-              {/* Legacy Content routes → redirect into the tabbed Content Management page */}
-              <Route path="about-content" element={<Navigate to="/admin/content?tab=about" replace />} />
-              <Route path="policies" element={<Navigate to="/admin/content?tab=policies" replace />} />
-              <Route path="footer" element={<Navigate to="/admin/content?tab=footer" replace />} />
-              <Route path="announcement" element={<Navigate to="/admin/content?tab=announcement" replace />} />
-              <Route path="contact-content" element={<Navigate to="/admin/content?tab=contact" replace />} />
-              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-            </Route>
-
-            {/* SHOPPING */}
-            <Route
-              path="/shopping"
+              path="/"
               element={
                 <CheckAuth isAuthenticated={isAuthenticated} user={user}>
                   <ShoppinLayout />
                 </CheckAuth>
               }
             >
-              <Route index element={<Navigate to="home" replace />} />
-              <Route path="home" element={<Home />} />
-              <Route path="account" element={<Account />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="rewards" element={<MyRewards />} />
-              <Route path="cart" element={<Cart />} />
-              <Route path="product-list" element={<ProductListing />} />
-              <Route path="product/:slug" element={<ProductDetails />} />
-              <Route path="drops" element={<DropsIndex />} />
-              <Route path="drop/:slug" element={<DropDetails />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="checkout-success" element={<OrderSuccess />} />
-              <Route path="wishlist" element={<Wishlist />} />
-              <Route path="for-you" element={<ForYou />} />
-              <Route path="order-tracking" element={<OrderTracking />} />
-              <Route path="account/my-reviews" element={<MyReviewsPage />} />
-              <Route path="manual-payment" element={<ManualPaymentPage />} />
-              <Route path="manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
-              <Route path="find-payment" element={<FindPaymentPage />} />
+              {/* Shopping Routes */}
+              <Route index element={<Navigate to="shopping/home" replace />} />
+              <Route path="shopping/home" element={<Home />} />
+              <Route path="shopping/account" element={<Account />} />
+              <Route path="shopping/orders" element={<Orders />} />
+              <Route path="shopping/rewards" element={<MyRewards />} />
+              <Route path="shopping/cart" element={<Cart />} />
+              <Route path="shopping/product-list" element={<ProductListing />} />
+              <Route path="shopping/product/:slug" element={<ProductDetails />} />
+              <Route path="shopping/drops" element={<DropsIndex />} />
+              <Route path="shopping/drop/:slug" element={<DropDetails />} />
+              <Route path="shopping/notifications" element={<NotificationsPage />} />
+              <Route path="shopping/checkout-success" element={<OrderSuccess />} />
+              <Route path="shopping/wishlist" element={<Wishlist />} />
+              <Route path="shopping/for-you" element={<ForYou />} />
+              <Route path="shopping/order-tracking" element={<OrderTracking />} />
+              <Route path="shopping/account/my-reviews" element={<MyReviewsPage />} />
+              <Route path="shopping/manual-payment" element={<ManualPaymentPage />} />
+              <Route path="shopping/manual-payment/:paymentSlug" element={<ManualPaymentPage />} />
+              <Route path="shopping/find-payment" element={<FindPaymentPage />} />
+              
+              {/* Auth Routes */}
+              <Route path="auth/login" element={<Navigate to="/" replace />} />
+              <Route path="auth/register" element={<Navigate to="/" replace />} />
+              <Route path="auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="auth/verify-reset-otp" element={<VerifyResetOtp />} />
+              <Route path="auth/reset-password-otp" element={<VerifyResetOtp />} />
+              <Route path="auth/set-new-password" element={<SetNewPassword />} />
+              <Route path="auth/verify-otp" element={<VerifyOtp />} />
             </Route>
 
             {/* CHECKOUT FLOW — standalone, no storefront chrome (own secure-checkout

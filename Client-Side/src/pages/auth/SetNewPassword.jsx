@@ -1,32 +1,83 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Check, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { resetPasswordAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
-import { firstPasswordError } from "@/lib/password-strength";
-import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
-import { Btn, Eyebrow, FieldError, AUTH_INPUT, AUTH_PRIMARY_BTN } from "@/components/ui/editorial";
+import usePageMeta from "@/hooks/use-page-meta";
+import AuthPageWrapper from "@/components/auth-components/AuthPageWrapper";
+import LuxuryInput from "@/components/auth-components/LuxuryInput";
+
+const checkPasswordReqs = (pwd) => ({
+  length: pwd.length >= 8,
+  upper: /[A-Z]/.test(pwd),
+  lower: /[a-z]/.test(pwd),
+  number: /\d/.test(pwd),
+  special: /[@$!%*?&]/.test(pwd)
+});
+
+const calculateStrength = (reqs) => {
+  const score = Object.values(reqs).filter(Boolean).length;
+  if (score <= 1) return { label: "Weak", color: "bg-rose-500", text: "text-rose-500" };
+  if (score <= 2) return { label: "Fair", color: "bg-orange-500", text: "text-orange-500" };
+  if (score <= 3) return { label: "Good", color: "bg-yellow-500", text: "text-yellow-500" };
+  if (score <= 4) return { label: "Strong", color: "bg-emerald-400", text: "text-emerald-400" };
+  return { label: "Excellent", color: "bg-[#F2CA50]", text: "text-[#F2CA50]" };
+};
+
+const PasswordChecklist = ({ password }) => {
+  const reqs = checkPasswordReqs(password);
+  const strength = calculateStrength(reqs);
+  const allReqs = [
+    { label: "Minimum 8 Characters", met: reqs.length },
+    { label: "Uppercase Letter", met: reqs.upper },
+    { label: "Lowercase Letter", met: reqs.lower },
+    { label: "Number", met: reqs.number },
+    { label: "Special Character (@$!%*?&)", met: reqs.special }
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c]">Password Strength</span>
+        <span className={`se-label text-[10px] uppercase tracking-[0.2em] font-bold ${strength.text}`}>{strength.label}</span>
+      </div>
+      <div className="flex gap-1 mb-4 h-1">
+        {[...Array(5)].map((_, i) => {
+          const score = Object.values(reqs).filter(Boolean).length;
+          return (
+            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-white/10'}`} />
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        {allReqs.map((req, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            {req.met ? <Check className="w-3 h-3 text-emerald-400" /> : <X className="w-3 h-3 text-rose-400/50" />}
+            <span className={`text-xs ${req.met ? 'text-[#e5e2e1]' : 'text-[#99907c]'}`}>{req.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const validateReset = (data, touched = {}) => {
   const errs = {};
-  const pwd = data.newPassword;
-  if (touched.newPassword && !pwd) {
-    errs.newPassword = "Choose a new password.";
-  } else if (pwd) {
-    const pwdError = firstPasswordError(pwd);
-    if (pwdError) errs.newPassword = pwdError;
+  if (touched.newPassword && !data.newPassword) errs.newPassword = "Choose a new password.";
+  else if (data.newPassword && Object.values(checkPasswordReqs(data.newPassword)).includes(false)) {
+    errs.newPassword = "Please meet all password requirements.";
   }
-  if (touched.confirmPassword && !data.confirmPassword) {
-    errs.confirmPassword = "Confirm your new password.";
-  } else if (data.confirmPassword && pwd && pwd !== data.confirmPassword) {
+  if (touched.confirmPassword && !data.confirmPassword) errs.confirmPassword = "Confirm your new password.";
+  else if (data.confirmPassword && data.newPassword !== data.confirmPassword) {
     errs.confirmPassword = "Passwords do not match.";
   }
   return errs;
 };
 
 const SetNewPassword = () => {
+  usePageMeta({ title: "Set New Password" });
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -35,9 +86,8 @@ const SetNewPassword = () => {
   const [formData, setFormData] = useState({ newPassword: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     setErrors(validateReset(formData, touched));
@@ -45,24 +95,11 @@ const SetNewPassword = () => {
 
   if (!email || !otp) {
     return (
-      <motion.div
-        initial={{ opacity: 0, x: 24 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
-        <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-5xl">
-          Start again,<br />gently.
-        </h1>
-        <p className="mt-5 se-body text-sm text-[#d0c5af] leading-relaxed">
-          The reset session has expired. Please request a new code.
-        </p>
-        <Link to="/auth/forgot-password" className="mt-8 inline-block">
-          <Btn variant="default" size="lg" iconRight={ArrowRight}>
-            Back to forgot password
-          </Btn>
+      <AuthPageWrapper title="Session Expired" description="Your password reset session has expired. Please request a new recovery link." badgeText="Session Lost">
+        <Link to="/auth/forgot-password" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A]">
+          Return to Forgot Password
         </Link>
-      </motion.div>
+      </AuthPageWrapper>
     );
   }
 
@@ -73,141 +110,94 @@ const SetNewPassword = () => {
     const fresh = validateReset(formData, allTouched);
     setErrors(fresh);
     if (Object.keys(fresh).length > 0) return;
+    
     setIsLoading(true);
     try {
-      await dispatch(
-        resetPasswordAction({
-          email,
-          otp,
-          newPassword: formData.newPassword,
-          confirmPassword: formData.confirmPassword,
-        })
-      ).unwrap();
-      toast({
-        title: "Password updated",
-        description: "Sign in with your new password.",
-        variant: "success",
-      });
-      setTimeout(() => navigate("/auth/login"), 1200);
+      await dispatch(resetPasswordAction({ email, otp, newPassword: formData.newPassword, confirmPassword: formData.confirmPassword })).unwrap();
+      setIsSuccess(true);
     } catch (err) {
-      toast({
-        title: "Reset failed",
-        description: err || "Couldn't reset your password.",
-        variant: "destructive",
-      });
+      toast({ title: "Reset failed", description: err || "Couldn't reset your password. Try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const inputBase = AUTH_INPUT;
-  const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
-  const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
+  if (isSuccess) {
+    return (
+      <AuthPageWrapper title="Password Updated Successfully" description="Your password has been changed. You can now use your new password to access your account." badgeText="Recovery Complete">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F2CA50]/10 border border-[#F2CA50]/20 mb-8">
+            <CheckCircle2 className="h-12 w-12 text-[#F2CA50]" />
+          </div>
+          <Link to="/auth/login" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A]">
+            Return to Login
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </motion.div>
+      </AuthPageWrapper>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    <AuthPageWrapper
+      title="Create New Password"
+      description="Your identity has been verified. Please choose a strong new password to secure your account."
+      badgeText="Secure Recovery"
     >
-      <Eyebrow tone="gold" size="md">Reset · final step</Eyebrow>
-      <h1 className="mt-4 se-serif text-[#e5e2e1] leading-[1.0] text-4xl md:text-6xl">
-        Set your<br />new key.
-      </h1>
-      <p className="mt-5 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
-        Eight characters, with at least one uppercase letter, one number, and one symbol from{" "}
-        <span className="se-mono text-[#e5e2e1]">@$!%*?&</span>.
-      </p>
-
-      <div className="mt-6 mb-2 flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#a8d8b6] animate-pulse" />
-        <span className="se-label text-[10px] tracking-[0.28em] text-[#a8d8b6]">
-          Secure session · encrypted
-        </span>
-        <div className="flex-1 h-px bg-[#4d4635]" />
-      </div>
-
-      <form onSubmit={handleSubmit} noValidate className="mt-6 md:mt-8 space-y-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
         <div>
-          <Eyebrow tone="muted" size="xs">New password</Eyebrow>
-          <div className="relative mt-2">
-            <input
-              type={showNew ? "text" : "password"}
-              autoComplete="new-password"
-              value={formData.newPassword}
-              onChange={(e) => setFormData((p) => ({ ...p, newPassword: e.target.value }))}
-              onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
-              placeholder="Choose with care"
-              aria-invalid={Boolean(touched.newPassword && errors.newPassword)}
-              className={`${inputBase} pr-10 ${touched.newPassword && errors.newPassword ? inputErr : inputOk}`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowNew((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
-              aria-label={showNew ? "Hide password" : "Show password"}
-            >
-              {showNew ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.newPassword ? errors.newPassword : null}</FieldError>
-          <PasswordStrengthMeter password={formData.newPassword} />
+          <LuxuryInput
+            id="newPassword"
+            type="password"
+            label="New Password"
+            placeholder="Choose with care"
+            autoComplete="new-password"
+            value={formData.newPassword}
+            error={touched.newPassword ? errors.newPassword : ""}
+            onChange={(e) => {
+              setFormData((p) => ({ ...p, newPassword: e.target.value }));
+              setTouched((p) => ({ ...p, newPassword: true }));
+            }}
+            onBlur={() => setTouched((p) => ({ ...p, newPassword: true }))}
+          />
+          {formData.newPassword && <PasswordChecklist password={formData.newPassword} />}
         </div>
 
-        <div>
-          <Eyebrow tone="muted" size="xs">Confirm password</Eyebrow>
-          <div className="relative mt-2">
-            <input
-              type={showConfirm ? "text" : "password"}
-              autoComplete="new-password"
-              value={formData.confirmPassword}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, confirmPassword: e.target.value }))
-              }
-              onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
-              placeholder="Once more"
-              aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
-              className={`${inputBase} ${touched.confirmPassword && errors.confirmPassword ? inputErr : inputOk}`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
-              aria-label={showConfirm ? "Hide password" : "Show password"}
-            >
-              {showConfirm ? (
-                <EyeOff size={16} strokeWidth={1.5} />
-              ) : (
-                <Eye size={16} strokeWidth={1.5} />
-              )}
-            </button>
-          </div>
-          <FieldError>{touched.confirmPassword ? errors.confirmPassword : null}</FieldError>
-        </div>
+        <LuxuryInput
+          id="confirmPassword"
+          type="password"
+          label="Confirm Password"
+          placeholder="Once more"
+          autoComplete="new-password"
+          value={formData.confirmPassword}
+          error={touched.confirmPassword ? errors.confirmPassword : ""}
+          onChange={(e) => {
+            setFormData((p) => ({ ...p, confirmPassword: e.target.value }));
+            setTouched((p) => ({ ...p, confirmPassword: true }));
+          }}
+          onBlur={() => setTouched((p) => ({ ...p, confirmPassword: true }))}
+        />
 
-        <Btn
-          variant="default"
-          className={AUTH_PRIMARY_BTN}
-          iconRight={ArrowRight}
+        <button
           type="submit"
           disabled={isLoading}
+          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
         >
-          {isLoading ? "Securing" : "Set new key"}
-        </Btn>
+          {isLoading ? "Securing..." : "Set New Password"}
+          {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+        </button>
       </form>
 
-      <Link
-        to="/auth/login"
-        className="mt-12 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
-      >
-        <ArrowLeft size={12} strokeWidth={1.5} />
-        Cancel · return to sign in
-      </Link>
-    </motion.div>
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <Link
+          to="/auth/login"
+          className="inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#F2CA50] transition-colors"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Cancel Recovery
+        </Link>
+      </div>
+    </AuthPageWrapper>
   );
 };
 

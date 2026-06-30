@@ -1,102 +1,117 @@
-// Register page - updated layout 2026-05-10
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { ArrowRight, Check, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, Check, X, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { registerUserAction } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
-import { firstPasswordError } from "@/lib/password-strength";
 import { describeAuthError } from "@/lib/auth-errors";
+import AuthPageWrapper from "@/components/auth-components/AuthPageWrapper";
+import LuxuryInput from "@/components/auth-components/LuxuryInput";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
-import PasswordStrengthMeter from "@/components/common-components/PasswordStrengthMeter";
 import usePageMeta from "@/hooks/use-page-meta";
-import LuxuryInput from "@/components/auth-components/LuxuryInput";
-import {
-  AUTH_PRIMARY_BTN,
-  Btn,
-  Eyebrow,
-  Hairline,
-} from "@/components/ui/editorial";
+import { Hairline } from "@/components/ui/editorial";
 
 const VALID_MOBILE_PREFIXES = ["70", "71", "72", "74", "75", "76", "77", "78"];
-
-void motion;
-
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isValidSriLankanMobile = (raw) => {
   const digits = String(raw || "").replace(/[^\d]/g, "");
   if (!digits) return false;
-
   let local = digits;
   if (local.startsWith("0094")) local = local.slice(4);
   else if (local.startsWith("94") && local.length === 11) local = local.slice(2);
   else if (local.startsWith("0") && local.length === 10) local = local.slice(1);
-
   return local.length === 9 && VALID_MOBILE_PREFIXES.includes(local.slice(0, 2));
+};
+
+const checkPasswordReqs = (pwd) => ({
+  length: pwd.length >= 8,
+  upper: /[A-Z]/.test(pwd),
+  lower: /[a-z]/.test(pwd),
+  number: /\d/.test(pwd),
+  special: /[@$!%*?&]/.test(pwd)
+});
+
+const calculateStrength = (reqs) => {
+  const score = Object.values(reqs).filter(Boolean).length;
+  if (score <= 1) return { label: "Weak", color: "bg-rose-500", text: "text-rose-500" };
+  if (score <= 2) return { label: "Fair", color: "bg-orange-500", text: "text-orange-500" };
+  if (score <= 3) return { label: "Good", color: "bg-yellow-500", text: "text-yellow-500" };
+  if (score <= 4) return { label: "Strong", color: "bg-emerald-400", text: "text-emerald-400" };
+  return { label: "Excellent", color: "bg-[#F2CA50]", text: "text-[#F2CA50]" };
+};
+
+const PasswordChecklist = ({ password }) => {
+  const reqs = checkPasswordReqs(password);
+  const strength = calculateStrength(reqs);
+  const allReqs = [
+    { label: "Minimum 8 Characters", met: reqs.length },
+    { label: "Uppercase Letter", met: reqs.upper },
+    { label: "Lowercase Letter", met: reqs.lower },
+    { label: "Number", met: reqs.number },
+    { label: "Special Character (@$!%*?&)", met: reqs.special }
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c]">Password Strength</span>
+        <span className={`se-label text-[10px] uppercase tracking-[0.2em] font-bold ${strength.text}`}>{strength.label}</span>
+      </div>
+      <div className="flex gap-1 mb-4 h-1">
+        {[...Array(5)].map((_, i) => {
+          const score = Object.values(reqs).filter(Boolean).length;
+          return (
+            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-white/10'}`} />
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        {allReqs.map((req, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            {req.met ? <Check className="w-3 h-3 text-emerald-400" /> : <X className="w-3 h-3 text-rose-400/50" />}
+            <span className={`text-xs ${req.met ? 'text-[#e5e2e1]' : 'text-[#99907c]'}`}>{req.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 const validateForm = (data, touched) => {
   const errs = {};
+  if (touched.email && !data.email) errs.email = "Tell us your email.";
+  else if (data.email && !EMAIL_REGEX.test(data.email)) errs.email = "Please enter a valid email address.";
 
-  if (touched.email && !data.email) {
-    errs.email = "Tell us your email.";
-  } else if (data.email && !EMAIL_REGEX.test(data.email)) {
-    errs.email = "Please enter a valid email address.";
+  if (touched.password && !data.password) errs.password = "Create a password.";
+  else if (data.password && Object.values(checkPasswordReqs(data.password)).includes(false)) {
+    errs.password = "Please meet all password requirements.";
   }
 
-  if (touched.password && !data.password) {
-    errs.password = "Create a password.";
-  } else if (data.password) {
-    const pErr = firstPasswordError(data.password);
-    if (pErr) errs.password = pErr;
-  }
+  if (touched.confirmPassword && !data.confirmPassword) errs.confirmPassword = "Confirm your password.";
+  else if (data.confirmPassword && data.password !== data.confirmPassword) errs.confirmPassword = "Passwords do not match.";
 
-  if (touched.confirmPassword && !data.confirmPassword) {
-    errs.confirmPassword = "Confirm your password.";
-  } else if (data.confirmPassword && data.password !== data.confirmPassword) {
-    errs.confirmPassword = "Passwords do not match.";
+  if (data.phoneNumber && !isValidSriLankanMobile(data.phoneNumber)) {
+    errs.phoneNumber = "Enter a valid Sri Lankan mobile (e.g. 0771234567).";
   }
-
-  if (
-    data.phoneNumber &&
-    !isValidSriLankanMobile(data.phoneNumber)
-  ) {
-    errs.phoneNumber =
-      "Enter a valid Sri Lankan mobile for WhatsApp OTP (e.g. 0771234567).";
-  }
-
   return errs;
 };
 
-const BENEFITS = [
-  "Faster checkout",
-  "Order tracking",
-  "Exclusive drops",
-  "Early access collections",
-  "Save wishlist",
-];
-
 const Register = () => {
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    phoneNumber: "",
-  });
+  usePageMeta({ title: "Join Saga Elite" });
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "", phoneNumber: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  usePageMeta({ title: "Join Saga Elite" });
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     setErrors(validateForm(formData, touched));
@@ -106,19 +121,13 @@ const Register = () => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
-
-  const markTouched = (field) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-  };
+  const markTouched = (field) => setTouched((prev) => ({ ...prev, [field]: true }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!agreed) return toast({ title: "Terms required", description: "Please agree to the Terms and Privacy Policy.", variant: "destructive" });
 
-    const allTouched = {
-      email: true,
-      password: true,
-      confirmPassword: true,
-    };
+    const allTouched = { email: true, password: true, confirmPassword: true };
     setTouched((prev) => ({ ...prev, ...allTouched }));
 
     const fresh = validateForm(formData, allTouched);
@@ -131,257 +140,184 @@ const Register = () => {
         email: formData.email.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        username: formData.username.trim() || undefined,
+        username: formData.firstName.trim() ? `${formData.firstName} ${formData.lastName}`.trim() : undefined,
       };
-      const phoneNumber = formData.phoneNumber.trim();
-      if (phoneNumber) payload.phoneNumber = phoneNumber;
+      if (formData.phoneNumber.trim()) payload.phoneNumber = formData.phoneNumber.trim();
+      
       const response = await dispatch(registerUserAction(payload)).unwrap();
-
-      toast({
-        title: "Welcome to the atelier",
-        description:
-          response?.message ||
-          "Check your email for the verification code.",
-        variant: "success",
-      });
-
-      navigate("/auth/verify-otp", {
-        state: { email: payload.email },
-      });
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate("/auth/verify-otp", { state: { email: payload.email } });
+      }, 3000);
     } catch (err) {
-      console.error("[register] error", err);
-      const { title, description } = describeAuthError(err, {
-        title: "Registration failed",
-      });
+      const { title, description } = describeAuthError(err, { title: "Registration failed" });
       toast({ title, description, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isSuccess) {
+    return (
+      <AuthPageWrapper title="Welcome to Saga Elite" description="Your account has been successfully created. We are sending a secure code to your email." badgeText="Account Created">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-12 text-center"
+        >
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F2CA50]/10 border border-[#F2CA50]/20 mb-6">
+            <CheckCircle2 className="h-12 w-12 text-[#F2CA50]" />
+          </div>
+          <h2 className="se-serif text-3xl text-[#e5e2e1]">Welcome to the Elite</h2>
+          <p className="se-body mt-4 text-[#99907c] max-w-sm">Redirecting to email verification...</p>
+        </motion.div>
+      </AuthPageWrapper>
+    );
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    <AuthPageWrapper
+      title="Create Your Account"
+      description="Join the elite to access exclusive drops, members-only chapters, and early releases."
+      badgeText="Secure Registration"
     >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-      >
-        <Eyebrow tone="gold" size="md">
-          Create Account
-        </Eyebrow>
-        <h1 className="mt-3 se-serif text-[#e5e2e1] leading-[1.05] text-3xl sm:text-4xl md:text-5xl">
-          Gain
-          <br />
-          access.
-        </h1>
-        <p className="mt-4 se-body text-sm text-[#d0c5af] leading-relaxed max-w-sm">
-          Create your account to access exclusive drops, members-only chapters, and early releases.
-        </p>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mt-6 p-4 bg-[#111111]/80 border border-[#1f1f1f] rounded-sm"
-      >
-        <p className="se-label text-[9px] tracking-[0.28em] text-[#99907c] uppercase mb-3">
-          Why join us?
-        </p>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {BENEFITS.map((benefit) => (
-            <div
-              key={benefit}
-              className="flex items-center gap-2 text-[#d0c5af] se-body text-xs"
-            >
-              <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-[#f2ca50]/10 text-[#f2ca50]">
-                <Check size={10} strokeWidth={2.5} />
-              </span>
-              <span>{benefit}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      <motion.form
-        onSubmit={handleSubmit}
-        noValidate
-        className="mt-7 space-y-5"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-        >
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
           <LuxuryInput
-            id="username"
+            id="firstName"
             type="text"
-            label="Your Handle in the Atelier (Optional)"
-            autoComplete="username"
-            value={formData.username}
-            onChange={handleChange("username")}
-            onBlur={() => markTouched("username")}
+            label="First Name"
+            placeholder="John"
+            value={formData.firstName}
+            onChange={handleChange("firstName")}
+            onBlur={() => markTouched("firstName")}
           />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.16 }}
-        >
           <LuxuryInput
-            id="email"
-            type="email"
-            label="Email Address"
-            autoComplete="email"
-            value={formData.email}
-            error={touched.email ? errors.email : ""}
-            onChange={handleChange("email")}
-            onBlur={() => markTouched("email")}
+            id="lastName"
+            type="text"
+            label="Last Name"
+            placeholder="Doe"
+            value={formData.lastName}
+            onChange={handleChange("lastName")}
+            onBlur={() => markTouched("lastName")}
           />
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <LuxuryInput
+          id="email"
+          type="email"
+          label="Email Address"
+          placeholder="your@email.com"
+          autoComplete="email"
+          value={formData.email}
+          error={touched.email ? errors.email : ""}
+          onChange={handleChange("email")}
+          onBlur={() => markTouched("email")}
+        />
+
+        <LuxuryInput
+          id="phoneNumber"
+          type="tel"
+          label="Phone Number (Optional)"
+          placeholder="0771234567"
+          value={formData.phoneNumber}
+          error={touched.phoneNumber ? errors.phoneNumber : ""}
+          onChange={handleChange("phoneNumber")}
+          onBlur={() => markTouched("phoneNumber")}
+        />
+
+        <div>
           <LuxuryInput
             id="password"
             type="password"
-            label="Choose Your Password"
+            label="Password"
+            placeholder="Choose your password"
             autoComplete="new-password"
             value={formData.password}
             error={touched.password ? errors.password : ""}
             onChange={handleChange("password")}
             onBlur={() => markTouched("password")}
           />
-          {formData.password && (
-            <div className="mt-1">
-              <PasswordStrengthMeter password={formData.password} />
-            </div>
+          {formData.password.length > 0 && (
+            <PasswordChecklist password={formData.password} />
           )}
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.22 }}
-        >
-          <LuxuryInput
-            id="confirmPassword"
-            type="password"
-            label="Confirm Password"
-            autoComplete="new-password"
-            value={formData.confirmPassword}
-            error={touched.confirmPassword ? errors.confirmPassword : ""}
-            onChange={handleChange("confirmPassword")}
-            onBlur={() => markTouched("confirmPassword")}
-          />
-        </motion.div>
+        <LuxuryInput
+          id="confirmPassword"
+          type="password"
+          label="Confirm Password"
+          placeholder="Confirm your password"
+          autoComplete="new-password"
+          value={formData.confirmPassword}
+          error={touched.confirmPassword ? errors.confirmPassword : ""}
+          onChange={handleChange("confirmPassword")}
+          onBlur={() => markTouched("confirmPassword")}
+        />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.24 }}
-        >
-          <LuxuryInput
-            id="phoneNumber"
-            type="tel"
-            label="Mobile for WhatsApp OTP (Optional)"
-            placeholder="0771234567"
-            autoComplete="tel"
-            value={formData.phoneNumber}
-            error={touched.phoneNumber ? errors.phoneNumber : ""}
-            onChange={handleChange("phoneNumber")}
-            onBlur={() => markTouched("phoneNumber")}
-          />
-        </motion.div>
+        <div className="flex items-start gap-3 mt-4">
+          <label className="flex items-start gap-3 cursor-pointer group mt-1">
+            <div className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded border border-white/20 bg-transparent transition-colors group-hover:border-[#F2CA50]">
+              <input
+                type="checkbox"
+                className="peer absolute inset-0 opacity-0 cursor-pointer"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+              />
+              <CheckCircle2 className="h-4 w-4 text-[#F2CA50] opacity-0 transition-opacity peer-checked:opacity-100" />
+            </div>
+            <span className="se-body text-xs leading-relaxed text-[#99907c] group-hover:text-[#d0c5af] transition-colors">
+              I agree to the <Link to="/legal/terms-and-conditions" className="text-[#F2CA50] hover:underline" target="_blank">Terms & Conditions</Link> and <Link to="/legal/privacy-policy" className="text-[#F2CA50] hover:underline" target="_blank">Privacy Policy</Link>.
+            </span>
+          </label>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.26 }}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
         >
-          <Btn
-            variant="default"
-            className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
-            iconRight={isLoading ? undefined : ArrowRight}
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? "Preparing Your Space..." : "Continue"}
-          </Btn>
-        </motion.div>
-      </motion.form>
+          {isLoading ? "Creating Account..." : "Register"}
+          {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+        </button>
+      </form>
 
       {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28 }}
-        >
-          <div className="my-6 flex items-center gap-4">
+        <div className="mt-8">
+          <div className="mb-6 flex items-center gap-4">
             <Hairline tone="soft" />
-            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500] whitespace-nowrap">
-              Or continue with
+            <span className="se-label text-[10px] uppercase tracking-[0.28em] text-[#574500] whitespace-nowrap">
+              Or register with
             </span>
             <Hairline tone="soft" />
           </div>
           <div className="space-y-3">
             {GOOGLE_ENABLED && (
-              <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
-                <GoogleAuthButton
-                  onSuccess={() => {}}
-                  onError={() => {}}
-                  label="Join with Google"
-                />
+              <div className="opacity-85 transition-opacity hover:opacity-100">
+                <GoogleAuthButton onSuccess={() => {}} onError={() => {}} label="Register with Google" />
               </div>
             )}
             {FACEBOOK_ENABLED && (
-              <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
-                <FacebookAuthButton
-                  onSuccess={() => {}}
-                  onError={() => {}}
-                  label="Join with Facebook"
-                />
+              <div className="opacity-85 transition-opacity hover:opacity-100">
+                <FacebookAuthButton onSuccess={() => {}} onError={() => {}} label="Register with Facebook" />
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="mt-5 flex items-center justify-center gap-2 text-xs text-[#99907c]"
-      >
-        <ShieldCheck size={14} className="text-[#f2ca50]" />
-        <span>Secure & Encrypted Authentication</span>
-      </motion.div>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.32 }}
-        className="mt-6 se-body text-sm text-[#99907c] text-center pb-4"
-      >
-        Already an elite member?{" "}
-        <Link
-          to="/auth/login"
-          className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
-        >
-          Continue your journey
-        </Link>
-      </motion.p>
-    </motion.div>
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <p className="se-body text-sm text-[#99907c]">
+          Already have an account?{" "}
+          <Link
+            to="/auth/login"
+            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-[#F2CA50] transition-colors hover:text-[#ffe088]"
+          >
+            Sign In
+          </Link>
+        </p>
+      </div>
+    </AuthPageWrapper>
   );
 };
 

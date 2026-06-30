@@ -1,107 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   loginUserAction,
   googleSignInAction,
   facebookSignInAction,
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
+import usePageMeta from "@/hooks/use-page-meta";
+import AuthPageWrapper from "@/components/auth-components/AuthPageWrapper";
+import LuxuryInput from "@/components/auth-components/LuxuryInput";
 import GoogleAuthButton from "@/components/auth-components/GoogleAuthButton";
 import FacebookAuthButton from "@/components/auth-components/FacebookAuthButton";
-import usePageMeta from "@/hooks/use-page-meta";
-import LuxuryInput from "@/components/auth-components/LuxuryInput";
-import {
-  AUTH_PRIMARY_BTN,
-  Btn,
-  Eyebrow,
-  Hairline,
-} from "@/components/ui/editorial";
-import { motion } from "framer-motion";
+import { describeAuthError } from "@/lib/auth-errors";
+import { AUTH_PRIMARY_BTN, Btn, Hairline } from "@/components/ui/editorial";
 
 const GOOGLE_ENABLED = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FACEBOOK_ENABLED = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-if (import.meta.env.DEV && !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-  console.warn(
-    "[Saga Elite] VITE_GOOGLE_CLIENT_ID not set — Google auth disabled."
-  );
-}
-
-const describeAuthError = (err) => {
-  if (typeof err === "string")
-    return { title: "Login failed", description: err };
-
-  const status = err?.response?.status;
-  const serverMsg = err?.response?.data?.message;
-  const code = err?.code;
-
-  if (code === "ERR_NETWORK" || err?.message === "Network Error") {
-    return {
-      title: "Cannot reach the atelier",
-      description:
-        "The backend isn't responding. Confirm it's running at the configured VITE_API_URL and that CORS allows http://localhost:5173 with credentials.",
-    };
-  }
-  if (status === 401) {
-    return {
-      title: "Wrong details",
-      description:
-        serverMsg || "Email or password didn't match. Try again.",
-    };
-  }
-  if (status === 403) {
-    return {
-      title: "Account not verified",
-      description:
-        serverMsg || "Verify your email before signing in.",
-    };
-  }
-  if (status === 429) {
-    return {
-      title: "Too many attempts",
-      description: serverMsg || "Wait a few minutes and try again.",
-    };
-  }
-  if (status >= 500) {
-    return {
-      title: `Server error · ${status}`,
-      description:
-        serverMsg || "The atelier had an issue. Try again shortly.",
-    };
-  }
-  if (status) {
-    return {
-      title: `Login failed · ${status}`,
-      description: serverMsg || err?.message || "Something didn't work.",
-    };
-  }
-  return {
-    title: "Login failed",
-    description: serverMsg || err?.message || "Something didn't work.",
-  };
-};
-
 const validateLogin = (data, touched = {}) => {
   const errs = {};
   if (touched.email && !data.email) {
-    errs.email = "Tell us your email.";
+    errs.email = "Please enter your email.";
   } else if (data.email && !EMAIL_REGEX.test(data.email)) {
-    errs.email = "Please enter a valid email address.";
+    errs.email = "Please enter a valid email format.";
   }
   if (touched.password && !data.password) {
-    errs.password = "Enter your password.";
+    errs.password = "Please enter your password.";
   }
   return errs;
 };
 
 const resolveDestination = (user) => {
   const role = String(user?.role || "").toLowerCase();
-  if (
-    ["admin", "super_admin", "superadmin", "sub_admin"].includes(role)
-  ) {
+  if (["admin", "super_admin", "sub_admin"].includes(role)) {
     return "/admin/dashboard";
   }
   return "/shopping/home";
@@ -109,39 +43,25 @@ const resolveDestination = (user) => {
 
 const resolveUserFromPayload = (payload) => {
   if (!payload) return null;
-  return (
-    payload.data?.user ||
-    (payload.data && typeof payload.data === "object"
-      ? payload.data
-      : null) ||
-    payload.user ||
-    null
-  );
+  return payload.data?.user || (payload.data && typeof payload.data === "object" ? payload.data : null) || payload.user || null;
 };
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  usePageMeta({ title: "Sign In" });
+
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  const { isAuthenticated, user } = useSelector(
-    (state) => state.auth
-  );
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (isAuthenticated)
-      navigate(resolveDestination(user), { replace: true });
+    if (isAuthenticated) navigate(resolveDestination(user), { replace: true });
   }, [isAuthenticated, user, navigate]);
-
-  usePageMeta({ title: "Sign In" });
 
   useEffect(() => {
     setErrors(validateLogin(formData, touched));
@@ -158,23 +78,16 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await dispatch(
-        loginUserAction(formData)
-      ).unwrap();
-
-      console.info("[login] response", response);
-
+      const response = await dispatch(loginUserAction({ ...formData, rememberMe })).unwrap();
       const u = resolveUserFromPayload(response);
 
       toast({
         title: "Welcome back",
-        description: response?.message || "Signed in.",
+        description: response?.message || "Signed in successfully.",
         variant: "success",
       });
-
       navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      console.error("[login] error", err);
       const { title, description } = describeAuthError(err);
       toast({ title, description, variant: "destructive" });
     } finally {
@@ -182,15 +95,11 @@ const Login = () => {
     }
   };
 
-  const handleGoogleSuccess = async ({ access_token }) => {
+  const handleSocialSuccess = (provider) => async ({ access_token }) => {
     setIsLoading(true);
     try {
-      const response = await dispatch(
-        googleSignInAction({ accessToken: access_token })
-      ).unwrap();
-
-      console.info("[google sign-in] response", response);
-
+      const action = provider === 'google' ? googleSignInAction : facebookSignInAction;
+      const response = await dispatch(action({ accessToken: access_token })).unwrap();
       const u = resolveUserFromPayload(response);
 
       toast({
@@ -198,115 +107,47 @@ const Login = () => {
         description: response?.message || "Signed in.",
         variant: "success",
       });
-
       navigate(resolveDestination(u), { replace: true });
     } catch (err) {
-      console.error("[google sign-in] error", err);
       const { title, description } = describeAuthError(err);
-
       toast({
-        title:
-          title === "Login failed"
-            ? "Google sign-in failed"
-            : title,
+        title: title === "Login failed" ? `${provider} sign-in failed` : title,
         description,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleError = () => {
-    toast({
-      title: "Google sign-in failed",
-      description:
-        "Please try again or use email and password.",
-      variant: "destructive",
-    });
-  };
-
-  const handleFacebookSuccess = async ({ access_token }) => {
-    setIsLoading(true);
-    try {
-      const response = await dispatch(
-        facebookSignInAction({ accessToken: access_token })
-      ).unwrap();
-
-      const u = resolveUserFromPayload(response);
-
-      toast({
-        title: "Welcome back",
-        description: response?.message || "Signed in.",
-        variant: "success",
-      });
-
-      navigate(resolveDestination(u), { replace: true });
-    } catch (err) {
-      console.error("[facebook sign-in] error", err);
-      const { title, description } = describeAuthError(err);
-      toast({
-        title: title === "Login failed" ? "Facebook sign-in failed" : title,
-        description,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFacebookError = () => {
-    toast({
-      title: "Facebook sign-in failed",
-      description: "Please try again or use email and password.",
-      variant: "destructive",
-    });
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    <AuthPageWrapper
+      title="Welcome Back"
+      description="Sign in to access your orders, wishlist, exclusive drops, and faster checkout."
+      badgeText="Secure Authentication"
     >
-      {/* Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-      >
-        <Eyebrow tone="gold" size="md">Welcome Back</Eyebrow>
-        <h1 className="mt-3 se-serif text-[#e5e2e1] leading-[1.05] text-3xl sm:text-4xl md:text-5xl">
-          Continue your<br />elite experience.
-        </h1>
-        <p className="mt-4 se-body text-sm text-[#d0c5af] leading-relaxed max-w-sm">
-          Sign in to unlock exclusive collections, order updates, and early drop access.
-        </p>
-      </motion.div>
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <LuxuryInput
+          id="email"
+          type="email"
+          label="Email Address"
+          placeholder="your@email.com"
+          autoComplete="email"
+          value={formData.email}
+          error={touched.email ? errors.email : ""}
+          onChange={(e) => {
+            setFormData((p) => ({ ...p, email: e.target.value }));
+            setTouched((p) => ({ ...p, email: true }));
+          }}
+          onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+        />
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <LuxuryInput
-            id="email"
-            type="email"
-            label="Email Address"
-            autoComplete="email"
-            value={formData.email}
-            error={touched.email ? errors.email : ""}
-            onChange={(e) => {
-              setFormData((p) => ({ ...p, email: e.target.value }));
-              setTouched((p) => ({ ...p, email: true }));
-            }}
-            onBlur={() => setTouched((p) => ({ ...p, email: true }))}
-          />
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <div>
           <LuxuryInput
             id="password"
             type="password"
-            label="Your Private Key"
+            label="Password"
+            placeholder="Enter your password"
             autoComplete="current-password"
             value={formData.password}
             error={touched.password ? errors.password : ""}
@@ -316,89 +157,82 @@ const Login = () => {
             }}
             onBlur={() => setTouched((p) => ({ ...p, password: true }))}
           />
-          <div className="flex items-center justify-end mt-1">
+          <div className="mt-4 flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="relative flex h-4 w-4 items-center justify-center rounded border border-white/20 bg-transparent transition-colors group-hover:border-[#F2CA50]">
+                <input
+                  type="checkbox"
+                  className="peer absolute inset-0 opacity-0 cursor-pointer"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <CheckCircle2 className="h-3 w-3 text-[#F2CA50] opacity-0 transition-opacity peer-checked:opacity-100" />
+              </div>
+              <span className="se-body text-xs text-[#99907c] group-hover:text-[#d0c5af] transition-colors">Remember me</span>
+            </label>
             <Link
               to="/auth/forgot-password"
-              className="se-label text-[9px] uppercase tracking-[0.24em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#F2CA50] transition-colors"
             >
-              Forgot password?
+              Forgot Password?
             </Link>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Btn
-            variant="default"
-            className={`${AUTH_PRIMARY_BTN} w-full transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.3)]`}
-            iconRight={isLoading ? undefined : ArrowRight}
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? "Entering Your Elite Space..." : "Enter the elite"}
-          </Btn>
-        </motion.div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
+        >
+          {isLoading ? "Signing in..." : "Sign In"}
+          {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+        </button>
       </form>
 
-      {/* Trust Badge */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.25 }}
-        className="mt-5 flex items-center justify-center gap-2 text-xs text-[#99907c]"
-      >
-        <ShieldCheck size={14} className="text-[#f2ca50]" />
-        <span>Secure & Encrypted Authentication</span>
-      </motion.div>
-
-      {/* Social Auth Divider */}
       {(GOOGLE_ENABLED || FACEBOOK_ENABLED) && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="my-6 flex items-center gap-4">
+        <div className="mt-8">
+          <div className="mb-6 flex items-center gap-4">
             <Hairline tone="soft" />
-            <span className="se-label text-[10px] tracking-[0.28em] text-[#574500] whitespace-nowrap">
+            <span className="se-label text-[10px] uppercase tracking-[0.28em] text-[#574500] whitespace-nowrap">
               Or continue with
             </span>
             <Hairline tone="soft" />
           </div>
           <div className="space-y-3">
             {GOOGLE_ENABLED && (
-              <div className="google-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+              <div className="opacity-85 transition-opacity hover:opacity-100">
                 <GoogleAuthButton
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
+                  onSuccess={handleSocialSuccess('google')}
+                  onError={() => toast({ title: "Google sign-in failed", description: "Try again.", variant: "destructive" })}
                   label="Continue with Google"
                 />
               </div>
             )}
             {FACEBOOK_ENABLED && (
-              <div className="facebook-auth-wrapper opacity-85 transition-opacity hover:opacity-100">
+              <div className="opacity-85 transition-opacity hover:opacity-100">
                 <FacebookAuthButton
-                  onSuccess={handleFacebookSuccess}
-                  onError={handleFacebookError}
+                  onSuccess={handleSocialSuccess('facebook')}
+                  onError={() => toast({ title: "Facebook sign-in failed", description: "Try again.", variant: "destructive" })}
                   label="Continue with Facebook"
                 />
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Switch to Register */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.35 }}
-        className="mt-8 se-body text-sm text-[#99907c] text-center"
-      >
-        Not an elite member yet?{" "}
-        <Link
-          to="/auth/register"
-          className="se-label text-[10px] tracking-[0.24em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
-        >
-          Join the brand experience
-        </Link>
-      </motion.p>
-    </motion.div>
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <p className="se-body text-sm text-[#99907c]">
+          Don't have an account?{" "}
+          <Link
+            to="/auth/register"
+            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-[#F2CA50] transition-colors hover:text-[#ffe088]"
+          >
+            Create New Account
+          </Link>
+        </p>
+      </div>
+    </AuthPageWrapper>
   );
 };
 
