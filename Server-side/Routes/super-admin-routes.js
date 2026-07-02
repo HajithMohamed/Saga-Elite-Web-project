@@ -66,6 +66,12 @@ router.get(
 // ── System Stats ────────────────────────────────────────────────────
 router.get("/stats", superAdminController.getSystemStats);
 
+// ── Integration Status (read-only .env presence report) ────────────
+router.get(
+  "/integration-status",
+  require("../Controllers/integration-status-controller").getIntegrationStatus
+);
+
 // ── Proxy Routes (super admin can access all resources) ─────────────
 router.get("/products", requirePermission("products"), paginatedResult(Product), require("../Controllers/product-controller").getAllProducts);
 router.get("/orders", requirePermission("orders"), require("../Controllers/order-controller").getAllOrders);

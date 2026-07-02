@@ -17,10 +17,30 @@ export function FormField({
   helper,
   error,
   hint, // appears beside label (e.g. "0 / 200")
+  maxLength, // with showCount, renders a live "n / max" counter as the hint
+  showCount = false,
+  value, // current field value — needed for the counter
   children,
   htmlFor,
   className = "",
 }) {
+  const length = String(value ?? "").length;
+  const nearLimit = maxLength ? length >= maxLength * 0.85 : false;
+  const counter =
+    showCount && maxLength ? (
+      <span
+        className={`text-[10px] tabular-nums ${
+          length > maxLength
+            ? "text-rose-400"
+            : nearLimit
+              ? "text-[#D4AF37]"
+              : "text-white/30"
+        }`}
+      >
+        {length} / {maxLength}
+      </span>
+    ) : null;
+
   return (
     <div className={`space-y-2 ${className}`.trim()}>
       <div className="flex items-baseline justify-between gap-3">
@@ -36,9 +56,9 @@ export function FormField({
             </span>
           ) : null}
         </label>
-        {hint ? (
+        {counter || (hint ? (
           <span className="text-[10px] tabular-nums text-white/30">{hint}</span>
-        ) : null}
+        ) : null)}
       </div>
       {helper ? (
         <p className="text-[11px] leading-relaxed text-white/40">{helper}</p>

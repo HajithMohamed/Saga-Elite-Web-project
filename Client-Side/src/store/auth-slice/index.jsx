@@ -279,6 +279,33 @@ export const registerGuestAction = createAsyncThunk(
   }
 );
 
+export const verifyTwoFactorAction = createAsyncThunk(
+  "auth/verify-2fa",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(`/auth/verify-2fa`, formData);
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const resendTwoFactorOtpAction = createAsyncThunk(
+  "auth/resend-2fa",
+  async (email, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(`/auth/resend-2fa`, { email });
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -512,6 +539,31 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+      })
+      // Verify 2FA
+      .addCase(verifyTwoFactorAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(verifyTwoFactorAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const isSuccess = action.payload.success || action.payload.status === "success";
+        state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
+        state.isAuthenticated = !!isSuccess;
+      })
+      .addCase(verifyTwoFactorAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Resend 2FA OTP
+      .addCase(resendTwoFactorOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(resendTwoFactorOtpAction.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(resendTwoFactorOtpAction.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });

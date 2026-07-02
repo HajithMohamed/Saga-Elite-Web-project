@@ -13,10 +13,12 @@ const {
   checkAuth,
   checkGuest,
   registerGuest,
+  verifyTwoFactor,
+  resendTwoFactorOtp,
 } = require("../Controllers/auth-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
-const { loginLimiter } = require("../Middlewares/rateLimitinMiddleware");
+const { loginLimiter, authLimiter } = require("../Middlewares/rateLimitinMiddleware");
 const {
   validateAuthRegister,
   validateAuthLogin,
@@ -42,5 +44,7 @@ router.post("/reset-password", validateResetPassword, resetPassword);
 router.post("/resend-reset-otp", validateEmailOnly, resendResetPasswordOtp);
 router.post("/check-guest", validateEmailOnly, checkGuest);
 router.post("/register-guest", validateEmailOnly, registerGuest);
+router.post("/verify-2fa", authLimiter, verifyTwoFactor);
+router.post("/resend-2fa", authLimiter, resendTwoFactorOtp);
 
 module.exports = router;

@@ -368,6 +368,7 @@ const FooterManager = () => {
                       label="Upload icon"
                       type="logo"
                       refId={`footer_payment_${idx}`}
+                      guidelines={{ dims: "120×76", maxSize: "1 MB", formats: "PNG / SVG / WEBP" }}
                     />
                   </div>
                 </div>

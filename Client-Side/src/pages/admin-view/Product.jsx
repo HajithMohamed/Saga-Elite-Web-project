@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
 import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Plus,
@@ -603,6 +604,51 @@ const Product = () => {
     return uploadedImages;
   };
 
+  // Persist colorTag edits + removals of already-uploaded images. The studio
+  // only edits local state; server state lives in `productImages` (set at
+  // beginEdit / after gallery changes), so a diff yields the pending changes.
+  const persistImageMetaChanges = async (originalImages, currentImages) => {
+    const failures = [];
+    const currentById = new Map(
+      currentImages.filter((img) => img._id).map((img) => [img._id, img])
+    );
+
+    for (const original of originalImages.filter((img) => img._id)) {
+      const current = currentById.get(original._id);
+
+      if (!current) {
+        // Removed in the studio → delete on the server.
+        try {
+          await axiosInstance.delete(`/image/delete-image/${original._id}`);
+        } catch {
+          failures.push("delete");
+        }
+        continue;
+      }
+
+      const originalTag = String(original.colorTag || "").trim();
+      const currentTag = String(current.colorTag || "").trim();
+      if (originalTag !== currentTag) {
+        try {
+          await axiosInstance.patch(`/image/update-image/${original._id}`, {
+            colorTag: currentTag,
+          });
+        } catch {
+          failures.push("colorTag");
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      toast({
+        title: "Some image changes didn't save",
+        description:
+          "The product was saved, but one or more image updates failed. Re-open the product and try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = async (studioFormData = formData, studioImages = productImages, setValidationErrors) => {
     if (isSavingProduct) return;
 
@@ -648,6 +694,11 @@ const Product = () => {
 
       const productId = result.product?._id;
       if (productId) {
+        // Editing: sync colorTag edits + removals of existing images first.
+        if (selectedProductSlug) {
+          await persistImageMetaChanges(productImages, studioImages);
+        }
+
         const newImages = studioImages.filter((img) => !img.isUploaded && img.file);
         if (newImages.length > 0) {
           try {

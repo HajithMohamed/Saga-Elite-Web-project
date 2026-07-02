@@ -30,6 +30,7 @@ const {
   updateMyProfile,
   getMyAddresses,
   addMyAddress,
+  setDefaultAddress,
   removeMyAddress,
   getMyManualPayments,
 } = require("../Controllers/user-controller");
@@ -62,6 +63,7 @@ router.delete("/wishlist/:productId", validateObjectIdParam("productId", "produc
 
 router.get("/addresses", getMyAddresses);
 router.post("/addresses", addMyAddress);
+router.patch("/addresses/:addressId/default", validateObjectIdParam("addressId", "address id"), setDefaultAddress);
 router.delete("/addresses/:addressId", validateObjectIdParam("addressId", "address id"), removeMyAddress);
 
 router.get("/manual-payments", getMyManualPayments);

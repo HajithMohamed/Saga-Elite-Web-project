@@ -510,6 +510,7 @@ const AboutSiteConfig = () => {
           value={values.shop_logo_url}
           onChange={(v) => setField("shop_logo_url", v)}
           label="Upload logo"
+          guidelines={{ dims: "512×512", aspect: "1:1", maxSize: "2 MB", formats: "PNG / SVG / WEBP" }}
         />
       </FieldShell>
       <div className="grid gap-4 md:grid-cols-3">

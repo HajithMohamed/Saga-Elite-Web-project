@@ -245,15 +245,21 @@ const OrderDetailDrawer = ({
             onClick={onClose}
             className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm"
           />
+          <div
+            key="modal-wrap"
+            className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto p-0 sm:p-6"
+            onClick={onClose}
+          >
           <motion.aside
             key="drawer"
             role="dialog"
             aria-modal="true"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 36 }}
-            className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-[640px] flex-col border-l border-[#4d4635]/60 bg-[#0a0a0a] text-white shadow-[-30px_0_80px_rgba(0,0,0,0.6)]"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="flex h-full max-h-full w-full flex-col border border-[#4d4635]/60 bg-[#0a0a0a] text-white shadow-[0_40px_120px_rgba(0,0,0,0.75)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-3xl"
           >
             <header className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
               <div className="min-w-0">
@@ -276,6 +282,8 @@ const OrderDetailDrawer = ({
             </header>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="md:grid md:grid-cols-[1.15fr_1fr]">
+              <div className="md:border-r md:border-white/10">
               <section className="space-y-5 px-6 py-6">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-white/5 bg-black/35 p-3">
@@ -335,26 +343,27 @@ const OrderDetailDrawer = ({
                       ) : null}
                     </div>
                   ) : null}
-                  {order.shippingAddress?.address ? (
-                    <p className="mt-3 text-xs leading-5 text-gray-400">
-                      {order.shippingAddress.address}
-                      {order.shippingAddress.city ? `, ${order.shippingAddress.city}` : ""}
-                      {order.shippingAddress.zipCode ? ` ${order.shippingAddress.zipCode}` : ""}
-                    </p>
+                  {typeof order.shippingAddress === "string" && order.shippingAddress ? (
+                    <div className="mt-3">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                        Shipping address
+                      </p>
+                      <p className="mt-1 whitespace-pre-line text-xs leading-5 text-gray-400">
+                        {order.shippingAddress}
+                      </p>
+                    </div>
+                  ) : null}
+                  {order.billingAddress && order.billingAddress !== order.shippingAddress ? (
+                    <div className="mt-3">
+                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
+                        Billing / permanent address
+                      </p>
+                      <p className="mt-1 whitespace-pre-line text-xs leading-5 text-gray-400">
+                        {order.billingAddress}
+                      </p>
+                    </div>
                   ) : null}
                 </div>
-              </section>
-
-              <section className="border-t border-white/10 px-6 py-6">
-                <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
-                  Customer story timeline
-                </p>
-                {showCancelled ? (
-                  <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
-                    Order is in a terminal state ({status.replace(/_/g, " ")}). Timeline frozen below.
-                  </div>
-                ) : null}
-                <Timeline order={order} />
               </section>
 
               {order.items && order.items.length > 0 ? (
@@ -368,15 +377,26 @@ const OrderDetailDrawer = ({
                         key={idx}
                         className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/30 px-3 py-2 text-sm"
                       >
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/50">
+                          {line.productImage ? (
+                            <img
+                              src={line.productImage}
+                              alt={line.productName || line.name || "Item"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-gray-600">
+                              <ShoppingCart className="h-4 w-4" />
+                            </div>
+                          )}
+                        </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-white">
-                            {line.name || line.product?.name || "Item"}
+                            {line.productName || line.name || line.product?.name || "Item"}
                           </p>
-                          {line.size || line.color ? (
-                            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500">
-                              {[line.size, line.color].filter(Boolean).join(" · ")}
-                            </p>
-                          ) : null}
+                          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500">
+                            {[line.size, line.color, line.variantSku].filter(Boolean).join(" · ")}
+                          </p>
                         </div>
                         <span className="shrink-0 font-mono text-xs tabular-nums text-gray-300">
                           ×{line.quantity || 1}
@@ -389,6 +409,33 @@ const OrderDetailDrawer = ({
                   </ul>
                 </section>
               ) : null}
+
+              {order.notes ? (
+                <section className="border-t border-white/10 px-6 py-6">
+                  <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
+                    Order notes
+                  </p>
+                  <p className="whitespace-pre-line rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-xs leading-5 text-gray-300">
+                    {order.notes}
+                  </p>
+                </section>
+              ) : null}
+              </div>
+
+              <div>
+              <section className="border-t border-white/10 px-6 py-6 md:border-t-0">
+                <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
+                  Customer story timeline
+                </p>
+                {showCancelled ? (
+                  <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
+                    Order is in a terminal state ({status.replace(/_/g, " ")}). Timeline frozen below.
+                  </div>
+                ) : null}
+                <Timeline order={order} />
+              </section>
+              </div>
+              </div>
             </div>
 
             <footer className="border-t border-white/10 bg-[#0a0a0a] px-6 py-4">
@@ -444,14 +491,21 @@ const OrderDetailDrawer = ({
                 {onDownloadInvoice ? (
                   <QuickAction
                     icon={MessageSquareText}
-                    label="Invoice PDF"
+                    label="Print Invoice"
                     onClick={() => onDownloadInvoice()}
                     disabled={isBusy}
                   />
                 ) : null}
+                <QuickAction
+                  icon={X}
+                  label="Close"
+                  onClick={onClose}
+                  disabled={false}
+                />
               </div>
             </footer>
           </motion.aside>
+          </div>
         </>
       ) : null}
     </AnimatePresence>

@@ -1,12 +1,34 @@
-import React, { useRef } from 'react';
-import axios from 'axios';
-import { useProductForm } from './ProductFormContext';
-import { Upload, X, Star, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
-import { API_V1_URL as API_BASE } from '@/lib/api';
+import React, { useMemo, useRef } from 'react';
+import axiosInstance from '@/api/axiosInstance';
+import { useProductForm, normalizeColorKey } from './ProductFormContext';
+import { UploadGuidelines } from '@/components/admin-components/_shared/UploadGuidelines';
+import { Upload, X, Star, ChevronUp, ChevronDown, ExternalLink, AlertTriangle } from 'lucide-react';
 
 export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
-  const { images, setImages } = useProductForm();
+  const { images, setImages, formData } = useProductForm();
   const fileInputRef = useRef(null);
+
+  // Distinct variant colors — feeds the colorTag datalist and the
+  // "this color has no tagged image" warning chips.
+  const variantColors = useMemo(() => {
+    const seen = new Map();
+    (formData?.variants || []).forEach((v) => {
+      const color = String(v?.color || '').trim();
+      if (color && !seen.has(normalizeColorKey(color))) {
+        seen.set(normalizeColorKey(color), color);
+      }
+    });
+    return [...seen.values()];
+  }, [formData?.variants]);
+
+  const untaggedColors = useMemo(() => {
+    const taggedKeys = new Set(
+      images
+        .map((img) => normalizeColorKey(img?.colorTag || ''))
+        .filter(Boolean)
+    );
+    return variantColors.filter((color) => !taggedKeys.has(normalizeColorKey(color)));
+  }, [images, variantColors]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -47,11 +69,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
         .filter((img) => img._id)
         .map((img, i) => ({ imageId: img._id, order: i }));
       try {
-        await axios.patch(
-          `${API_BASE}/image/reorder-images`,
-          { imageOrders },
-          { withCredentials: true }
-        );
+        await axiosInstance.patch(`/image/reorder-images`, { imageOrders });
       } catch {
         /* keep local order on failure */
       }
@@ -66,11 +84,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
 
     if (image._id && isEditing) {
       try {
-        await axios.patch(
-          `${API_BASE}/image/set-primary/${image._id}`,
-          {},
-          { withCredentials: true }
-        );
+        await axiosInstance.patch(`/image/set-primary/${image._id}`, {});
       } catch {
         return;
       }
@@ -90,6 +104,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
         <div>
           <h2 className="text-lg font-semibold text-white">Media Studio</h2>
           <p className="mt-1 text-xs text-white/50">Upload images and tag by variant color for storefront switching.</p>
+          <UploadGuidelines dims="1600×2000" aspect="4:5" maxSize="5 MB" />
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/50">{images.length} assets</span>
@@ -105,6 +120,32 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
           )}
         </div>
       </div>
+
+      <datalist id="media-studio-variant-colors">
+        {variantColors.map((color) => (
+          <option key={color} value={color} />
+        ))}
+      </datalist>
+
+      {untaggedColors.length > 0 && images.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <span className="text-[11px] text-amber-200/80">
+            No image tagged for:
+          </span>
+          {untaggedColors.map((color) => (
+            <span
+              key={color}
+              className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
+            >
+              {color}
+            </span>
+          ))}
+          <span className="text-[10px] text-amber-200/50">
+            — these variants will fall back to the primary image on the storefront.
+          </span>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         <div
@@ -198,6 +239,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                       prev.map((i) => ((i.id || i._id) === imgKey ? { ...i, colorTag: val } : i))
                     );
                   }}
+                  list="media-studio-variant-colors"
                   placeholder="Variant Color (e.g. Black)"
                   className="w-full rounded-lg border border-white/20 bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-md focus:border-[#D4AF37] focus:outline-none"
                 />

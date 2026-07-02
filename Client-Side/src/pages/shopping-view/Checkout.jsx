@@ -16,6 +16,7 @@ import {
 import { createOrder } from "@/store/order-slice";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
+import { getVariantImage } from "@/lib/variant-image";
 import VariantSelectors, {
   getColorsForSize,
   getProductSizes,
@@ -70,6 +71,21 @@ const SRI_LANKA_DISTRICTS = [
   "Matale", "Matara", "Monaragala", "Mullaitivu", "Nuwara Eliya",
   "Polonnaruwa", "Puttalam", "Ratnapura", "Trincomalee", "Vavuniya",
 ];
+
+// District → province, for resolving the admin-managed shipping zone
+// (ShippingZone.provinces holds province names).
+const DISTRICT_TO_PROVINCE = {
+  Colombo: "Western", Gampaha: "Western", Kalutara: "Western",
+  Kandy: "Central", Matale: "Central", "Nuwara Eliya": "Central",
+  Galle: "Southern", Matara: "Southern", Hambantota: "Southern",
+  Jaffna: "Northern", Kilinochchi: "Northern", Mannar: "Northern",
+  Mullaitivu: "Northern", Vavuniya: "Northern",
+  Trincomalee: "Eastern", Batticaloa: "Eastern", Ampara: "Eastern",
+  Kurunegala: "North Western", Puttalam: "North Western",
+  Anuradhapura: "North Central", Polonnaruwa: "North Central",
+  Badulla: "Uva", Monaragala: "Uva",
+  Ratnapura: "Sabaragamuwa", Kegalle: "Sabaragamuwa",
+};
 
 const FAST_DISTRICTS = ["Colombo", "Gampaha", "Kalutara"];
 
@@ -202,12 +218,15 @@ const sanitizePhoneInput = (value) =>
     .replace(/\s{2,}/g, " ")
     .slice(0, 18);
 
-const useCheckoutPersistence = (initialValue) => {
+const useCheckoutPersistence = (initialValue, migrate) => {
   const [val, setVal] = useState(() => {
     if (typeof window === "undefined") return initialValue;
     try {
       const stored = window.localStorage.getItem(CHECKOUT_PERSIST_KEY);
-      return stored ? JSON.parse(stored) : initialValue;
+      // Merge over the defaults so newly added form fields never come back
+      // undefined from an older persisted snapshot.
+      const merged = stored ? { ...initialValue, ...JSON.parse(stored) } : initialValue;
+      return migrate ? migrate(merged) : merged;
     } catch {
       return initialValue;
     }
@@ -357,11 +376,32 @@ const Checkout = () => {
     city: "",
     district: "",
     postalCode: "",
+    // Permanent (billing) address — delivery mirrors it while
+    // "same as permanent" is ticked.
+    sameAsPermanent: true,
+    permStreet: "",
+    permCity: "",
+    permDistrict: "",
+    permPostalCode: "",
     deliveryMode: "standard",
     notes: "",
     paymentMethod: "manual_bank_transfer",
     termsAccepted: false,
     couponCode: "",
+  }, (merged) => {
+    // Older persisted checkouts pre-date the permanent-address block —
+    // seed it from the delivery fields so nothing appears blank.
+    if (!merged.permStreet && !merged.permCity && !merged.permPostalCode &&
+        (merged.addressLine || merged.city || merged.postalCode)) {
+      return {
+        ...merged,
+        permStreet: merged.addressLine,
+        permCity: merged.city,
+        permDistrict: merged.district,
+        permPostalCode: merged.postalCode,
+      };
+    }
+    return merged;
   });
 
   const [errors, setErrors] = useState({});
@@ -461,6 +501,31 @@ const Checkout = () => {
     setCheckoutTotal(totalPrice);
   }, [hasInitializedSource, isBuyNow, items, totalPrice]);
 
+  // Pre-fill the permanent block from the default saved address, without
+  // clobbering anything the customer already typed this session.
+  const seedPermanentFromSaved = (list) => {
+    const def = list.find((a) => a.isDefault) || list[0];
+    if (!def) return;
+    setFormData((prev) => {
+      if (prev.permStreet || prev.permCity || prev.permPostalCode) return prev;
+      return {
+        ...prev,
+        permStreet: def.street || "",
+        permCity: def.city || "",
+        permDistrict: def.district || "",
+        permPostalCode: def.postalCode || "",
+        ...(prev.sameAsPermanent
+          ? {
+              addressLine: def.street || "",
+              city: def.city || "",
+              district: def.district || prev.district || "",
+              postalCode: def.postalCode || "",
+            }
+          : {}),
+      };
+    });
+  };
+
   // Saved addresses fetch (Fix #4)
   useEffect(() => {
     if (isAuthenticated) {
@@ -469,10 +534,14 @@ const Checkout = () => {
         .then((res) => {
           const list = res.data?.data?.addresses || [];
           setSavedAddresses(list);
-          if (list.length > 0) setUseNewAddress(false);
+          if (list.length > 0) {
+            setUseNewAddress(false);
+            seedPermanentFromSaved(list);
+          }
         })
         .catch(() => setSavedAddresses([]));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed helper is stable per render
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -512,7 +581,10 @@ const Checkout = () => {
       .then((res) => {
         const list = res.data?.data?.addresses || [];
         setSavedAddresses(list);
-        if (list.length > 0) setUseNewAddress(false);
+        if (list.length > 0) {
+          setUseNewAddress(false);
+          seedPermanentFromSaved(list);
+        }
       })
       .catch(() => setSavedAddresses([]));
   };
@@ -521,11 +593,56 @@ const Checkout = () => {
     if (!addr) return;
     setFormData((prev) => ({
       ...prev,
-      addressLine: addr.street || "",
-      city: addr.city || "",
-      postalCode: addr.postalCode || "",
+      // Saved addresses fill the permanent block; delivery mirrors it while
+      // "same as permanent" is ticked.
+      permStreet: addr.street || "",
+      permCity: addr.city || "",
+      permDistrict: addr.district || prev.permDistrict || "",
+      permPostalCode: addr.postalCode || "",
+      ...(prev.sameAsPermanent
+        ? {
+            addressLine: addr.street || "",
+            city: addr.city || "",
+            district: addr.district || prev.district || "",
+            postalCode: addr.postalCode || "",
+          }
+        : {}),
       country: addr.country || "Sri Lanka",
-      district: prev.district, // district isn't on saved address; user picks
+    }));
+  };
+
+  // Permanent-address field writes; mirrored into the delivery fields while
+  // the "same as permanent" checkbox is ticked.
+  const PERM_TO_DELIVERY = {
+    permStreet: "addressLine",
+    permCity: "city",
+    permDistrict: "district",
+    permPostalCode: "postalCode",
+  };
+
+  const updatePermField = (field) => (e) => {
+    const value = e?.target ? e.target.value : e;
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(prev.sameAsPermanent ? { [PERM_TO_DELIVERY[field]]: value } : {}),
+    }));
+    setErrors((prev) => ({ ...prev, [PERM_TO_DELIVERY[field]]: "" }));
+  };
+
+  const toggleSameAsPermanent = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      sameAsPermanent: checked,
+      // Ticking the box copies the permanent address onto delivery.
+      ...(checked
+        ? {
+            addressLine: prev.permStreet,
+            city: prev.permCity,
+            district: prev.permDistrict,
+            postalCode: prev.permPostalCode,
+          }
+        : {}),
     }));
   };
 
@@ -541,18 +658,53 @@ const Checkout = () => {
       .catch(() => setBankDetails(DEFAULT_MANUAL_BANK_DETAILS));
   }, []);
 
+  // Admin-managed shipping zones — resolves the delivery fee/ETA from the
+  // selected district. Falls back to the hardcoded prices if unavailable.
+  const [shippingZones, setShippingZones] = useState([]);
+  useEffect(() => {
+    axios
+      .get(`${API_BASE}/shipping-zones`)
+      .then((res) => {
+        const zones = res.data?.data?.zones || res.data?.data || [];
+        setShippingZones(Array.isArray(zones) ? zones : []);
+      })
+      .catch(() => setShippingZones([]));
+  }, []);
+
   // Always use Saga Elite gold as the checkout accent — never override with variant colour
   const CHECKOUT_GOLD = "#f2ca50";
 
-  // Delivery Pricing Logic
+  // Delivery Pricing Logic — zone-based (admin-managed), with the previous
+  // hardcoded prices as a graceful fallback when no zone matches.
   const isFastDistrict = FAST_DISTRICTS.includes(formData.district);
   const selectedDelivery = DELIVERY_METHODS.find(m => m.id === formData.deliveryMode) || DELIVERY_METHODS[0];
-  const isFreeShippingQualify = checkoutTotal >= FREE_SHIPPING_THRESHOLD;
-  
-  const shippingFee = formData.deliveryMode === "pickup" 
-    ? 0 
-    : formData.deliveryMode === "standard" && isFreeShippingQualify 
-      ? 0 
+
+  const deliveryProvince = DISTRICT_TO_PROVINCE[formData.district] || "";
+  const activeZone = useMemo(() => {
+    if (!deliveryProvince || shippingZones.length === 0) return null;
+    return (
+      shippingZones.find((zone) =>
+        (zone.provinces || []).some(
+          (p) => String(p).trim().toLowerCase() === deliveryProvince.toLowerCase()
+        )
+      ) || null
+    );
+  }, [shippingZones, deliveryProvince]);
+
+  // Free-shipping threshold: the zone's own freeAbove wins; otherwise the
+  // legacy global threshold applies.
+  const freeShippingThreshold =
+    activeZone && Number(activeZone.freeAbove) > 0
+      ? Number(activeZone.freeAbove)
+      : FREE_SHIPPING_THRESHOLD;
+  const isFreeShippingQualify = checkoutTotal >= freeShippingThreshold;
+
+  const standardFee = activeZone ? Number(activeZone.deliveryFee) || 0 : DELIVERY_METHODS[0].price;
+
+  const shippingFee = formData.deliveryMode === "pickup"
+    ? 0
+    : formData.deliveryMode === "standard"
+      ? (isFreeShippingQualify ? 0 : standardFee)
       : selectedDelivery.price;
 
   const couponDiscount = Math.min(
@@ -560,8 +712,8 @@ const Checkout = () => {
     Math.max(0, Number(appliedCoupon?.discount || 0))
   );
   const finalTotal = Math.max(0, checkoutTotal - couponDiscount) + shippingFee;
-  const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - checkoutTotal);
-  const shippingProgress = Math.min(100, (checkoutTotal / FREE_SHIPPING_THRESHOLD) * 100);
+  const amountToFreeShipping = Math.max(0, freeShippingThreshold - checkoutTotal);
+  const shippingProgress = Math.min(100, (checkoutTotal / freeShippingThreshold) * 100);
 
   const displayBankDetails = bankDetails || DEFAULT_MANUAL_BANK_DETAILS;
   const whatsAppLink = displayBankDetails.whatsapp
@@ -888,6 +1040,18 @@ const Checkout = () => {
             .filter(Boolean)
             .join("\n");
 
+    // Billing = the permanent address (equals delivery when "same as" ticked).
+    const billingAddress = formData.permStreet
+      ? [
+          formData.fullName,
+          formData.permStreet,
+          `${formData.permCity}, ${formData.permDistrict} ${formData.permPostalCode}`.trim(),
+          formData.country,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : undefined;
+
     const orderItems = checkoutItems
       .map((item) => {
         const productId = item.product?.id || item.product?._id;
@@ -922,17 +1086,31 @@ const Checkout = () => {
       return;
     }
 
-    // Structured address payload for persistence (Fix #4). Pickup mode skips it.
+    // Structured address payload for persistence (Fix #4) — stores the
+    // PERMANENT address so the next checkout auto-fills it. Pickup keeps the
+    // delivery-fields fallback.
+    const permComplete =
+      formData.permStreet && formData.permCity && formData.permPostalCode;
     const structuredAddress =
-      formData.deliveryMode === "pickup"
+      formData.deliveryMode === "pickup" && !permComplete
         ? null
-        : {
-            label: formData.district || undefined,
-            street: formData.addressLine,
-            city: formData.city,
-            postalCode: formData.postalCode,
-            country: formData.country || "Sri Lanka",
-          };
+        : permComplete
+          ? {
+              label: formData.permDistrict || undefined,
+              street: formData.permStreet,
+              city: formData.permCity,
+              district: formData.permDistrict || undefined,
+              postalCode: formData.permPostalCode,
+              country: formData.country || "Sri Lanka",
+            }
+          : {
+              label: formData.district || undefined,
+              street: formData.addressLine,
+              city: formData.city,
+              district: formData.district || undefined,
+              postalCode: formData.postalCode,
+              country: formData.country || "Sri Lanka",
+            };
 
     setIsSubmitting(true);
     try {
@@ -941,6 +1119,7 @@ const Checkout = () => {
           items: orderItems,
           checkoutMode: isBuyNow ? "buyNow" : "cart",
           shippingAddress,
+          billingAddress,
           structuredAddress,
           contactNumber: formData.phone,
           alternativePhone: formData.alternativePhone || undefined,
@@ -1091,7 +1270,7 @@ const Checkout = () => {
               {checkoutItems.map((item) => (
                 <div key={item.id} className="flex gap-4">
                   <div className="relative w-16 h-16 bg-[#131313] rounded-xl border border-[#1c1b1b] overflow-hidden flex-shrink-0">
-                    <img src={item.product?.image} alt={item.product?.name} className="w-full h-full object-contain p-1" />
+                    <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1" />
                     <span className="absolute -top-1.5 -right-1.5 bg-[#f2ca50] text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
                   </div>
                   <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
@@ -1105,7 +1284,7 @@ const Checkout = () => {
               ))}
               <div className="border-t border-[#1c1b1b] pt-4 flex flex-col gap-2">
                 <div className="flex justify-between text-sm"><span className="text-[#99907c]">Subtotal</span><span className="text-[#e5e2e1] font-bold">{formatLKR(checkoutTotal)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-[#99907c]">Shipping</span><span className="text-[#e5e2e1] font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-[#99907c]">Delivery{activeZone && formData.deliveryMode !== "pickup" ? ` · ${activeZone.name}` : ""}</span><span className="text-[#e5e2e1] font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span></div>
                 {couponDiscount > 0 && <div className="flex justify-between text-sm"><span className="text-green-400">Discount</span><span className="text-green-400 font-bold">-{formatLKR(couponDiscount)}</span></div>}
                 <div className="flex justify-between text-base pt-2 border-t border-[#f2ca50]/20"><span className="font-bold text-[#e5e2e1]">Total</span><span className="font-bold text-[#f2ca50]">{formatLKR(finalTotal)}</span></div>
               </div>
@@ -1156,6 +1335,7 @@ const Checkout = () => {
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Email Address *</label>
                         <input type="email" value={formData.email}
                           onChange={handleEmailChange} readOnly={isAuthenticated}
+                          onBlur={() => { if (!isAuthenticated) fetchGuestAddresses(formData.email); }}
                           placeholder="you@example.com"
                           className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.email ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]", isAuthenticated ? "opacity-60 cursor-not-allowed" : ""].join(" ")}
                         />
@@ -1184,7 +1364,10 @@ const Checkout = () => {
                   </section>
 
                   <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <h2 className="text-xl font-bold text-[#e5e2e1]">Delivery Address</h2>
+                    <div>
+                      <h2 className="text-xl font-bold text-[#e5e2e1]">Permanent Address</h2>
+                      <p className="text-[11px] text-[#99907c] mt-1">Saved to your account and auto-filled on your next purchase.</p>
+                    </div>
 
                     {savedAddresses.length > 0 && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1208,40 +1391,97 @@ const Checkout = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Street Address *</label>
-                        <input type="text" value={formData.addressLine}
-                          onChange={(e) => updateField("addressLine")(e)} placeholder="No. 12, Main Street"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.addressLine ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                        <input type="text" value={formData.permStreet}
+                          onChange={updatePermField("permStreet")} placeholder="No. 12, Main Street"
+                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.addressLine ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         />
-                        {errors.addressLine && <span className="text-[10px] text-[#ffb4ab]">{errors.addressLine}</span>}
+                        {formData.sameAsPermanent && errors.addressLine && <span className="text-[10px] text-[#ffb4ab]">{errors.addressLine}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">City *</label>
-                        <input type="text" value={formData.city}
-                          onChange={(e) => updateField("city")(e)} placeholder="Colombo"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.city ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                        <input type="text" value={formData.permCity}
+                          onChange={updatePermField("permCity")} placeholder="Colombo"
+                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.city ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         />
-                        {errors.city && <span className="text-[10px] text-[#ffb4ab]">{errors.city}</span>}
+                        {formData.sameAsPermanent && errors.city && <span className="text-[10px] text-[#ffb4ab]">{errors.city}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">District *</label>
-                        <select value={formData.district}
-                          onChange={(e) => updateField("district")(e)}
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] outline-none transition-colors appearance-none cursor-pointer", errors.district ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                        <select value={formData.permDistrict}
+                          onChange={updatePermField("permDistrict")}
+                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] outline-none transition-colors appearance-none cursor-pointer", formData.sameAsPermanent && errors.district ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         >
                           <option value="">Select District</option>
                           {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
                         </select>
-                        {errors.district && <span className="text-[10px] text-[#ffb4ab]">{errors.district}</span>}
+                        {formData.sameAsPermanent && errors.district && <span className="text-[10px] text-[#ffb4ab]">{errors.district}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Postal Code *</label>
-                        <input type="text" value={formData.postalCode}
-                          onChange={(e) => updateField("postalCode")(e)} placeholder="10100"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.postalCode ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                        <input type="text" value={formData.permPostalCode}
+                          onChange={updatePermField("permPostalCode")} placeholder="10100"
+                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.postalCode ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
                         />
-                        {errors.postalCode && <span className="text-[10px] text-[#ffb4ab]">{errors.postalCode}</span>}
+                        {formData.sameAsPermanent && errors.postalCode && <span className="text-[10px] text-[#ffb4ab]">{errors.postalCode}</span>}
                       </div>
                     </div>
+
+                    {/* Same-as-permanent toggle */}
+                    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-[#1c1b1b] bg-[#0a0a0a] p-4 hover:border-[#4d4635] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.sameAsPermanent}
+                        onChange={(e) => toggleSameAsPermanent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[#f2ca50] cursor-pointer"
+                      />
+                      <span className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-[#e5e2e1]">Delivery address is same as permanent address</span>
+                        <span className="text-[10px] text-[#99907c]">Untick to ship this order somewhere else — your permanent address stays saved.</span>
+                      </span>
+                    </label>
+
+                    {!formData.sameAsPermanent && (
+                      <div className="flex flex-col gap-4 rounded-xl border border-[#f2ca50]/20 bg-[#f2ca50]/[0.02] p-4 md:p-5">
+                        <h3 className="text-sm font-bold text-[#e5e2e1]">Delivery Address</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="md:col-span-2 flex flex-col gap-1.5">
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Street Address *</label>
+                            <input type="text" value={formData.addressLine}
+                              onChange={(e) => updateField("addressLine")(e)} placeholder="No. 12, Main Street"
+                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.addressLine ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                            />
+                            {errors.addressLine && <span className="text-[10px] text-[#ffb4ab]">{errors.addressLine}</span>}
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">City *</label>
+                            <input type="text" value={formData.city}
+                              onChange={(e) => updateField("city")(e)} placeholder="Colombo"
+                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.city ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                            />
+                            {errors.city && <span className="text-[10px] text-[#ffb4ab]">{errors.city}</span>}
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">District *</label>
+                            <select value={formData.district}
+                              onChange={(e) => updateField("district")(e)}
+                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] outline-none transition-colors appearance-none cursor-pointer", errors.district ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                            >
+                              <option value="">Select District</option>
+                              {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                            {errors.district && <span className="text-[10px] text-[#ffb4ab]">{errors.district}</span>}
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Postal Code *</label>
+                            <input type="text" value={formData.postalCode}
+                              onChange={(e) => updateField("postalCode")(e)} placeholder="10100"
+                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.postalCode ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                            />
+                            {errors.postalCode && <span className="text-[10px] text-[#ffb4ab]">{errors.postalCode}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <div className="flex justify-end">
@@ -1281,12 +1521,50 @@ const Checkout = () => {
                       </div>
                     )}
 
+                    {/* Delivery zone transparency — resolved from the admin-managed
+                        shipping zones by the selected district's province. */}
+                    {activeZone && formData.deliveryMode !== "pickup" && (
+                      <div className="p-4 rounded-xl border border-[#f2ca50]/20 bg-[#f2ca50]/[0.03] flex flex-col gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Delivery Zone</div>
+                            <div className="text-sm font-bold text-[#e5e2e1] mt-0.5">{activeZone.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Estimated</div>
+                            <div className="text-sm font-bold text-[#e5e2e1] mt-0.5">{activeZone.estimatedDays || "1–3 business days"}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Delivery Charge</div>
+                            <div className="text-sm font-bold mt-0.5">
+                              {isFreeShippingQualify && formData.deliveryMode === "standard"
+                                ? <span className="text-green-400">FREE</span>
+                                : <span className="text-[#f2ca50]">{formatLKR(standardFee)}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-[#99907c] border-t border-[#f2ca50]/10 pt-2.5">
+                          Delivery charges are calculated automatically based on your delivery zone
+                          ({deliveryProvince} Province).
+                          {Number(activeZone.freeAbove) > 0 && (
+                            <> Orders above {formatLKR(activeZone.freeAbove)} ship free in this zone.</>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-3">
                       {DELIVERY_METHODS.map((method) => {
                         const isSelected = formData.deliveryMode === method.id;
                         const Icon = method.icon;
-                        const eta = isFastDistrict ? method.fastEta : method.eta;
-                        const fee = method.id === "pickup" ? 0 : (method.id === "standard" && isFreeShippingQualify) ? 0 : method.price;
+                        const eta = method.id === "standard" && activeZone?.estimatedDays
+                          ? activeZone.estimatedDays
+                          : isFastDistrict ? method.fastEta : method.eta;
+                        const fee = method.id === "pickup"
+                          ? 0
+                          : method.id === "standard"
+                            ? (isFreeShippingQualify ? 0 : standardFee)
+                            : method.price;
                         return (
                           <div key={method.id}
                             onClick={() => updateField("deliveryMode")(method.id)}
@@ -1495,7 +1773,7 @@ const Checkout = () => {
                   {checkoutItems.map((item) => (
                     <div key={item.id} className="flex gap-4">
                       <div className="relative w-[72px] h-[72px] bg-[#0a0a0a] rounded-xl border border-[#1c1b1b] overflow-hidden flex-shrink-0">
-                        <img src={item.product?.image} alt={item.product?.name} className="w-full h-full object-contain p-1.5" />
+                        <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1.5" />
                         <span className="absolute -top-1.5 -right-1.5 bg-[#f2ca50] text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
                       </div>
                       <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
@@ -1552,6 +1830,11 @@ const Checkout = () => {
                     <span className="text-[#99907c]">Shipping ({selectedDelivery.label})</span>
                     <span className="font-bold">{shippingFee === 0 ? <span className="text-green-400">FREE</span> : <span className="text-[#e5e2e1]">{formatLKR(shippingFee)}</span>}</span>
                   </div>
+                  {activeZone && formData.deliveryMode !== "pickup" && (
+                    <p className="text-[9px] uppercase tracking-widest text-[#4d4635] -mt-1.5">
+                      {activeZone.name} · {activeZone.estimatedDays || "1–3 business days"}
+                    </p>
+                  )}
                   {couponDiscount > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-green-400">Discount ({appliedCoupon?.code})</span>

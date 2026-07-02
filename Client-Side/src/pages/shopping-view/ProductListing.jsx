@@ -75,6 +75,8 @@ const ProductListing = () => {
   const sortParam = (searchParams.get("sort") || "new").toLowerCase();
   const inStockOnly = searchParams.get("stock") === "in";
   const limitedOnly = searchParams.get("limited") === "1";
+  // Header search lands here as ?keyword=… — stays active until cleared.
+  const keywordParam = (searchParams.get("keyword") || "").trim();
   const isOffersListing = categoryParam === "offers" || filterParam === "offers";
 
   // Refinements
@@ -194,8 +196,24 @@ const ProductListing = () => {
     return list;
   }, [products, sortParam]);
 
+  const keywordKey = keywordParam.toLowerCase();
+
   const filteredProducts = useMemo(() => {
     return sortedProducts
+      .filter((p) => {
+        if (!keywordKey) return true;
+        const haystack = [
+          p.name,
+          p.brand?.name || p.brand,
+          p.artNo,
+          p.description,
+          ...(Array.isArray(p.tags) ? p.tags : []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(keywordKey);
+      })
       .filter((p) => !inStockOnly || (p.variants || []).some((v) => Number(v?.stock || 0) > 0))
       .filter((p) => !limitedOnly || p.isLimited)
       .filter((p) => {
@@ -215,11 +233,11 @@ const ProductListing = () => {
         const price = Number(p.basePrice || 0);
         return price >= priceMinParam && price <= priceMaxParam;
       });
-  }, [sortedProducts, inStockOnly, limitedOnly, colorsParam, sizesParam, brandsParam, priceMinParam, priceMaxParam]);
+  }, [sortedProducts, keywordKey, inStockOnly, limitedOnly, colorsParam, sizesParam, brandsParam, priceMinParam, priceMaxParam]);
 
   const { page, setPage, pageCount, total: totalProducts, pageItems: visibleProducts, pageSize: productPageSize } = usePagination(filteredProducts, PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [setPage, categoryParam, filterParam, inStockOnly, limitedOnly, colorsParam.join(","), sizesParam.join(","), brandsParam.join(","), priceMinParam, priceMaxParam]);
+  useEffect(() => { setPage(1); }, [setPage, categoryParam, filterParam, keywordKey, inStockOnly, limitedOnly, colorsParam.join(","), sizesParam.join(","), brandsParam.join(","), priceMinParam, priceMaxParam]);
 
   useLiveProductUpdates((payload = {}) => products.some((product) => String(product._id) === String(payload.productId || "")));
 
@@ -384,6 +402,16 @@ const ProductListing = () => {
                 <div className="text-[#99907c] se-label text-[11px] uppercase tracking-widest">
                   Showing {totalProducts} Products
                 </div>
+                {/* Active search keyword — persists until cleared */}
+                {keywordParam && (
+                  <button
+                    onClick={() => updateParams((p) => p.delete("keyword"))}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-[#F2CA50]/10 border border-[#F2CA50]/40 rounded-full text-[10px] text-[#F2CA50] uppercase tracking-wider hover:bg-[#F2CA50]/20 transition-colors"
+                    title="Clear search"
+                  >
+                    “{keywordParam}” <X className="w-3 h-3" />
+                  </button>
+                )}
                 {/* Active Filter Chips */}
                 {hasFilterActive && (
                   <div className="flex flex-wrap gap-2 items-center">
@@ -471,11 +499,20 @@ const ProductListing = () => {
                 </div>
                 <h3 className="text-[#fafafa] se-serif text-[28px] mb-2">No Matches Found</h3>
                 <p className="text-[#99907c] max-w-md mx-auto se-body text-[15px] mb-8">
-                  We couldn't find any products matching your current filters.
+                  {keywordParam
+                    ? `We couldn't find any products matching “${keywordParam}”.`
+                    : "We couldn't find any products matching your current filters."}
                 </p>
-                <button onClick={clearAllFilters} className="h-[52px] px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
-                  Clear Filters
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  {keywordParam && (
+                    <button onClick={() => updateParams((p) => p.delete("keyword"))} className="h-[52px] px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
+                      Clear Search
+                    </button>
+                  )}
+                  <button onClick={clearAllFilters} className="h-[52px] px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
+                    Clear Filters
+                  </button>
+                </div>
               </motion.div>
             ) : (
               <div>
@@ -483,7 +520,7 @@ const ProductListing = () => {
                   products={visibleProducts}
                   featuredEvery={filteredProducts.length < 6 ? Infinity : 7}
                   filtersOpen={filtersOpen}
-                  motionKey={[categoryParam, subCategoryParam, categoryPathParam, filterParam, sortParam].join("|")}
+                  motionKey={[categoryParam, subCategoryParam, categoryPathParam, filterParam, sortParam, keywordKey].join("|")}
                 />
                 <div className="mt-12">
                   <Pagination page={page} pageCount={pageCount} onPageChange={setPage} total={totalProducts} pageSize={productPageSize} label="products" />

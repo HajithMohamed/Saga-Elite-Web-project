@@ -401,6 +401,9 @@ const sanitizeStructuredAddress = (input) => {
     }),
     street,
     city,
+    district: sanitizeOptionalPlainText(input.district, "structuredAddress.district", {
+      maxLength: 64,
+    }),
     postalCode,
     country:
       sanitizeOptionalPlainText(input.country, "structuredAddress.country", {
@@ -810,6 +813,9 @@ const validateOrderCreate = createValidationMiddleware((req) => {
     shippingAddress: sanitizeString(req.body.shippingAddress, "shippingAddress", {
       required: true,
       minLength: 8,
+      maxLength: 1000,
+    }),
+    billingAddress: sanitizeOptionalPlainText(req.body.billingAddress, "billingAddress", {
       maxLength: 1000,
     }),
     contactNumber,
@@ -1411,7 +1417,7 @@ const validateBulkReviewAction = createValidationMiddleware((req) => {
 
   const action = sanitizeEnum(
     req.body.action,
-    ["feature", "unfeature", "category"],
+    ["feature", "unfeature", "category", "archive", "restore"],
     "action",
     { required: true }
   );

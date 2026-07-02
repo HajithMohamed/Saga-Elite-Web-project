@@ -90,6 +90,16 @@ export const featureReviewApi = (reviewId, isFeatured) =>
     }
   );
 
+export const archiveReviewApi = (reviewId) =>
+  axios.patch(`${API_BASE}/admin/reviews/${reviewId}/archive`, null, {
+    withCredentials: true,
+  });
+
+export const restoreReviewApi = (reviewId) =>
+  axios.patch(`${API_BASE}/admin/reviews/${reviewId}/restore`, null, {
+    withCredentials: true,
+  });
+
 export const fetchReviewAnalyticsApi = () =>
   axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });
 

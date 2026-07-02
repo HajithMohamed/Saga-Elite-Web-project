@@ -14,6 +14,7 @@ import {
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { invalidateShopAbout } from "@/hooks/use-shop-about";
+import useUnsavedChanges from "@/hooks/use-unsaved-changes";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import {
@@ -111,6 +112,9 @@ const PoliciesManager = () => {
     () => TABS.filter((t) => isDirty(t.id)).length,
     [isDirty]
   );
+
+  // Warn on tab close / refresh while any policy tab has unsaved edits.
+  useUnsavedChanges(dirtyCount > 0);
 
   const saveActive = async () => {
     if (!isDirty(activeTab)) {

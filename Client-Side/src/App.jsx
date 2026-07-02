@@ -47,11 +47,14 @@ const PendingPaymentsPage = lazy(() => import("./pages/admin-view/PendingPayment
 const PaymentVerificationPage = lazy(() => import("./pages/admin-view/PaymentVerificationPage"));
 const AdminUsers = lazy(() => import("./pages/admin-view/Users"));
 const SuperAdminDashboard = lazy(() => import("./pages/admin-view/SuperAdminDashboard"));
+const IntegrationsStatusPage = lazy(() => import("./pages/admin-view/IntegrationsStatusPage"));
 const ReviewModerationPage = lazy(() => import("./pages/admin-view/ReviewModerationPage"));
 const ContactInquiriesPage = lazy(() => import("./pages/admin-view/ContactInquiriesPage"));
 const AdminCategoriesList = lazy(() => import("./pages/admin/CategoriesList"));
 const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 const ContentManagement = lazy(() => import("./pages/admin-view/ContentManagement"));
+const AdminAnalytics = lazy(() => import("./pages/admin-view/Analytics"));
+const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
@@ -378,6 +381,14 @@ function App() {
                 }
               />
               <Route
+                path="integrations"
+                element={
+                  <PermissionGuard superAdminOnly>
+                    <IntegrationsStatusPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route
                 path="reviews"
                 element={
                   <PermissionGuard permission="manageReviews">
@@ -392,6 +403,22 @@ function App() {
                 element={
                   <PermissionGuard superAdminOnly>
                     <ContentManagement />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics"
+                element={
+                  <PermissionGuard permission="viewAnalytics">
+                    <AdminAnalytics />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="drop-analytics"
+                element={
+                  <PermissionGuard permission="viewAnalytics">
+                    <DropAnalytics />
                   </PermissionGuard>
                 }
               />

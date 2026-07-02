@@ -92,7 +92,15 @@
       "Bash(node --check Server-side/Controllers/stats-controller.js)",
       "Bash(node --check Server-side/Routes/stats-routes.js)",
       "Bash(node --check Server-side/Controllers/category-controller.js)",
-      "Bash(node --check Server-side/server.js)"
+      "Bash(node --check Server-side/server.js)",
+      "Bash(node --check Controllers/integration-status-controller.js)",
+      "Bash(node --check Routes/super-admin-routes.js)",
+      "Bash(node --check Controllers/user-controller.js)",
+      "Bash(node --check Middlewares/request-validation.js)",
+      "Bash(node --check Models/Order.js)",
+      "Bash(node --check Models/User.js)",
+      "Bash(node --check Models/Guest.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5001/api/v1/shipping-zones)"
     ]
   }
 }
