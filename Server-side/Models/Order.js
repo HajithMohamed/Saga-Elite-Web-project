@@ -103,6 +103,13 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    // Optional billing/permanent address — equals shippingAddress when the
+    // customer ticks "delivery address is same as permanent address".
+    billingAddress: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
     contactNumber: {
       type: String,
       required: true,

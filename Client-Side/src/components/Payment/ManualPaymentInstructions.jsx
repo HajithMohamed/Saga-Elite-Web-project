@@ -5,11 +5,11 @@ import { Clock3, ShieldAlert, Check } from "lucide-react";
 const MOTION_EASE = [0.16, 1, 0.3, 1];
 
 const STEPS = [
-  "Transfer the exact payment amount.",
+  "Please complete your bank transfer for the exact payment amount.",
   "Use your Order Number as the payment reference.",
-  "Save the payment receipt.",
-  "Upload the receipt below.",
-  "Wait for Saga Elite to verify your payment."
+  "After completing the payment, upload your payment receipt below.",
+  "A payment verification link has also been sent to your registered email.",
+  "Your order will be processed once payment verification is approved.",
 ];
 
 const PaymentInstructionSteps = () => {

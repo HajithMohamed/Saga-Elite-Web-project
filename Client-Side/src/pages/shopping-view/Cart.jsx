@@ -32,21 +32,10 @@ import EmptyState from "@/components/ui/EmptyState";
 import { Btn, Eyebrow, Hairline } from "@/components/ui/editorial";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useAllOffers } from "@/hooks/use-product-offers";
+import { getVariantImage as productImage } from "@/lib/variant-image";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
-
-const productImage = (product, variantColor) => {
-  // Prefer an image tagged with the variant's color
-  if (variantColor && Array.isArray(product?.images)) {
-    const colorKey = variantColor.toLowerCase();
-    const matched = product.images.find(
-      (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
-    );
-    if (matched?.url) return matched.url;
-  }
-  return product?.image || product?.images?.[0]?.url || "/LOGO.png";
-};
 
 const variantLabel = (variant = {}) =>
   [variant?.size].filter(Boolean).join(" · ") || "Standard";

@@ -22,6 +22,7 @@ const { recordLoginAttempt } = require("../Utils/login-activity-service");
 const { ensureWelcomeReward } = require("../Utils/reward-service");
 const Customer = require("../Models/Customer");
 const { migrateGuestToUser, ensureCustomerRecord } = require("../Services/migration-service");
+const { isAdminRole } = require("../Utils/admin-roles");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -450,6 +451,42 @@ const login = catchAsync(async (req, res, next) => {
         });
     }
 
+    // Admin 2FA: if admin role AND twoFactorEnabled, send OTP (no token)
+    if (isAdminRole(user.role) && user.twoFactorEnabled) {
+        const twoFactorOtp = generateOtp(6);
+        user.twoFactorOtp = twoFactorOtp;
+        user.twoFactorOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save({ validateBeforeSave: false });
+
+        const subject = "Saga Elite — Two-Factor Authentication Code";
+        const message = `Your 2FA code is: ${twoFactorOtp}\nValid for 10 minutes.`;
+        try {
+            await sendMail({
+                email: user.email,
+                subject,
+                message,
+                html: buildEmailTemplate(subject, message),
+            });
+        } catch (error) {
+            user.twoFactorOtp = undefined;
+            user.twoFactorOtpExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+            return next(new AppError("Error sending OTP email, please try again.", 500));
+        }
+
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: true,
+        });
+        return res.status(200).json({
+            status: "two_factor_required",
+            success: false,
+            email: user.email,
+        });
+    }
+
     recordLoginAttempt({
         req,
         userId: user._id,
@@ -839,6 +876,83 @@ const registerGuest = catchAsync(async (req, res, next) => {
     createSendToken(newUser, 201, res, "Registration successful. Check your email for password.");
 });
 
+const verifyTwoFactor = catchAsync(async (req, res, next) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return next(new AppError("Email and OTP are required", 400));
+    }
+
+    const user = await User.findOne({ email }).select("+twoFactorOtp");
+    if (!user) {
+        return next(new AppError("User not found", 404));
+    }
+
+    if (!user.twoFactorOtp || !user.twoFactorOtpExpires) {
+        return next(new AppError("No active 2FA session. Please log in again.", 400));
+    }
+
+    if (user.twoFactorOtpExpires < Date.now()) {
+        user.twoFactorOtp = undefined;
+        user.twoFactorOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("OTP has expired. Please request a new one.", 400));
+    }
+
+    if (user.twoFactorOtp !== otp) {
+        return next(new AppError("Invalid OTP", 401));
+    }
+
+    user.twoFactorOtp = undefined;
+    user.twoFactorOtpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    createSendToken(user, 200, res, "Two-factor authentication successful");
+});
+
+const resendTwoFactorOtp = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return next(new AppError("Email is required", 400));
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return next(new AppError("User not found", 404));
+    }
+
+    if (!isAdminRole(user.role) || !user.twoFactorEnabled) {
+        return next(new AppError("2FA not enabled for this account", 400));
+    }
+
+    const twoFactorOtp = generateOtp(6);
+    user.twoFactorOtp = twoFactorOtp;
+    user.twoFactorOtpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save({ validateBeforeSave: false });
+
+    const subject = "Saga Elite — Two-Factor Authentication Code (Resend)";
+    const message = `Your 2FA code is: ${twoFactorOtp}\nValid for 10 minutes.`;
+    try {
+        await sendMail({
+            email: user.email,
+            subject,
+            message,
+            html: buildEmailTemplate(subject, message),
+        });
+    } catch (error) {
+        user.twoFactorOtp = undefined;
+        user.twoFactorOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("Error sending OTP email, please try again.", 500));
+    }
+
+    res.status(200).json({
+        status: "success",
+        message: "OTP resent successfully",
+    });
+});
+
 module.exports = {
     registerUser,
     otpVerify,
@@ -853,4 +967,6 @@ module.exports = {
     checkAuth,
     checkGuest,
     registerGuest,
+    verifyTwoFactor,
+    resendTwoFactorOtp,
 };

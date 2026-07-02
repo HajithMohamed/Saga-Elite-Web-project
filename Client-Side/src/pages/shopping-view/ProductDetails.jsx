@@ -926,7 +926,7 @@ const ProductDetails = () => {
               </summary>
               <div className="pt-4 pb-2 text-[#d0c5af] text-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {product.brand?.name && <div className="flex flex-col"><span className="text-[#99907c] uppercase tracking-widest text-[10px]">Brand</span><span className="text-white">{product.brand.name}</span></div>}
+                  {(typeof product.brand === "string" ? product.brand : product.brand?.name) && <div className="flex flex-col"><span className="text-[#99907c] uppercase tracking-widest text-[10px]">Brand</span><span className="text-white">{typeof product.brand === "string" ? product.brand : product.brand?.name}</span></div>}
                   {product.category && <div className="flex flex-col"><span className="text-[#99907c] uppercase tracking-widest text-[10px]">Category</span><span className="text-white">{product.category}</span></div>}
                   {product.gender && <div className="flex flex-col"><span className="text-[#99907c] uppercase tracking-widest text-[10px]">Gender</span><span className="text-white">{product.gender}</span></div>}
                   {product.fitType && <div className="flex flex-col"><span className="text-[#99907c] uppercase tracking-widest text-[10px]">Fit</span><span className="text-white">{product.fitType}</span></div>}

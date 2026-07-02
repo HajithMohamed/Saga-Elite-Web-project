@@ -10,6 +10,7 @@ import {
   Package,
   Users,
   Shield,
+  Plug,
   CreditCard,
   StarHalf,
   Inbox,
@@ -18,6 +19,7 @@ import {
   Truck,
   ChevronDown,
   FolderTree,
+  BarChart3,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -29,13 +31,13 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Dashboard: ["Dashboard"],
+  Dashboard: ["Dashboard", "Analytics"],
   Store: ["Products", "Categories", "Drops"],
   Sales: ["Orders", "Payments", "Shipping"],
   Marketing: ["Offers / Campaigns", "Coupons"],
   Customers: ["Customers", "Reviews", "Contact Messages"],
   Content: ["Content Management"],
-  Settings: ["Admin Team"],
+  Settings: ["Admin Team", "API Status"],
 };
 
 const SECTION_ORDER = [
@@ -194,6 +196,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <LayoutDashboard className="h-5 w-5" />,
       permission: null,
     },
+    {
+      label: "Analytics",
+      path: "/admin/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+      permission: "viewAnalytics",
+    },
 
     // Store
     {
@@ -298,6 +306,11 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       label: "Admin Team",
       path: "/admin/super-admin",
       icon: <Shield className="h-5 w-5" />,
+    });
+    menuItems.push({
+      label: "API Status",
+      path: "/admin/integrations",
+      icon: <Plug className="h-5 w-5" />,
     });
   }
 

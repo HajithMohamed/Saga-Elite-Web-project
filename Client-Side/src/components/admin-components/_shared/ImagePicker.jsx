@@ -4,6 +4,7 @@ import { Image as ImageIcon, Loader2 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { compressImageFile } from "@/lib/image-compression";
+import { UploadGuidelines } from "./UploadGuidelines";
 
 const ImagePicker = ({
   value,
@@ -12,6 +13,7 @@ const ImagePicker = ({
   refModel = "SiteConfig",
   refId = "site_content",
   type = "logo",
+  guidelines, // optional { dims, aspect, maxSize, formats } → hint under the picker
 }) => {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
@@ -103,6 +105,7 @@ const ImagePicker = ({
           className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 font-mono text-[11px] text-white outline-none focus:border-[#D4AF37]/40"
         />
       ) : null}
+      {guidelines ? <UploadGuidelines {...guidelines} className="mt-1" /> : null}
     </div>
   );
 };

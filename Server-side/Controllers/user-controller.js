@@ -1372,6 +1372,28 @@ const addMyAddress = catchAsync(async (req, res, next) => {
   });
 });
 
+// Mark one saved address as the default/permanent address.
+const setDefaultAddress = catchAsync(async (req, res, next) => {
+  const { addressId } = req.params;
+
+  const user = await User.findById(req.userInfo._id || req.userInfo.id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  const target = user.addresses.find((a) => String(a._id) === String(addressId));
+  if (!target) return next(new AppError("Address not found", 404));
+
+  user.addresses.forEach((a) => {
+    a.isDefault = String(a._id) === String(addressId);
+  });
+  await user.save({ validateModifiedOnly: true });
+
+  res.status(200).json({
+    success: true,
+    message: "Default address updated",
+    data: { addresses: user.addresses },
+  });
+});
+
 const removeMyAddress = catchAsync(async (req, res, next) => {
   const { addressId } = req.params;
 
@@ -1459,6 +1481,7 @@ module.exports = {
   updateMyProfile,
   getMyAddresses,
   addMyAddress,
+  setDefaultAddress,
   removeMyAddress,
   getMyManualPayments,
 };

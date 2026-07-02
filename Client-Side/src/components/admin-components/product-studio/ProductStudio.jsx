@@ -5,6 +5,7 @@ import { WorkspaceNav } from './WorkspaceNav';
 import { WorkspaceLeft } from './WorkspaceLeft';
 import { WorkspaceRight } from './WorkspaceRight';
 import { motion } from 'framer-motion';
+import useUnsavedChanges from '@/hooks/use-unsaved-changes';
 
 export const ProductStudio = ({
   initialData,
@@ -48,8 +49,11 @@ const ProductStudioContent = ({
   onSubmit,
   onOpenGallery,
 }) => {
-  const { formData, images, setIsSaving, setValidationErrors } = useProductForm();
+  const { formData, images, setIsSaving, setValidationErrors, isDirty, isSaving } = useProductForm();
   const [activeTab, setActiveTab] = React.useState('basic-info');
+
+  // Warn on tab close / refresh while the form has unsaved edits.
+  useUnsavedChanges(isDirty && !isSaving);
 
   const handlePublish = async () => {
     setIsSaving(true);

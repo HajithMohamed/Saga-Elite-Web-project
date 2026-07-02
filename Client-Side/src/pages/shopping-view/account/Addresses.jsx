@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Plus, MapPin, Edit2, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, MapPin, Trash2, CheckCircle2, Star } from "lucide-react";
+import { Link } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
 import { toast } from "@/hooks/use-toast";
 import AppLoader from "@/components/ui/AppLoader";
@@ -7,12 +8,13 @@ import AppLoader from "@/components/ui/AppLoader";
 const Addresses = () => {
   const [addresses, setAddresses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
 
   const fetchAddresses = async () => {
     try {
       const res = await axiosInstance.get("/user/addresses");
       if (res.data?.success) {
-        setAddresses(res.data.data);
+        setAddresses(res.data.data?.addresses || []);
       }
     } catch (error) {
       console.error(error);
@@ -28,11 +30,24 @@ const Addresses = () => {
   const handleDelete = async (addressId) => {
     if (!window.confirm("Are you sure you want to delete this address?")) return;
     try {
-      await axiosInstance.delete(`/user/addresses/${addressId}`);
+      const res = await axiosInstance.delete(`/user/addresses/${addressId}`);
       toast({ title: "Address deleted", variant: "success" });
-      setAddresses(addresses.filter(a => a._id !== addressId));
-    } catch (error) {
+      setAddresses(res.data?.data?.addresses || addresses.filter(a => a._id !== addressId));
+    } catch {
       toast({ title: "Failed to delete address", variant: "destructive" });
+    }
+  };
+
+  const handleSetDefault = async (addressId) => {
+    setBusyId(addressId);
+    try {
+      const res = await axiosInstance.patch(`/user/addresses/${addressId}/default`);
+      setAddresses(res.data?.data?.addresses || []);
+      toast({ title: "Permanent address updated", variant: "success" });
+    } catch {
+      toast({ title: "Failed to update default address", variant: "destructive" });
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -45,14 +60,14 @@ const Addresses = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
            <h1 className="font-sans text-2xl font-bold text-[#fafafa] mb-1">Saved Addresses</h1>
-           <p className="se-body text-[14px] text-[#99907c]">Manage your delivery addresses for faster checkout.</p>
+           <p className="se-body text-[14px] text-[#99907c]">Your permanent (default) address auto-fills at checkout.</p>
         </div>
-        <button 
-          onClick={() => toast({ title: "Coming soon", description: "Adding addresses here will be available soon. Please add during checkout." })}
+        <Link
+          to="/shopping/checkout"
           className="h-[48px] px-6 bg-[#F2CA50] text-[#0e0e0e] rounded-[12px] font-sans font-bold uppercase tracking-wider text-[11px] hover:-translate-y-1 transition-transform flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Add New Address
-        </button>
+          <Plus className="w-4 h-4" /> Add During Checkout
+        </Link>
       </div>
 
       {addresses.length === 0 ? (
@@ -61,13 +76,13 @@ const Addresses = () => {
               <MapPin className="w-8 h-8 text-[#99907c]" />
            </div>
            <h3 className="font-sans font-bold text-lg text-[#fafafa] mb-2">No Saved Addresses</h3>
-           <p className="text-[14px] text-[#99907c] max-w-sm mb-6">You haven't saved any delivery addresses yet. Add one now to speed up your next purchase.</p>
-           <button 
-             onClick={() => toast({ title: "Coming soon", description: "Adding addresses here will be available soon." })}
-             className="h-[48px] px-6 border border-[#F2CA50] text-[#F2CA50] rounded-[12px] font-sans font-bold uppercase tracking-wider text-[11px] hover:bg-[#F2CA50]/10 transition-colors"
+           <p className="text-[14px] text-[#99907c] max-w-sm mb-6">Addresses are saved automatically when you place an order. Your next checkout will auto-fill from here.</p>
+           <Link
+             to="/shopping/product-list"
+             className="h-[48px] px-6 border border-[#F2CA50] text-[#F2CA50] rounded-[12px] font-sans font-bold uppercase tracking-wider text-[11px] hover:bg-[#F2CA50]/10 transition-colors flex items-center"
            >
-             Add Address
-           </button>
+             Shop Now
+           </Link>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
@@ -75,7 +90,7 @@ const Addresses = () => {
             <div key={address._id} className="bg-[#1A1A1A] border border-white/5 rounded-[24px] p-6 relative group overflow-hidden">
                {address.isDefault && (
                  <div className="absolute top-0 right-0 bg-[#F2CA50] text-[#0e0e0e] px-3 py-1 rounded-bl-[16px] text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 z-10">
-                    <CheckCircle2 className="w-3 h-3" /> Default
+                    <CheckCircle2 className="w-3 h-3" /> Permanent
                  </div>
                )}
                <div className="flex items-start gap-4">
@@ -83,21 +98,24 @@ const Addresses = () => {
                      <MapPin className="w-5 h-5 text-[#99907c]" />
                   </div>
                   <div className="flex-1">
-                     <h4 className="font-sans font-bold text-[16px] text-[#fafafa] mb-1">{address.fullName}</h4>
+                     <h4 className="font-sans font-bold text-[16px] text-[#fafafa] mb-1">{address.label || "Saved Address"}</h4>
                      <p className="text-[13px] text-[#99907c] leading-relaxed mb-4">
-                        {address.address}<br />
-                        {address.city}, {address.pincode}<br />
-                        Phone: {address.phone}
+                        {address.street}<br />
+                        {[address.city, address.district].filter(Boolean).join(", ")} {address.postalCode}<br />
+                        {address.country || "Sri Lanka"}
                      </p>
-                     
+
                      <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                        <button 
-                          onClick={() => toast({ title: "Coming soon", description: "Edit functionality will be available soon." })}
-                          className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#99907c] hover:text-[#F2CA50] transition-colors"
-                        >
-                           <Edit2 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button 
+                        {!address.isDefault && (
+                          <button
+                            onClick={() => handleSetDefault(address._id)}
+                            disabled={busyId === address._id}
+                            className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#99907c] hover:text-[#F2CA50] transition-colors disabled:opacity-50"
+                          >
+                             <Star className="w-3.5 h-3.5" /> Set as Permanent
+                          </button>
+                        )}
+                        <button
                           onClick={() => handleDelete(address._id)}
                           className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#99907c] hover:text-red-400 transition-colors ml-auto"
                         >

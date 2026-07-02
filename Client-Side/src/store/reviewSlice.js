@@ -11,6 +11,8 @@ import {
   flagReviewApi,
   replyToReviewApi,
   featureReviewApi,
+  archiveReviewApi,
+  restoreReviewApi,
   fetchReviewAnalyticsApi,
   bulkModerateReviewsApi,
 } from "@/api/reviewAPI";
@@ -223,6 +225,34 @@ export const featureReview = createAsyncThunk(
   }
 );
 
+export const archiveReview = createAsyncThunk(
+  "review/archiveReview",
+  async (reviewId, thunkAPI) => {
+    try {
+      const response = await archiveReviewApi(reviewId);
+      return { ...response.data, reviewId };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to archive review")
+      );
+    }
+  }
+);
+
+export const restoreReview = createAsyncThunk(
+  "review/restoreReview",
+  async (reviewId, thunkAPI) => {
+    try {
+      const response = await restoreReviewApi(reviewId);
+      return { ...response.data, reviewId };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to restore review")
+      );
+    }
+  }
+);
+
 export const fetchReviewAnalytics = createAsyncThunk(
   "review/fetchReviewAnalytics",
   async (_, thunkAPI) => {
@@ -395,6 +425,24 @@ const reviewSlice = createSlice({
             review._id === updated._id ? updated : review
           );
         }
+      })
+      .addCase(archiveReview.fulfilled, (state, action) => {
+        const { reviewId } = action.payload;
+        state.adminReviews = state.adminReviews.filter(
+          (review) => review._id !== reviewId
+        );
+      })
+      .addCase(archiveReview.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(restoreReview.fulfilled, (state, action) => {
+        const { reviewId } = action.payload;
+        state.adminReviews = state.adminReviews.filter(
+          (review) => review._id !== reviewId
+        );
+      })
+      .addCase(restoreReview.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
       })
       .addCase(fetchReviewAnalytics.fulfilled, (state, action) => {
         state.adminAnalytics = action.payload?.data || null;

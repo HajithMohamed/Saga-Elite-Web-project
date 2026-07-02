@@ -23,9 +23,6 @@ import { WhyChooseSaga, FAQPreview } from "@/components/landing/TrustSections";
 import { Newsletter } from "@/components/landing/CommunitySections";
 import { Btn, Reveal } from "@/components/ui/editorial";
 
-// Fallback background for Hero
-const HERO_BG = "https://images.unsplash.com/photo-1441984904996-e0b6a687762d?w=1920&q=80";
-
 const DEFAULT_TIMELINE = [
   { year: "2024", milestone: "Saga Elite Founded", description: "The vision to bring premium fashion to Sri Lanka begins." },
   { year: "2025", milestone: "Website Launch", description: "Our official digital atelier goes live with nationwide access." },
@@ -66,9 +63,9 @@ const AboutPage = () => {
     fetchStoreStats().then((res) => setStats(res)).catch(() => {});
   }, []);
 
-  // Hero / story imagery is admin-managed (SiteConfig). Fall back to the bundled
-  // editorial background only when no hero image is set — never the bare logo.
-  const heroImage = about?.about_hero_image || HERO_BG;
+  // Hero / story imagery is admin-managed (SiteConfig). When no hero image is
+  // set we fall back to a branded dark backdrop — never a stock placeholder.
+  const heroImage = about?.about_hero_image?.trim() || "";
   const heroTitle = about?.about_hero_title?.trim() || "About Saga Elite";
   const heroSubtitle = about?.about_hero_subtitle?.trim() || "Premium Fashion Designed for Modern Sri Lanka";
   const heroCtaLabel = about?.about_hero_cta_label?.trim() || "Shop Collection";
@@ -105,12 +102,16 @@ const AboutPage = () => {
       
       {/* HERO BANNER */}
       <section className="relative h-[260px] md:h-[320px] lg:h-[420px] overflow-hidden flex items-end justify-center w-full">
-        <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="About Saga Elite"
-            className="w-full h-full object-cover object-center"
-          />
+        <div className="absolute inset-0 bg-[#0e0e0e]">
+          {heroImage ? (
+            <img
+              src={heroImage}
+              alt={heroTitle}
+              className="w-full h-full object-cover object-center"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#161616] via-[#0e0e0e] to-[#000]" />
+          )}
           <div className="absolute inset-0 bg-[#0e0e0e]/70" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
         </div>

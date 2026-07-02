@@ -1,6 +1,7 @@
 import React, { Fragment, useState, useEffect } from "react";
 import useBulkSelection from "@/hooks/use-bulk-selection";
 import usePagination from "@/hooks/use-pagination";
+import useUnsavedChanges from "@/hooks/use-unsaved-changes";
 import Pagination from "@/components/common-components/Pagination";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
@@ -225,6 +226,11 @@ const Drops = () => {
     }, 600);
     return () => clearTimeout(id);
   }, [formData, showForm, currentEditedSlug]);
+
+  // Warn on tab close / refresh while the drop form is open with edits.
+  const isDropFormDirty =
+    showForm && JSON.stringify(formData) !== JSON.stringify(initialFormData);
+  useUnsavedChanges(isDropFormDirty);
 
   const bulk = useBulkSelection(drops);
   const dropsPg = usePagination(drops, 10);
@@ -616,7 +622,9 @@ const Drops = () => {
           label="Drop Name"
           required
           helper="Shown on the homepage, drop page, and notifications. Keep it under 40 characters."
-          hint={`${formData.name.length} / 200`}
+          maxLength={200}
+          showCount
+          value={formData.name}
         >
           <LuxuryInput
             type="text"
@@ -631,7 +639,9 @@ const Drops = () => {
           label="Description"
           optional
           helper="A short narrative for the drop hero. Supports plain text."
-          hint={`${formData.description.length} / 2000`}
+          maxLength={2000}
+          showCount
+          value={formData.description}
         >
           <LuxuryTextarea
             value={formData.description}

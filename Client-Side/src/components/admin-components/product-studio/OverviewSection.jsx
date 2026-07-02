@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useProductForm,
   MATERIAL_OPTIONS,
@@ -13,9 +13,28 @@ import { FormField } from '@/components/admin-components/_form/FormField';
 import { LuxuryInput, LuxurySelect, LuxuryTextarea } from '@/components/admin-components/_form/inputs';
 import { CareInstructionsBuilder } from './CareInstructionsBuilder';
 import { SizeGuideBuilder } from './SizeGuideBuilder';
+import axiosInstance from '@/api/axiosInstance';
 
 export const OverviewSection = ({ drops = [] }) => {
   const { formData, updateField, validationErrors } = useProductForm();
+
+  const [brandOptions, setBrandOptions] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const brandsRes = await axiosInstance.get('/brands');
+        if (!mounted) return;
+        setBrandOptions(brandsRes.data?.data || []);
+      } catch {
+        // Picker degrades to free-text input when the list can't load.
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const [fabricSelection, setFabricSelection] = useState(() =>
     formData.fabric
@@ -109,11 +128,19 @@ export const OverviewSection = ({ drops = [] }) => {
 
       <div className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-2">
-          <FormField label="Product Name" required error={validationErrors.name}>
+          <FormField
+            label="Product Name"
+            required
+            error={validationErrors.name}
+            maxLength={200}
+            showCount
+            value={formData.name}
+          >
             <LuxuryInput
               value={formData.name}
               onChange={(e) => updateField('name', e.target.value)}
               placeholder="e.g. Signature Heavyweight Hoodie"
+              maxLength={200}
               error={!!validationErrors.name}
             />
           </FormField>
@@ -126,11 +153,18 @@ export const OverviewSection = ({ drops = [] }) => {
           </FormField>
         </div>
 
-        <FormField label="Description" helper="Detailed product description for the storefront">
+        <FormField
+          label="Description"
+          helper="Detailed product description for the storefront"
+          maxLength={2000}
+          showCount
+          value={formData.description}
+        >
           <LuxuryTextarea
             data-lenis-prevent="true"
             value={formData.description}
             onChange={(e) => updateField('description', e.target.value)}
+            maxLength={2000}
             rows={8}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             className="[&::-webkit-scrollbar]:hidden"
@@ -192,7 +226,18 @@ export const OverviewSection = ({ drops = [] }) => {
               value={formData.brand}
               onChange={(e) => updateField('brand', e.target.value)}
               placeholder="e.g. Sovereign Elite"
+              list="product-brand-options"
             />
+            <datalist id="product-brand-options">
+              {brandOptions.map((brand) => (
+                <option key={brand._id} value={brand.name} />
+              ))}
+            </datalist>
+            {brandOptions.length > 0 ? (
+              <p className="mt-1.5 text-[10px] text-white/40">
+                Pick from the brand list (Store → Brands) or type a new name.
+              </p>
+            ) : null}
           </FormField>
           <FormField label="Collection Drop">
             <LuxurySelect
@@ -209,11 +254,17 @@ export const OverviewSection = ({ drops = [] }) => {
           </FormField>
         </div>
 
-        <FormField label="Product Story (Optional)">
+        <FormField
+          label="Product Story (Optional)"
+          maxLength={3000}
+          showCount
+          value={formData.story}
+        >
           <LuxuryTextarea
             data-lenis-prevent="true"
             value={formData.story}
             onChange={(e) => updateField('story', e.target.value)}
+            maxLength={3000}
             rows={6}
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             className="[&::-webkit-scrollbar]:hidden"

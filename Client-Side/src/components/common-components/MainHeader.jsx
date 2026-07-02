@@ -126,6 +126,7 @@ const MainHeader = () => {
   const isAdminView = location.pathname.startsWith("/admin");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [menuCategories, setMenuCategories] = useState([]);
@@ -142,6 +143,17 @@ const MainHeader = () => {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Header search → product listing with ?keyword=…; the listing paginates
+  // within the filtered results and keeps the keyword until cleared.
+  const submitSearch = (e) => {
+    e?.preventDefault?.();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearchOpen(false);
+    setSearchQuery("");
+    navigate(`/shopping/product-list?keyword=${encodeURIComponent(q)}`);
+  };
 
   // Close user dropdown when clicking outside
   useEffect(() => {
@@ -338,18 +350,32 @@ const MainHeader = () => {
         <AnimatePresence>
           {searchOpen ? (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="absolute top-full left-0 w-full border-b border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md overflow-hidden">
-              <div className="max-w-[800px] mx-auto p-6">
+              <form onSubmit={submitSearch} className="max-w-[800px] mx-auto p-6">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d0c5af]" />
                   <input
                     autoFocus
                     type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setSearchOpen(false);
+                        setSearchQuery("");
+                      }
+                    }}
                     placeholder="SEARCH CATALOG OR DROPS..."
                     className="w-full bg-[#1f1f1f] text-[#e5e2e1] placeholder:text-[#d0c5af]/50 pl-12 pr-6 py-4 outline-none font-mono text-[12px] tracking-widest border border-[#2a2a2a] focus:border-[#f2ca50] transition-colors shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]"
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#d0c5af]/40">ESC</div>
+                  <button
+                    type="submit"
+                    aria-label="Search"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#d0c5af]/60 hover:text-[#f2ca50] transition-colors"
+                  >
+                    {searchQuery.trim() ? <ArrowRight className="w-4 h-4" /> : "ESC"}
+                  </button>
                 </div>
-              </div>
+              </form>
             </motion.div>
           ) : null}
         </AnimatePresence>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -8,15 +9,20 @@ import {
   Star,
   Image as ImageIcon,
   Tag,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import {
   fetchAdminReviews,
   categorizeReview,
   replyToReview,
   featureReview,
+  archiveReview,
+  restoreReview,
   fetchReviewAnalytics,
   bulkModerateReviews,
 } from "@/store/reviewSlice";
+import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
 import { toast } from "@/hooks/use-toast";
 import StarRating from "@/components/Review/StarRating";
 import { useSocketEvent } from "@/hooks/use-socket-events";
@@ -48,6 +54,7 @@ const FILTER_TABS = [
   { value: "low", label: "1–2 ★", category: null },
   { value: "media", label: "With Photos", category: null },
   { value: "featured", label: "Featured", category: null },
+  { value: "archived", label: "Archived", category: null },
 ];
 
 const QUICK_REPLIES = [
@@ -84,6 +91,8 @@ const applyClientSideFilter = (reviews, filter) => {
       );
     case "featured":
       return reviews.filter((r) => r.isFeatured);
+    case "archived":
+      return reviews;
     default:
       return reviews;
   }
@@ -117,18 +126,20 @@ const ReviewModerationPage = () => {
   }, [search]);
 
   const categoryParam = tabToCategoryParam(activeFilter);
+  const isArchivedView = activeFilter === "archived";
+  const statusParam = isArchivedView ? "archived" : "approved";
 
   useEffect(() => {
     dispatch(
       fetchAdminReviews({
-        status: "approved",
+        status: statusParam,
         category: categoryParam,
         page: 1,
         search: debouncedSearch,
         limit: 50,
       })
     );
-  }, [dispatch, categoryParam, debouncedSearch]);
+  }, [dispatch, statusParam, categoryParam, debouncedSearch]);
 
   useEffect(() => {
     dispatch(fetchReviewAnalytics());
@@ -139,7 +150,7 @@ const ReviewModerationPage = () => {
     () => {
       dispatch(
         fetchAdminReviews({
-          status: "approved",
+          status: statusParam,
           category: categoryParam,
           page: 1,
           search: debouncedSearch,
@@ -148,7 +159,7 @@ const ReviewModerationPage = () => {
       );
       dispatch(fetchReviewAnalytics());
     },
-    [dispatch, categoryParam, debouncedSearch]
+    [dispatch, statusParam, categoryParam, debouncedSearch]
   );
 
   const handlePublishReply = async (review) => {
@@ -209,6 +220,44 @@ const ReviewModerationPage = () => {
     }
   };
 
+  const [archiveConfirmId, setArchiveConfirmId] = useState(null);
+  const [archiveSubmittingId, setArchiveSubmittingId] = useState(null);
+
+  const handleArchive = async (review) => {
+    try {
+      setArchiveSubmittingId(review._id);
+      await dispatch(archiveReview(review._id)).unwrap();
+      toast({ title: "Review archived", description: "It no longer appears on the storefront." });
+      setArchiveConfirmId(null);
+      dispatch(fetchReviewAnalytics());
+    } catch (error) {
+      toast({
+        title: "Archive failed",
+        description: error || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setArchiveSubmittingId(null);
+    }
+  };
+
+  const handleRestore = async (review) => {
+    try {
+      setArchiveSubmittingId(review._id);
+      await dispatch(restoreReview(review._id)).unwrap();
+      toast({ title: "Review restored" });
+      dispatch(fetchReviewAnalytics());
+    } catch (error) {
+      toast({
+        title: "Restore failed",
+        description: error || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setArchiveSubmittingId(null);
+    }
+  };
+
   const filteredReviews = useMemo(
     () => applyClientSideFilter(adminReviews || [], activeFilter),
     [adminReviews, activeFilter]
@@ -237,7 +286,16 @@ const ReviewModerationPage = () => {
         variant: fail === 0 ? "success" : "destructive",
       });
       bulk.clear();
-      dispatch(fetchAdminReviews({ page: 1, limit: 20 }));
+      dispatch(
+        fetchAdminReviews({
+          status: statusParam,
+          category: categoryParam,
+          page: 1,
+          search: debouncedSearch,
+          limit: 50,
+        })
+      );
+      dispatch(fetchReviewAnalytics());
     } catch (err) {
       toast({
         title: "Bulk moderation failed",
@@ -481,32 +539,54 @@ const ReviewModerationPage = () => {
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <StarRating value={review.rating} readOnly size="sm" />
-                        <select
-                          value={reviewCategory}
-                          disabled={categorizeSubmittingId === review._id}
-                          onChange={(e) =>
-                            handleCategorize(review, e.target.value)
-                          }
-                          className="rounded-full border border-white/10 bg-[#111] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-white/80 focus:border-[#D4AF37]/50 focus:outline-none disabled:opacity-50"
-                        >
-                          {CATEGORY_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          disabled={featureSubmittingId === review._id}
-                          onClick={() => handleToggleFeature(review)}
-                          className={`rounded-full border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition-colors ${
-                            review.isFeatured
-                              ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                              : "border-white/10 text-white/60 hover:border-[#f2ca50]/40 hover:text-[#f2ca50]"
-                          }`}
-                        >
-                          {review.isFeatured ? "Unfeature" : "Feature"}
-                        </button>
+                        {isArchivedView ? (
+                          <button
+                            type="button"
+                            disabled={archiveSubmittingId === review._id}
+                            onClick={() => handleRestore(review)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-emerald-300 transition-colors hover:bg-emerald-400/20 disabled:opacity-50"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            {archiveSubmittingId === review._id ? "Restoring…" : "Restore"}
+                          </button>
+                        ) : (
+                          <>
+                            <select
+                              value={reviewCategory}
+                              disabled={categorizeSubmittingId === review._id}
+                              onChange={(e) =>
+                                handleCategorize(review, e.target.value)
+                              }
+                              className="rounded-full border border-white/10 bg-[#111] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-white/80 focus:border-[#D4AF37]/50 focus:outline-none disabled:opacity-50"
+                            >
+                              {CATEGORY_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              disabled={featureSubmittingId === review._id}
+                              onClick={() => handleToggleFeature(review)}
+                              className={`rounded-full border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition-colors ${
+                                review.isFeatured
+                                  ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
+                                  : "border-white/10 text-white/60 hover:border-[#f2ca50]/40 hover:text-[#f2ca50]"
+                              }`}
+                            >
+                              {review.isFeatured ? "Unfeature" : "Feature"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={archiveSubmittingId === review._id}
+                              onClick={() => setArchiveConfirmId(review._id)}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-rose-300/80 transition-colors hover:border-rose-500/60 hover:text-rose-300 disabled:opacity-50"
+                            >
+                              <Archive className="h-3 w-3" /> Archive
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           onClick={() =>
@@ -520,6 +600,19 @@ const ReviewModerationPage = () => {
                         </button>
                       </div>
                     </div>
+
+                    <ConfirmInline
+                      show={archiveConfirmId === review._id}
+                      message="Archive this review? It will be hidden from the storefront and excluded from the product's rating. You can restore it later from the Archived tab."
+                      confirmLabel={
+                        archiveSubmittingId === review._id
+                          ? "Archiving…"
+                          : "Archive review"
+                      }
+                      onConfirm={() => handleArchive(review)}
+                      onCancel={() => setArchiveConfirmId(null)}
+                      className="ml-7"
+                    />
 
                     {isExpanded ? (
                       <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
@@ -758,11 +851,16 @@ const ReviewModerationPage = () => {
         onClear={bulk.clear}
         pending={bulkPending}
         label="reviews selected"
-        actions={[
-          { label: "Feature", onClick: () => runBulkReviewAction("feature") },
-          { label: "Unfeature", onClick: () => runBulkReviewAction("unfeature") },
-          { label: `Set → ${bulkCategory}`, onClick: () => runBulkReviewAction("category") },
-        ]}
+        actions={
+          isArchivedView
+            ? [{ label: "Restore", onClick: () => runBulkReviewAction("restore") }]
+            : [
+                { label: "Feature", onClick: () => runBulkReviewAction("feature") },
+                { label: "Unfeature", onClick: () => runBulkReviewAction("unfeature") },
+                { label: `Set → ${bulkCategory}`, onClick: () => runBulkReviewAction("category") },
+                { label: "Archive", onClick: () => runBulkReviewAction("archive") },
+              ]
+        }
       />
     </AdminPage>
   );
