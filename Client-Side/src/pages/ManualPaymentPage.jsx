@@ -617,7 +617,7 @@ const ManualPaymentPage = () => {
       />
 
       {/* Stepper Section */}
-      <div className="mt-12 mb-10 w-full px-2 lg:px-8">
+      <div className="mt-6 mb-8 w-full px-2 lg:px-8">
         <PaymentStepper currentStatus={paymentStatus} />
       </div>
 
@@ -628,10 +628,12 @@ const ManualPaymentPage = () => {
         </div>
       )}
 
-      {/* Main Two-Column Layout */}
-      <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
+      {/* Main Two-Column Layout — on mobile the bank details (right column)
+          lead so customers see how much / where / the reference first, then
+          the instructions and upload follow. */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
         {/* Left Column: Instructions & Upload */}
-        <div className="space-y-8 min-w-0">
+        <div className="order-2 lg:order-1 space-y-6 min-w-0">
           
           {isExpired ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[24px] border border-amber-500/20 bg-amber-500/5 p-6 sm:p-8 text-sm text-amber-100">
@@ -676,15 +678,15 @@ const ManualPaymentPage = () => {
           <PaymentFAQ />
         </div>
 
-        {/* Right Column: Bank Details, Summary, Support */}
-        <div className="space-y-8 flex flex-col items-center lg:items-start">
+        {/* Right Column: Bank Details + Summary (leads on mobile) */}
+        <div className="order-1 lg:order-2 space-y-6 flex flex-col items-center lg:items-start">
           <BankDetailsCard
             bankDetails={bankDetails}
             referenceNumber={activeReferenceNumber}
             amount={activeAmount}
             currency="LKR"
           />
-          
+
           <PaymentSummaryCard
             orderNumber={currentPayment?.orderId?.orderNumber || "—"}
             orderDate={currentPayment?.orderId?.orderDate || currentPayment?.createdAt}
@@ -695,12 +697,16 @@ const ManualPaymentPage = () => {
             orderStatus={currentPayment?.orderId?.orderStatus || "Pending"}
             paymentStatus={paymentStatus}
           />
-          
-          <ContactSupportSection
-            bankDetails={bankDetails}
-            referenceNumber={activeReferenceNumber}
-          />
         </div>
+      </div>
+
+      {/* Support — demoted to the bottom so the core pay → upload flow stays
+          front and centre. */}
+      <div className="mt-6">
+        <ContactSupportSection
+          bankDetails={bankDetails}
+          referenceNumber={activeReferenceNumber}
+        />
       </div>
     </div>
   );
