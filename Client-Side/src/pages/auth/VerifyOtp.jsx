@@ -80,11 +80,11 @@ const VerifyOtp = () => {
     return (
       <AuthPageWrapper title="Account Activated" description="Your email has been successfully verified." badgeText="Verification Complete">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F2CA50]/10 border border-[#F2CA50]/20 mb-6">
-            <CheckCircle2 className="h-12 w-12 text-[#F2CA50]" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gold/10 border border-gold-ink/20 mb-6">
+            <CheckCircle2 className="h-12 w-12 text-gold-ink" />
           </div>
-          <h2 className="se-serif text-3xl text-[#e5e2e1]">Access Granted</h2>
-          <p className="se-body mt-4 text-[#99907c] max-w-sm">Redirecting to your atelier...</p>
+          <h2 className="se-serif text-3xl text-ink-2">Access Granted</h2>
+          <p className="se-body mt-4 text-muted max-w-sm">Redirecting to your atelier...</p>
         </motion.div>
       </AuthPageWrapper>
     );
@@ -96,12 +96,12 @@ const VerifyOtp = () => {
       description="We have sent a verification code to your email address. Please enter it below."
       badgeText="Email Verification"
     >
-      <div className="mb-8 flex items-center justify-between rounded-[16px] border border-white/10 bg-[#0a0a0a] p-4">
+      <div className="mb-8 flex items-center justify-between rounded-[16px] border border-ink/10 bg-page p-4">
         <div>
-          <p className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] mb-1">Sent to</p>
-          <p className="se-body text-sm font-medium text-[#e5e2e1]">{maskedEmail || "your email"}</p>
+          <p className="se-label text-[9px] uppercase tracking-[0.2em] text-muted mb-1">Sent to</p>
+          <p className="se-body text-sm font-medium text-ink-2">{maskedEmail || "your email"}</p>
         </div>
-        <Link to="/auth/register" className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-[#F2CA50] transition-colors hover:bg-white/10">
+        <Link to="/auth/register" className="flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-gold-ink transition-colors hover:bg-ink/10">
           <Edit2 className="h-3 w-3" /> Edit
         </Link>
       </div>
@@ -117,25 +117,25 @@ const VerifyOtp = () => {
         <button
           type="submit"
           disabled={isLoading || otp.length < 4}
-          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
+          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-gold/50"
         >
           {isLoading ? "Verifying..." : "Verify Identity"}
           {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
         </button>
       </form>
 
-      <div className="mt-8 text-center border-t border-white/5 pt-6">
-        <p className="se-body text-sm text-[#99907c] mb-2">Didn't receive the code?</p>
+      <div className="mt-8 text-center border-t border-ink/5 pt-6">
+        <p className="se-body text-sm text-muted mb-2">Didn't receive the code?</p>
         {seconds > 0 ? (
-          <span className="se-label text-[10px] tracking-[0.28em] text-[#99907c]">
-            Resend available in <span className="text-[#F2CA50]">{seconds}s</span>
+          <span className="se-label text-[10px] tracking-[0.28em] text-muted">
+            Resend available in <span className="text-gold-ink">{seconds}s</span>
           </span>
         ) : (
           <button
             type="button"
             onClick={handleResend}
             disabled={resending}
-            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-[#F2CA50] hover:text-[#ffe088] transition-colors disabled:opacity-50"
+            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-gold-ink hover:text-gold-ink transition-colors disabled:opacity-50"
           >
             {resending ? "Sending..." : "Resend Code"}
           </button>

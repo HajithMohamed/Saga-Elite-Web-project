@@ -5,10 +5,10 @@ import { Home, MessageCircle, RotateCcw } from "lucide-react";
 
 const NotFound = () => {
   return (
-    <section className="relative min-h-screen bg-[#0e0e0e] flex items-center justify-center overflow-hidden px-4">
+    <section className="relative min-h-screen bg-page flex items-center justify-center overflow-hidden px-4">
       {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#F2CA50]/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold/[0.03] rounded-full blur-[120px]" />
         <div className="absolute top-0 left-0 w-full h-full bg-grain opacity-30" />
       </div>
 
@@ -19,13 +19,13 @@ const NotFound = () => {
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-[10px] font-sans font-bold uppercase tracking-[0.4em] text-[#F2CA50] mb-6">
+          <p className="text-[10px] font-sans font-bold uppercase tracking-[0.4em] text-gold-ink mb-6">
             Error 404
           </p>
-          <h1 className="se-serif text-[80px] md:text-[120px] lg:text-[160px] text-[#fafafa] leading-none tracking-tight mb-4 select-none">
+          <h1 className="se-serif text-[80px] md:text-[120px] lg:text-[160px] text-ink leading-none tracking-tight mb-4 select-none">
             404
           </h1>
-          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-[#F2CA50] to-transparent mx-auto mb-8" />
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-8" />
         </motion.div>
 
         <motion.div
@@ -33,10 +33,10 @@ const NotFound = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="font-sans text-2xl md:text-3xl font-bold text-[#fafafa] mb-4">
+          <h2 className="font-sans text-2xl md:text-3xl font-bold text-ink mb-4">
             Page Not Found
           </h2>
-          <p className="se-body text-[15px] text-[#99907c] max-w-md mx-auto mb-10 leading-relaxed">
+          <p className="se-body text-[15px] text-muted max-w-md mx-auto mb-10 leading-relaxed">
             The page you're looking for has been moved, removed, or doesn't exist. 
             Let's get you back on track.
           </p>

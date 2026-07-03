@@ -123,8 +123,8 @@ export const OverviewSection = ({ drops = [] }) => {
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md">
-      <h2 className="mb-6 text-lg font-semibold text-white">Product Overview</h2>
+    <div className="rounded-2xl border border-ink/[0.08] bg-ink/[0.02] p-6 backdrop-blur-md">
+      <h2 className="mb-6 text-lg font-semibold text-ink">Product Overview</h2>
 
       <div className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-2">
@@ -178,13 +178,13 @@ export const OverviewSection = ({ drops = [] }) => {
               value={fabricSelection}
               onChange={(e) => handleFabricSelectionChange(e.target.value)}
             >
-              <option value="" className="bg-[#0f1014] text-white">Select material...</option>
+              <option value="" className="bg-panel text-ink">Select material...</option>
               {MATERIAL_OPTIONS.map((material) => (
-                <option key={material} value={material} className="bg-[#0f1014] text-white">
+                <option key={material} value={material} className="bg-panel text-ink">
                   {material}
                 </option>
               ))}
-              <option value={CUSTOM_OPTION} className="bg-[#0f1014] text-[#D4AF37]">Custom / Other...</option>
+              <option value={CUSTOM_OPTION} className="bg-panel text-gold-ink2">Custom / Other...</option>
             </LuxurySelect>
             {(fabricSelection === CUSTOM_OPTION || (formData.fabric && !MATERIAL_OPTIONS.includes(formData.fabric))) && (
               <LuxuryInput
@@ -201,13 +201,13 @@ export const OverviewSection = ({ drops = [] }) => {
               value={gsmSelection}
               onChange={(e) => handleGsmSelectionChange(e.target.value)}
             >
-              <option value="" className="bg-[#0f1014] text-white">Select GSM...</option>
+              <option value="" className="bg-panel text-ink">Select GSM...</option>
               {GSM_OPTIONS.map((gsm) => (
-                <option key={gsm} value={gsm} className="bg-[#0f1014] text-white">
+                <option key={gsm} value={gsm} className="bg-panel text-ink">
                   {gsm}
                 </option>
               ))}
-              <option value={CUSTOM_OPTION} className="bg-[#0f1014] text-[#D4AF37]">Custom...</option>
+              <option value={CUSTOM_OPTION} className="bg-panel text-gold-ink2">Custom...</option>
             </LuxurySelect>
             {(gsmSelection === CUSTOM_OPTION || (formData.gsm && !GSM_OPTIONS.includes(String(formData.gsm)))) && (
               <LuxuryInput
@@ -234,7 +234,7 @@ export const OverviewSection = ({ drops = [] }) => {
               ))}
             </datalist>
             {brandOptions.length > 0 ? (
-              <p className="mt-1.5 text-[10px] text-white/40">
+              <p className="mt-1.5 text-[10px] text-ink/40">
                 Pick from the brand list (Store → Brands) or type a new name.
               </p>
             ) : null}
@@ -244,9 +244,9 @@ export const OverviewSection = ({ drops = [] }) => {
               value={formData.drop}
               onChange={(e) => updateField('drop', e.target.value)}
             >
-              <option value="" className="bg-[#0f1014] text-white">Select Drop...</option>
+              <option value="" className="bg-panel text-ink">Select Drop...</option>
               {drops.map((d) => (
-                <option key={d._id} value={d._id} className="bg-[#0f1014] text-white">
+                <option key={d._id} value={d._id} className="bg-panel text-ink">
                   {d.name}
                 </option>
               ))}
@@ -278,13 +278,13 @@ export const OverviewSection = ({ drops = [] }) => {
               value={fitSelection}
               onChange={(e) => handleFitSelectionChange(e.target.value)}
             >
-              <option value="" className="bg-[#0f1014] text-white">Select fit...</option>
+              <option value="" className="bg-panel text-ink">Select fit...</option>
               {FIT_OPTIONS.map((fit) => (
-                <option key={fit} value={fit} className="bg-[#0f1014] text-white">
+                <option key={fit} value={fit} className="bg-panel text-ink">
                   {fit}
                 </option>
               ))}
-              <option value={CUSTOM_OPTION} className="bg-[#0f1014] text-[#D4AF37]">Custom...</option>
+              <option value={CUSTOM_OPTION} className="bg-panel text-gold-ink2">Custom...</option>
             </LuxurySelect>
             {(fitSelection === CUSTOM_OPTION || (formData.fitType && !FIT_OPTIONS.includes(formData.fitType))) && (
               <LuxuryInput
@@ -303,19 +303,19 @@ export const OverviewSection = ({ drops = [] }) => {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Size Guide Preset</label>
+            <label className="text-xs font-semibold uppercase tracking-wider text-ink/50">Size Guide Preset</label>
             <LuxurySelect
               value={sizeGuideSelection}
               onChange={(e) => handleSizeGuideSelectionChange(e.target.value)}
               className="w-48 text-xs py-1"
             >
-              <option value="" className="bg-[#0f1014] text-white">No preset</option>
+              <option value="" className="bg-panel text-ink">No preset</option>
               {SIZE_GUIDE_PRESETS.map((preset) => (
-                <option key={preset.value} value={preset.value} className="bg-[#0f1014] text-white">
+                <option key={preset.value} value={preset.value} className="bg-panel text-ink">
                   {preset.label}
                 </option>
               ))}
-              <option value={CUSTOM_OPTION} className="bg-[#0f1014] text-[#D4AF37]">Custom...</option>
+              <option value={CUSTOM_OPTION} className="bg-panel text-gold-ink2">Custom...</option>
             </LuxurySelect>
           </div>
 

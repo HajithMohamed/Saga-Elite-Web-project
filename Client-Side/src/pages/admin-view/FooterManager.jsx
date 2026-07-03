@@ -172,21 +172,21 @@ const FooterManager = () => {
   const renderLinkSection = (key, title, emptyText) => {
     const rows = values[key] || [];
     return (
-      <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+      <section className="rounded-2xl border border-ink/10 bg-page p-6">
         <header className="mb-4 flex items-center gap-2">
-          <LinkIcon className="h-4 w-4 text-[#D4AF37]" />
-          <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+          <LinkIcon className="h-4 w-4 text-gold-ink2" />
+          <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
             {title}
           </h2>
         </header>
         {rows.length === 0 ? (
-          <p className="mb-3 rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
+          <p className="mb-3 rounded-lg border border-dashed border-ink/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
             {emptyText}
           </p>
         ) : null}
         <div className="space-y-3">
           {rows.map((row, idx) => (
-            <div key={idx} className="rounded-lg border border-white/10 bg-black/30 p-3">
+            <div key={idx} className="rounded-lg border border-ink/10 bg-black/30 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
                   #{idx + 1}
@@ -194,7 +194,7 @@ const FooterManager = () => {
                 <button
                   type="button"
                   onClick={() => removeLinkRow(key, idx)}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
+                  className="inline-flex items-center gap-1 rounded-md border border-ink/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
                 >
                   <Trash2 className="h-3 w-3" /> Remove
                 </button>
@@ -204,13 +204,13 @@ const FooterManager = () => {
                   value={row.label || ""}
                   onChange={(e) => updateLinkRow(key, idx, { label: e.target.value })}
                   placeholder="Label (e.g. New Drops)"
-                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                  className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
                 />
                 <input
                   value={row.url || ""}
                   onChange={(e) => updateLinkRow(key, idx, { url: e.target.value })}
                   placeholder="URL (e.g. /shopping/product-list or https://…)"
-                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                  className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
                 />
               </div>
               <label className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xs text-gray-400">
@@ -218,7 +218,7 @@ const FooterManager = () => {
                   type="checkbox"
                   checked={!!row.openInNewTab}
                   onChange={(e) => updateLinkRow(key, idx, { openInNewTab: e.target.checked })}
-                  className="accent-[#D4AF37]"
+                  className="accent-gold-deep"
                 />
                 Open in new tab
               </label>
@@ -228,7 +228,7 @@ const FooterManager = () => {
         <button
           type="button"
           onClick={() => addLinkRow(key)}
-          className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+          className="mt-3 inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20"
         >
           <Plus className="h-3.5 w-3.5" /> Add link
         </button>
@@ -240,7 +240,7 @@ const FooterManager = () => {
     return (
       <AdminPage eyebrow="Content" title="Footer">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
         </div>
       </AdminPage>
     );
@@ -280,10 +280,10 @@ const FooterManager = () => {
       >
         <div className="space-y-6">
           {/* Brand description */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <FileText className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Brand description
               </h2>
             </header>
@@ -294,7 +294,7 @@ const FooterManager = () => {
               }
               rows={4}
               placeholder="A short blurb about the brand for the footer."
-              className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
               {(values.footer_brand_description || "").length} / 600
@@ -323,15 +323,15 @@ const FooterManager = () => {
           )}
 
           {/* Payment methods */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <CreditCard className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Payment methods
               </h2>
             </header>
             {values.footer_payment_methods.length === 0 ? (
-              <p className="mb-3 rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
+              <p className="mb-3 rounded-lg border border-dashed border-ink/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
                 No payment icons yet. Add one to get started.
               </p>
             ) : null}
@@ -339,7 +339,7 @@ const FooterManager = () => {
               {values.footer_payment_methods.map((row, idx) => (
                 <div
                   key={idx}
-                  className="rounded-lg border border-white/10 bg-black/30 p-3"
+                  className="rounded-lg border border-ink/10 bg-black/30 p-3"
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
@@ -348,7 +348,7 @@ const FooterManager = () => {
                     <button
                       type="button"
                       onClick={() => removePayRow(idx)}
-                      className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
+                      className="inline-flex items-center gap-1 rounded-md border border-ink/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
                     >
                       <Trash2 className="h-3 w-3" /> Remove
                     </button>
@@ -360,7 +360,7 @@ const FooterManager = () => {
                         updatePayRow(idx, { name: e.target.value })
                       }
                       placeholder="Name (Visa, Mastercard, PayHere…)"
-                      className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                      className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
                     />
                     <ImagePicker
                       value={row.iconUrl || ""}
@@ -377,17 +377,17 @@ const FooterManager = () => {
             <button
               type="button"
               onClick={addPayRow}
-              className="mt-3 inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+              className="mt-3 inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20"
             >
               <Plus className="h-3.5 w-3.5" /> Add icon
             </button>
           </section>
 
           {/* Copyright */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <Copyright className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <Copyright className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Copyright text
               </h2>
             </header>
@@ -396,7 +396,7 @@ const FooterManager = () => {
               value={values.footer_copyright || ""}
               onChange={(e) => setField("footer_copyright", e.target.value)}
               placeholder="© {year} Saga Elite. All rights reserved."
-              className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
               Use {"{year}"} to insert the current year automatically on the

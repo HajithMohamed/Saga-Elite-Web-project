@@ -114,7 +114,7 @@ const Timeline = ({ order }) => {
   const status = order?.status || "pending";
 
   return (
-    <ol className="relative ml-3 space-y-5 border-l border-white/10 pl-6">
+    <ol className="relative ml-3 space-y-5 border-l border-ink/10 pl-6">
       {TIMELINE_STAGES.map((stage) => {
         const Icon = stage.icon;
         const at = readPath(order || {}, stage.atField);
@@ -126,9 +126,9 @@ const Timeline = ({ order }) => {
               (status === "pending" || status === "pending_payment")));
         const dotTone = reached
           ? isCurrent
-            ? "border-[#f2ca50] bg-[#f2ca50] text-black shadow-[0_0_18px_rgba(242,202,80,0.4)]"
+            ? "border-gold-ink bg-gold text-black shadow-[0_0_18px_rgba(242,202,80,0.4)]"
             : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-          : "border-white/10 bg-black/40 text-gray-600";
+          : "border-ink/10 bg-black/40 text-gray-600";
 
         return (
           <li key={stage.key} className="relative">
@@ -139,7 +139,7 @@ const Timeline = ({ order }) => {
             </span>
             <p
               className={`text-sm font-semibold ${
-                reached ? "text-white" : "text-gray-500"
+                reached ? "text-ink" : "text-gray-500"
               }`}
             >
               {stage.label}
@@ -167,8 +167,8 @@ const QuickAction = ({ icon: Icon, label, onClick, tone = "default", disabled })
       : tone === "danger"
         ? "border-rose-500/30 bg-rose-500/10 text-rose-200 hover:border-rose-500/50 hover:bg-rose-500/20"
         : tone === "accent"
-          ? "border-[#f2ca50]/40 bg-[#f2ca50]/10 text-[#f2ca50] hover:bg-[#f2ca50]/20"
-          : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-white/20 hover:text-white";
+          ? "border-gold-ink/40 bg-gold/10 text-gold-ink hover:bg-gold/20"
+          : "border-ink/10 bg-ink/[0.04] text-gray-300 hover:border-ink/20 hover:text-ink";
 
   return (
     <button
@@ -259,14 +259,14 @@ const OrderDetailDrawer = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 16 }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            className="flex h-full max-h-full w-full flex-col border border-[#4d4635]/60 bg-[#0a0a0a] text-white shadow-[0_40px_120px_rgba(0,0,0,0.75)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-3xl"
+            className="flex h-full max-h-full w-full flex-col border border-line/60 bg-page text-ink shadow-[0_40px_120px_rgba(0,0,0,0.75)] sm:h-auto sm:max-h-[92vh] sm:max-w-[920px] sm:rounded-3xl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+            <header className="flex items-start justify-between gap-4 border-b border-ink/10 px-6 py-5">
               <div className="min-w-0">
-                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[#f2ca50]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-ink">
                   Order story
                 </p>
-                <h2 className="mt-1 truncate text-xl font-bold text-white">{customerName}</h2>
+                <h2 className="mt-1 truncate text-xl font-bold text-ink">{customerName}</h2>
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
                   {String(order._id).slice(-12)}
                 </p>
@@ -274,7 +274,7 @@ const OrderDetailDrawer = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-white/10 bg-black/60 p-2 text-gray-300 transition hover:border-[#f2ca50]/40 hover:text-[#f2ca50]"
+                className="rounded-full border border-ink/10 bg-black/60 p-2 text-gray-300 transition hover:border-gold-ink/40 hover:text-gold-ink"
                 aria-label="Close drawer"
               >
                 <X className="h-4 w-4" />
@@ -283,52 +283,52 @@ const OrderDetailDrawer = ({
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               <div className="md:grid md:grid-cols-[1.15fr_1fr]">
-              <div className="md:border-r md:border-white/10">
+              <div className="md:border-r md:border-ink/10">
               <section className="space-y-5 px-6 py-6">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                     <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
                       Total
                     </p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-white">
+                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
                       LKR {formatCurrency(order.totalAmount)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                     <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
                       Items
                     </p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-white">
+                    <p className="mt-1 text-lg font-bold tabular-nums text-ink">
                       {(order.items || []).reduce((sum, i) => sum + (i.quantity || 1), 0)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                     <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
                       Payment
                     </p>
-                    <p className="mt-1 truncate text-sm text-white">{order.paymentMethod || "—"}</p>
+                    <p className="mt-1 truncate text-sm text-ink">{order.paymentMethod || "—"}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                     <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
                       Placed
                     </p>
-                    <p className="mt-1 text-sm text-white">
+                    <p className="mt-1 text-sm text-ink">
                       {formatDateTime(order.createdAt) || "—"}
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="rounded-2xl border border-ink/10 bg-black/30 p-4">
                   <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
                     Customer
                   </p>
-                  <p className="mt-2 text-sm text-white">{customerName}</p>
+                  <p className="mt-2 text-sm text-ink">{customerName}</p>
                   <p className="mt-1 break-all text-xs text-gray-400">
                     {order.user?.email || order.guestEmail || "—"}
                   </p>
                   {phone ? (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="rounded-full border border-white/10 bg-black/40 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-gray-300">
+                      <span className="rounded-full border border-ink/10 bg-black/40 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-gray-300">
                         {phone}
                       </span>
                       {waPhone ? (
@@ -367,7 +367,7 @@ const OrderDetailDrawer = ({
               </section>
 
               {order.items && order.items.length > 0 ? (
-                <section className="border-t border-white/10 px-6 py-6">
+                <section className="border-t border-ink/10 px-6 py-6">
                   <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
                     Items ({order.items.length})
                   </p>
@@ -375,9 +375,9 @@ const OrderDetailDrawer = ({
                     {order.items.map((line, idx) => (
                       <li
                         key={idx}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/30 px-3 py-2 text-sm"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-ink/5 bg-black/30 px-3 py-2 text-sm"
                       >
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/50">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-ink/10 bg-black/50">
                           {line.productImage ? (
                             <img
                               src={line.productImage}
@@ -391,7 +391,7 @@ const OrderDetailDrawer = ({
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-white">
+                          <p className="truncate text-ink">
                             {line.productName || line.name || line.product?.name || "Item"}
                           </p>
                           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-gray-500">
@@ -401,7 +401,7 @@ const OrderDetailDrawer = ({
                         <span className="shrink-0 font-mono text-xs tabular-nums text-gray-300">
                           ×{line.quantity || 1}
                         </span>
-                        <span className="shrink-0 font-mono text-xs tabular-nums text-white">
+                        <span className="shrink-0 font-mono text-xs tabular-nums text-ink">
                           LKR {formatCurrency(line.totalPrice || line.unitPrice * (line.quantity || 1))}
                         </span>
                       </li>
@@ -411,11 +411,11 @@ const OrderDetailDrawer = ({
               ) : null}
 
               {order.notes ? (
-                <section className="border-t border-white/10 px-6 py-6">
+                <section className="border-t border-ink/10 px-6 py-6">
                   <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
                     Order notes
                   </p>
-                  <p className="whitespace-pre-line rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-xs leading-5 text-gray-300">
+                  <p className="whitespace-pre-line rounded-xl border border-ink/5 bg-black/30 px-4 py-3 text-xs leading-5 text-gray-300">
                     {order.notes}
                   </p>
                 </section>
@@ -423,7 +423,7 @@ const OrderDetailDrawer = ({
               </div>
 
               <div>
-              <section className="border-t border-white/10 px-6 py-6 md:border-t-0">
+              <section className="border-t border-ink/10 px-6 py-6 md:border-t-0">
                 <p className="mb-5 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
                   Customer story timeline
                 </p>
@@ -438,7 +438,7 @@ const OrderDetailDrawer = ({
               </div>
             </div>
 
-            <footer className="border-t border-white/10 bg-[#0a0a0a] px-6 py-4">
+            <footer className="border-t border-ink/10 bg-page px-6 py-4">
               <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.28em] text-gray-500">
                 Quick actions
               </p>

@@ -563,8 +563,8 @@ const Drops = () => {
           </RightRailPanel>
 
           <RightRailPanel title="Status & Visibility">
-            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3">
-              <span className="text-xs font-semibold text-white/80">Current state</span>
+            <div className="flex items-center justify-between rounded-xl border border-ink/[0.06] bg-black/30 px-4 py-3">
+              <span className="text-xs font-semibold text-ink/80">Current state</span>
               <StatusPill status={computedStatus} size="md" />
             </div>
             <RailToggleRow
@@ -588,24 +588,24 @@ const Drops = () => {
               segments={5}
               filledCount={completedCount}
             />
-            <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+            <p className="mt-2 text-[11px] leading-relaxed text-ink/40">
               Required: name and release date. Add a description, end date, and hero
               imagery for a stronger campaign.
             </p>
           </RightRailPanel>
 
           <RightRailPanel title="Tips">
-            <ul className="space-y-2 text-[11px] leading-relaxed text-white/50">
+            <ul className="space-y-2 text-[11px] leading-relaxed text-ink/50">
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 Keep drop names under 40 characters for cleaner storefront layout.
               </li>
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 Hero imagery looks best at 1600×2000 (4:5).
               </li>
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 Schedule a release date in the future to auto-publish later.
               </li>
             </ul>
@@ -693,12 +693,12 @@ const Drops = () => {
         description="Hero and supporting imagery shown across the storefront."
       >
         {currentEditedSlug === null ? (
-          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/30 p-8 text-center">
-            <Package className="mx-auto mb-3 h-8 w-8 text-white/20" />
-            <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
+          <div className="rounded-2xl border border-dashed border-ink/[0.08] bg-black/30 p-8 text-center">
+            <Package className="mx-auto mb-3 h-8 w-8 text-ink/20" />
+            <p className="text-xs uppercase tracking-[0.2em] font-semibold text-gold-ink2">
               Save the drop to upload images
             </p>
-            <p className="mt-2 text-[11px] text-white/40">
+            <p className="mt-2 text-[11px] text-ink/40">
               Drop-page gallery 1600×2000 (4:5) · Homepage banner 1280×420 (21:9) · JPG / PNG / WEBP · Max 5 MB
             </p>
           </div>
@@ -707,10 +707,10 @@ const Drops = () => {
             {/* Portrait campaign gallery — drop page */}
             <div>
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-ink2">
                   Drop-page gallery
                 </h4>
-                <span className="text-[10px] text-white/40">Portrait · 4:5 · 1600×2000</span>
+                <span className="text-[10px] text-ink/40">Portrait · 4:5 · 1600×2000</span>
               </div>
               <ImageUpload
                 images={dropImages}
@@ -730,7 +730,7 @@ const Drops = () => {
                       images: dropImages,
                     })
                   }
-                  className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+                  className="mt-3 inline-flex items-center justify-center rounded-full border border-gold-ink2/30 bg-gold-deep/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-gold-ink2 hover:bg-gold-deep/[0.16] transition"
                 >
                   View all images
                 </button>
@@ -738,14 +738,14 @@ const Drops = () => {
             </div>
 
             {/* 21:9 homepage banner — separate dedicated slot */}
-            <div className="rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] p-4">
+            <div className="rounded-2xl border border-gold-ink2/15 bg-gold-deep/[0.03] p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-ink2">
                   Homepage banner (21:9)
                 </h4>
-                <span className="text-[10px] text-white/40">1280×420 · Cover</span>
+                <span className="text-[10px] text-ink/40">1280×420 · Cover</span>
               </div>
-              <ul className="mb-3 space-y-1 text-[11px] leading-relaxed text-white/50">
+              <ul className="mb-3 space-y-1 text-[11px] leading-relaxed text-ink/50">
                 <li>• Recommended 1280 × 420 px (21:9). Minimum 1280 × 420.</li>
                 <li>• JPG / PNG / WEBP · Max 5 MB.</li>
                 <li>• Keep models, logos &amp; key subjects within the centre 60% — edges get cropped on wide screens.</li>
@@ -766,7 +766,7 @@ const Drops = () => {
               {/* Responsive preview — three 21:9 frames + centre safe-area guide */}
               {bannerImages[0]?.url && (
                 <div className="mt-4">
-                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-ink/40">
                     Preview across devices
                   </p>
                   <div className="flex flex-wrap items-start gap-4">
@@ -776,16 +776,16 @@ const Drops = () => {
                       { label: "Mobile", w: "w-[130px]" },
                     ].map((d) => (
                       <div key={d.label} className="space-y-1">
-                        <div className={`${d.w} relative aspect-[1280/420] overflow-hidden rounded-lg border border-white/10 bg-black`}>
+                        <div className={`${d.w} relative aspect-[1280/420] overflow-hidden rounded-lg border border-ink/10 bg-page`}>
                           <img
                             src={bannerImages[0].url}
                             alt={`${d.label} banner preview`}
                             className="absolute inset-0 h-full w-full object-cover object-center"
                           />
                           {/* centre 60% safe-area guide */}
-                          <div className="pointer-events-none absolute inset-y-0 left-[20%] right-[20%] border-x border-dashed border-[#D4AF37]/40" />
+                          <div className="pointer-events-none absolute inset-y-0 left-[20%] right-[20%] border-x border-dashed border-gold-ink2/40" />
                         </div>
-                        <p className="text-center text-[9px] uppercase tracking-wider text-white/40">{d.label}</p>
+                        <p className="text-center text-[9px] uppercase tracking-wider text-ink/40">{d.label}</p>
                       </div>
                     ))}
                   </div>
@@ -832,13 +832,13 @@ const Drops = () => {
           />
         </FormField>
 
-        <div className="rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] p-4">
+        <div className="rounded-2xl border border-gold-ink2/15 bg-gold-deep/[0.04] p-4">
           <label className="flex cursor-pointer items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <Film className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" />
+              <Film className="mt-0.5 h-4 w-4 shrink-0 text-gold-ink2" />
               <div>
-                <p className="text-sm font-semibold text-white">Cinematic mode</p>
-                <p className="mt-1 text-xs text-white/55">
+                <p className="text-sm font-semibold text-ink">Cinematic mode</p>
+                <p className="mt-1 text-xs text-ink/55">
                   Renders the drop landing with a fullscreen hero + animated reveal. Best for marquee
                   releases.
                 </p>
@@ -850,7 +850,7 @@ const Drops = () => {
               onChange={(e) =>
                 setFormData({ ...formData, cinematicMode: e.target.checked })
               }
-              className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+              className="h-4 w-4 cursor-pointer rounded border-ink/30 bg-black/60 accent-gold-deep"
             />
           </label>
         </div>
@@ -883,7 +883,7 @@ const Drops = () => {
         {currentEditedSlug ? (
           <Link
             to="/admin/drop-analytics"
-            className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-black/40 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-gold-ink2/40 hover:text-gold-ink2"
           >
             <BarChart3 className="h-3.5 w-3.5" /> View drop performance
           </Link>
@@ -909,9 +909,9 @@ const Drops = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-white/10"
+      className="flex-1 flex flex-col bg-surface text-on-surface rounded-3xl border border-ink/10"
     >
-      <div className="border-b border-white/10 px-6 py-3">
+      <div className="border-b border-ink/10 px-6 py-3">
         <ToastFlash show={showDropSaved} message="Drop saved" />
       </div>
 
@@ -935,21 +935,21 @@ const Drops = () => {
                 <button
                   disabled={bulkPending}
                   onClick={() => runBulkDropAction("activate")}
-                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-saga-primary hover:text-black transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-saga-primary hover:text-black transition-colors disabled:opacity-50"
                 >
                   Publish
                 </button>
                 <button
                   disabled={bulkPending}
                   onClick={() => runBulkDropAction("deactivate")}
-                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-white hover:text-black transition-colors disabled:opacity-50"
                 >
                   Unpublish
                 </button>
                 <button
                   disabled={bulkPending}
                   onClick={() => runBulkDropAction("archive")}
-                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-white hover:text-black transition-colors disabled:opacity-50"
                 >
                   Archive
                 </button>
@@ -957,7 +957,7 @@ const Drops = () => {
                 <button
                   disabled={bulkPending}
                   onClick={() => runBulkDropAction("delete")}
-                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-400 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-400 hover:bg-red-500 hover:text-ink transition-colors disabled:opacity-50"
                 >
                   Delete
                 </button>
@@ -969,8 +969,8 @@ const Drops = () => {
         {/* Title + Actions */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-4 gap-8">
           <div>
-            <h2 className="text-xl font-serif text-white">All Drops</h2>
-            <p className="text-xs text-white/50 font-mono mt-1">
+            <h2 className="text-xl font-serif text-ink">All Drops</h2>
+            <p className="text-xs text-ink/50 font-mono mt-1">
               {drops.length} drop{drops.length === 1 ? "" : "s"} total
             </p>
           </div>
@@ -985,14 +985,14 @@ const Drops = () => {
         </div>
 
         {/* NATIVE DATA TABLE LAYOUT */}
-        <div className="w-full max-w-full overflow-x-auto rounded-3xl border border-[#D4AF37]/10 bg-[#0B0B0B]/80 backdrop-blur-xl">
+        <div className="w-full max-w-full overflow-x-auto rounded-3xl border border-gold-ink2/10 bg-page/80 backdrop-blur-xl">
           <table className="min-w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-white/5 text-[10px] uppercase tracking-[0.2em] text-white/40">
+              <tr className="border-b border-ink/5 text-[10px] uppercase tracking-[0.2em] text-ink/40">
                 <th className="px-6 py-5 font-semibold w-12">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-white/20 bg-black/40 accent-[#D4AF37] focus:ring-[#D4AF37]/50"
+                    className="h-4 w-4 rounded border-ink/20 bg-black/40 accent-gold-deep focus:ring-gold-ink2/50"
                     checked={bulk.isAllSelected}
                     onChange={bulk.toggleAll}
                   />
@@ -1003,7 +1003,7 @@ const Drops = () => {
                 <th className="px-6 py-5 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-ink/5">
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="py-12">
@@ -1012,7 +1012,7 @@ const Drops = () => {
                 </tr>
               ) : drops.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-white/40">
+                  <td colSpan={5} className="py-20 text-center text-ink/40">
                     <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
                     <p className="font-mono text-xs uppercase tracking-widest">No drops found</p>
                   </td>
@@ -1023,19 +1023,19 @@ const Drops = () => {
                   return (
                   <tr
                     key={drop._id}
-                    className="group transition-colors hover:bg-white/[0.02]"
+                    className="group transition-colors hover:bg-ink/[0.02]"
                   >
                     <td className="px-6 py-4 align-middle">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-white/20 bg-black/40 accent-[#D4AF37] focus:ring-[#D4AF37]/50"
+                        className="h-4 w-4 rounded border-ink/20 bg-black/40 accent-gold-deep focus:ring-gold-ink2/50"
                         checked={bulk.selectedIds.includes(drop.slug)}
                         onChange={() => bulk.toggle(drop.slug)}
                       />
                     </td>
                     <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-white/5 border border-white/10 flex items-center justify-center">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-ink/5 border border-ink/10 flex items-center justify-center">
                           {drop.images && drop.images.length > 0 ? (
                             <img
                               src={drop.images[0].url}
@@ -1043,14 +1043,14 @@ const Drops = () => {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <Package className="h-5 w-5 text-white/20" />
+                            <Package className="h-5 w-5 text-ink/20" />
                           )}
                         </div>
                         <div className="max-w-[200px] lg:max-w-[300px]">
-                          <p className="truncate text-sm font-semibold text-white group-hover:text-[#D4AF37] transition-colors">
+                          <p className="truncate text-sm font-semibold text-ink group-hover:text-gold-ink2 transition-colors">
                             {drop.name}
                           </p>
-                          <p className="truncate text-xs text-white/40 mt-0.5">
+                          <p className="truncate text-xs text-ink/40 mt-0.5">
                             {drop.description || "No description"}
                           </p>
                         </div>
@@ -1061,26 +1061,26 @@ const Drops = () => {
                         <PulseDot active={drop.isPublished} />
                         <span
                           className={`text-[10px] uppercase tracking-widest font-bold ${
-                            drop.isPublished ? "text-saga-primary" : "text-white/40"
+                            drop.isPublished ? "text-saga-primary" : "text-ink/40"
                           }`}
                         >
                           {drop.isPublished ? "Live" : "Draft"}
                         </span>
                         {drop.isArchived && (
-                          <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-white/50">
+                          <span className="ml-2 rounded bg-ink/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-ink/50">
                             Archived
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 align-middle hidden lg:table-cell">
-                      <div className="flex flex-col gap-1 text-xs text-white/60 font-mono">
+                      <div className="flex flex-col gap-1 text-xs text-ink/60 font-mono">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-3 w-3 text-[#D4AF37]" />
+                          <Calendar className="h-3 w-3 text-gold-ink2" />
                           {new Date(drop.releaseDate).toLocaleDateString()}
                         </div>
                         {daysAway != null && (
-                          <span className="inline-flex w-fit items-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] uppercase tracking-wider text-[#D4AF37]">
+                          <span className="inline-flex w-fit items-center rounded-full border border-gold-ink2/20 bg-gold-deep/10 px-2 py-0.5 text-[9px] uppercase tracking-wider text-gold-ink2">
                             {daysAway} day{daysAway === 1 ? "" : "s"} away
                           </span>
                         )}
@@ -1091,7 +1091,7 @@ const Drops = () => {
                         <button
                           type="button"
                           onClick={() => openDropGallery(drop)}
-                          className="p-2 text-white/40 hover:text-white transition-colors"
+                          className="p-2 text-ink/40 hover:text-ink transition-colors"
                           title="Gallery"
                         >
                           <Eye className="h-4 w-4" />
@@ -1120,7 +1120,7 @@ const Drops = () => {
                             }
                             setShowForm(true);
                           }}
-                          className="p-2 text-white/40 hover:text-[#D4AF37] transition-colors"
+                          className="p-2 text-ink/40 hover:text-gold-ink2 transition-colors"
                           title="Edit"
                         >
                           <Edit2 className="h-4 w-4" />
@@ -1128,7 +1128,7 @@ const Drops = () => {
                         <button
                           type="button"
                           onClick={() => setDeleteConfirmSlug((s) => (s === drop.slug ? null : drop.slug))}
-                          className="p-2 text-white/40 hover:text-red-400 transition-colors relative"
+                          className="p-2 text-ink/40 hover:text-red-400 transition-colors relative"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />

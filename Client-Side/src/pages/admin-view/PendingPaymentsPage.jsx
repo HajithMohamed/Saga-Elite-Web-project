@@ -324,7 +324,7 @@ const PendingPaymentsPage = () => {
 
   const currentStatusClass = (status) =>
     statusMeta[status]?.className ||
-    "border-white/10 bg-white/5 text-gray-300";
+    "border-ink/10 bg-ink/5 text-gray-300";
 
   const visibleIds = (pendingPayments || []).map((p) => String(p._id));
   const allVisibleSelected =
@@ -337,14 +337,14 @@ const PendingPaymentsPage = () => {
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
+      className="min-h-screen bg-page px-6 py-8 text-ink lg:px-8"
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <section className="rounded-[2rem] border border-[#D4AF37]/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
+        <section className="rounded-[2rem] border border-gold-ink2/15 bg-[linear-gradient(180deg,rgba(212,175,55,0.14),rgba(255,255,255,0.02)_50%,rgba(255,255,255,0.04)_100%)] p-8 shadow-[0_30px_120px_rgba(0,0,0,0.4)]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Payments</p>
-              <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">
+              <p className="text-xs uppercase tracking-[0.35em] text-gold-ink2">Payments</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight text-ink sm:text-5xl">
                 Review bank transfers and card payments in one queue.
               </h1>
               <p className="mt-4 text-sm leading-7 text-gray-400">
@@ -355,7 +355,7 @@ const PendingPaymentsPage = () => {
             <button
               type="button"
               onClick={loadQueue}
-              className="inline-flex items-center justify-center gap-3 self-start rounded-full border border-[#D4AF37]/25 bg-black/70 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37]"
+              className="inline-flex items-center justify-center gap-3 self-start rounded-full border border-gold-ink2/25 bg-black/70 px-5 py-3 text-sm font-semibold text-ink transition hover:border-gold-ink2"
             >
               <RefreshCcw className="h-4 w-4" />
               Refresh queue
@@ -364,7 +364,7 @@ const PendingPaymentsPage = () => {
         </section>
 
         {/* Payment-type tabs — All / Manual / Card */}
-        <section className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-[#0b0b0b] p-1.5">
+        <section className="flex flex-wrap gap-2 rounded-full border border-ink/10 bg-page p-1.5">
           {[
             { value: "all", label: "All" },
             { value: "manual_bank_transfer", label: "Manual" },
@@ -378,8 +378,8 @@ const PendingPaymentsPage = () => {
                 onClick={() => setPaymentTypeFilter(tab.value)}
                 className={`rounded-full px-5 py-2 text-xs font-bold uppercase tracking-[0.22em] transition ${
                   active
-                    ? "bg-[#D4AF37] text-black"
-                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    ? "bg-gold-deep text-black"
+                    : "text-gray-300 hover:bg-ink/5 hover:text-ink"
                 }`}
               >
                 {tab.label}
@@ -391,9 +391,9 @@ const PendingPaymentsPage = () => {
         {/* Method summary tiles (Fix #2) */}
         {methodSummary?.byMethod?.length > 0 && (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#0b0b0b] p-5">
-              <p className="text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">Total</p>
-              <p className="mt-2 text-3xl font-bold text-white">
+            <div className="rounded-2xl border border-gold-ink2/30 bg-page p-5">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-gold-ink2">Total</p>
+              <p className="mt-2 text-3xl font-bold text-ink">
                 {methodSummary.totals?.count || 0}
               </p>
               <p className="text-xs text-gray-400 mt-1">
@@ -403,12 +403,12 @@ const PendingPaymentsPage = () => {
             {methodSummary.byMethod.map((row) => (
               <div
                 key={row.method}
-                className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-5"
+                className="rounded-2xl border border-ink/10 bg-page p-5"
               >
                 <p className="text-[10px] uppercase tracking-[0.28em] text-gray-400">
                   {PAYMENT_METHOD_LABELS[row.method] || row.method}
                 </p>
-                <p className="mt-2 text-3xl font-bold text-white">{row.count}</p>
+                <p className="mt-2 text-3xl font-bold text-ink">{row.count}</p>
                 <p className="text-xs text-gray-400 mt-1">
                   LKR {formatCurrency(row.totalAmount || 0)}
                 </p>
@@ -417,7 +417,7 @@ const PendingPaymentsPage = () => {
           </section>
         )}
 
-        <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
+        <section className="grid gap-4 rounded-[1.75rem] border border-ink/10 bg-page p-6 md:grid-cols-2 xl:grid-cols-[1fr_0.75fr]">
           <div className="space-y-3">
             <label className="space-y-2 text-sm text-gray-300 block">
               Status filter
@@ -425,7 +425,7 @@ const PendingPaymentsPage = () => {
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="w-full appearance-none rounded-2xl border border-white/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+                  className="w-full appearance-none rounded-2xl border border-ink/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
                 >
                   {statusOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -441,18 +441,18 @@ const PendingPaymentsPage = () => {
                 type="checkbox"
                 checked={guestOnly}
                 onChange={(e) => setGuestOnly(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+                className="h-4 w-4 cursor-pointer rounded border-ink/30 bg-black/60 accent-gold-deep"
               />
               Guest payments only
             </label>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-400">
-            <div className="flex items-center gap-2 text-[#D4AF37]">
+          <div className="rounded-2xl border border-ink/10 bg-black/40 p-4 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-gold-ink2">
               <Landmark className="h-4 w-4" />
               Queue summary
             </div>
-            <p className="mt-2 text-white">
+            <p className="mt-2 text-ink">
               {pagination?.totalCount || 0} records in this view.
             </p>
           </div>
@@ -462,10 +462,10 @@ const PendingPaymentsPage = () => {
           <motion.section
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-[#D4AF37]/30 bg-[#0b0b0b] px-5 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
+            className="sticky top-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-gold-ink2/30 bg-page px-5 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
           >
             <div className="flex items-center gap-3">
-              <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+              <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-ink2">
                 {selectedIds.size} selected
               </span>
               {bulkProcessing ? (
@@ -497,7 +497,7 @@ const PendingPaymentsPage = () => {
                 type="button"
                 onClick={clearSelection}
                 disabled={!!bulkProcessing}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-ink/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <X className="h-3.5 w-3.5" /> Clear
               </button>
@@ -506,23 +506,23 @@ const PendingPaymentsPage = () => {
         ) : null}
 
         {isAdminLoading ? (
-          <div className="flex items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] py-16 text-gray-400">
-            <Loader2 className="mr-3 h-5 w-5 animate-spin text-[#D4AF37]" /> Loading pending payments...
+          <div className="flex items-center justify-center rounded-[2rem] border border-ink/10 bg-page py-16 text-gray-400">
+            <Loader2 className="mr-3 h-5 w-5 animate-spin text-gold-ink2" /> Loading pending payments...
           </div>
         ) : !pendingPayments || pendingPayments.length === 0 ? (
-          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-10 text-center text-sm text-gray-400">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37]">
+          <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-ink/10 bg-page p-10 text-center text-sm text-gray-400">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-gold-ink2/20 bg-gold-deep/10 text-gold-ink2">
               <ShieldAlert className="h-7 w-7" />
             </div>
-            <h2 className="text-xl font-bold text-white">No pending payments</h2>
+            <h2 className="text-xl font-bold text-ink">No pending payments</h2>
             <p className="mt-2 max-w-md leading-6 text-gray-400">
               There are no payments waiting for admin verification in the selected filter.
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+          <div className="overflow-hidden rounded-[1.75rem] border border-ink/10 bg-page shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10 text-left text-sm">
+              <table className="min-w-full divide-y divide-ink/10 text-left text-sm">
                 <thead className="bg-black/40 text-[10px] uppercase tracking-[0.24em] text-gray-400">
                   <tr>
                     <th className="w-10 px-4 py-4">
@@ -534,7 +534,7 @@ const PendingPaymentsPage = () => {
                           if (el) el.indeterminate = someVisibleSelected;
                         }}
                         onChange={toggleSelectAll}
-                        className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+                        className="h-4 w-4 cursor-pointer rounded border-ink/30 bg-black/60 accent-gold-deep"
                       />
                     </th>
                     <th className="px-6 py-4">Reference Number</th>
@@ -548,7 +548,7 @@ const PendingPaymentsPage = () => {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-ink/5">
                   {pendingPayments.map((payment) => {
                     const status = payment.status || "proof_submitted";
                     const id = String(payment._id);
@@ -558,7 +558,7 @@ const PendingPaymentsPage = () => {
                       <tr
                         key={payment._id || payment.referenceNumber}
                         className={`align-top transition ${
-                          isSelected ? "bg-[#D4AF37]/[0.05]" : "hover:bg-white/[0.02]"
+                          isSelected ? "bg-gold-deep/[0.05]" : "hover:bg-ink/[0.02]"
                         }`}
                       >
                         <td className="px-4 py-5">
@@ -567,13 +567,13 @@ const PendingPaymentsPage = () => {
                             aria-label={`Select ${payment.referenceNumber || "payment"}`}
                             checked={isSelected}
                             onChange={() => toggleSelect(id)}
-                            className="h-4 w-4 cursor-pointer rounded border-white/30 bg-black/60 accent-[#D4AF37]"
+                            className="h-4 w-4 cursor-pointer rounded border-ink/30 bg-black/60 accent-gold-deep"
                           />
                         </td>
-                        <td className="px-6 py-5 font-mono text-xs tracking-[0.2em] text-[#D4AF37]">
+                        <td className="px-6 py-5 font-mono text-xs tracking-[0.2em] text-gold-ink2">
                           {payment.referenceNumber || "—"}
                         </td>
-                        <td className="px-6 py-5 text-white">{resolveCustomerName(payment)}</td>
+                        <td className="px-6 py-5 text-ink">{resolveCustomerName(payment)}</td>
                         <td className="px-6 py-5 break-all text-gray-300">{resolveOrderId(payment)}</td>
                         <td className="px-6 py-5 text-gray-300">LKR {formatCurrency(payment.amount)}</td>
                         <td className="px-6 py-5 text-gray-300">
@@ -585,7 +585,7 @@ const PendingPaymentsPage = () => {
                                   resolvePaymentMethod(payment)}
                             </span>
                             {payment.paymentType === "card" && payment.cardDetails?.simulated ? (
-                              <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+                              <span className="rounded-full border border-gold-ink2/30 bg-gold-deep/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-gold-ink2">
                                 Sample
                               </span>
                             ) : null}
@@ -626,7 +626,7 @@ const PendingPaymentsPage = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between rounded-[1.5rem] border border-white/10 bg-[#0b0b0b] px-5 py-4 text-sm text-gray-400">
+        <div className="flex items-center justify-between rounded-[1.5rem] border border-ink/10 bg-page px-5 py-4 text-sm text-gray-400">
           <span>
             Page {pagination?.page || page} of {pagination?.totalPages || 0}
           </span>
@@ -635,7 +635,7 @@ const PendingPaymentsPage = () => {
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
-              className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-full border border-ink/10 px-4 py-2 font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
             </button>
@@ -643,7 +643,7 @@ const PendingPaymentsPage = () => {
               type="button"
               disabled={page >= (pagination?.totalPages || 1)}
               onClick={() => setPage((currentPage) => currentPage + 1)}
-              className="rounded-full border border-white/10 px-4 py-2 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-full border border-ink/10 px-4 py-2 font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
             </button>
@@ -653,18 +653,18 @@ const PendingPaymentsPage = () => {
 
       {decisionModal.open && decisionModal.payment ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">
+          <div className="w-full max-w-lg rounded-[1.75rem] border border-ink/10 bg-page p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]">
+            <p className="text-xs uppercase tracking-[0.35em] text-gold-ink2">
               {decisionModal.action === "verify" ? "Verify payment" : "Reject payment"}
             </p>
-            <h2 className="mt-3 text-2xl font-black text-white">
+            <h2 className="mt-3 text-2xl font-black text-ink">
               {decisionModal.payment.referenceNumber || "Manual payment"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-gray-400">
               Add optional admin notes before confirming this action.
             </p>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/35 p-4 text-sm text-gray-300">
+            <div className="mt-5 rounded-2xl border border-ink/10 bg-black/35 p-4 text-sm text-gray-300">
               <p>
                 <span className="text-gray-500">Customer:</span> {resolveCustomerName(decisionModal.payment)}
               </p>
@@ -679,7 +679,7 @@ const PendingPaymentsPage = () => {
                 value={decisionModal.notes}
                 onChange={(event) => setDecisionModal((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Optional internal note"
-                className="mt-2 min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                className="mt-2 min-h-[120px] w-full rounded-2xl border border-ink/10 bg-black/70 px-4 py-3 text-sm text-ink outline-none focus:border-gold-ink2"
               />
             </label>
 
@@ -688,7 +688,7 @@ const PendingPaymentsPage = () => {
                 type="button"
                 onClick={closeDecisionModal}
                 disabled={isVerifying}
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-ink/10 px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-ink transition disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

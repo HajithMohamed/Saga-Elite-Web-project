@@ -21,7 +21,7 @@ const CollectionHero = ({ variant = "all" }) => {
   return (
     <section
       ref={ref}
-      className="relative h-[60vh] md:h-[80vh] max-h-[720px] w-full overflow-hidden bg-[#050505]"
+      className="relative h-[60vh] md:h-[80vh] max-h-[720px] w-full overflow-hidden bg-page"
     >
       {/* Parallax background image */}
       <motion.div style={{ y }} className="absolute inset-0">
@@ -57,7 +57,7 @@ const CollectionHero = ({ variant = "all" }) => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="font-display text-[44px] md:text-[88px] leading-[0.95] uppercase text-[#FAF7F2] tracking-tight max-w-4xl"
+          className="font-display text-[44px] md:text-[88px] leading-[0.95] uppercase text-ink tracking-tight max-w-4xl"
         >
           {data.title}
         </motion.h1>
@@ -67,7 +67,7 @@ const CollectionHero = ({ variant = "all" }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.3 }}
-            className="font-sans text-sm md:text-base text-[#d0c5af] max-w-xl mt-6 leading-relaxed"
+            className="font-sans text-sm md:text-base text-cream max-w-xl mt-6 leading-relaxed"
           >
             {data.tagline}
           </motion.p>
@@ -83,7 +83,7 @@ const CollectionHero = ({ variant = "all" }) => {
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="flex flex-col items-center gap-1 text-[#99907c]"
+            className="flex flex-col items-center gap-1 text-muted"
           >
             <span className="font-mono text-[9px] tracking-[0.3em] uppercase">
               Scroll

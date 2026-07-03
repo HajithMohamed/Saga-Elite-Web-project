@@ -26,38 +26,38 @@ export const VariantStudio = () => {
   const variants = formData.variants || [];
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md overflow-hidden">
+    <div className="rounded-2xl border border-ink/[0.08] bg-ink/[0.02] p-6 backdrop-blur-md overflow-hidden">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Variant Studio</h2>
-          <p className="mt-1 text-xs text-white/50">Manage SKUs, sizing, colors, and stock in a spreadsheet view.</p>
+          <h2 className="text-lg font-semibold text-ink">Variant Studio</h2>
+          <p className="mt-1 text-xs text-ink/50">Manage SKUs, sizing, colors, and stock in a spreadsheet view.</p>
         </div>
         <button
           type="button"
           onClick={addVariant}
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-white/10"
+          className="flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-ink transition-colors hover:bg-ink/10"
         >
           <Plus className="h-4 w-4" />
           Add Variant
         </button>
       </div>
 
-      <div className="mb-4 rounded-xl border border-white/10 bg-black/30 p-4">
+      <div className="mb-4 rounded-xl border border-ink/10 bg-black/30 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-3 text-sm">
-            <span className="text-white/60">
-              Total stock: <strong className="text-[#D4AF37]">{variantStockSummary.totalStock}</strong>
+            <span className="text-ink/60">
+              Total stock: <strong className="text-gold-ink2">{variantStockSummary.totalStock}</strong>
             </span>
-            <span className="text-white/40">·</span>
-            <span className="text-white/60">
+            <span className="text-ink/40">·</span>
+            <span className="text-ink/60">
               {variantStockSummary.variantCount} variant{variantStockSummary.variantCount === 1 ? '' : 's'}
             </span>
-            <span className="text-white/40">·</span>
-            <span className="text-white/60">
+            <span className="text-ink/40">·</span>
+            <span className="text-ink/60">
               {variantStockSummary.uniqueColors} color{variantStockSummary.uniqueColors === 1 ? '' : 's'}
             </span>
-            <span className="text-white/40">·</span>
-            <span className="text-white/60">
+            <span className="text-ink/40">·</span>
+            <span className="text-ink/60">
               {variantStockSummary.uniqueSizes} size{variantStockSummary.uniqueSizes === 1 ? '' : 's'}
             </span>
           </div>
@@ -65,7 +65,7 @@ export const VariantStudio = () => {
             <button
               type="button"
               onClick={() => setShowBreakdown((s) => !s)}
-              className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-[#D4AF37] hover:text-[#D4AF37]/80"
+              className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-gold-ink2 hover:text-gold-ink2/80"
             >
               Stock breakdown
               {showBreakdown ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -74,17 +74,17 @@ export const VariantStudio = () => {
         </div>
 
         {showBreakdown && (
-          <div className="mt-3 grid gap-3 border-t border-white/5 pt-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 border-t border-ink/5 pt-3 sm:grid-cols-2">
             {variantStockSummary.colorBreakdown.length > 0 && (
               <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wider text-white/40">By color</p>
+                <p className="mb-2 text-[10px] uppercase tracking-wider text-ink/40">By color</p>
                 <div className="flex flex-wrap gap-1.5">
                   {variantStockSummary.colorBreakdown.map(({ color, stock }) => (
                     <span
                       key={color}
-                      className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
+                      className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1 text-[11px] text-ink/80"
                     >
-                      {color}: <span className="font-semibold text-[#D4AF37]">{stock}</span>
+                      {color}: <span className="font-semibold text-gold-ink2">{stock}</span>
                     </span>
                   ))}
                 </div>
@@ -92,14 +92,14 @@ export const VariantStudio = () => {
             )}
             {variantStockSummary.sizeBreakdown.length > 0 && (
               <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wider text-white/40">By size</p>
+                <p className="mb-2 text-[10px] uppercase tracking-wider text-ink/40">By size</p>
                 <div className="flex flex-wrap gap-1.5">
                   {variantStockSummary.sizeBreakdown.map(({ size, stock }) => (
                     <span
                       key={size}
-                      className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/80"
+                      className="rounded-full border border-ink/10 bg-ink/5 px-2.5 py-1 text-[11px] text-ink/80"
                     >
-                      {size}: <span className="font-semibold text-[#D4AF37]">{stock}</span>
+                      {size}: <span className="font-semibold text-gold-ink2">{stock}</span>
                     </span>
                   ))}
                 </div>
@@ -114,8 +114,8 @@ export const VariantStudio = () => {
       )}
 
       <div className="w-full" data-lenis-prevent="true">
-        <table className="w-full text-left text-sm text-white">
-          <thead className="border-b border-white/10 text-xs uppercase tracking-wider text-white/50">
+        <table className="w-full text-left text-sm text-ink">
+          <thead className="border-b border-ink/10 text-xs uppercase tracking-wider text-ink/50">
             <tr>
               <th className="px-2 py-3 font-medium">SKU</th>
               <th className="px-2 py-3 font-medium">Image</th>
@@ -127,7 +127,7 @@ export const VariantStudio = () => {
               <th className="px-2 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-ink/5">
             {variants.map((variant, index) => {
               const linkedImage = getImageForVariantColor(images, variant.color);
               const sizeValue = SIZE_OPTIONS.includes(variant.size)
@@ -137,7 +137,7 @@ export const VariantStudio = () => {
                   : '';
 
               return (
-                <tr key={variant.id || `variant-${index}`} className="group transition-colors hover:bg-white/[0.02]">
+                <tr key={variant.id || `variant-${index}`} className="group transition-colors hover:bg-ink/[0.02]">
                   <td className="p-1 px-2">
                     <LuxuryInput
                       value={variant.sku}
@@ -151,7 +151,7 @@ export const VariantStudio = () => {
                         onClick={() =>
                           updateVariant(variant.id, 'sku', generateSku(formData.artNo, variant.size, variant.color))
                         }
-                        className="mt-1 text-xs text-[#D4AF37] opacity-0 transition-opacity hover:underline group-hover:opacity-100"
+                        className="mt-1 text-xs text-gold-ink2 opacity-0 transition-opacity hover:underline group-hover:opacity-100"
                       >
                         Generate SKU
                       </button>
@@ -159,7 +159,7 @@ export const VariantStudio = () => {
                   </td>
                   <td className="p-1 px-2">
                     <div
-                      className="relative h-8 w-8 overflow-hidden rounded-md border border-white/20 bg-black/40"
+                      className="relative h-8 w-8 overflow-hidden rounded-md border border-ink/20 bg-black/40"
                       title={
                         linkedImage
                           ? `Linked to ${variant.color} media`
@@ -169,7 +169,7 @@ export const VariantStudio = () => {
                       {linkedImage?.url ? (
                         <img src={linkedImage.url} alt={variant.color || 'Variant'} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-white/30">
+                        <div className="flex h-full w-full items-center justify-center text-ink/30">
                           <ImageIcon className="h-4 w-4" />
                         </div>
                       )}
@@ -187,11 +187,11 @@ export const VariantStudio = () => {
                         }}
                         className="w-20 py-1.5 text-sm"
                       >
-                        <option value="" className="bg-[#0f1014] text-white">—</option>
+                        <option value="" className="bg-panel text-ink">—</option>
                         {SIZE_OPTIONS.map((s) => (
-                          <option key={s} value={s} className="bg-[#0f1014] text-white">{s}</option>
+                          <option key={s} value={s} className="bg-panel text-ink">{s}</option>
                         ))}
-                        <option value={CUSTOM_OPTION} className="bg-[#0f1014] text-[#D4AF37]">Custom</option>
+                        <option value={CUSTOM_OPTION} className="bg-panel text-gold-ink2">Custom</option>
                       </LuxurySelect>
                       {(sizeValue === CUSTOM_OPTION || (variant.size && !SIZE_OPTIONS.includes(variant.size))) && (
                         <LuxuryInput
@@ -217,11 +217,11 @@ export const VariantStudio = () => {
                         }}
                         className="w-24 py-1.5 text-sm"
                       >
-                        <option value="" className="bg-[#0f1014] text-white">Select...</option>
+                        <option value="" className="bg-panel text-ink">Select...</option>
                         {COLOR_OPTIONS.map((c) => (
-                          <option key={c.name} value={c.name} className="bg-[#0f1014] text-white">{c.name}</option>
+                          <option key={c.name} value={c.name} className="bg-panel text-ink">{c.name}</option>
                         ))}
-                        <option value="Custom" className="bg-[#0f1014] text-[#D4AF37]">Custom / Other...</option>
+                        <option value="Custom" className="bg-panel text-gold-ink2">Custom / Other...</option>
                       </LuxurySelect>
                       {!COLOR_OPTIONS.some((c) => c.name === variant.color) && variant.color && (
                         <LuxuryInput
@@ -239,7 +239,7 @@ export const VariantStudio = () => {
                         type="color"
                         value={variant.colorCode || '#000000'}
                         onChange={(e) => updateVariant(variant.id, 'colorCode', e.target.value)}
-                        className="h-7 w-7 cursor-pointer rounded-md border border-white/20 bg-transparent p-0 outline-none"
+                        className="h-7 w-7 cursor-pointer rounded-md border border-ink/20 bg-transparent p-0 outline-none"
                       />
                       <LuxuryInput
                         value={variant.colorCode}
@@ -272,7 +272,7 @@ export const VariantStudio = () => {
                       <button
                         type="button"
                         onClick={() => duplicateVariant(variant.id)}
-                        className="rounded p-1.5 text-white/50 hover:bg-white/10 hover:text-white"
+                        className="rounded p-1.5 text-ink/50 hover:bg-ink/10 hover:text-ink"
                         title="Duplicate Variant"
                       >
                         <Copy className="h-4 w-4" />
@@ -281,7 +281,7 @@ export const VariantStudio = () => {
                         type="button"
                         onClick={() => removeVariant(variant.id)}
                         disabled={variants.length === 1}
-                        className="rounded p-1.5 text-white/50 hover:bg-red-500/20 hover:text-red-500 disabled:opacity-30"
+                        className="rounded p-1.5 text-ink/50 hover:bg-red-500/20 hover:text-red-500 disabled:opacity-30"
                         title="Remove Variant"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -294,7 +294,7 @@ export const VariantStudio = () => {
           </tbody>
         </table>
         {variants.length === 0 && (
-          <div className="py-8 text-center text-sm text-white/50">
+          <div className="py-8 text-center text-sm text-ink/50">
             No variants configured. Click &quot;Add Variant&quot; to start.
           </div>
         )}

@@ -57,7 +57,7 @@ const FloatingActions = () => {
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.94 }}
-      className={`fixed ${positionClass} z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-shadow hover:shadow-[0_0_28px_rgba(37,211,102,0.35)] focus:outline-none focus:ring-2 focus:ring-[#25D366]/60 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]`}
+      className={`fixed ${positionClass} z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-ink shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-shadow hover:shadow-[0_0_28px_rgba(37,211,102,0.35)] focus:outline-none focus:ring-2 focus:ring-[#25D366]/60 focus:ring-offset-2 focus:ring-offset-page`}
       aria-label="Chat with Saga Elite on WhatsApp"
       title="Chat on WhatsApp"
     >

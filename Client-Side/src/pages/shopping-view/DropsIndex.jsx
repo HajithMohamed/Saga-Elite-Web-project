@@ -55,7 +55,7 @@ const CountdownDisplay = ({ target, label }) => {
   return (
     <div>
       {label && (
-        <p className="se-label text-[10px] uppercase tracking-widest text-[#F2CA50] mb-3">
+        <p className="se-label text-[10px] uppercase tracking-widest text-gold-ink mb-3">
           {label}
         </p>
       )}
@@ -63,12 +63,12 @@ const CountdownDisplay = ({ target, label }) => {
         {units.map((u) => (
           <div
             key={u.l}
-            className="w-[56px] h-[56px] bg-[#131313] border border-white/10 rounded-[12px] flex flex-col items-center justify-center"
+            className="w-[56px] h-[56px] bg-panel border border-ink/10 rounded-[12px] flex flex-col items-center justify-center"
           >
-            <span className="font-sans font-bold text-[18px] text-[#fafafa] leading-none">
+            <span className="font-sans font-bold text-[18px] text-ink leading-none">
               {String(u.v).padStart(2, "0")}
             </span>
-            <span className="text-[8px] uppercase tracking-wider text-[#99907c] mt-0.5">
+            <span className="text-[8px] uppercase tracking-wider text-muted mt-0.5">
               {u.l}
             </span>
           </div>
@@ -145,7 +145,7 @@ const DropsIndex = () => {
   const heroImage = active[0]?.images?.[0]?.url || upcoming[0]?.images?.[0]?.url || null;
 
   return (
-    <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
+    <div className="bg-page text-ink-2 min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
 
       {/* ── HERO ── */}
       <section className="relative h-[240px] md:h-[320px] lg:h-[420px] overflow-hidden flex items-end justify-center w-full">
@@ -153,26 +153,26 @@ const DropsIndex = () => {
           {heroImage ? (
             <img src={heroImage} alt="Exclusive Drops" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-[#0e0e0e]" />
+            <div className="w-full h-full bg-page" />
           )}
-          <div className="absolute inset-0 bg-[#0e0e0e]/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
+          <div className="absolute inset-0 bg-page/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-page via-page/50 to-transparent" />
         </div>
         <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 pb-10">
-          <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
-            <Link to="/" className="hover:text-[#F2CA50] transition-colors">Home</Link>
+          <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-4">
+            <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-[#fafafa] font-bold">Exclusive Drops</span>
+            <span className="text-ink font-bold">Exclusive Drops</span>
           </nav>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-4xl md:text-5xl lg:text-[56px] mb-3">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-ink text-4xl md:text-5xl lg:text-[56px] mb-3">
             Exclusive Drops
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-[#99907c] text-base md:text-lg max-w-2xl mb-6">
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-muted text-base md:text-lg max-w-2xl mb-6">
             Discover limited-edition collections available only for a limited time. Once they're gone, they're gone.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex gap-4">
             <Link to="/shopping/product-list">
-              <button className="h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:-translate-y-1 transition-transform">
+              <button className="h-[56px] px-8 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:-translate-y-1 transition-transform">
                 Browse Products
               </button>
             </Link>
@@ -189,13 +189,13 @@ const DropsIndex = () => {
             { icon: CalendarClock, label: "Upcoming", value: upcoming.length },
           ].map((card, i) => (
             <Reveal key={i} delay={i * 0.1}>
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-[20px] p-5 md:p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#F2CA50]/10 flex items-center justify-center shrink-0">
-                  <card.icon className="w-6 h-6 text-[#F2CA50]" strokeWidth={1.5} />
+              <div className="bg-card border border-ink/5 rounded-[20px] p-5 md:p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
+                  <card.icon className="w-6 h-6 text-gold-ink" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <div className="font-serif text-[28px] md:text-[32px] text-[#F2CA50] leading-none">{card.value}</div>
-                  <div className="se-label text-[10px] md:text-[11px] text-[#99907c] uppercase tracking-wider mt-1">{card.label}</div>
+                  <div className="font-serif text-[28px] md:text-[32px] text-gold-ink leading-none">{card.value}</div>
+                  <div className="se-label text-[10px] md:text-[11px] text-muted uppercase tracking-wider mt-1">{card.label}</div>
                 </div>
               </div>
             </Reveal>
@@ -206,8 +206,8 @@ const DropsIndex = () => {
       {/* ── LOADING / ERROR ── */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-32">
-          <motion.div className="w-8 h-8 border-[3px] border-[#4d4635] border-t-[#f2ca50] rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, ease: "linear", repeat: Infinity }} />
-          <span className="se-label mt-6 text-[#99907c] tracking-widest text-[10px] uppercase">Loading Drops</span>
+          <motion.div className="w-8 h-8 border-[3px] border-line border-t-gold-ink rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, ease: "linear", repeat: Infinity }} />
+          <span className="se-label mt-6 text-muted tracking-widest text-[10px] uppercase">Loading Drops</span>
         </div>
       )}
 
@@ -221,23 +221,23 @@ const DropsIndex = () => {
       {!isLoading && !error && (
         <section className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24">
           <Reveal className="text-center mb-12">
-            <h2 className="se-serif text-[32px] md:text-[36px] text-[#fafafa] mb-3">How Drops Work</h2>
-            <p className="se-body text-[#99907c] text-base max-w-xl mx-auto">
+            <h2 className="se-serif text-[32px] md:text-[36px] text-ink mb-3">How Drops Work</h2>
+            <p className="se-body text-muted text-base max-w-xl mx-auto">
               Exclusive collections that open for a limited window. Once a piece sells out, it's never restocked.
             </p>
           </Reveal>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {HOW_STEPS.map((step, i) => (
               <Reveal key={i} delay={i * 0.1}>
-                <div className="bg-[#1A1A1A] rounded-[20px] border border-white/5 p-6 text-center h-full flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-full bg-[#F2CA50]/10 flex items-center justify-center mb-4">
-                    <step.icon className="w-7 h-7 text-[#F2CA50]" strokeWidth={1.5} />
+                <div className="bg-card rounded-[20px] border border-ink/5 p-6 text-center h-full flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-4">
+                    <step.icon className="w-7 h-7 text-gold-ink" strokeWidth={1.5} />
                   </div>
-                  <div className="w-7 h-7 rounded-full bg-[#F2CA50] text-[#0e0e0e] font-bold text-[14px] flex items-center justify-center mb-4">
+                  <div className="w-7 h-7 rounded-full bg-gold text-ongold font-bold text-[14px] flex items-center justify-center mb-4">
                     {i + 1}
                   </div>
-                  <h3 className="font-sans font-semibold text-[16px] text-[#fafafa] mb-2">{step.title}</h3>
-                  <p className="se-body text-[13px] text-[#99907c]">{step.desc}</p>
+                  <h3 className="font-sans font-semibold text-[16px] text-ink mb-2">{step.title}</h3>
+                  <p className="se-body text-[13px] text-muted">{step.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -249,8 +249,8 @@ const DropsIndex = () => {
       {!isLoading && !error && active.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-24">
           <Reveal className="mb-10">
-            <h2 className="se-serif text-[32px] text-[#fafafa] mb-2">Live Now</h2>
-            <p className="se-body text-[#99907c]">Shop these drops before they close.</p>
+            <h2 className="se-serif text-[32px] text-ink mb-2">Live Now</h2>
+            <p className="se-body text-muted">Shop these drops before they close.</p>
           </Reveal>
           <div className="space-y-12">
             {active.map((drop, i) => {
@@ -258,7 +258,7 @@ const DropsIndex = () => {
               const isEnding = endingSoon.includes(drop);
               return (
                 <Reveal key={drop._id || i}>
-                  <div className={`grid lg:grid-cols-2 gap-8 bg-[#1A1A1A] rounded-[24px] border overflow-hidden ${isEnding ? 'border-[#F2CA50]/40' : 'border-white/5'}`}>
+                  <div className={`grid lg:grid-cols-2 gap-8 bg-card rounded-[24px] border overflow-hidden ${isEnding ? 'border-gold-ink/40' : 'border-ink/5'}`}>
                     {/* Image */}
                     <Link to={`/shopping/drop/${drop.slug}`} className="relative aspect-[16/10] overflow-hidden group">
                       <img
@@ -269,11 +269,11 @@ const DropsIndex = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       {isEnding && (
-                        <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#F2CA50] text-[#0e0e0e] font-sans font-bold text-[10px] uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                        <div className="absolute top-4 left-4 px-3 py-1.5 bg-gold text-ongold font-sans font-bold text-[10px] uppercase tracking-wider rounded-full flex items-center gap-1.5">
                           <Flame className="w-3 h-3" /> Ending Soon
                         </div>
                       )}
-                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#0e0e0e]/80 backdrop-blur-sm border border-white/10 text-[#fafafa] font-sans font-bold text-[10px] uppercase tracking-wider rounded-full">
+                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-page/80 backdrop-blur-sm border border-ink/10 text-ink font-sans font-bold text-[10px] uppercase tracking-wider rounded-full">
                         {drop.products?.length ?? 0} Pieces
                       </div>
                     </Link>
@@ -283,14 +283,14 @@ const DropsIndex = () => {
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="se-label text-[10px] uppercase tracking-widest text-emerald-400">Live</span>
                       </div>
-                      <h3 className="se-serif text-[28px] md:text-[32px] text-[#fafafa] mb-3">{drop.name}</h3>
-                      <p className="se-body text-[15px] text-[#99907c] leading-relaxed mb-6 line-clamp-3">
+                      <h3 className="se-serif text-[28px] md:text-[32px] text-ink mb-3">{drop.name}</h3>
+                      <p className="se-body text-[15px] text-muted leading-relaxed mb-6 line-clamp-3">
                         {drop.description || "Explore this exclusive collection before it closes."}
                       </p>
                       {endDate && <CountdownDisplay target={endDate} label="Closes in" />}
                       <div className="mt-8 flex gap-4">
                         <Link to={`/shopping/drop/${drop.slug}`}>
-                          <button className="h-[52px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:-translate-y-1 transition-transform flex items-center gap-2">
+                          <button className="h-[52px] px-8 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:-translate-y-1 transition-transform flex items-center gap-2">
                             Shop Drop <ArrowRight className="w-4 h-4" />
                           </button>
                         </Link>
@@ -308,13 +308,13 @@ const DropsIndex = () => {
       {!isLoading && !error && upcoming.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-24">
           <Reveal className="mb-10">
-            <h2 className="se-serif text-[32px] text-[#fafafa] mb-2">Coming Soon</h2>
-            <p className="se-body text-[#99907c]">Get ready for these upcoming releases.</p>
+            <h2 className="se-serif text-[32px] text-ink mb-2">Coming Soon</h2>
+            <p className="se-body text-muted">Get ready for these upcoming releases.</p>
           </Reveal>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcoming.map((drop, i) => (
               <Reveal key={drop._id || i} delay={i * 0.1}>
-                <div className="bg-[#1A1A1A] rounded-[24px] border border-[#F2CA50]/20 overflow-hidden group">
+                <div className="bg-card rounded-[24px] border border-gold-ink/20 overflow-hidden group">
                   <div className="relative aspect-[16/10] overflow-hidden">
                     <img
                       src={drop.images?.[0]?.url || "/LOGO.png"}
@@ -322,24 +322,24 @@ const DropsIndex = () => {
                       loading="lazy"
                       className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500"
                     />
-                    <div className="absolute inset-0 bg-[#0e0e0e]/50" />
-                    <div className="absolute top-4 left-4 px-3 py-1.5 bg-[#F2CA50]/10 border border-[#F2CA50]/30 text-[#F2CA50] font-sans font-bold text-[10px] uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                    <div className="absolute inset-0 bg-page/50" />
+                    <div className="absolute top-4 left-4 px-3 py-1.5 bg-gold/10 border border-gold-ink/30 text-gold-ink font-sans font-bold text-[10px] uppercase tracking-wider rounded-full flex items-center gap-1.5">
                       <CalendarClock className="w-3 h-3" /> Coming Soon
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="font-sans font-semibold text-[20px] text-[#fafafa] mb-2">{drop.name}</h3>
-                    <p className="se-body text-[14px] text-[#99907c] mb-4 line-clamp-2">
+                    <h3 className="font-sans font-semibold text-[20px] text-ink mb-2">{drop.name}</h3>
+                    <p className="se-body text-[14px] text-muted mb-4 line-clamp-2">
                       {drop.description || "A new chapter is about to open."}
                     </p>
                     {drop.releaseDate && (
-                      <div className="flex items-center gap-2 text-[12px] text-[#F2CA50] mb-4">
+                      <div className="flex items-center gap-2 text-[12px] text-gold-ink mb-4">
                         <Clock className="w-4 h-4" />
                         <span>Launches {new Date(drop.releaseDate).toLocaleDateString()}</span>
                       </div>
                     )}
                     {drop.releaseDate && <CountdownDisplay target={drop.releaseDate} label="Opens in" />}
-                    <button className="mt-6 h-[48px] w-full border border-[#F2CA50]/30 text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[11px] flex items-center justify-center gap-2 hover:bg-[#F2CA50]/10 transition-colors">
+                    <button className="mt-6 h-[48px] w-full border border-gold-ink/30 text-gold-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[11px] flex items-center justify-center gap-2 hover:bg-gold/10 transition-colors">
                       <Bell className="w-4 h-4" /> Notify Me
                     </button>
                   </div>
@@ -354,20 +354,20 @@ const DropsIndex = () => {
       {!isLoading && !error && past.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-24 opacity-70">
           <Reveal className="mb-10">
-            <h2 className="se-serif text-[28px] text-[#99907c] mb-2">Past Drops</h2>
-            <p className="se-body text-[#99907c] text-sm">These chapters have closed.</p>
+            <h2 className="se-serif text-[28px] text-muted mb-2">Past Drops</h2>
+            <p className="se-body text-muted text-sm">These chapters have closed.</p>
           </Reveal>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {past.slice(0, 6).map((drop, i) => (
               <Reveal key={drop._id || i} delay={i * 0.05}>
-                <Link to={`/shopping/drop/${drop.slug}`} className="block bg-[#131313] rounded-[20px] border border-white/5 overflow-hidden group">
+                <Link to={`/shopping/drop/${drop.slug}`} className="block bg-panel rounded-[20px] border border-ink/5 overflow-hidden group">
                   <div className="relative aspect-[16/10] overflow-hidden">
                     <img src={drop.images?.[0]?.url || "/LOGO.png"} alt={drop.name} loading="lazy" className="w-full h-full object-cover grayscale" />
-                    <div className="absolute inset-0 bg-[#0e0e0e]/60" />
+                    <div className="absolute inset-0 bg-page/60" />
                   </div>
                   <div className="p-5">
-                    <h3 className="font-sans font-semibold text-[16px] text-[#99907c] mb-1">{drop.name}</h3>
-                    <p className="text-[12px] text-[#99907c]">{drop.products?.length ?? 0} pieces · Ended</p>
+                    <h3 className="font-sans font-semibold text-[16px] text-muted mb-1">{drop.name}</h3>
+                    <p className="text-[12px] text-muted">{drop.products?.length ?? 0} pieces · Ended</p>
                   </div>
                 </Link>
               </Reveal>
@@ -379,17 +379,17 @@ const DropsIndex = () => {
       {/* ── EMPTY STATE ── */}
       {!isLoading && !error && drops.length === 0 && (
         <section className="max-w-2xl mx-auto px-4 py-32 text-center">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-[#1A1A1A] border border-white/5 flex items-center justify-center">
-            <Zap className="w-10 h-10 text-[#F2CA50]" />
+          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-card border border-ink/5 flex items-center justify-center">
+            <Zap className="w-10 h-10 text-gold-ink" />
           </div>
-          <h3 className="se-serif text-[28px] text-[#fafafa] mb-3">No Drops Live Just Now</h3>
-          <p className="se-body text-[#99907c] mb-8">The next chapter opens soon. Stay tuned for exclusive releases.</p>
+          <h3 className="se-serif text-[28px] text-ink mb-3">No Drops Live Just Now</h3>
+          <p className="se-body text-muted mb-8">The next chapter opens soon. Stay tuned for exclusive releases.</p>
           <div className="flex justify-center gap-4">
             <Link to="/shopping/product-list">
-              <button className="h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px]">Browse Products</button>
+              <button className="h-[56px] px-8 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px]">Browse Products</button>
             </Link>
             <Link to="/">
-              <button className="h-[56px] px-8 border border-white/10 text-[#fafafa] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-[#F2CA50] hover:text-[#F2CA50] transition-colors">Return Home</button>
+              <button className="h-[56px] px-8 border border-ink/10 text-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-gold-ink hover:text-gold-ink transition-colors">Return Home</button>
             </Link>
           </div>
         </section>

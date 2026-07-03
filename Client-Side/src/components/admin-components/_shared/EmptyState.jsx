@@ -17,9 +17,9 @@ export function EmptyState({
       className={`flex flex-col items-center justify-center py-16 text-center ${className}`.trim()}
     >
       {Icon ? (
-        <Icon className="mb-4 h-16 w-16 text-white opacity-20" strokeWidth={1} />
+        <Icon className="mb-4 h-16 w-16 text-ink opacity-20" strokeWidth={1} />
       ) : null}
-      <h3 className="text-lg font-bold text-white">{title}</h3>
+      <h3 className="text-lg font-bold text-ink">{title}</h3>
       {subtitle ? (
         <p className="mt-2 max-w-md text-sm text-gray-500">{subtitle}</p>
       ) : null}

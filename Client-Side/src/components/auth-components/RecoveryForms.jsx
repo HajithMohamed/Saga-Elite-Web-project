@@ -86,10 +86,10 @@ export const ForgotPasswordForm = ({ onBack, onNext }) => {
   return (
     <motion.div {...panelMotion}>
       <Eyebrow tone="gold" size="md">Lost access</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">
         Reset your access.
       </h2>
-      <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">
+      <p className="mt-2 text-[11px] text-muted leading-relaxed">
         We’ll send a code to the email tied to your account.
       </p>
 
@@ -119,15 +119,15 @@ export const ForgotPasswordForm = ({ onBack, onNext }) => {
         </Btn>
       </form>
 
-      <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-[#574500]">
-        <ShieldCheck size={11} className="text-[#f2ca50]" />
+      <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-goldshadow">
+        <ShieldCheck size={11} className="text-gold-ink" />
         <span>Secure & Encrypted Recovery</span>
       </div>
 
       <button
         type="button"
         onClick={onBack}
-        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-muted hover:text-gold-ink transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
         Back to sign in
@@ -153,16 +153,16 @@ export const VerifyResetOtpForm = ({ email = "", onBack, onNext }) => {
     return (
       <motion.div {...panelMotion}>
         <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
-        <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">
+        <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">
           Start again, gently.
         </h2>
-        <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">
+        <p className="mt-2 text-[11px] text-muted leading-relaxed">
           We need the email from the previous step before we can verify the code.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="mt-6 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+          className="mt-6 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-gold-ink hover:text-gold-ink transition-colors"
         >
           <ArrowLeft size={12} strokeWidth={1.5} />
           Back to forgot password
@@ -228,11 +228,11 @@ export const VerifyResetOtpForm = ({ email = "", onBack, onNext }) => {
   return (
     <motion.div {...panelMotion}>
       <Eyebrow tone="gold" size="md">Reset · step two</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">
         Verify the code.
       </h2>
-      <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">
-        We sent a four-digit code to <span className="text-[#e5e2e1]">{masked}</span>.
+      <p className="mt-2 text-[11px] text-muted leading-relaxed">
+        We sent a four-digit code to <span className="text-ink-2">{masked}</span>.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -253,7 +253,7 @@ export const VerifyResetOtpForm = ({ email = "", onBack, onNext }) => {
 
       <div className="mt-6 text-center">
         {seconds > 0 ? (
-          <span className="se-label text-[10px] tracking-[0.28em] text-[#574500]">
+          <span className="se-label text-[10px] tracking-[0.28em] text-goldshadow">
             Resend in {seconds}s
           </span>
         ) : (
@@ -261,7 +261,7 @@ export const VerifyResetOtpForm = ({ email = "", onBack, onNext }) => {
             type="button"
             onClick={handleResend}
             disabled={resending}
-            className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] transition-colors disabled:opacity-50"
+            className="se-label text-[10px] tracking-[0.28em] text-gold-ink hover:text-gold-ink transition-colors disabled:opacity-50"
           >
             {resending ? "Sending..." : "Resend the code"}
           </button>
@@ -271,7 +271,7 @@ export const VerifyResetOtpForm = ({ email = "", onBack, onNext }) => {
       <button
         type="button"
         onClick={onBack}
-        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-muted hover:text-gold-ink transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
         Back to forgot password
@@ -310,16 +310,16 @@ export const SetNewPasswordForm = ({ email = "", otp = "", onBack, onDone }) => 
     return (
       <motion.div {...panelMotion}>
         <Eyebrow tone="muted" size="md">Session lost</Eyebrow>
-        <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">
+        <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">
           Start again, gently.
         </h2>
-        <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">
+        <p className="mt-2 text-[11px] text-muted leading-relaxed">
           The reset session expired before we could set the new password.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="mt-6 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#f2ca50] hover:text-[#ffe088] transition-colors"
+          className="mt-6 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-gold-ink hover:text-gold-ink transition-colors"
         >
           <ArrowLeft size={12} strokeWidth={1.5} />
           Back to verification
@@ -376,16 +376,16 @@ export const SetNewPasswordForm = ({ email = "", otp = "", onBack, onDone }) => 
   };
 
   const inputBase = AUTH_INPUT;
-  const inputOk = "border-[#4d4635] focus:border-[#f2ca50]";
-  const inputErr = "border-[#ffb4ab] focus:border-[#ffb4ab]";
+  const inputOk = "border-line focus:border-gold-ink";
+  const inputErr = "border-danger-ink focus:border-danger-ink";
 
   return (
     <motion.div {...panelMotion}>
       <Eyebrow tone="gold" size="md">Reset · final step</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">
         Set your new key.
       </h2>
-      <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">
+      <p className="mt-2 text-[11px] text-muted leading-relaxed">
         Use at least eight characters with an uppercase letter, a number, and a symbol.
       </p>
 
@@ -406,7 +406,7 @@ export const SetNewPasswordForm = ({ email = "", otp = "", onBack, onDone }) => 
             <button
               type="button"
               onClick={() => setShowNew((value) => !value)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-muted hover:text-gold-ink transition-colors"
               aria-label={showNew ? "Hide password" : "Show password"}
             >
               {showNew ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
@@ -436,7 +436,7 @@ export const SetNewPasswordForm = ({ email = "", otp = "", onBack, onDone }) => 
             <button
               type="button"
               onClick={() => setShowConfirm((value) => !value)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-[#99907c] hover:text-[#f2ca50] transition-colors"
+              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-muted hover:text-gold-ink transition-colors"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {showConfirm ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
@@ -459,7 +459,7 @@ export const SetNewPasswordForm = ({ email = "", otp = "", onBack, onDone }) => 
       <button
         type="button"
         onClick={onBack}
-        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+        className="mt-8 inline-flex items-center gap-2 se-label text-[10px] tracking-[0.28em] text-muted hover:text-gold-ink transition-colors"
       >
         <ArrowLeft size={12} strokeWidth={1.5} />
         Back to code verification

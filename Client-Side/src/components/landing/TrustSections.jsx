@@ -49,10 +49,10 @@ export function WhyChooseSaga() {
   return (
     <section className={SECTION_CONTAINER}>
       <div className="text-center mb-12 md:mb-16">
-        <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+        <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
           Why Choose Saga Elite
         </h2>
-        <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-2xl mx-auto">
+        <p className="se-body text-base md:text-[18px] text-muted max-w-2xl mx-auto">
           Premium fashion, trusted service, and a seamless shopping experience designed for everyone.
         </p>
       </div>
@@ -60,15 +60,15 @@ export function WhyChooseSaga() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-[24px]">
         {TRUST_CARDS.map((card, i) => (
           <Reveal key={i} delay={i * 0.1}>
-            <div className="group flex flex-col items-start rounded-[20px] bg-[#1A1A1A] p-6 md:p-8 border border-white/10 transition-all duration-250 hover:border-[#f2ca50] hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(242,202,80,0.1)] w-full h-[220px]">
+            <div className="group flex flex-col items-start rounded-[20px] bg-card p-6 md:p-8 border border-ink/10 transition-all duration-250 hover:border-gold-ink hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(242,202,80,0.1)] w-full h-[220px]">
               {/* Fixed icon box → equal visual weight across all four cards */}
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-[#f2ca50]/10">
-                <card.icon className="h-7 w-7 text-[#f2ca50] transition-transform group-hover:scale-110" strokeWidth={1.5} />
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-gold/10">
+                <card.icon className="h-7 w-7 text-gold-ink transition-transform group-hover:scale-110" strokeWidth={1.5} />
               </div>
-              <h3 className="font-sans font-semibold text-[18px] md:text-[20px] text-[#e5e2e1] mb-2">
+              <h3 className="font-sans font-semibold text-[18px] md:text-[20px] text-ink-2 mb-2">
                 {card.title}
               </h3>
-              <p className="se-body text-[14px] md:text-[16px] text-[#99907c] leading-relaxed">
+              <p className="se-body text-[14px] md:text-[16px] text-muted leading-relaxed">
                 {card.desc}
               </p>
             </div>
@@ -107,12 +107,12 @@ const SHOPPING_STEPS = [
 
 export function HowShoppingWorks() {
   return (
-    <section className={cn(SECTION_CONTAINER, "bg-[#0b0b0b] border-y border-white/5")}>
+    <section className={cn(SECTION_CONTAINER, "bg-page border-y border-ink/5")}>
       <div className="text-center mb-12 md:mb-16">
-        <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+        <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
           How Shopping Works
         </h2>
-        <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-2xl mx-auto">
+        <p className="se-body text-base md:text-[18px] text-muted max-w-2xl mx-auto">
           Shopping online has never been easier. Follow these four simple steps.
         </p>
       </div>
@@ -120,29 +120,29 @@ export function HowShoppingWorks() {
       {/* Desktop/Tablet Grid + Mobile Timeline */}
       <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-[24px]">
         {/* Mobile Vertical Line */}
-        <div className="absolute left-[39px] top-0 bottom-0 w-[2px] bg-white/10 sm:hidden z-0" />
+        <div className="absolute left-[39px] top-0 bottom-0 w-[2px] bg-ink/10 sm:hidden z-0" />
 
         {SHOPPING_STEPS.map((step, i) => (
           <Reveal key={i} delay={i * 0.15}>
-            <div className="relative z-10 flex flex-row sm:flex-col items-center sm:items-start gap-6 sm:gap-6 w-full lg:w-[260px] h-auto lg:h-[280px] bg-[#131313] sm:bg-transparent rounded-[20px] p-6 sm:p-0 border sm:border-none border-white/5">
+            <div className="relative z-10 flex flex-row sm:flex-col items-center sm:items-start gap-6 sm:gap-6 w-full lg:w-[260px] h-auto lg:h-[280px] bg-panel sm:bg-transparent rounded-[20px] p-6 sm:p-0 border sm:border-none border-ink/5">
               
               {/* Connector (Desktop Only) */}
               {i < SHOPPING_STEPS.length - 1 && (
-                <div className="hidden lg:block absolute top-[28px] left-[72px] right-[-48px] h-[2px] bg-gradient-to-r from-[#f2ca50]/50 to-transparent z-[-1]" />
+                <div className="hidden lg:block absolute top-[28px] left-[72px] right-[-48px] h-[2px] bg-gradient-to-r from-gold/50 to-transparent z-[-1]" />
               )}
 
-              <div className="relative shrink-0 flex items-center justify-center w-14 h-14 rounded-full bg-[#1A1A1A] border border-[#f2ca50]/30 shadow-[0_0_20px_rgba(242,202,80,0.1)] text-[#f2ca50]">
+              <div className="relative shrink-0 flex items-center justify-center w-14 h-14 rounded-full bg-card border border-gold-ink/30 shadow-[0_0_20px_rgba(242,202,80,0.1)] text-gold-ink">
                 <step.icon className="w-6 h-6" />
-                <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-[#f2ca50] text-[#0a0a0a] font-bold text-[12px]">
+                <div className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full bg-gold text-ongold font-bold text-[12px]">
                   {i + 1}
                 </div>
               </div>
               
               <div className="flex flex-col sm:mt-2">
-                <h3 className="font-sans font-semibold text-[18px] text-[#e5e2e1] mb-2">
+                <h3 className="font-sans font-semibold text-[18px] text-ink-2 mb-2">
                   {step.title}
                 </h3>
-                <p className="se-body text-[14px] md:text-[15px] text-[#99907c] leading-relaxed">
+                <p className="se-body text-[14px] md:text-[15px] text-muted leading-relaxed">
                   {step.desc}
                 </p>
               </div>
@@ -191,10 +191,10 @@ export function CustomerTestimonials() {
   if (!loaded) {
     return (
       <section className={SECTION_CONTAINER}>
-        <div className="mx-auto mb-12 h-10 w-72 rounded-lg bg-[#131313] animate-pulse" />
+        <div className="mx-auto mb-12 h-10 w-72 rounded-lg bg-panel animate-pulse" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-[240px] rounded-[20px] bg-[#131313] animate-pulse" />
+            <div key={i} className="h-[240px] rounded-[20px] bg-panel animate-pulse" />
           ))}
         </div>
       </section>
@@ -209,10 +209,10 @@ export function CustomerTestimonials() {
       {reviews.length > 0 && (
         <>
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+            <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
               What Our Customers Say
             </h2>
-            <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-2xl mx-auto">
+            <p className="se-body text-base md:text-[18px] text-muted max-w-2xl mx-auto">
               Real reviews from verified Saga Elite customers.
             </p>
           </div>
@@ -221,26 +221,26 @@ export function CustomerTestimonials() {
           <div className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:pb-0">
             {reviews.map((t, i) => (
               <Reveal key={t._id || i} delay={i * 0.1}>
-                <div className="flex flex-col justify-between rounded-[20px] bg-[#131313] border border-[#f2ca50]/20 p-8 w-[85vw] sm:w-[320px] md:w-auto md:max-w-[340px] lg:max-w-[390px] h-full min-h-[240px] lg:min-h-[260px] snap-center shrink-0">
+                <div className="flex flex-col justify-between rounded-[20px] bg-panel border border-gold-ink/20 p-8 w-[85vw] sm:w-[320px] md:w-auto md:max-w-[340px] lg:max-w-[390px] h-full min-h-[240px] lg:min-h-[260px] snap-center shrink-0">
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex gap-1 text-[#f2ca50]">
+                      <div className="flex gap-1 text-gold-ink">
                         {Array.from({ length: 5 }).map((_, s) => (
-                          <Star key={s} className={cn("w-4 h-4", s < Math.round(t.rating) ? "fill-current" : "text-white/20")} />
+                          <Star key={s} className={cn("w-4 h-4", s < Math.round(t.rating) ? "fill-current" : "text-ink/20")} />
                         ))}
                       </div>
                       {t.verifiedPurchase && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#f2ca50]/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#f2ca50]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gold/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold-ink">
                           <Check className="w-3 h-3" /> Verified
                         </span>
                       )}
                     </div>
-                    <p className="se-body text-[16px] leading-relaxed text-[#e5e2e1] line-clamp-4 italic">
+                    <p className="se-body text-[16px] leading-relaxed text-ink-2 line-clamp-4 italic">
                       &ldquo;{t.content}&rdquo;
                     </p>
                   </div>
                   <div className="flex items-center gap-4 mt-6">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center border-2 border-[#f2ca50]/30 shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-card flex items-center justify-center border-2 border-gold-ink/30 shrink-0">
                       {t.customer?.avatar ? (
                         <img
                           src={t.customer.avatar}
@@ -249,16 +249,16 @@ export function CustomerTestimonials() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="se-serif text-[#f2ca50] text-xl">
+                        <span className="se-serif text-gold-ink text-xl">
                           {(t.customer?.name || "A").charAt(0).toUpperCase()}
                         </span>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-sans font-semibold text-[16px] md:text-[18px] text-[#e5e2e1] truncate">
+                      <h4 className="font-sans font-semibold text-[16px] md:text-[18px] text-ink-2 truncate">
                         {t.customer?.name || "Verified Buyer"}
                       </h4>
-                      <p className="text-[12px] md:text-[14px] text-[#99907c] truncate">
+                      <p className="text-[12px] md:text-[14px] text-muted truncate">
                         {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Recently"}
                         {t.product ? ` · ${t.product}` : ""}
                       </p>
@@ -273,11 +273,11 @@ export function CustomerTestimonials() {
 
       {/* Trust Indicators (real metrics only) */}
       {trustIndicators.length > 0 && (
-        <div className={cn("grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6", reviews.length > 0 && "mt-12 md:mt-16 border-t border-white/5 pt-12 md:pt-16")}>
+        <div className={cn("grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6", reviews.length > 0 && "mt-12 md:mt-16 border-t border-ink/5 pt-12 md:pt-16")}>
           {trustIndicators.map((stat, i) => (
-            <div key={i} className="text-center p-4 bg-[#0a0a0a] rounded-[16px] border border-white/5">
-              <div className="font-serif text-[24px] md:text-[32px] text-[#f2ca50] mb-1">{stat.value}</div>
-              <div className="se-label text-[11px] md:text-[12px] text-[#99907c] uppercase tracking-wider">{stat.label}</div>
+            <div key={i} className="text-center p-4 bg-page rounded-[16px] border border-ink/5">
+              <div className="font-serif text-[24px] md:text-[32px] text-gold-ink mb-1">{stat.value}</div>
+              <div className="se-label text-[11px] md:text-[12px] text-muted uppercase tracking-wider">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -303,10 +303,10 @@ export function FAQPreview() {
   const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
 
   return (
-    <section className={cn(SECTION_CONTAINER, "bg-[#0b0b0b]")}>
+    <section className={cn(SECTION_CONTAINER, "bg-page")}>
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-10 md:mb-12">
-          <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+          <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
             Frequently Asked Questions
           </h2>
         </div>
@@ -317,15 +317,15 @@ export function FAQPreview() {
             return (
               <div
                 key={i}
-                className="bg-[#131313] rounded-[16px] border border-white/5 overflow-hidden transition-all duration-250"
+                className="bg-panel rounded-[16px] border border-ink/5 overflow-hidden transition-all duration-250"
               >
                 <button
                   onClick={() => toggle(i)}
-                  className="w-full flex items-center justify-between px-6 min-h-[60px] text-left focus:outline-none focus:ring-2 focus:ring-[#f2ca50] focus:ring-inset"
+                  className="w-full flex items-center justify-between px-6 min-h-[60px] text-left focus:outline-none focus:ring-2 focus:ring-gold-ink focus:ring-inset"
                   aria-expanded={isOpen}
                 >
-                  <span className="font-sans font-medium text-[16px] text-[#e5e2e1] pr-4">{faq.q}</span>
-                  <ChevronDown className={cn("w-5 h-5 text-[#f2ca50] transition-transform duration-250 shrink-0", isOpen && "rotate-180")} />
+                  <span className="font-sans font-medium text-[16px] text-ink-2 pr-4">{faq.q}</span>
+                  <ChevronDown className={cn("w-5 h-5 text-gold-ink transition-transform duration-250 shrink-0", isOpen && "rotate-180")} />
                 </button>
                 <div
                   className={cn(
@@ -334,7 +334,7 @@ export function FAQPreview() {
                   )}
                 >
                   <div className="overflow-hidden">
-                    <p className="px-6 pb-6 se-body text-[15px] text-[#99907c] leading-relaxed">
+                    <p className="px-6 pb-6 se-body text-[15px] text-muted leading-relaxed">
                       {faq.a}
                     </p>
                   </div>
@@ -346,7 +346,7 @@ export function FAQPreview() {
 
         <div className="mt-10 text-center">
           <Link to="/contact">
-            <button className="h-[48px] px-8 rounded-full border border-[#f2ca50] text-[#f2ca50] font-sans font-semibold text-[14px] transition-colors hover:bg-[#f2ca50] hover:text-[#0a0a0a]">
+            <button className="h-[48px] px-8 rounded-full border border-gold-ink text-gold-ink font-sans font-semibold text-[14px] transition-colors hover:bg-gold hover:text-ongold">
               View All FAQs
             </button>
           </Link>
@@ -369,11 +369,11 @@ const BADGES = [
 
 export function TrustBadgesStrip() {
   return (
-    <div className="w-full bg-[#f2ca50] py-4 overflow-hidden">
+    <div className="w-full bg-gold py-4 overflow-hidden">
       <div className="max-w-[1280px] mx-auto px-4 md:px-8">
         <div className="flex items-center gap-6 md:gap-12 overflow-x-auto hide-scrollbar whitespace-nowrap md:justify-center">
           {BADGES.map((badge, i) => (
-            <div key={i} className="flex items-center gap-2 text-[#0a0a0a] shrink-0">
+            <div key={i} className="flex items-center gap-2 text-ongold shrink-0">
               <Check className="w-4 h-4 md:w-5 md:h-5" strokeWidth={3} />
               <span className="font-sans font-bold text-[12px] md:text-[14px] uppercase tracking-wider">{badge}</span>
             </div>

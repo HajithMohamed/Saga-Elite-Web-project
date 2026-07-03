@@ -60,13 +60,13 @@ const ReviewCard = ({
   );
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-6">
+    <div className="rounded-3xl border border-ink/10 bg-page p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-white">{displayName}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/50">
+          <p className="text-sm font-semibold text-ink">{displayName}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink/50">
             {review?.verifiedPurchase && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#D4AF37]/10 px-2 py-1 text-[#D4AF37]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gold-deep/10 px-2 py-1 text-gold-ink2">
                 <CheckCircle2 className="h-3 w-3" /> Verified purchase
               </span>
             )}
@@ -77,15 +77,15 @@ const ReviewCard = ({
       </div>
 
       <div className="mt-4 space-y-3">
-        <p className="text-base font-semibold text-white">
+        <p className="text-base font-semibold text-ink">
           {review?.title || ""}
         </p>
-        <p className="text-sm leading-relaxed text-white/70">{shownContent}</p>
+        <p className="text-sm leading-relaxed text-ink/70">{shownContent}</p>
         {isLong && (
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-ink2"
           >
             {expanded ? "Show less" : "Read more"}
           </button>
@@ -99,7 +99,7 @@ const ReviewCard = ({
               key={`${img}-${index}`}
               type="button"
               onClick={() => setLightbox(img)}
-              className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#111]"
+              className="relative overflow-hidden rounded-2xl border border-ink/10 bg-panel"
             >
               <img
                 src={img}
@@ -110,7 +110,7 @@ const ReviewCard = ({
           ))}
         </div>
       ) : (
-        <div className="mt-4 flex items-center gap-2 text-xs text-white/30">
+        <div className="mt-4 flex items-center gap-2 text-xs text-ink/30">
           <ImageOff className="h-4 w-4" />
           No images
         </div>
@@ -122,8 +122,8 @@ const ReviewCard = ({
           onClick={() => onHelpfulVote && onHelpfulVote(review)}
           className={`inline-flex items-center gap-1.5 se-label text-[9px] tracking-[0.24em] transition-colors ${
             hasVoted
-              ? "text-[#D4AF37]"
-              : "text-[#99907c] hover:text-[#d0c5af]"
+              ? "text-gold-ink2"
+              : "text-muted hover:text-cream"
           }`}
         >
           <ThumbsUp className="h-3 w-3" />
@@ -135,7 +135,7 @@ const ReviewCard = ({
             <button
               type="button"
               onClick={() => setIsFlagging(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-red-500/50 hover:text-red-400"
+              className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/70 hover:border-red-500/50 hover:text-red-400"
             >
               <Flag className="h-3 w-3" /> Report
             </button>
@@ -145,14 +145,14 @@ const ReviewCard = ({
               <button
                 type="button"
                 onClick={() => onEdit && onEdit(review)}
-                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-[#D4AF37]/50"
+                className="rounded-full border border-ink/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-ink/70 hover:border-gold-ink2/50"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => onDelete && onDelete(review)}
-                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 hover:border-rose-400/70"
+                className="rounded-full border border-ink/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 hover:border-rose-400/70"
               >
                 Delete
               </button>
@@ -166,7 +166,7 @@ const ReviewCard = ({
           <button
             type="button"
             onClick={() => setLightbox(null)}
-            className="absolute right-6 top-6 rounded-full border border-white/20 bg-black/50 px-4 py-2 text-xs font-semibold text-white"
+            className="absolute right-6 top-6 rounded-full border border-ink/20 bg-black/50 px-4 py-2 text-xs font-semibold text-ink"
           >
             Close
           </button>
@@ -180,22 +180,22 @@ const ReviewCard = ({
 
       {isFlagging && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-          <div className="w-full max-w-lg rounded-3xl bg-[#0b0b0b] p-6">
-            <h2 className="text-lg font-semibold text-white">Report Review</h2>
-            <p className="mt-2 text-sm text-white/60">
+          <div className="w-full max-w-lg rounded-3xl bg-page p-6">
+            <h2 className="text-lg font-semibold text-ink">Report Review</h2>
+            <p className="mt-2 text-sm text-ink/60">
               Why are you reporting this review? (Spam, abusive, irrelevant, etc.)
             </p>
             <textarea
               value={flagReason}
               onChange={(e) => setFlagReason(e.target.value)}
-              className="mt-4 min-h-[100px] w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white focus:border-red-500/50"
+              className="mt-4 min-h-[100px] w-full rounded-2xl border border-ink/10 bg-black/30 px-4 py-3 text-sm text-ink focus:border-red-500/50"
               placeholder="Provide a reason..."
             />
             <div className="mt-4 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsFlagging(false)}
-                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/60"
+                className="rounded-full border border-ink/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/60"
               >
                 Cancel
               </button>
@@ -220,22 +220,22 @@ const ReviewCard = ({
 };
 
 export const ReviewCardSkeleton = () => (
-  <div className="animate-pulse rounded-3xl border border-white/10 bg-[#0b0b0b] p-6">
+  <div className="animate-pulse rounded-3xl border border-ink/10 bg-page p-6">
     <div className="flex items-center justify-between">
       <div className="space-y-2">
-        <div className="h-4 w-32 rounded-full bg-white/10" />
-        <div className="h-3 w-24 rounded-full bg-white/10" />
+        <div className="h-4 w-32 rounded-full bg-ink/10" />
+        <div className="h-3 w-24 rounded-full bg-ink/10" />
       </div>
-      <div className="h-4 w-24 rounded-full bg-white/10" />
+      <div className="h-4 w-24 rounded-full bg-ink/10" />
     </div>
     <div className="mt-4 space-y-3">
-      <div className="h-4 w-40 rounded-full bg-white/10" />
-      <div className="h-3 w-full rounded-full bg-white/10" />
-      <div className="h-3 w-5/6 rounded-full bg-white/10" />
+      <div className="h-4 w-40 rounded-full bg-ink/10" />
+      <div className="h-3 w-full rounded-full bg-ink/10" />
+      <div className="h-3 w-5/6 rounded-full bg-ink/10" />
     </div>
     <div className="mt-4 grid grid-cols-3 gap-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="h-24 rounded-2xl bg-white/10" />
+        <div key={index} className="h-24 rounded-2xl bg-ink/10" />
       ))}
     </div>
   </div>

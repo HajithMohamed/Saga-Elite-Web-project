@@ -8,7 +8,7 @@ const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen w-full bg-[#050505]">
+    <div className="flex min-h-screen w-full bg-page">
       <SideBar
         mobileOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}

@@ -74,27 +74,27 @@ const MyReviewsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060606] text-white">
+    <div className="min-h-screen bg-page text-ink">
       <div className="container mx-auto max-w-7xl px-4 py-10">
         <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-ink2">
             My reviews
           </p>
           <h1 className="mt-2 text-4xl font-semibold">Your Review History</h1>
         </div>
 
         {loading ? (
-          <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-10 text-white/60">
+          <div className="rounded-3xl border border-ink/10 bg-page p-10 text-ink/60">
             Loading your reviews...
           </div>
         ) : userReviews.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-10 text-white/60">
+          <div className="rounded-3xl border border-ink/10 bg-page p-10 text-ink/60">
             You have not posted any reviews yet.
           </div>
         ) : (
           <div className="space-y-6">
             {userReviews.map((review) => (
-              <div key={review._id} className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-6">
+              <div key={review._id} className="rounded-3xl border border-ink/10 bg-page p-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <img
@@ -106,7 +106,7 @@ const MyReviewsPage = () => {
                       <p className="text-sm font-semibold">{review.productId?.name}</p>
                       <Link
                         to={`/shopping/product/${review.productId?.slug}`}
-                        className="text-xs uppercase tracking-[0.2em] text-white/50"
+                        className="text-xs uppercase tracking-[0.2em] text-ink/50"
                       >
                         View product
                       </Link>
@@ -143,11 +143,11 @@ const MyReviewsPage = () => {
         )}
 
         <div className="mt-12">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-ink2">
             Write a review
           </p>
           {eligibleProducts.length === 0 ? (
-            <div className="mt-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-8 text-white/60">
+            <div className="mt-4 rounded-3xl border border-ink/10 bg-page p-8 text-ink/60">
               No eligible purchases to review yet.
             </div>
           ) : (
@@ -155,7 +155,7 @@ const MyReviewsPage = () => {
               {eligibleProducts.map((item) => (
                 <div
                   key={item.productId}
-                  className="flex items-center justify-between gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6"
+                  className="flex items-center justify-between gap-4 rounded-3xl border border-ink/10 bg-page p-6"
                 >
                   <div className="flex items-center gap-4">
                     <img
@@ -165,14 +165,14 @@ const MyReviewsPage = () => {
                     />
                     <div>
                       <p className="text-sm font-semibold">{item.name}</p>
-                      <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                      <p className="text-xs uppercase tracking-[0.2em] text-ink/50">
                         Eligible to review
                       </p>
                     </div>
                   </div>
                   <Link
                     to={`/product/${item.productId}/reviews`}
-                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70"
+                    className="rounded-full border border-ink/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/70"
                   >
                     Write review
                   </Link>

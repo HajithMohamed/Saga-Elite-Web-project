@@ -54,7 +54,7 @@ const DropTimeline = ({ drop }) => {
   ];
 
   return (
-    <section className="bg-[#0a0a0a] py-16 md:py-24 border-y border-[#1a1a1a]">
+    <section className="bg-page py-16 md:py-24 border-y border-card">
       <div className="max-w-[1200px] mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -63,17 +63,17 @@ const DropTimeline = ({ drop }) => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-gold-ink mb-3">
             Timeline
           </p>
-          <h2 className="font-display text-[28px] md:text-[40px] uppercase text-[#FAF7F2] leading-none">
+          <h2 className="font-display text-[28px] md:text-[40px] uppercase text-ink leading-none">
             The chapter, in three beats
           </h2>
         </motion.div>
 
         <div className="relative">
           {/* Connector line */}
-          <div className="absolute left-0 right-0 top-6 h-px bg-[#1f1f1f] hidden md:block" />
+          <div className="absolute left-0 right-0 top-6 h-px bg-card hidden md:block" />
           <motion.div
             initial={{ scaleX: 0 }}
             whileInView={{
@@ -83,7 +83,7 @@ const DropTimeline = ({ drop }) => {
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             style={{ transformOrigin: "left" }}
-            className="absolute left-0 right-0 top-6 h-px bg-[#f2ca50] hidden md:block"
+            className="absolute left-0 right-0 top-6 h-px bg-gold hidden md:block"
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4">
@@ -98,12 +98,12 @@ const DropTimeline = ({ drop }) => {
               >
                 {/* Node */}
                 <div
-                  className={`relative w-12 h-12 flex items-center justify-center border-2 rounded-full transition-all bg-[#0a0a0a] ${
+                  className={`relative w-12 h-12 flex items-center justify-center border-2 rounded-full transition-all bg-page ${
                     step.passed
-                      ? "border-[#f2ca50]"
+                      ? "border-gold-ink"
                       : step.active
-                        ? "border-[#f2ca50] animate-pulse"
-                        : "border-[#4d4635]"
+                        ? "border-gold-ink animate-pulse"
+                        : "border-line"
                   }`}
                   style={{
                     boxShadow: step.active
@@ -115,12 +115,12 @@ const DropTimeline = ({ drop }) => {
                     <Check
                       size={18}
                       strokeWidth={2.5}
-                      className="text-[#f2ca50]"
+                      className="text-gold-ink"
                     />
                   ) : (
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        step.active ? "bg-[#f2ca50]" : "bg-[#4d4635]"
+                        step.active ? "bg-gold" : "bg-line"
                       }`}
                     />
                   )}
@@ -129,8 +129,8 @@ const DropTimeline = ({ drop }) => {
                 <p
                   className={`mt-5 font-mono text-[10px] tracking-[0.32em] uppercase ${
                     step.passed || step.active
-                      ? "text-[#f2ca50]"
-                      : "text-[#574500]"
+                      ? "text-gold-ink"
+                      : "text-goldshadow"
                   }`}
                 >
                   {step.label}
@@ -139,14 +139,14 @@ const DropTimeline = ({ drop }) => {
                   <p
                     className={`mt-2 font-sans text-xs ${
                       step.passed || step.active
-                        ? "text-[#d0c5af]"
-                        : "text-[#574500]"
+                        ? "text-cream"
+                        : "text-goldshadow"
                     }`}
                   >
                     {step.date}
                   </p>
                 ) : (
-                  <p className="mt-2 font-sans text-xs text-[#574500]">—</p>
+                  <p className="mt-2 font-sans text-xs text-goldshadow">—</p>
                 )}
               </motion.div>
             ))}

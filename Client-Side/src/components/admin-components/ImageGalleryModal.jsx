@@ -228,7 +228,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
               <button
                 type="button"
                 onClick={() => setColorFilter("all")}
-                className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter === "all" ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]" : "border-white/10 text-white/55 hover:border-white/20 hover:text-white"}`}
+                className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter === "all" ? "border-gold-ink2/45 bg-gold-deep/[0.12] text-gold-ink2" : "border-ink/10 text-ink/55 hover:border-ink/20 hover:text-ink"}`}
               >
                 All ({localImages.length})
               </button>
@@ -239,7 +239,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                     key={color}
                     type="button"
                     onClick={() => setColorFilter(color)}
-                    className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter.toLowerCase() === color.toLowerCase() ? "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]" : "border-white/10 text-white/55 hover:border-white/20 hover:text-white"}`}
+                    className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter.toLowerCase() === color.toLowerCase() ? "border-gold-ink2/45 bg-gold-deep/[0.12] text-gold-ink2" : "border-ink/10 text-ink/55 hover:border-ink/20 hover:text-ink"}`}
                   >
                     {color} ({count})
                   </button>
@@ -249,7 +249,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                 <button
                   type="button"
                   onClick={() => setColorFilter("untagged")}
-                  className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter === "untagged" ? "border-[#ffb4ab]/45 bg-[#ffb4ab]/[0.12] text-[#ffb4ab]" : "border-white/10 text-white/55 hover:border-white/20 hover:text-white"}`}
+                  className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition ${colorFilter === "untagged" ? "border-danger-ink/45 bg-danger-ink/[0.12] text-danger-ink" : "border-ink/10 text-ink/55 hover:border-ink/20 hover:text-ink"}`}
                 >
                   Untagged ({localImages.filter((img) => !img.colorTag || String(img.colorTag).trim() === "").length})
                 </button>
@@ -261,12 +261,12 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
             {filteredImages.map((image, index) => {
               const globalIndex = localImages.indexOf(image);
               return (
-              <div key={image._id ?? `${index}-${image.url}`} className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-[#111]">
+              <div key={image._id ?? `${index}-${image.url}`} className="overflow-hidden rounded-2xl border border-outline-variant/20 bg-panel">
                 <div className="relative">
                   <img
                     src={image.url}
                     alt={`${title} ${index + 1}`}
-                    className="h-56 w-full object-contain bg-[#0a0a0a]"
+                    className="h-56 w-full object-contain bg-page"
                   />
                   {image.isPrimary && (
                     <span className="absolute left-3 top-3 rounded-full bg-saga-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-black">
@@ -275,7 +275,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                   )}
                   {/* Color tag badge */}
                   {image.colorTag && String(image.colorTag).trim() && (
-                    <span className="absolute right-3 top-3 rounded-full border border-[#D4AF37]/40 bg-black/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37] backdrop-blur-sm">
+                    <span className="absolute right-3 top-3 rounded-full border border-gold-ink2/40 bg-black/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-gold-ink2 backdrop-blur-sm">
                       {image.colorTag}
                     </span>
                   )}
@@ -305,13 +305,13 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                           value={colorTagInput}
                           onChange={(e) => setColorTagInput(e.target.value)}
                           placeholder="e.g. Black"
-                          className="flex-1 rounded-lg border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs text-white outline-none transition focus:border-[#D4AF37]/40"
+                          className="flex-1 rounded-lg border border-ink/15 bg-black/40 px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-gold-ink2/40"
                           autoFocus
                         />
                         <button type="submit" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-bold text-emerald-300 transition hover:bg-emerald-500/20">
                           Save
                         </button>
-                        <button type="button" onClick={() => setEditingColorTagId(null)} className="rounded-lg border border-white/10 px-2 py-1.5 text-[10px] text-white/50 transition hover:text-white">
+                        <button type="button" onClick={() => setEditingColorTagId(null)} className="rounded-lg border border-ink/10 px-2 py-1.5 text-[10px] text-ink/50 transition hover:text-ink">
                           ✕
                         </button>
                       </form>
@@ -323,7 +323,7 @@ const ImageGalleryModal = ({ title, images = [], onClose, onImagesUpdate }) => {
                           setEditingColorTagId(image._id);
                           setColorTagInput(image.colorTag || "");
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.18em] text-white/60 transition hover:border-[#D4AF37]/30 hover:text-[#D4AF37] disabled:opacity-40"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-ink/10 bg-ink/[0.03] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.18em] text-ink/60 transition hover:border-gold-ink2/30 hover:text-gold-ink2 disabled:opacity-40"
                       >
                         🏷️ {image.colorTag ? `Color: ${image.colorTag}` : "Set color tag"}
                       </button>

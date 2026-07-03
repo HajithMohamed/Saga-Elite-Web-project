@@ -42,7 +42,7 @@ const MobileBottomNav = () => {
           className="md:hidden fixed bottom-0 left-0 w-full z-40 pb-safe"
           aria-label="Mobile navigation"
         >
-          <div className="bg-[#0e0e0e]/95 backdrop-blur-[16px] border-t border-white/5 flex items-center justify-around h-[72px] px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.4)]">
+          <div className="bg-page/95 backdrop-blur-[16px] border-t border-ink/5 flex items-center justify-around h-[72px] px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.4)]">
             {navItems.map((item) => {
               const isActive = location.pathname.includes(item.to) || (item.key === 'home' && location.pathname === '/shopping/home');
               return (
@@ -53,16 +53,16 @@ const MobileBottomNav = () => {
                   className="flex flex-col items-center justify-center w-full h-full gap-1 group relative"
                 >
                   <item.icon 
-                    className={`w-6 h-6 transition-all duration-250 ${isActive ? 'text-[#F2CA50]' : 'text-[#99907c] group-hover:text-[#fafafa]'}`} 
+                    className={`w-6 h-6 transition-all duration-250 ${isActive ? 'text-gold-ink' : 'text-muted group-hover:text-ink'}`} 
                     strokeWidth={isActive ? 2 : 1.5}
                   />
-                  <span className={`text-[10px] font-sans transition-colors ${isActive ? 'text-[#F2CA50] font-bold' : 'text-[#99907c] group-hover:text-[#fafafa]'}`}>
+                  <span className={`text-[10px] font-sans transition-colors ${isActive ? 'text-gold-ink font-bold' : 'text-muted group-hover:text-ink'}`}>
                     {item.label}
                   </span>
                   {isActive && (
                     <motion.div 
                       layoutId="bottomNavIndicator"
-                      className="absolute -top-[1px] w-8 h-[2px] bg-[#F2CA50] rounded-full shadow-[0_0_10px_#F2CA50]"
+                      className="absolute -top-[1px] w-8 h-[2px] bg-gold rounded-full shadow-[0_0_10px_#F2CA50]"
                     />
                   )}
                 </Link>

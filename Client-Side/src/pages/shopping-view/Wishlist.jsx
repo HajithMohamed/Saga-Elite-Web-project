@@ -42,18 +42,18 @@ const Wishlist = () => {
     <div className="space-y-8 pb-12 font-sans">
       
       {/* ── HEADER & SUMMARY ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-ink/5 pb-6">
          <div>
-            <h1 className="font-sans text-2xl font-bold text-[#fafafa] mb-1">My Wishlist</h1>
-            <p className="se-body text-[14px] text-[#99907c]">Save your favorite products and purchase them whenever you're ready.</p>
+            <h1 className="font-sans text-2xl font-bold text-ink mb-1">My Wishlist</h1>
+            <p className="se-body text-[14px] text-muted">Save your favorite products and purchase them whenever you're ready.</p>
          </div>
          
-         <div className="flex items-center gap-4 bg-[#1A1A1A] border border-white/5 px-4 py-2 rounded-full">
-            <span className="text-[14px] font-sans font-bold text-[#F2CA50]">{wishlistItems.length}</span>
-            <span className="text-[10px] uppercase tracking-widest text-[#99907c]">Saved</span>
-            <div className="w-[1px] h-4 bg-white/10" />
-            <span className="text-[14px] font-sans font-bold text-white">{wishlistItems.filter(item => (item.totalStock ?? 1) > 0).length}</span>
-            <span className="text-[10px] uppercase tracking-widest text-[#99907c]">Available</span>
+         <div className="flex items-center gap-4 bg-card border border-ink/5 px-4 py-2 rounded-full">
+            <span className="text-[14px] font-sans font-bold text-gold-ink">{wishlistItems.length}</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted">Saved</span>
+            <div className="w-[1px] h-4 bg-ink/10" />
+            <span className="text-[14px] font-sans font-bold text-ink">{wishlistItems.filter(item => (item.totalStock ?? 1) > 0).length}</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted">Available</span>
          </div>
       </div>
 
@@ -82,8 +82,8 @@ const Wishlist = () => {
 
       {/* ── RECOMMENDED ── */}
       {recommendedProducts.length > 0 && (
-        <div className="mt-16 pt-12 border-t border-white/5">
-           <h2 className="font-sans font-bold text-xl text-[#fafafa] mb-8">Recommended For You</h2>
+        <div className="mt-16 pt-12 border-t border-ink/5">
+           <h2 className="font-sans font-bold text-xl text-ink mb-8">Recommended For You</h2>
            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {recommendedProducts.map((product) => (
                 <ProductCard

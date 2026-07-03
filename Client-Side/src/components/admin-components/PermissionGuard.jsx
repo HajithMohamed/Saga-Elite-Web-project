@@ -62,12 +62,12 @@ const AccessDenied = ({ reason }) => (
     transition={{ duration: 0.4 }}
     className="flex min-h-[60vh] items-center justify-center p-6"
   >
-    <div className="w-full max-w-lg rounded-[32px] border border-white/10 bg-white/[0.03] p-10 text-center backdrop-blur-xl">
+    <div className="w-full max-w-lg rounded-[32px] border border-ink/10 bg-ink/[0.03] p-10 text-center backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10">
         <ShieldOff className="h-8 w-8 text-rose-400" />
       </div>
 
-      <h2 className="mt-6 text-2xl font-bold text-white">Access Restricted</h2>
+      <h2 className="mt-6 text-2xl font-bold text-ink">Access Restricted</h2>
 
       <p className="mt-4 text-sm leading-7 text-gray-400">{reason}</p>
 
@@ -77,7 +77,7 @@ const AccessDenied = ({ reason }) => (
 
       <Link
         to="/admin/dashboard"
-        className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-6 py-3 text-sm font-semibold text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+        className="mt-8 inline-flex items-center gap-2 rounded-full border border-gold-ink2/20 bg-gold-deep/10 px-6 py-3 text-sm font-semibold text-gold-ink2 transition hover:bg-gold-deep/20"
       >
         ← Return to Dashboard
       </Link>

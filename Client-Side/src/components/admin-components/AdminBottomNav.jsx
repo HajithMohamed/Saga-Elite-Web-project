@@ -101,13 +101,13 @@ const AdminBottomNav = ({ onMenuToggle }) => {
       <Link
         key={item.path}
         to={item.path}
-        className={`relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 transition-colors ${isActive ? "text-[#f2ca50]" : "text-[#99907c]"
+        className={`relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 transition-colors ${isActive ? "text-gold-ink" : "text-muted"
           }`}
       >
         {isActive ? (
           <motion.span
             layoutId="bottom-nav-indicator"
-            className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-[#f2ca50]"
+            className="absolute inset-x-3 top-0 h-0.5 rounded-b-full bg-gold"
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           />
         ) : null}
@@ -128,7 +128,7 @@ const AdminBottomNav = ({ onMenuToggle }) => {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-[#4d4635]/60 bg-[#0a0a0a]/95 backdrop-blur-sm lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line/60 bg-page/95 backdrop-blur-sm lg:hidden"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
@@ -138,7 +138,7 @@ const AdminBottomNav = ({ onMenuToggle }) => {
       <button
         type="button"
         onClick={onMenuToggle}
-        className="relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 text-[#99907c] transition-colors hover:text-[#f2ca50]"
+        className="relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 text-muted transition-colors hover:text-gold-ink"
         aria-label="Open admin menu"
       >
         <div className="relative">

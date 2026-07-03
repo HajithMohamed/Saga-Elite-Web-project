@@ -29,22 +29,22 @@ export const StickyHeader = ({ onBack, onSaveDraft, onPublish, isEditing = false
   };
 
   return (
-    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-white/[0.04] bg-[#0a0a0a]/80 px-8 py-5 backdrop-blur-xl">
+    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-ink/[0.04] bg-page/80 px-8 py-5 backdrop-blur-xl">
       <div className="flex items-center gap-5">
         <button
           type="button"
           onClick={handleBack}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111111] text-white/70 shadow-sm transition-all hover:bg-white/5 hover:text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-ink/10 bg-panel text-ink/70 shadow-sm transition-all hover:bg-ink/5 hover:text-ink"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2 text-sm">
           <span
             className={`h-2 w-2 rounded-full ${
-              isSaving ? 'animate-pulse bg-[#D4AF37]' : isDirty ? 'bg-amber-400' : 'bg-emerald-400'
+              isSaving ? 'animate-pulse bg-gold-deep' : isDirty ? 'bg-amber-400' : 'bg-emerald-400'
             }`}
           />
-          <span className={isDirty ? 'text-white/80' : 'text-white/50'}>{statusLabel}</span>
+          <span className={isDirty ? 'text-ink/80' : 'text-ink/50'}>{statusLabel}</span>
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export const StickyHeader = ({ onBack, onSaveDraft, onPublish, isEditing = false
           type="button"
           onClick={onSaveDraft}
           disabled={isSaving}
-          className="rounded-xl border border-white/10 bg-transparent px-5 py-2.5 text-[13px] font-semibold tracking-wide text-white transition-all hover:bg-white/5 hover:text-white disabled:opacity-50 shadow-sm"
+          className="rounded-xl border border-ink/10 bg-transparent px-5 py-2.5 text-[13px] font-semibold tracking-wide text-ink transition-all hover:bg-ink/5 hover:text-ink disabled:opacity-50 shadow-sm"
         >
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Draft'}
         </button>
@@ -77,7 +77,7 @@ export const StickyHeader = ({ onBack, onSaveDraft, onPublish, isEditing = false
           onClick={handlePreview}
           disabled={!isEditing || !productSlug}
           title={!isEditing ? 'Save product first to preview on storefront' : 'Open storefront preview'}
-          className="rounded-xl border border-white/10 bg-transparent px-5 py-2.5 text-[13px] font-semibold tracking-wide text-white transition-all hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
+          className="rounded-xl border border-ink/10 bg-transparent px-5 py-2.5 text-[13px] font-semibold tracking-wide text-ink transition-all hover:bg-ink/5 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
         >
           Preview
         </button>
@@ -86,7 +86,7 @@ export const StickyHeader = ({ onBack, onSaveDraft, onPublish, isEditing = false
           type="button"
           onClick={onPublish}
           disabled={isSaving}
-          className="flex items-center gap-2 rounded-xl bg-[#5235e8] hover:bg-[#4323d8] px-6 py-2.5 text-[13px] font-bold text-white transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(82,53,232,0.15)]"
+          className="flex items-center gap-2 rounded-xl bg-[#5235e8] hover:bg-[#4323d8] px-6 py-2.5 text-[13px] font-bold text-ink transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(82,53,232,0.15)]"
         >
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Publish Product

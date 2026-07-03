@@ -49,7 +49,7 @@ const DEFAULT_CORE_VALUES = [
 ];
 
 const GlassCard = ({ children, className = "" }) => (
-  <div className={`rounded-[20px] bg-[#1A1A1A] border border-white/5 backdrop-blur-md ${className}`}>
+  <div className={`rounded-[20px] bg-card border border-ink/5 backdrop-blur-md ${className}`}>
     {children}
   </div>
 );
@@ -91,18 +91,18 @@ const AboutPage = () => {
 
   if (loading && !about?.about_brand_story) {
     return (
-      <div className="bg-[#0e0e0e] min-h-screen flex items-center justify-center">
-        <div className="animate-pulse se-body text-[#F2CA50]">Loading our story…</div>
+      <div className="bg-page min-h-screen flex items-center justify-center">
+        <div className="animate-pulse se-body text-gold-ink">Loading our story…</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
+    <div className="bg-page text-ink-2 min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
       
       {/* HERO BANNER */}
       <section className="relative h-[260px] md:h-[320px] lg:h-[420px] overflow-hidden flex items-end justify-center w-full">
-        <div className="absolute inset-0 bg-[#0e0e0e]">
+        <div className="absolute inset-0 bg-page">
           {heroImage ? (
             <img
               src={heroImage}
@@ -110,10 +110,10 @@ const AboutPage = () => {
               className="w-full h-full object-cover object-center"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#161616] via-[#0e0e0e] to-[#000]" />
+            <div className="w-full h-full bg-gradient-to-br from-card via-page to-page" />
           )}
-          <div className="absolute inset-0 bg-[#0e0e0e]/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
+          <div className="absolute inset-0 bg-page/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-page via-page/50 to-transparent" />
         </div>
         
         <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 pb-12 text-center flex flex-col items-center">
@@ -121,7 +121,7 @@ const AboutPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="se-serif text-[#fafafa] text-4xl md:text-5xl lg:text-[48px] leading-tight mb-4"
+            className="se-serif text-ink text-4xl md:text-5xl lg:text-[48px] leading-tight mb-4"
           >
             {heroTitle}
           </motion.h1>
@@ -129,7 +129,7 @@ const AboutPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="se-body text-[#F2CA50] text-lg md:text-xl max-w-2xl"
+            className="se-body text-gold-ink text-lg md:text-xl max-w-2xl"
           >
             {heroSubtitle}
           </motion.p>
@@ -137,7 +137,7 @@ const AboutPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-3 se-body text-[#99907c] max-w-2xl"
+            className="mt-3 se-body text-muted max-w-2xl"
           >
             We bring premium clothing, footwear, and accessories together in one trusted online destination.
           </motion.p>
@@ -148,7 +148,7 @@ const AboutPage = () => {
             className="mt-8"
           >
             <Link to={heroCtaUrl}>
-              <button className="h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] transition-transform duration-250 hover:-translate-y-1">
+              <button className="h-[56px] px-8 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] transition-transform duration-250 hover:-translate-y-1">
                 {heroCtaLabel}
               </button>
             </Link>
@@ -160,8 +160,8 @@ const AboutPage = () => {
       <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 md:px-8">
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
           <Reveal>
-            <h2 className="se-serif text-[36px] text-[#fafafa] mb-6">Our Story</h2>
-            <div className="se-body text-[#99907c] space-y-6 text-[16px] leading-relaxed">
+            <h2 className="se-serif text-[36px] text-ink mb-6">Our Story</h2>
+            <div className="se-body text-muted space-y-6 text-[16px] leading-relaxed">
               <p>
                 {about?.about_brand_story || `Saga Elite was born out of a desire to elevate the online shopping experience in Sri Lanka. We noticed a gap in the market for a trusted, premium destination that offered not just clothes, but a complete lifestyle experience.`}
               </p>
@@ -175,14 +175,14 @@ const AboutPage = () => {
           </Reveal>
           {storyImage ? (
             <Reveal delay={0.2}>
-              <div className="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-[#1A1A1A]">
+              <div className="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-card">
                 <img
                   src={storyImage}
                   alt={`${brandName} story`}
                   loading="lazy"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 border border-white/10 rounded-[20px] pointer-events-none" />
+                <div className="absolute inset-0 border border-ink/10 rounded-[20px] pointer-events-none" />
               </div>
             </Reveal>
           ) : null}
@@ -193,19 +193,19 @@ const AboutPage = () => {
       <section className="py-20 max-w-7xl mx-auto px-4 md:px-8">
         <div className="grid md:grid-cols-2 gap-6">
           <Reveal>
-            <GlassCard className="h-[260px] p-8 md:p-10 flex flex-col justify-center border-t-2 border-t-[#F2CA50]/50 hover:border-t-[#F2CA50] transition-colors group">
-              <Target className="w-10 h-10 text-[#F2CA50] mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
-              <h3 className="font-sans font-semibold text-[22px] text-[#fafafa] mb-3">Our Mission</h3>
-              <p className="se-body text-[#99907c] text-[16px] leading-relaxed">
+            <GlassCard className="h-[260px] p-8 md:p-10 flex flex-col justify-center border-t-2 border-t-gold-ink/50 hover:border-t-gold-ink transition-colors group">
+              <Target className="w-10 h-10 text-gold-ink mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+              <h3 className="font-sans font-semibold text-[22px] text-ink mb-3">Our Mission</h3>
+              <p className="se-body text-muted text-[16px] leading-relaxed">
                 {about?.about_mission || "To provide a seamless, premium online shopping experience by offering carefully curated, high-quality fashion to modern Sri Lankans."}
               </p>
             </GlassCard>
           </Reveal>
           <Reveal delay={0.1}>
-            <GlassCard className="h-[260px] p-8 md:p-10 flex flex-col justify-center border-t-2 border-t-[#F2CA50]/50 hover:border-t-[#F2CA50] transition-colors group">
-              <Eye className="w-10 h-10 text-[#F2CA50] mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
-              <h3 className="font-sans font-semibold text-[22px] text-[#fafafa] mb-3">Our Vision</h3>
-              <p className="se-body text-[#99907c] text-[16px] leading-relaxed">
+            <GlassCard className="h-[260px] p-8 md:p-10 flex flex-col justify-center border-t-2 border-t-gold-ink/50 hover:border-t-gold-ink transition-colors group">
+              <Eye className="w-10 h-10 text-gold-ink mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+              <h3 className="font-sans font-semibold text-[22px] text-ink mb-3">Our Vision</h3>
+              <p className="se-body text-muted text-[16px] leading-relaxed">
                 {about?.about_vision || "To be Sri Lanka's leading digital destination for premium lifestyle products, recognized for exclusivity, trust, and customer satisfaction."}
               </p>
             </GlassCard>
@@ -214,10 +214,10 @@ const AboutPage = () => {
       </section>
 
       {/* CORE VALUES */}
-      <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 md:px-8 border-y border-white/5 bg-[#0b0b0b]">
+      <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 md:px-8 border-y border-ink/5 bg-page">
         <Reveal className="text-center mb-16">
-          <h2 className="se-serif text-[36px] text-[#fafafa] mb-4">Core Values</h2>
-          <p className="se-body text-[#99907c] text-[18px] max-w-2xl mx-auto">
+          <h2 className="se-serif text-[36px] text-ink mb-4">Core Values</h2>
+          <p className="se-body text-muted text-[18px] max-w-2xl mx-auto">
             The principles that guide everything we do.
           </p>
         </Reveal>
@@ -227,11 +227,11 @@ const AboutPage = () => {
             const Icon = val.icon;
             return (
               <Reveal key={i} delay={i * 0.1}>
-                <div className="h-[220px] rounded-[20px] bg-[#1A1A1A] p-8 flex flex-col items-center justify-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-1 hover:border-[#F2CA50]/30 hover:shadow-[0_10px_30px_rgba(242,202,80,0.05)]">
-                  <div className="w-14 h-14 rounded-full bg-[#F2CA50]/10 flex items-center justify-center mb-6">
-                    <Icon className="w-7 h-7 text-[#F2CA50]" strokeWidth={1.5} />
+                <div className="h-[220px] rounded-[20px] bg-card p-8 flex flex-col items-center justify-center text-center border border-ink/5 transition-all duration-300 hover:-translate-y-1 hover:border-gold-ink/30 hover:shadow-[0_10px_30px_rgba(242,202,80,0.05)]">
+                  <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-6">
+                    <Icon className="w-7 h-7 text-gold-ink" strokeWidth={1.5} />
                   </div>
-                  <h3 className="font-sans font-semibold text-[18px] text-[#fafafa]">{val.title}</h3>
+                  <h3 className="font-sans font-semibold text-[18px] text-ink">{val.title}</h3>
                 </div>
               </Reveal>
             );
@@ -244,18 +244,18 @@ const AboutPage = () => {
 
       {/* BUSINESS STATISTICS (Dynamic) */}
       {statCards.length > 0 && (
-        <section className="py-20 border-y border-white/5">
+        <section className="py-20 border-y border-ink/5">
           <div className="max-w-7xl mx-auto px-4 md:px-8">
             <Reveal className="text-center mb-16">
-              <h2 className="se-serif text-[36px] text-[#fafafa] mb-4">Saga Elite in Numbers</h2>
-              <p className="se-body text-[#99907c] text-[18px]">Trusted by thousands across the island.</p>
+              <h2 className="se-serif text-[36px] text-ink mb-4">Saga Elite in Numbers</h2>
+              <p className="se-body text-muted text-[18px]">Trusted by thousands across the island.</p>
             </Reveal>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {statCards.map((stat, i) => (
                 <Reveal key={i} delay={i * 0.1}>
-                  <div className="text-center p-8 bg-[#1A1A1A] rounded-[20px] border border-white/5 h-full flex flex-col justify-center">
-                    <div className="font-serif text-[48px] text-[#F2CA50] mb-2">{stat.value}</div>
-                    <div className="se-label text-[12px] text-[#99907c] uppercase tracking-wider">{stat.label}</div>
+                  <div className="text-center p-8 bg-card rounded-[20px] border border-ink/5 h-full flex flex-col justify-center">
+                    <div className="font-serif text-[48px] text-gold-ink mb-2">{stat.value}</div>
+                    <div className="se-label text-[12px] text-muted uppercase tracking-wider">{stat.label}</div>
                   </div>
                 </Reveal>
               ))}
@@ -265,15 +265,15 @@ const AboutPage = () => {
       )}
 
       {/* OUR JOURNEY TIMELINE */}
-      <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 md:px-8 bg-[#0e0e0e]">
+      <section className="py-20 md:py-28 max-w-7xl mx-auto px-4 md:px-8 bg-page">
         <Reveal className="text-center mb-20">
-          <h2 className="se-serif text-[36px] text-[#fafafa] mb-4">Our Journey</h2>
-          <p className="se-body text-[#99907c] text-[18px]">Milestones that define our growth.</p>
+          <h2 className="se-serif text-[36px] text-ink mb-4">Our Journey</h2>
+          <p className="se-body text-muted text-[18px]">Milestones that define our growth.</p>
         </Reveal>
         
         <div className="relative">
           {/* Vertical Line */}
-          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-[#1A1A1A] md:-translate-x-1/2" />
+          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-card md:-translate-x-1/2" />
           
           <div className="space-y-12">
             {timeline.map((item, i) => {
@@ -283,16 +283,16 @@ const AboutPage = () => {
                   <div className={`relative flex items-center ${isEven ? 'md:flex-row-reverse' : 'md:flex-row'}`}>
                     
                     {/* Marker */}
-                    <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-[#F2CA50] rounded-full -translate-x-[7px] md:-translate-x-[8px] border-4 border-[#0e0e0e] shadow-[0_0_15px_rgba(242,202,80,0.5)] z-10" />
+                    <div className="absolute left-4 md:left-1/2 w-4 h-4 bg-gold rounded-full -translate-x-[7px] md:-translate-x-[8px] border-4 border-page shadow-[0_0_15px_rgba(242,202,80,0.5)] z-10" />
                     
                     {/* Content */}
                     <div className={`w-full md:w-1/2 pl-12 md:pl-0 ${isEven ? 'md:pr-16 text-left md:text-right' : 'md:pl-16 text-left'}`}>
-                      <div className="inline-block px-3 py-1 bg-[#F2CA50]/10 border border-[#F2CA50]/20 rounded-full text-[#F2CA50] font-sans font-bold text-[12px] mb-3">
+                      <div className="inline-block px-3 py-1 bg-gold/10 border border-gold-ink/20 rounded-full text-gold-ink font-sans font-bold text-[12px] mb-3">
                         {item.year}
                       </div>
-                      <h3 className="font-sans font-semibold text-[22px] text-[#fafafa] mb-2">{item.milestone}</h3>
+                      <h3 className="font-sans font-semibold text-[22px] text-ink mb-2">{item.milestone}</h3>
                       {item.description && (
-                        <p className="se-body text-[#99907c] text-[16px]">{item.description}</p>
+                        <p className="se-body text-muted text-[16px]">{item.description}</p>
                       )}
                     </div>
                   </div>
@@ -304,20 +304,20 @@ const AboutPage = () => {
       </section>
 
       {/* OUR SERVICES */}
-      <section className="py-20 md:py-28 border-t border-white/5 bg-[#0b0b0b]">
+      <section className="py-20 md:py-28 border-t border-ink/5 bg-page">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <Reveal className="text-center mb-16">
-            <h2 className="se-serif text-[36px] text-[#fafafa] mb-4">Our Services</h2>
-            <p className="se-body text-[#99907c] text-[18px]">Designed for an effortless shopping experience.</p>
+            <h2 className="se-serif text-[36px] text-ink mb-4">Our Services</h2>
+            <p className="se-body text-muted text-[18px]">Designed for an effortless shopping experience.</p>
           </Reveal>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {DEFAULT_SERVICES.map((srv, i) => (
               <Reveal key={i} delay={i * 0.1}>
-                <div className="group bg-[#1A1A1A] p-8 rounded-[20px] border border-white/5 h-full transition-colors hover:bg-white/[0.04]">
-                  <srv.icon className="w-8 h-8 text-[#F2CA50] mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
-                  <h3 className="font-sans font-semibold text-[20px] text-[#fafafa] mb-3">{srv.title}</h3>
-                  <p className="se-body text-[#99907c] text-[15px] leading-relaxed">{srv.desc}</p>
+                <div className="group bg-card p-8 rounded-[20px] border border-ink/5 h-full transition-colors hover:bg-ink/[0.04]">
+                  <srv.icon className="w-8 h-8 text-gold-ink mb-6 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+                  <h3 className="font-sans font-semibold text-[20px] text-ink mb-3">{srv.title}</h3>
+                  <p className="se-body text-muted text-[15px] leading-relaxed">{srv.desc}</p>
                 </div>
               </Reveal>
             ))}

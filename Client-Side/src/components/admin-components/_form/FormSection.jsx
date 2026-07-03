@@ -18,19 +18,19 @@ export function FormSection({ number, title, description, action, children, id, 
   return (
     <section
       id={id}
-      className={`rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-6 lg:p-8 ${className}`.trim()}
+      className={`rounded-2xl border border-ink/[0.06] bg-panel p-6 lg:p-8 ${className}`.trim()}
     >
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-3 min-w-0">
           {number ? (
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37] mt-0.5 shrink-0">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-ink2 mt-0.5 shrink-0">
               {number}
             </span>
           ) : null}
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white truncate">{title}</h2>
+            <h2 className="text-lg font-semibold text-ink truncate">{title}</h2>
             {description ? (
-              <p className="mt-1 text-xs text-white/50 leading-relaxed">{description}</p>
+              <p className="mt-1 text-xs text-ink/50 leading-relaxed">{description}</p>
             ) : null}
           </div>
         </div>

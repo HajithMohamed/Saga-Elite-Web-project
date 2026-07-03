@@ -24,8 +24,8 @@ export function LivePreviewCard({
   meta = [],
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0F0F0F]">
-      <div className="relative aspect-[4/5] w-full bg-gradient-to-br from-white/[0.04] to-black/40">
+    <div className="overflow-hidden rounded-2xl border border-ink/[0.06] bg-panel">
+      <div className="relative aspect-[4/5] w-full bg-gradient-to-br from-ink/[0.04] to-black/40">
         {image ? (
           <img
             src={image}
@@ -33,7 +33,7 @@ export function LivePreviewCard({
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/20">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-ink/20">
             <ImageIcon className="h-10 w-10" />
             <p className="text-[10px] uppercase tracking-[0.2em]">No hero image</p>
           </div>
@@ -46,24 +46,24 @@ export function LivePreviewCard({
       </div>
       <div className="space-y-2 p-4">
         {eyebrow ? (
-          <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37]">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gold-ink2">
             {eyebrow}
           </p>
         ) : null}
-        <h4 className="text-base font-semibold text-white truncate">
+        <h4 className="text-base font-semibold text-ink truncate">
           {title || "Untitled"}
         </h4>
         {meta.length > 0 ? (
-          <dl className="mt-3 space-y-1.5 border-t border-white/[0.05] pt-3">
+          <dl className="mt-3 space-y-1.5 border-t border-ink/[0.05] pt-3">
             {meta.map((row, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between gap-3 text-[11px]"
               >
-                <dt className="text-white/40 uppercase tracking-wider">
+                <dt className="text-ink/40 uppercase tracking-wider">
                   {row.label}
                 </dt>
-                <dd className="text-white/80 tabular-nums truncate text-right">
+                <dd className="text-ink/80 tabular-nums truncate text-right">
                   {row.value}
                 </dd>
               </div>

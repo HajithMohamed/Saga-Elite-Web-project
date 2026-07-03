@@ -39,25 +39,25 @@ const FAQ_ITEMS = [
 ];
 
 const AccordionItem = ({ item, isOpen, onToggle }) => (
-  <div className="border-b border-white/5 last:border-0">
+  <div className="border-b border-ink/5 last:border-0">
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-[#F2CA50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CA50]"
+      className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-gold-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink"
       aria-expanded={isOpen}
     >
       <span
         className={cn(
           "se-body text-sm font-medium transition-colors",
-          isOpen ? "text-[#F2CA50]" : "text-[#e5e2e1]"
+          isOpen ? "text-gold-ink" : "text-ink-2"
         )}
       >
         {item.question}
       </span>
       <ChevronDown
         className={cn(
-          "h-4 w-4 shrink-0 text-[#574500] transition-transform duration-300",
-          isOpen && "rotate-180 text-[#F2CA50]"
+          "h-4 w-4 shrink-0 text-goldshadow transition-transform duration-300",
+          isOpen && "rotate-180 text-gold-ink"
         )}
       />
     </button>
@@ -71,7 +71,7 @@ const AccordionItem = ({ item, isOpen, onToggle }) => (
           transition={{ duration: 0.3, ease: MOTION_EASE }}
           className="overflow-hidden"
         >
-          <p className="se-body pb-5 text-sm leading-6 text-[#99907c]">
+          <p className="se-body pb-5 text-sm leading-6 text-muted">
             {item.answer}
           </p>
         </motion.div>
@@ -92,19 +92,19 @@ const PaymentFAQ = () => {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.4 }}
-      className="rounded-[24px] border border-white/10 bg-[#0d0d0d] p-6 sm:p-8"
+      className="rounded-[24px] border border-ink/10 bg-page p-6 sm:p-8"
       aria-label="Frequently asked questions"
     >
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
-          <HelpCircle className="h-5 w-5 text-[#d0c5af]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink/10 bg-ink/[0.03]">
+          <HelpCircle className="h-5 w-5 text-cream" />
         </div>
         <div>
-          <h3 className="se-serif text-lg text-[#e5e2e1]">
+          <h3 className="se-serif text-lg text-ink-2">
             Frequently Asked Questions
           </h3>
-          <p className="se-label text-[8px] tracking-[0.25em] text-[#574500]">
+          <p className="se-label text-[8px] tracking-[0.25em] text-goldshadow">
             Common payment queries
           </p>
         </div>

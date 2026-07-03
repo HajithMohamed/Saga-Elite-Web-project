@@ -26,7 +26,7 @@ const CheckoutLayout = () => {
   }, [dispatch, isAuthenticated]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0a0a0a] text-[#e5e2e1]">
+    <div className="flex min-h-screen flex-col bg-page text-ink-2">
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}

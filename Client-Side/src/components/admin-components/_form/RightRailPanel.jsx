@@ -20,8 +20,8 @@ export function RightRailPanel({
 }) {
   const accent =
     tone === "accent"
-      ? "border-[#D4AF37]/30 bg-gradient-to-br from-[#D4AF37]/[0.08] to-transparent"
-      : "border-white/[0.06] bg-[#0F0F0F]";
+      ? "border-gold-ink2/30 bg-gradient-to-br from-gold-deep/[0.08] to-transparent"
+      : "border-ink/[0.06] bg-panel";
 
   return (
     <section className={`rounded-2xl border ${accent} p-5 ${className}`.trim()}>
@@ -29,12 +29,12 @@ export function RightRailPanel({
         <header className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             {title ? (
-              <h3 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-white/80">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-ink/80">
                 {title}
               </h3>
             ) : null}
             {description ? (
-              <p className="mt-1 text-[11px] leading-relaxed text-white/40">
+              <p className="mt-1 text-[11px] leading-relaxed text-ink/40">
                 {description}
               </p>
             ) : null}
@@ -52,11 +52,11 @@ export function RightRailPanel({
  */
 export function RailToggleRow({ label, helper, checked, onChange, disabled }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-ink/[0.06] bg-black/30 px-4 py-3">
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-white truncate">{label}</p>
+        <p className="text-xs font-semibold text-ink truncate">{label}</p>
         {helper ? (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-white/40">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-ink/40">
             {helper}
           </p>
         ) : null}
@@ -67,7 +67,7 @@ export function RailToggleRow({ label, helper, checked, onChange, disabled }) {
         disabled={disabled}
         aria-pressed={checked}
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
-          checked ? "bg-[#D4AF37]" : "bg-white/[0.1]"
+          checked ? "bg-gold-deep" : "bg-ink/[0.1]"
         } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
         <span

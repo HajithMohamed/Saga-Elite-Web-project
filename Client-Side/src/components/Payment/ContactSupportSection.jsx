@@ -55,7 +55,7 @@ const ContactSupportSection = ({
       icon: Mail,
       label: "Email",
       style:
-        "border-[#F2CA50]/30 bg-[#F2CA50]/10 text-[#F2CA50] hover:bg-[#F2CA50]/20",
+        "border-gold-ink/30 bg-gold/10 text-gold-ink hover:bg-gold/20",
       external: false,
     },
   ].filter(Boolean);
@@ -65,26 +65,26 @@ const ContactSupportSection = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.35 }}
-      className="rounded-[24px] border border-white/10 bg-[#0d0d0d] p-6 sm:p-8"
+      className="rounded-[24px] border border-ink/10 bg-page p-6 sm:p-8"
       aria-label="Contact support"
     >
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
-          <Headphones className="h-5 w-5 text-[#d0c5af]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink/10 bg-ink/[0.03]">
+          <Headphones className="h-5 w-5 text-cream" />
         </div>
         <div>
-          <h3 className="se-serif text-[22px] text-[#e5e2e1]">Need Help?</h3>
-          <p className="se-body mt-0.5 text-sm text-[#99907c]">
+          <h3 className="se-serif text-[22px] text-ink-2">Need Help?</h3>
+          <p className="se-body mt-0.5 text-sm text-muted">
             Contact us if you're having trouble verifying your payment.
           </p>
         </div>
       </div>
 
       {/* Verification time hint */}
-      <div className="mb-5 rounded-2xl border border-[#F2CA50]/15 bg-[#F2CA50]/5 px-4 py-3">
-        <p className="se-body text-sm leading-6 text-[#d0c5af]">
-          <span className="font-semibold text-[#F2CA50]">
+      <div className="mb-5 rounded-2xl border border-gold-ink/15 bg-gold/5 px-4 py-3">
+        <p className="se-body text-sm leading-6 text-cream">
+          <span className="font-semibold text-gold-ink">
             Verification usually takes 1–24 hours
           </span>{" "}
           during business hours. We'll notify you via email and WhatsApp once
@@ -103,7 +103,7 @@ const ContactSupportSection = ({
               target={btn.external ? "_blank" : undefined}
               rel={btn.external ? "noopener noreferrer" : undefined}
               className={cn(
-                "se-label flex h-[52px] items-center justify-center gap-2 rounded-2xl border text-[10px] tracking-[0.2em] transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CA50]",
+                "se-label flex h-[52px] items-center justify-center gap-2 rounded-2xl border text-[10px] tracking-[0.2em] transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink",
                 btn.style
               )}
             >

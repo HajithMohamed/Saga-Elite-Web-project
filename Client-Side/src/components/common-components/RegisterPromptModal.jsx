@@ -58,7 +58,7 @@ const RegisterPromptModal = ({ guestToken, isAuthenticated }) => {
               <X size={18} />
             </button>
 
-            <div className="bg-gradient-to-br from-amber-500 to-amber-700 p-6 text-white">
+            <div className="bg-gradient-to-br from-amber-500 to-amber-700 p-6 text-ink">
               <div className="flex items-center gap-3 mb-2">
                 <Gift size={28} />
                 <h2 className="text-xl font-bold tracking-tight">
@@ -90,7 +90,7 @@ const RegisterPromptModal = ({ guestToken, isAuthenticated }) => {
                 <Link
                   to="/auth/register"
                   onClick={close}
-                  className="flex-1 text-center bg-zinc-900 dark:bg-amber-600 text-white py-2.5 rounded-lg font-semibold hover:bg-zinc-800 dark:hover:bg-amber-500 transition"
+                  className="flex-1 text-center bg-zinc-900 dark:bg-amber-600 text-ink py-2.5 rounded-lg font-semibold hover:bg-zinc-800 dark:hover:bg-amber-500 transition"
                 >
                   Register
                 </Link>

@@ -149,16 +149,8 @@ function App() {
     dispatch(checkAuthAction());
   }, [dispatch]);
 
-  useEffect(() => {
-    const applyTheme = (isDark) => {
-      document.documentElement.classList.toggle("dark", isDark);
-    };
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    applyTheme(mq.matches);
-    const handler = (e) => applyTheme(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
+  // Theme (dark/light) is managed by ThemeProvider (context/theme-context.jsx),
+  // which owns the `dark`/`light` classes on <html> and persistence.
 
   if (isLoading) {
     return <AppLoader message="Opening the atelier" />;

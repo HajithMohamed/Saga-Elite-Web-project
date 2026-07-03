@@ -9,7 +9,7 @@ import {
 } from "@/components/admin-components/_shared/Buttons";
 
 const inputClass =
-  "w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40";
+  "w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40";
 const labelClass =
   "mb-1.5 block font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500";
 
@@ -330,7 +330,7 @@ const CategoryEditorPanel = ({
                 </span>
               ))}
               <ChevronRight className="h-3 w-3 text-gray-600" />
-              <span className="text-[#f2ca50]">{form.name.trim() || "…"}</span>
+              <span className="text-gold-ink">{form.name.trim() || "…"}</span>
             </div>
           ) : (
             <div className="mt-1.5 text-sm text-gray-400">
@@ -343,7 +343,7 @@ const CategoryEditorPanel = ({
             type="button"
             onClick={() => onAddChild(category._id)}
             title={`Add a subcategory under ${category.name}`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#D4AF37]/30 px-3 py-2 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/10"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gold-ink2/30 px-3 py-2 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/10"
           >
             <Plus className="h-3.5 w-3.5" /> Add subcategory
           </button>
@@ -351,7 +351,7 @@ const CategoryEditorPanel = ({
       </div>
 
       {/* Hierarchy */}
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+      <section className="space-y-4 rounded-2xl border border-ink/10 bg-black/30 p-5">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
           Hierarchy
         </h2>
@@ -362,8 +362,8 @@ const CategoryEditorPanel = ({
             onClick={() => onTypeChange("main")}
             className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition ${
               categoryType === "main"
-                ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37]"
-                : "border-white/10 text-gray-300 hover:border-white/25"
+                ? "border-gold-ink2/50 bg-gold-deep/10 text-gold-ink2"
+                : "border-ink/10 text-gray-300 hover:border-ink/25"
             }`}
           >
             <FolderTree className="h-4 w-4 shrink-0" />
@@ -379,8 +379,8 @@ const CategoryEditorPanel = ({
             onClick={() => onTypeChange("sub")}
             className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition ${
               categoryType === "sub"
-                ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37]"
-                : "border-white/10 text-gray-300 hover:border-white/25"
+                ? "border-gold-ink2/50 bg-gold-deep/10 text-gold-ink2"
+                : "border-ink/10 text-gray-300 hover:border-ink/25"
             }`}
           >
             <FolderPlus className="h-4 w-4 shrink-0" />
@@ -414,8 +414,8 @@ const CategoryEditorPanel = ({
                         onClick={() => onMainChange(c._id)}
                         className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
                           active
-                            ? "border-[#D4AF37]/60 bg-[#D4AF37]/15 text-[#D4AF37]"
-                            : "border-white/10 text-gray-300 hover:border-white/30 hover:text-white"
+                            ? "border-gold-ink2/60 bg-gold-deep/15 text-gold-ink2"
+                            : "border-ink/10 text-gray-300 hover:border-ink/30 hover:text-ink"
                         }`}
                       >
                         {c.name}
@@ -430,7 +430,7 @@ const CategoryEditorPanel = ({
               <div>
                 <label className={labelClass}>Subcategories under {mainName}</label>
                 {subParentOptions.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-white/10 bg-black/30 px-3 py-2.5 text-[12px] text-gray-500">
+                  <p className="rounded-lg border border-dashed border-ink/10 bg-black/30 px-3 py-2.5 text-[12px] text-gray-500">
                     No subcategories under {mainName} yet — this one will be the first.
                   </p>
                 ) : (
@@ -455,7 +455,7 @@ const CategoryEditorPanel = ({
                       {subParentOptions.map((opt) => (
                         <span
                           key={opt._id}
-                          className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-gray-400"
+                          className="rounded-md border border-ink/10 bg-ink/[0.03] px-2 py-1 text-[11px] text-gray-400"
                         >
                           {opt.label}
                         </span>
@@ -470,7 +470,7 @@ const CategoryEditorPanel = ({
       </section>
 
       {/* Basics */}
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+      <section className="space-y-4 rounded-2xl border border-ink/10 bg-black/30 p-5">
         <div>
           <label className={labelClass}>Name *</label>
           <input
@@ -504,7 +504,7 @@ const CategoryEditorPanel = ({
       </section>
 
       {/* Visibility */}
-      <section className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+      <section className="space-y-3 rounded-2xl border border-ink/10 bg-black/30 p-5">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
           Visibility
         </h2>
@@ -513,7 +513,7 @@ const CategoryEditorPanel = ({
             type="checkbox"
             checked={form.isActive}
             onChange={(e) => setField("isActive", e.target.checked)}
-            className="accent-[#D4AF37]"
+            className="accent-gold-deep"
           />
           Active (visible on storefront)
         </label>
@@ -522,7 +522,7 @@ const CategoryEditorPanel = ({
             type="checkbox"
             checked={form.isFeatured}
             onChange={(e) => setField("isFeatured", e.target.checked)}
-            className="accent-[#D4AF37]"
+            className="accent-gold-deep"
           />
           Featured
         </label>
@@ -531,14 +531,14 @@ const CategoryEditorPanel = ({
             type="checkbox"
             checked={form.showOnHome}
             onChange={(e) => setField("showOnHome", e.target.checked)}
-            className="accent-[#D4AF37]"
+            className="accent-gold-deep"
           />
           Show on homepage
         </label>
       </section>
 
       {/* SEO */}
-      <section className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+      <section className="space-y-4 rounded-2xl border border-ink/10 bg-black/30 p-5">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
           SEO
         </h2>
@@ -562,7 +562,7 @@ const CategoryEditorPanel = ({
       </section>
 
       {/* Actions */}
-      <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-4">
+      <div className="flex items-center justify-between gap-3 border-t border-ink/5 pt-4">
         <div>
           {isEdit ? (
             <button
@@ -574,7 +574,7 @@ const CategoryEditorPanel = ({
                   ? "Remove its subcategories first"
                   : "Delete this category"
               }
-              className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-2 text-xs text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-md border border-ink/10 px-3 py-2 text-xs text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {deleting ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

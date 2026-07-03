@@ -169,14 +169,14 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
         <button
           onClick={() => { setStep("login"); setTwoFactorOtp(""); }}
-          className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors uppercase mb-5"
+          className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-muted hover:text-gold-ink transition-colors uppercase mb-5"
         >
           <ChevronLeft size={12} /> Back to login
         </button>
         <Eyebrow tone="gold" size="md">Two-Factor Security</Eyebrow>
-        <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">Verify<br />it&apos;s you.</h2>
-        <p className="mt-3 text-[11px] text-[#d0c5af]">
-          A six-digit code was sent to <span className="text-[#e5e2e1]">{fd.email}</span>. It expires in 10 minutes.
+        <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">Verify<br />it&apos;s you.</h2>
+        <p className="mt-3 text-[11px] text-cream">
+          A six-digit code was sent to <span className="text-ink-2">{fd.email}</span>. It expires in 10 minutes.
         </p>
         <form onSubmit={submitTwoFactor} className="mt-8 space-y-6">
           <OtpCells length={6} value={twoFactorOtp} onChange={setTwoFactorOtp} disabled={loading} />
@@ -186,12 +186,12 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
         </form>
         <div className="mt-5 text-center">
           {twoFactorSeconds > 0
-            ? <span className="se-label text-[9px] tracking-widest text-[#99907c]">Resend in <span className="text-[#e5e2e1]">{twoFactorSeconds}s</span></span>
-            : <button onClick={resendTwoFactor} disabled={twoFactorResending} className="se-label text-[9px] tracking-widest text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50">{twoFactorResending ? "Sending..." : "Resend code"}</button>
+            ? <span className="se-label text-[9px] tracking-widest text-muted">Resend in <span className="text-ink-2">{twoFactorSeconds}s</span></span>
+            : <button onClick={resendTwoFactor} disabled={twoFactorResending} className="se-label text-[9px] tracking-widest text-gold-ink hover:text-gold-ink disabled:opacity-50">{twoFactorResending ? "Sending..." : "Resend code"}</button>
           }
         </div>
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-[#574500]">
-          <ShieldCheck size={11} className="text-[#f2ca50]" /><span>Admin account protection</span>
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-goldshadow">
+          <ShieldCheck size={11} className="text-gold-ink" /><span>Admin account protection</span>
         </div>
       </motion.div>
     );
@@ -200,8 +200,8 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
       <Eyebrow tone="gold" size="md">Welcome Back</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">Continue your<br />elite experience.</h2>
-      <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">Sign in to unlock exclusive collections and early drop access.</p>
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">Continue your<br />elite experience.</h2>
+      <p className="mt-2 text-[11px] text-muted leading-relaxed">Sign in to unlock exclusive collections and early drop access.</p>
 
       {(GOOGLE || FB) && (
         <div className="mt-5">
@@ -209,7 +209,7 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
             onFbSuccess={handleFb} onFbError={() => toast({ title: "Facebook failed", variant: "destructive" })}
             googleLabel="Continue with Google" fbLabel="Continue with Facebook" />
           <div className="flex items-center gap-3 my-4">
-            <Hairline tone="soft" /><span className="se-label text-[9px] tracking-[0.28em] text-[#574500] whitespace-nowrap">Or sign in with email</span><Hairline tone="soft" />
+            <Hairline tone="soft" /><span className="se-label text-[9px] tracking-[0.28em] text-goldshadow whitespace-nowrap">Or sign in with email</span><Hairline tone="soft" />
           </div>
         </div>
       )}
@@ -225,14 +225,14 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                className="se-label text-[9px] uppercase tracking-[0.2em] text-muted hover:text-gold-ink transition-colors"
               >
                 Forgot password?
               </button>
             ) : (
               <Link
                 to="/auth/forgot-password"
-                className="se-label text-[9px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                className="se-label text-[9px] uppercase tracking-[0.2em] text-muted hover:text-gold-ink transition-colors"
               >
                 Forgot password?
               </Link>
@@ -244,12 +244,12 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
         </Btn>
       </form>
 
-      <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-[#574500]">
-        <ShieldCheck size={11} className="text-[#f2ca50]" /><span>Secure & Encrypted</span>
+      <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-goldshadow">
+        <ShieldCheck size={11} className="text-gold-ink" /><span>Secure & Encrypted</span>
       </div>
-      <p className="mt-5 text-[11px] text-[#99907c] text-center">
+      <p className="mt-5 text-[11px] text-muted text-center">
         Not a member yet?{" "}
-        <button onClick={switchToRegister} className="text-[#f2ca50] hover:text-[#ffe088] transition-colors se-label text-[9px] tracking-[0.2em] uppercase">Join the brand</button>
+        <button onClick={switchToRegister} className="text-gold-ink hover:text-gold-ink transition-colors se-label text-[9px] tracking-[0.2em] uppercase">Join the brand</button>
       </p>
     </motion.div>
   );
@@ -282,31 +282,31 @@ export const JoinOptions = ({ onEmailClick, onClose }) => {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
       <Eyebrow tone="gold" size="md">Create Account</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">Gain<br />access.</h2>
-      <p className="mt-2 text-[11px] text-[#99907c] leading-relaxed">Join the brand to unlock exclusive drops, early access, and members-only chapters.</p>
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">Gain<br />access.</h2>
+      <p className="mt-2 text-[11px] text-muted leading-relaxed">Join the brand to unlock exclusive drops, early access, and members-only chapters.</p>
 
       <div className="mt-6 space-y-3">
         {GOOGLE && <GoogleAuthButton onSuccess={handleGoogle} onError={() => toast({ title: "Google failed", variant: "destructive" })} label="Sign up with Google" disabled={loading} />}
         {FB && <FacebookAuthButton onSuccess={handleFb} onError={() => toast({ title: "Facebook failed", variant: "destructive" })} label="Sign up with Facebook" disabled={loading} />}
 
         <div className="flex items-center gap-3 my-2">
-          <Hairline tone="soft" /><span className="se-label text-[9px] tracking-[0.28em] text-[#574500] whitespace-nowrap">Or</span><Hairline tone="soft" />
+          <Hairline tone="soft" /><span className="se-label text-[9px] tracking-[0.28em] text-goldshadow whitespace-nowrap">Or</span><Hairline tone="soft" />
         </div>
 
         <button
           onClick={onEmailClick}
-          className="w-full h-12 flex items-center justify-center gap-3 bg-[#1a1a1a] border border-[#3a3226] hover:border-[#f2ca50]/50 text-[#d0c5af] hover:text-[#f2ca50] transition-all duration-200 group"
+          className="w-full h-12 flex items-center justify-center gap-3 bg-card border border-[#3a3226] hover:border-gold-ink/50 text-cream hover:text-gold-ink transition-all duration-200 group"
         >
-          <Mail size={16} className="group-hover:text-[#f2ca50]" />
+          <Mail size={16} className="group-hover:text-gold-ink" />
           <span className="se-label text-[11px] tracking-[0.18em]">Sign up with email</span>
         </button>
       </div>
 
-      <div className="mt-4 p-3 bg-[#111]/60 border border-[#1f1f1f] rounded-sm">
+      <div className="mt-4 p-3 bg-panel/60 border border-card rounded-sm">
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
           {["Faster checkout","Order tracking","Exclusive drops","Early access","Save wishlist"].map((b, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[#99907c] text-[10px]">
-              <span className="flex items-center justify-center w-3 h-3 rounded-full bg-[#f2ca50]/10 text-[#f2ca50]"><Check size={7} strokeWidth={2.5} /></span>
+            <div key={i} className="flex items-center gap-1.5 text-muted text-[10px]">
+              <span className="flex items-center justify-center w-3 h-3 rounded-full bg-gold/10 text-gold-ink"><Check size={7} strokeWidth={2.5} /></span>
               {b}
             </div>
           ))}
@@ -364,11 +364,11 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
-      <button onClick={onBack} className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors uppercase mb-4">
+      <button onClick={onBack} className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-muted hover:text-gold-ink transition-colors uppercase mb-4">
         <ChevronLeft size={12} /> Back
       </button>
       <Eyebrow tone="gold" size="md">Create Account</Eyebrow>
-      <h2 className="mt-1 se-serif text-[#e5e2e1] text-xl leading-snug">Sign up with email.</h2>
+      <h2 className="mt-1 se-serif text-ink-2 text-xl leading-snug">Sign up with email.</h2>
 
       <form onSubmit={submit} noValidate className="mt-5 space-y-4">
         <LuxuryInput id="r-username" type="text" label="Your Handle" autoComplete="username" value={fd.username} error={touched.username ? errors.username : ""} onChange={set("username")} onBlur={() => setTouched(p => ({ ...p, username: true }))} />
@@ -384,8 +384,8 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
         </Btn>
       </form>
 
-      <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-[#574500]">
-        <ShieldCheck size={11} className="text-[#f2ca50]" /><span>Secure & Encrypted</span>
+      <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-goldshadow">
+        <ShieldCheck size={11} className="text-gold-ink" /><span>Secure & Encrypted</span>
       </div>
     </motion.div>
   );
@@ -444,27 +444,27 @@ export const OtpPanel = ({ onClose, onBack }) => {
   if (success) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16 text-center">
       <div className="relative w-24 h-24 flex items-center justify-center">
-        <motion.div className="absolute w-24 h-24 rounded-full border border-[#f2ca50]/30" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: [0.6, 1.2, 1], opacity: [0, 0.5, 0.2] }} transition={{ duration: 0.8 }} />
-        <motion.div className="w-14 h-14 rounded-full bg-[#f2ca50]/10 border border-[#f2ca50]/40 flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 }}>
-          <CheckCheck size={22} className="text-[#f2ca50]" />
+        <motion.div className="absolute w-24 h-24 rounded-full border border-gold-ink/30" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: [0.6, 1.2, 1], opacity: [0, 0.5, 0.2] }} transition={{ duration: 0.8 }} />
+        <motion.div className="w-14 h-14 rounded-full bg-gold/10 border border-gold-ink/40 flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 }}>
+          <CheckCheck size={22} className="text-gold-ink" />
         </motion.div>
       </div>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-6">
-        <p className="se-label text-[10px] tracking-[0.5em] text-[#f2ca50]">ACCESS GRANTED</p>
-        <p className="se-serif text-[#e5e2e1] text-xl mt-2">Welcome to the elite.</p>
+        <p className="se-label text-[10px] tracking-[0.5em] text-gold-ink">ACCESS GRANTED</p>
+        <p className="se-serif text-ink-2 text-xl mt-2">Welcome to the elite.</p>
       </motion.div>
     </motion.div>
   );
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-      <button onClick={onBack} className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors uppercase mb-5">
+      <button onClick={onBack} className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-muted hover:text-gold-ink transition-colors uppercase mb-5">
         <ChevronLeft size={12} /> Back
       </button>
       <Eyebrow tone="gold" size="md">Almost inside</Eyebrow>
-      <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">Confirm<br />your access.</h2>
-      <p className="mt-3 text-[11px] text-[#d0c5af]">
-        A four-digit code was sent to <span className="text-[#e5e2e1]">{masked || "your inbox"}</span>.
+      <h2 className="mt-2 se-serif text-ink-2 text-2xl leading-snug">Confirm<br />your access.</h2>
+      <p className="mt-3 text-[11px] text-cream">
+        A four-digit code was sent to <span className="text-ink-2">{masked || "your inbox"}</span>.
       </p>
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <OtpCells length={4} value={otp} onChange={setOtp} disabled={isLoading} success={success} />
@@ -474,8 +474,8 @@ export const OtpPanel = ({ onClose, onBack }) => {
       </form>
       <div className="mt-5 text-center">
         {seconds > 0
-          ? <span className="se-label text-[9px] tracking-widest text-[#99907c]">Resend in <span className="text-[#e5e2e1]">{seconds}s</span></span>
-          : <button onClick={handleResend} disabled={resending} className="se-label text-[9px] tracking-widest text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50">{resending ? "Sending..." : "Resend code"}</button>
+          ? <span className="se-label text-[9px] tracking-widest text-muted">Resend in <span className="text-ink-2">{seconds}s</span></span>
+          : <button onClick={handleResend} disabled={resending} className="se-label text-[9px] tracking-widest text-gold-ink hover:text-gold-ink disabled:opacity-50">{resending ? "Sending..." : "Resend code"}</button>
         }
       </div>
     </motion.div>

@@ -66,7 +66,7 @@ const QUICK_REPLIES = [
 const SENTIMENT_STYLES = {
   positive: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
   neutral: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-  negative: "border-[#ffb4ab]/40 bg-[#ffb4ab]/10 text-[#ffb4ab]",
+  negative: "border-danger-ink/40 bg-danger-ink/10 text-danger-ink",
 };
 
 const applyClientSideFilter = (reviews, filter) => {
@@ -333,40 +333,40 @@ const ReviewModerationPage = () => {
       >
         {adminAnalytics ? (
           <div className="mb-6 grid gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border border-[#4d4635]/60 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+            <div className="rounded-2xl border border-line/60 bg-page p-4">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted">
                 Total reviews
               </p>
-              <p className="mt-2 text-2xl font-bold text-[#e5e2e1]">
+              <p className="mt-2 text-2xl font-bold text-ink-2">
                 {adminAnalytics.totalApproved || 0}
               </p>
             </div>
-            <div className="rounded-2xl border border-[#4d4635]/60 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+            <div className="rounded-2xl border border-line/60 bg-page p-4">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted">
                 Avg rating
               </p>
-              <p className="mt-2 inline-flex items-center gap-1 text-2xl font-bold text-[#f2ca50]">
-                <Star className="h-4 w-4 fill-[#f2ca50]" />
+              <p className="mt-2 inline-flex items-center gap-1 text-2xl font-bold text-gold-ink">
+                <Star className="h-4 w-4 fill-gold" />
                 {(adminAnalytics.averageRating || 0).toFixed(1)}
               </p>
             </div>
-            <div className="rounded-2xl border border-[#4d4635]/60 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+            <div className="rounded-2xl border border-line/60 bg-page p-4">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted">
                 Uncategorized
               </p>
               <p className="mt-2 text-2xl font-bold text-amber-400">
                 {categoryBreakdown.uncategorized || 0}
               </p>
             </div>
-            <div className="rounded-2xl border border-[#4d4635]/60 bg-[#0e0e0e] p-4">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+            <div className="rounded-2xl border border-line/60 bg-page p-4">
+              <p className="text-[10px] uppercase tracking-[0.26em] text-muted">
                 Featured
               </p>
-              <p className="mt-2 text-2xl font-bold text-[#f2ca50]">
+              <p className="mt-2 text-2xl font-bold text-gold-ink">
                 {adminAnalytics.totalFeatured || 0}
               </p>
             </div>
-            <div className="md:col-span-4 rounded-2xl border border-[#4d4635]/60 bg-[#0e0e0e] p-4">
+            <div className="md:col-span-4 rounded-2xl border border-line/60 bg-page p-4">
               <div className="flex h-2 overflow-hidden rounded-full">
                 <div
                   className="bg-emerald-400"
@@ -377,11 +377,11 @@ const ReviewModerationPage = () => {
                   style={{ width: `${pct(sentimentTotals.neutral)}%` }}
                 />
                 <div
-                  className="bg-[#ffb4ab]"
+                  className="bg-danger-ink"
                   style={{ width: `${pct(sentimentTotals.negative)}%` }}
                 />
               </div>
-              <div className="mt-2 flex justify-between text-[10px] tracking-[0.18em] uppercase text-[#99907c]">
+              <div className="mt-2 flex justify-between text-[10px] tracking-[0.18em] uppercase text-muted">
                 <span>Positive {pct(sentimentTotals.positive)}%</span>
                 <span>Neutral {pct(sentimentTotals.neutral)}%</span>
                 <span>Negative {pct(sentimentTotals.negative)}%</span>
@@ -392,24 +392,24 @@ const ReviewModerationPage = () => {
 
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-ink2">
               Customer Voice
             </p>
             <h1 className="mt-2 text-3xl font-bold">Reviews</h1>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink/50" />
             <input
               type="text"
               placeholder="Search by product or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-3 rounded-full border border-white/10 bg-[#111] text-sm text-white placeholder:text-white/50 focus:border-[#D4AF37]/50 focus:outline-none w-full sm:w-64"
+              className="pl-10 pr-4 py-3 rounded-full border border-ink/10 bg-panel text-sm text-ink placeholder:text-ink/50 focus:border-gold-ink2/50 focus:outline-none w-full sm:w-64"
             />
           </div>
         </div>
 
-        <div className="mb-8 flex flex-wrap gap-2 border-b border-white/10 pb-4">
+        <div className="mb-8 flex flex-wrap gap-2 border-b border-ink/10 pb-4">
           {FILTER_TABS.map((tab) => {
             const isActive = activeFilter === tab.value;
             const count =
@@ -423,8 +423,8 @@ const ReviewModerationPage = () => {
                 onClick={() => setActiveFilter(tab.value)}
                 className={`relative rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] transition-colors ${
                   isActive
-                    ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                    : "border-white/10 text-white/60 hover:text-white hover:border-white/30"
+                    ? "border-gold-ink bg-gold/10 text-gold-ink"
+                    : "border-ink/10 text-ink/60 hover:text-ink hover:border-ink/30"
                 }`}
               >
                 {tab.label}
@@ -438,13 +438,13 @@ const ReviewModerationPage = () => {
         {loading ? (
           <SkeletonGrid count={4} className="grid gap-4 md:grid-cols-2" />
         ) : filteredReviews.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-10 text-white/60">
+          <div className="rounded-3xl border border-ink/10 bg-page p-10 text-ink/60">
             No reviews match the current filter.
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-[#0a0a0a] px-5 py-3">
-              <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60">
+            <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-ink/10 bg-page px-5 py-3">
+              <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-ink/60">
                 <input
                   type="checkbox"
                   aria-label="Select all visible reviews"
@@ -453,18 +453,18 @@ const ReviewModerationPage = () => {
                     if (el) el.indeterminate = bulk.isSomeSelected;
                   }}
                   onChange={bulk.toggleAll}
-                  className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                  className="h-4 w-4 cursor-pointer accent-gold-deep"
                   data-testid="admin-bulk-select-all"
                 />
                 Select all
               </label>
-              <span className="text-[10px] uppercase tracking-widest text-white/40">
+              <span className="text-[10px] uppercase tracking-widest text-ink/40">
                 Bulk category target:
               </span>
               <select
                 value={bulkCategory}
                 onChange={(e) => setBulkCategory(e.target.value)}
-                className="rounded-md border border-white/10 bg-black px-2 py-1 text-xs text-white"
+                className="rounded-md border border-ink/10 bg-page px-2 py-1 text-xs text-ink"
               >
                 {CATEGORY_OPTIONS.filter((c) => c.value !== "uncategorized").map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
@@ -489,8 +489,8 @@ const ReviewModerationPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.22 }}
-                    className={`relative rounded-3xl border bg-[#0b0b0b] p-6 ${
-                      isChecked ? "border-[#D4AF37]/60" : "border-white/10"
+                    className={`relative rounded-3xl border bg-page p-6 ${
+                      isChecked ? "border-gold-ink2/60" : "border-ink/10"
                     }`}
                   >
                     <input
@@ -498,14 +498,14 @@ const ReviewModerationPage = () => {
                       aria-label={`Select review by ${reviewer}`}
                       checked={isChecked}
                       onChange={() => bulk.toggle(review._id)}
-                      className="absolute top-4 left-4 h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                      className="absolute top-4 left-4 h-4 w-4 cursor-pointer accent-gold-deep"
                       data-testid="admin-bulk-row-select"
                     />
                     <div className="flex flex-wrap items-center justify-between gap-4 pl-7">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold">{productName}</p>
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/5 px-2 py-0.5 text-[9px] uppercase tracking-wider text-[#D4AF37]">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-gold-ink2/30 bg-gold-deep/5 px-2 py-0.5 text-[9px] uppercase tracking-wider text-gold-ink2">
                             <Tag className="h-3 w-3" /> {reviewCategory}
                           </span>
                           {review.sentiment ? (
@@ -518,8 +518,8 @@ const ReviewModerationPage = () => {
                             </span>
                           ) : null}
                           {review.isFeatured ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#f2ca50]/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#f2ca50]">
-                              <Star className="h-3 w-3 fill-[#f2ca50]" /> Featured
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gold-ink">
+                              <Star className="h-3 w-3 fill-gold" /> Featured
                             </span>
                           ) : null}
                           {review.isFlagged ? (
@@ -529,13 +529,13 @@ const ReviewModerationPage = () => {
                           ) : null}
                           {Array.isArray(review.images) &&
                           review.images.length > 0 ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[9px] uppercase tracking-wider text-white/70">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2 py-0.5 text-[9px] uppercase tracking-wider text-ink/70">
                               <ImageIcon className="h-3 w-3" />{" "}
                               {review.images.length}
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs text-white/50">{reviewer}</p>
+                        <p className="text-xs text-ink/50">{reviewer}</p>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <StarRating value={review.rating} readOnly size="sm" />
@@ -557,7 +557,7 @@ const ReviewModerationPage = () => {
                               onChange={(e) =>
                                 handleCategorize(review, e.target.value)
                               }
-                              className="rounded-full border border-white/10 bg-[#111] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-white/80 focus:border-[#D4AF37]/50 focus:outline-none disabled:opacity-50"
+                              className="rounded-full border border-ink/10 bg-panel px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-ink/80 focus:border-gold-ink2/50 focus:outline-none disabled:opacity-50"
                             >
                               {CATEGORY_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -571,8 +571,8 @@ const ReviewModerationPage = () => {
                               onClick={() => handleToggleFeature(review)}
                               className={`rounded-full border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition-colors ${
                                 review.isFeatured
-                                  ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                                  : "border-white/10 text-white/60 hover:border-[#f2ca50]/40 hover:text-[#f2ca50]"
+                                  ? "border-gold-ink bg-gold/10 text-gold-ink"
+                                  : "border-ink/10 text-ink/60 hover:border-gold-ink/40 hover:text-gold-ink"
                               }`}
                             >
                               {review.isFeatured ? "Unfeature" : "Feature"}
@@ -592,7 +592,7 @@ const ReviewModerationPage = () => {
                           onClick={() =>
                             setExpandedId(isExpanded ? null : review._id)
                           }
-                          className="text-xs uppercase tracking-[0.2em] text-[#D4AF37]"
+                          className="text-xs uppercase tracking-[0.2em] text-gold-ink2"
                         >
                           <span className="inline-flex items-center gap-1">
                             Details <ChevronDown className="h-3 w-3" />
@@ -615,12 +615,12 @@ const ReviewModerationPage = () => {
                     />
 
                     {isExpanded ? (
-                      <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
+                      <div className="mt-4 space-y-4 border-t border-ink/10 pt-4">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+                          <p className="text-xs uppercase tracking-[0.2em] text-ink/40">
                             {review.title}
                           </p>
-                          <p className="mt-2 text-sm text-white/70">
+                          <p className="mt-2 text-sm text-ink/70">
                             {review.content}
                           </p>
                         </div>
@@ -653,7 +653,7 @@ const ReviewModerationPage = () => {
                               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-violet-300">
                                 AI moderation signal
                               </p>
-                              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/40">
+                              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink/40">
                                 {review.aiAnalysis.model || "model"} ·{" "}
                                 {new Date(review.aiAnalysis.analyzedAt).toLocaleDateString()}
                               </p>
@@ -704,10 +704,10 @@ const ReviewModerationPage = () => {
                                 return (
                                   <div
                                     key={m.key}
-                                    className="rounded-lg border border-white/10 bg-black/40 p-3"
+                                    className="rounded-lg border border-ink/10 bg-black/40 p-3"
                                   >
                                     <div className="flex items-center justify-between">
-                                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-white/50">
+                                      <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-ink/50">
                                         {m.label}
                                       </p>
                                       <p className={`font-mono text-xs tabular-nums ${textTone}`}>
@@ -715,7 +715,7 @@ const ReviewModerationPage = () => {
                                         {m.key === "sentiment" ? "" : "%"}
                                       </p>
                                     </div>
-                                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink/10">
                                       <div
                                         className={`h-full ${barTone}`}
                                         style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
@@ -731,7 +731,7 @@ const ReviewModerationPage = () => {
                               })}
                             </div>
                             {review.aiAnalysis.summary ? (
-                              <p className="mt-3 text-xs leading-5 text-white/60">
+                              <p className="mt-3 text-xs leading-5 text-ink/60">
                                 <span className="font-mono uppercase tracking-[0.2em] text-violet-300">
                                   Summary —
                                 </span>{" "}
@@ -740,19 +740,19 @@ const ReviewModerationPage = () => {
                             ) : null}
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-white/10 bg-black/30 p-3 text-center">
-                            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/40">
+                          <div className="rounded-xl border border-dashed border-ink/10 bg-black/30 p-3 text-center">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
                               AI signal pending
                             </p>
-                            <p className="mt-1 text-[11px] text-white/40">
+                            <p className="mt-1 text-[11px] text-ink/40">
                               Classification runs in the background — usually within ~15 seconds of submission.
                             </p>
                           </div>
                         )}
 
                         {review.brandReply ? (
-                          <div className="rounded-xl border border-[#f2ca50]/30 bg-[#f2ca50]/5 p-3">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#f2ca50]">
+                          <div className="rounded-xl border border-gold-ink/30 bg-gold/5 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-gold-ink">
                               Saga Elite — replied{" "}
                               {review.brandReplyAt
                                 ? new Date(
@@ -760,7 +760,7 @@ const ReviewModerationPage = () => {
                                   ).toLocaleDateString()
                                 : ""}
                             </p>
-                            <p className="mt-1 text-sm text-[#e5e2e1]">
+                            <p className="mt-1 text-sm text-ink-2">
                               {review.brandReply}
                             </p>
                           </div>
@@ -772,14 +772,14 @@ const ReviewModerationPage = () => {
                             onClick={() =>
                               setReplyOpenFor(replyOpen ? null : review._id)
                             }
-                            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 hover:text-[#f2ca50]"
+                            className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-ink/80 hover:text-gold-ink"
                           >
                             {review.brandReply ? "Edit reply" : "+ Add brand reply"}
                           </button>
                         </div>
 
                         {replyOpen ? (
-                          <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4">
+                          <div className="rounded-2xl border border-ink/10 bg-page p-4">
                             <textarea
                               value={replyDraft}
                               onChange={(e) =>
@@ -791,7 +791,7 @@ const ReviewModerationPage = () => {
                               placeholder="Write your response as Saga Elite…"
                               rows={3}
                               maxLength={1000}
-                              className="w-full resize-none border border-[#4d4635] bg-transparent p-3 text-sm text-[#e5e2e1] outline-none focus:border-[#f2ca50]"
+                              className="w-full resize-none border border-line bg-transparent p-3 text-sm text-ink-2 outline-none focus:border-gold-ink"
                             />
                             <div className="mt-3 flex flex-wrap gap-2">
                               {QUICK_REPLIES.map((text) => (
@@ -804,7 +804,7 @@ const ReviewModerationPage = () => {
                                       [review._id]: text,
                                     }))
                                   }
-                                  className="rounded-full border border-[#4d4635] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#99907c] hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                                  className="rounded-full border border-line px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-muted hover:border-gold-ink hover:text-gold-ink"
                                 >
                                   Use template
                                 </button>
@@ -820,7 +820,7 @@ const ReviewModerationPage = () => {
                                     [review._id]: "",
                                   }))
                                 }
-                                className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em] text-white/60"
+                                className="rounded-full border border-ink/10 px-4 py-1.5 text-[10px] uppercase tracking-[0.2em] text-ink/60"
                               >
                                 Clear
                               </button>
@@ -828,7 +828,7 @@ const ReviewModerationPage = () => {
                                 type="button"
                                 disabled={replySubmittingId === review._id}
                                 onClick={() => handlePublishReply(review)}
-                                className="rounded-full bg-[#f2ca50] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a] disabled:opacity-50"
+                                className="rounded-full bg-gold px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-ongold disabled:opacity-50"
                               >
                                 {replySubmittingId === review._id
                                   ? "Publishing…"

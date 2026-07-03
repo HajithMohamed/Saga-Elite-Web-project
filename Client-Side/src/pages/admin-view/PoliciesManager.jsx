@@ -156,7 +156,7 @@ const PoliciesManager = () => {
     return (
       <AdminPage eyebrow="Content" title="Policies">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
         </div>
       </AdminPage>
     );
@@ -174,7 +174,7 @@ const PoliciesManager = () => {
         title="Policies"
         description="Edit Terms, Privacy, Refund, and Delivery policies. Rich text supports headings, lists, links, and tables. Saves immediately to the public site."
       >
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-3">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-ink/10 pb-3">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -186,8 +186,8 @@ const PoliciesManager = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
                   active
-                    ? "bg-[#D4AF37] text-black"
-                    : "border border-white/10 text-gray-300 hover:border-[#D4AF37]/40 hover:text-white"
+                    ? "bg-gold-deep text-black"
+                    : "border border-ink/10 text-gray-300 hover:border-gold-ink2/40 hover:text-ink"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -203,7 +203,7 @@ const PoliciesManager = () => {
           })}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+        <div className="rounded-2xl border border-ink/10 bg-page p-6">
           <div className="mb-4 flex items-center justify-between gap-4 text-xs text-gray-400">
             <span className="font-mono uppercase tracking-[0.22em]">
               Last updated · {formatDate(active.lastUpdated)}
@@ -236,7 +236,7 @@ const PoliciesManager = () => {
                 value={active.metaTitle || ""}
                 onChange={(e) => setActiveField({ metaTitle: e.target.value })}
                 placeholder="Privacy Policy · Saga Elite"
-                className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
             <div>
@@ -250,7 +250,7 @@ const PoliciesManager = () => {
                   setActiveField({ metaDescription: e.target.value })
                 }
                 placeholder="Brief summary shown in search results."
-                className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
           </div>

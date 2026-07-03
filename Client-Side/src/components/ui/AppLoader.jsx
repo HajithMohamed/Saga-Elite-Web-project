@@ -84,7 +84,7 @@ export default function AppLoader({ message = "Opening the atelier" }) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[100] bg-[#0a0a0a] flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[100] bg-page flex items-center justify-center overflow-hidden"
       style={{ cursor: hasMoved && !reduced ? "none" : "default" }}
     >
       {/* Cursor spotlight — large soft gold halo that follows the mouse */}
@@ -121,25 +121,25 @@ export default function AppLoader({ message = "Opening the atelier" }) {
 
       {/* Inset hairline frame — draws on mount */}
       <motion.div
-        className="absolute top-6 md:top-10 left-6 md:left-10 right-6 md:right-10 h-px bg-[#e5e2e1]/15 origin-left"
+        className="absolute top-6 md:top-10 left-6 md:left-10 right-6 md:right-10 h-px bg-ivory/15 origin-left"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.7, delay: 0.05, ease: [0.65, 0, 0.35, 1] }}
       />
       <motion.div
-        className="absolute bottom-6 md:bottom-10 left-6 md:left-10 right-6 md:right-10 h-px bg-[#e5e2e1]/15 origin-right"
+        className="absolute bottom-6 md:bottom-10 left-6 md:left-10 right-6 md:right-10 h-px bg-ivory/15 origin-right"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.7, delay: 0.15, ease: [0.65, 0, 0.35, 1] }}
       />
       <motion.div
-        className="absolute top-6 md:top-10 bottom-6 md:bottom-10 left-6 md:left-10 w-px bg-[#e5e2e1]/12 origin-top"
+        className="absolute top-6 md:top-10 bottom-6 md:bottom-10 left-6 md:left-10 w-px bg-ivory/12 origin-top"
         initial={{ scaleY: 0 }}
         animate={{ scaleY: 1 }}
         transition={{ duration: 0.8, delay: 0.2, ease: [0.65, 0, 0.35, 1] }}
       />
       <motion.div
-        className="absolute top-6 md:top-10 bottom-6 md:bottom-10 right-6 md:right-10 w-px bg-[#e5e2e1]/12 origin-bottom"
+        className="absolute top-6 md:top-10 bottom-6 md:bottom-10 right-6 md:right-10 w-px bg-ivory/12 origin-bottom"
         initial={{ scaleY: 0 }}
         animate={{ scaleY: 1 }}
         transition={{ duration: 0.8, delay: 0.25, ease: [0.65, 0, 0.35, 1] }}
@@ -147,7 +147,7 @@ export default function AppLoader({ message = "Opening the atelier" }) {
 
       {/* Top-left chapter mark */}
       <motion.div
-        className="absolute top-10 md:top-14 left-10 md:left-14 se-label text-[10px] tracking-[0.42em] text-[#574500] z-10"
+        className="absolute top-10 md:top-14 left-10 md:left-14 se-label text-[10px] tracking-[0.42em] text-goldshadow z-10"
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.4 }}
@@ -158,16 +158,16 @@ export default function AppLoader({ message = "Opening the atelier" }) {
       {/* Top-right cursor coordinate readout */}
       {!reduced && (
         <motion.div
-          className="absolute top-10 md:top-14 right-10 md:right-14 z-10 flex items-center gap-3 se-mono text-[10px] tabular-nums text-[#574500]"
+          className="absolute top-10 md:top-14 right-10 md:right-14 z-10 flex items-center gap-3 se-mono text-[10px] tabular-nums text-goldshadow"
           initial={{ opacity: 0 }}
           animate={{ opacity: hasMoved ? 1 : 0.4 }}
           transition={{ duration: 0.4 }}
         >
           <span>X · {padX}</span>
-          <span className="text-[#4d4635]">/</span>
+          <span className="text-line">/</span>
           <span>Y · {padY}</span>
           <span
-            className="w-1.5 h-1.5 rounded-full bg-[#f2ca50]"
+            className="w-1.5 h-1.5 rounded-full bg-gold"
             style={{ opacity: hasMoved ? 1 : 0.3 }}
           />
         </motion.div>
@@ -257,24 +257,24 @@ export default function AppLoader({ message = "Opening the atelier" }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <span className="se-wordmark text-[#fafafa] text-2xl tracking-[0.18em]">
+          <span className="se-wordmark text-ink text-2xl tracking-[0.18em]">
             Saga Elite
           </span>
-          <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
+          <span className="se-label text-[10px] tracking-[0.32em] text-muted">
             Rare fit, forever
           </span>
         </motion.div>
 
         {/* Indeterminate progress line */}
         <motion.div
-          className="relative h-px w-44 bg-[#4d4635] overflow-hidden mt-2"
+          className="relative h-px w-44 bg-line overflow-hidden mt-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.7 }}
         >
           {!reduced && (
             <motion.div
-              className="absolute inset-y-0 left-0 w-1/3 bg-[#f2ca50]"
+              className="absolute inset-y-0 left-0 w-1/3 bg-gold"
               animate={{ x: ["-100%", "300%"] }}
               transition={{
                 duration: 1.6,
@@ -284,19 +284,19 @@ export default function AppLoader({ message = "Opening the atelier" }) {
             />
           )}
           {reduced && (
-            <span className="absolute inset-0 bg-[#f2ca50] opacity-70" />
+            <span className="absolute inset-0 bg-gold opacity-70" />
           )}
         </motion.div>
 
         {/* Status */}
         <motion.div
-          className="flex items-center gap-2 se-label text-[10px] tracking-[0.32em] text-[#99907c]"
+          className="flex items-center gap-2 se-label text-[10px] tracking-[0.32em] text-muted"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
           <motion.span
-            className="w-1.5 h-1.5 rounded-full bg-[#f2ca50]"
+            className="w-1.5 h-1.5 rounded-full bg-gold"
             animate={!reduced ? { opacity: [1, 0.3, 1] } : {}}
             transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
           />
@@ -306,7 +306,7 @@ export default function AppLoader({ message = "Opening the atelier" }) {
 
       {/* Bottom-right tracking */}
       <motion.div
-        className="absolute bottom-10 md:bottom-14 right-10 md:right-14 se-mono text-[10px] text-[#574500] z-10 tabular-nums"
+        className="absolute bottom-10 md:bottom-14 right-10 md:right-14 se-mono text-[10px] text-goldshadow z-10 tabular-nums"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.7 }}
@@ -327,7 +327,7 @@ export default function AppLoader({ message = "Opening the atelier" }) {
         >
           {/* Centre dot */}
           <motion.span
-            className="absolute block w-1 h-1 rounded-full bg-[#f2ca50]"
+            className="absolute block w-1 h-1 rounded-full bg-gold"
             style={{
               top: 0,
               left: 0,
@@ -339,7 +339,7 @@ export default function AppLoader({ message = "Opening the atelier" }) {
           />
           {/* Outer ring */}
           <motion.span
-            className="absolute block rounded-full border border-[#f2ca50]/40"
+            className="absolute block rounded-full border border-gold-ink/40"
             style={{
               top: 0,
               left: 0,
@@ -352,24 +352,24 @@ export default function AppLoader({ message = "Opening the atelier" }) {
           />
           {/* 4 hairline arms — top, right, bottom, left */}
           <span
-            className="absolute block bg-[#f2ca50]/55"
+            className="absolute block bg-gold/55"
             style={{ top: -22, left: 0, width: 1, height: 14, transform: "translate(-50%, 0)" }}
           />
           <span
-            className="absolute block bg-[#f2ca50]/55"
+            className="absolute block bg-gold/55"
             style={{ top: 0, left: 22, width: 14, height: 1, transform: "translate(0, -50%)" }}
           />
           <span
-            className="absolute block bg-[#f2ca50]/55"
+            className="absolute block bg-gold/55"
             style={{ top: 8, left: 0, width: 1, height: 14, transform: "translate(-50%, 0)" }}
           />
           <span
-            className="absolute block bg-[#f2ca50]/55"
+            className="absolute block bg-gold/55"
             style={{ top: 0, left: -22, width: 14, height: 1, transform: "translate(0, -50%)" }}
           />
           {/* Tracking label off to bottom-right of cursor */}
           <span
-            className="absolute se-label text-[9px] tracking-[0.28em] text-[#f2ca50] whitespace-nowrap"
+            className="absolute se-label text-[9px] tracking-[0.28em] text-gold-ink whitespace-nowrap"
             style={{ top: 18, left: 18 }}
           >
             TRACKING

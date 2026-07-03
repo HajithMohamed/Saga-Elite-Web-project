@@ -215,7 +215,7 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/40">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-ink/10 bg-black/40">
           {value ? (
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
@@ -236,7 +236,7 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
             {busy ? "Uploading…" : label}
@@ -259,7 +259,7 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://…"
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 font-mono text-[11px] text-white outline-none focus:border-[#D4AF37]/40"
+          className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 font-mono text-[11px] text-ink outline-none focus:border-gold-ink2/40"
         />
       ) : null}
     </div>
@@ -288,7 +288,7 @@ const TextField = ({ label, hint, value, onChange, placeholder, error, type = "t
       value={value || ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mt-1 w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+      className="mt-1 w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none transition focus:border-gold-ink2/40"
     />
   </FieldShell>
 );
@@ -310,7 +310,7 @@ const TextArea = ({ label, hint, value, onChange, placeholder, rows = 4, max }) 
       }}
       placeholder={placeholder}
       rows={rows}
-      className="mt-1 w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none transition focus:border-[#D4AF37]/40"
+      className="mt-1 w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none transition focus:border-gold-ink2/40"
     />
   </FieldShell>
 );
@@ -333,12 +333,12 @@ const RowEditor = ({ rows = [], onChange, renderRow, blank, addLabel = "Add row"
   return (
     <div className="space-y-3">
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
+        <p className="rounded-lg border border-dashed border-ink/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
           No entries yet. Add one to get started.
         </p>
       ) : null}
       {rows.map((row, idx) => (
-        <div key={idx} className="rounded-lg border border-white/10 bg-black/30 p-3">
+        <div key={idx} className="rounded-lg border border-ink/10 bg-black/30 p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
               #{idx + 1}
@@ -346,7 +346,7 @@ const RowEditor = ({ rows = [], onChange, renderRow, blank, addLabel = "Add row"
             <button
               type="button"
               onClick={() => remove(idx)}
-              className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
+              className="inline-flex items-center gap-1 rounded-md border border-ink/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
             >
               <Trash2 className="h-3 w-3" />
               Remove
@@ -359,7 +359,7 @@ const RowEditor = ({ rows = [], onChange, renderRow, blank, addLabel = "Add row"
         type="button"
         onClick={add}
         disabled={max && rows.length >= max}
-        className="inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Plus className="h-3.5 w-3.5" /> {addLabel}
         {max ? <span className="text-[10px] opacity-70">({rows.length} / {max})</span> : null}
@@ -551,7 +551,7 @@ const AboutSiteConfig = () => {
               onChange={(e) => update({ text: e.target.value })}
               rows={3}
               placeholder="A paragraph of the brand story…"
-              className="w-full rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="w-full rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
           )}
         />
@@ -561,8 +561,8 @@ const AboutSiteConfig = () => {
 
   const AboutPageTab = (
     <div className="grid gap-6">
-      <div className="grid gap-5 rounded-xl border border-white/10 bg-black/30 p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+      <div className="grid gap-5 rounded-xl border border-ink/10 bg-black/30 p-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-gold-ink2">
           Hero banner
         </p>
         <FieldShell
@@ -606,8 +606,8 @@ const AboutSiteConfig = () => {
         </div>
       </div>
 
-      <div className="grid gap-5 rounded-xl border border-white/10 bg-black/30 p-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+      <div className="grid gap-5 rounded-xl border border-ink/10 bg-black/30 p-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-gold-ink2">
           Our Story
         </p>
         <FieldShell
@@ -621,7 +621,7 @@ const AboutSiteConfig = () => {
           />
         </FieldShell>
         <p className="text-[10px] text-gray-500">
-          Story text is edited under the <span className="text-[#D4AF37]">Brand</span> tab (Brand story paragraphs).
+          Story text is edited under the <span className="text-gold-ink2">Brand</span> tab (Brand story paragraphs).
         </p>
       </div>
     </div>
@@ -735,13 +735,13 @@ const AboutSiteConfig = () => {
                 value={row.day || ""}
                 onChange={(e) => update({ day: e.target.value })}
                 placeholder="Mon–Fri"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
               <input
                 value={row.hours || ""}
                 onChange={(e) => update({ hours: e.target.value })}
                 placeholder="9:00 AM – 6:00 PM"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
           )}
@@ -794,19 +794,19 @@ const AboutSiteConfig = () => {
               value={row.label || ""}
               onChange={(e) => update({ label: e.target.value })}
               placeholder="Pieces sold"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <input
               value={row.value || ""}
               onChange={(e) => update({ value: e.target.value })}
               placeholder="84"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <input
               value={row.suffix || ""}
               onChange={(e) => update({ suffix: e.target.value })}
               placeholder="+"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
           </div>
         )}
@@ -842,8 +842,8 @@ const AboutSiteConfig = () => {
                       title={opt.name}
                       className={`flex h-8 w-8 items-center justify-center rounded-md border transition ${
                         active
-                          ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]"
-                          : "border-white/10 bg-black/40 text-gray-400 hover:border-white/20"
+                          ? "border-gold-ink2 bg-gold-deep/15 text-gold-ink2"
+                          : "border-ink/10 bg-black/40 text-gray-400 hover:border-ink/20"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -856,14 +856,14 @@ const AboutSiteConfig = () => {
               value={row.title || ""}
               onChange={(e) => update({ title: e.target.value })}
               placeholder="Slowly"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <textarea
               value={row.body || ""}
               onChange={(e) => update({ body: e.target.value })}
               placeholder="One short sentence describing this value…"
               rows={2}
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
           </div>
         )}
@@ -904,13 +904,13 @@ const AboutSiteConfig = () => {
                   value={row.name || ""}
                   onChange={(e) => update({ name: e.target.value })}
                   placeholder="Name"
-                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                  className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
                 />
                 <input
                   value={row.title || ""}
                   onChange={(e) => update({ title: e.target.value })}
                   placeholder="Title (Pattern Cutter, etc.)"
-                  className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                  className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
                 />
               </div>
               <ImagePicker
@@ -923,7 +923,7 @@ const AboutSiteConfig = () => {
                 onChange={(e) => update({ bio: e.target.value })}
                 placeholder="Optional one-line bio…"
                 rows={2}
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
           )}
@@ -950,13 +950,13 @@ const AboutSiteConfig = () => {
                 value={row.year || ""}
                 onChange={(e) => update({ year: e.target.value })}
                 placeholder="2024"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
               <input
                 value={row.milestone || ""}
                 onChange={(e) => update({ milestone: e.target.value })}
                 placeholder="Saga Elite founded"
-                className="md:col-span-2 rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="md:col-span-2 rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
             <ImagePicker
@@ -992,13 +992,13 @@ const AboutSiteConfig = () => {
               value={row.caption || ""}
               onChange={(e) => update({ caption: e.target.value })}
               placeholder="Caption (optional)"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
             <input
               value={row.altText || ""}
               onChange={(e) => update({ altText: e.target.value })}
               placeholder="Alt text for screen readers"
-              className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+              className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
             />
           </div>
         )}
@@ -1026,14 +1026,14 @@ const AboutSiteConfig = () => {
                 value={row.name || ""}
                 onChange={(e) => update({ name: e.target.value })}
                 placeholder="Pima cotton"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
               <textarea
                 value={row.description || ""}
                 onChange={(e) => update({ description: e.target.value })}
                 placeholder="Sourced from… honest line about origin or process."
                 rows={2}
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
           )}
@@ -1055,20 +1055,20 @@ const AboutSiteConfig = () => {
                 value={row.source || ""}
                 onChange={(e) => update({ source: e.target.value })}
                 placeholder="Source (e.g. Vogue)"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
               <textarea
                 value={row.quote || ""}
                 onChange={(e) => update({ quote: e.target.value })}
                 placeholder="Quote text…"
                 rows={2}
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
               <input
                 value={row.url || ""}
                 onChange={(e) => update({ url: e.target.value })}
                 placeholder="https://… (optional link)"
-                className="rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+                className="rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
               />
             </div>
           )}
@@ -1095,7 +1095,7 @@ const AboutSiteConfig = () => {
     return (
       <AdminPage eyebrow="Site content" title="About content">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
         </div>
       </AdminPage>
     );
@@ -1124,7 +1124,7 @@ const AboutSiteConfig = () => {
           </PrimaryButton>
         }
       >
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-3">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-ink/10 pb-3">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1136,8 +1136,8 @@ const AboutSiteConfig = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
                   active
-                    ? "bg-[#D4AF37] text-black"
-                    : "border border-white/10 text-gray-300 hover:border-[#D4AF37]/40 hover:text-white"
+                    ? "bg-gold-deep text-black"
+                    : "border border-ink/10 text-gray-300 hover:border-gold-ink2/40 hover:text-ink"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -1153,7 +1153,7 @@ const AboutSiteConfig = () => {
           })}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+        <div className="rounded-2xl border border-ink/10 bg-page p-6">
           {tabContent[activeTab]}
         </div>
 

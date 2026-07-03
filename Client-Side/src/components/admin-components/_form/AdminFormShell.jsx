@@ -49,7 +49,7 @@ export function AdminFormShell({ header, rightRail, children, onClose }) {
       exit="hidden"
       data-admin-form-scroll
       data-lenis-prevent="true"
-      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#0A0A0A] text-white"
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-page text-ink"
     >
       {/* Sticky header (StickyActionBar already sets `sticky top-0`). */}
       {header}

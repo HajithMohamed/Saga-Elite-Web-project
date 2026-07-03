@@ -326,28 +326,28 @@ const ProductListing = () => {
   const heroSubtitle = categoryTrail.length ? `Discover our premium ${heroTitle.toLowerCase()} collection.` : "Browse our premium fashion collections for Men, Women and Unisex.";
 
   return (
-    <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen pt-[64px] md:pt-[72px]">
+    <div className="bg-page text-ink-2 min-h-screen pt-[64px] md:pt-[72px]">
 
       {/* ── PAGE HEADER (text-only; no placeholder banner) ── */}
-      <section className="w-full border-b border-white/5">
+      <section className="w-full border-b border-ink/5">
         <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 pt-10 md:pt-14 pb-8 md:pb-10">
-          <nav className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
-            <Link to="/" className="hover:text-[#F2CA50] transition-colors">Home</Link>
+          <nav className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-4">
+            <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link to="/shopping/product-list" className="hover:text-[#F2CA50] transition-colors">Shop</Link>
+            <Link to="/shopping/product-list" className="hover:text-gold-ink transition-colors">Shop</Link>
             {categoryTrail.map((segment, index) => (
               <React.Fragment key={`${segment.value}-${index}`}>
                 <ChevronRight className="w-3 h-3" />
-                <Link to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))} className={index === categoryTrail.length - 1 ? "text-[#fafafa] font-bold" : "hover:text-[#F2CA50] transition-colors"}>
+                <Link to={buildListingUrl(categoryTrail.slice(0, index + 1).map((item) => item.value))} className={index === categoryTrail.length - 1 ? "text-ink font-bold" : "hover:text-gold-ink transition-colors"}>
                   {segment.label}
                 </Link>
               </React.Fragment>
             ))}
           </nav>
-          <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-3xl md:text-4xl lg:text-[44px] leading-tight">
+          <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-ink text-3xl md:text-4xl lg:text-[44px] leading-tight">
             {heroTitle}
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="se-body text-[#99907c] text-sm md:text-base max-w-2xl mt-3">
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="se-body text-muted text-sm md:text-base max-w-2xl mt-3">
             {heroSubtitle}
           </motion.p>
         </div>
@@ -397,16 +397,16 @@ const ProductListing = () => {
           {/* ── RIGHT PANE (Product Grid) ── */}
           <div className="flex-1 w-full min-w-0">
             {/* Top Bar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-white/5 pb-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-ink/5 pb-4">
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="text-[#99907c] se-label text-[11px] uppercase tracking-widest">
+                <div className="text-muted se-label text-[11px] uppercase tracking-widest">
                   Showing {totalProducts} Products
                 </div>
                 {/* Active search keyword — persists until cleared */}
                 {keywordParam && (
                   <button
                     onClick={() => updateParams((p) => p.delete("keyword"))}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-[#F2CA50]/10 border border-[#F2CA50]/40 rounded-full text-[10px] text-[#F2CA50] uppercase tracking-wider hover:bg-[#F2CA50]/20 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-gold/10 border border-gold-ink/40 rounded-full text-[10px] text-gold-ink uppercase tracking-wider hover:bg-gold/20 transition-colors"
                     title="Clear search"
                   >
                     “{keywordParam}” <X className="w-3 h-3" />
@@ -415,28 +415,28 @@ const ProductListing = () => {
                 {/* Active Filter Chips */}
                 {hasFilterActive && (
                   <div className="flex flex-wrap gap-2 items-center">
-                    <span className="w-[1px] h-4 bg-white/10 hidden md:block" />
+                    <span className="w-[1px] h-4 bg-ink/10 hidden md:block" />
                     {colorsParam.map(c => (
-                       <button key={`c-${c}`} onClick={() => removeFilterChip('color', c)} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
-                         {c} <X className="w-3 h-3 text-[#99907c]" />
+                       <button key={`c-${c}`} onClick={() => removeFilterChip('color', c)} className="flex items-center gap-1.5 px-3 py-1 bg-card border border-ink/10 rounded-full text-[10px] text-ink uppercase tracking-wider hover:border-gold-ink/50 transition-colors">
+                         {c} <X className="w-3 h-3 text-muted" />
                        </button>
                     ))}
                     {sizesParam.map(s => (
-                       <button key={`s-${s}`} onClick={() => removeFilterChip('size', s)} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
-                         Size {s} <X className="w-3 h-3 text-[#99907c]" />
+                       <button key={`s-${s}`} onClick={() => removeFilterChip('size', s)} className="flex items-center gap-1.5 px-3 py-1 bg-card border border-ink/10 rounded-full text-[10px] text-ink uppercase tracking-wider hover:border-gold-ink/50 transition-colors">
+                         Size {s} <X className="w-3 h-3 text-muted" />
                        </button>
                     ))}
                     {brandsParam.map(b => (
-                       <button key={`b-${b}`} onClick={() => removeFilterChip('brand', b)} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
-                         {b} <X className="w-3 h-3 text-[#99907c]" />
+                       <button key={`b-${b}`} onClick={() => removeFilterChip('brand', b)} className="flex items-center gap-1.5 px-3 py-1 bg-card border border-ink/10 rounded-full text-[10px] text-ink uppercase tracking-wider hover:border-gold-ink/50 transition-colors">
+                         {b} <X className="w-3 h-3 text-muted" />
                        </button>
                     ))}
                     {(priceMinParam > priceBounds.min || priceMaxParam < priceBounds.max) && (
-                       <button onClick={() => removeFilterChip('price')} className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1A1A] border border-white/10 rounded-full text-[10px] text-[#fafafa] uppercase tracking-wider hover:border-[#F2CA50]/50 transition-colors">
-                         Rs {priceMinParam} - {priceMaxParam} <X className="w-3 h-3 text-[#99907c]" />
+                       <button onClick={() => removeFilterChip('price')} className="flex items-center gap-1.5 px-3 py-1 bg-card border border-ink/10 rounded-full text-[10px] text-ink uppercase tracking-wider hover:border-gold-ink/50 transition-colors">
+                         Rs {priceMinParam} - {priceMaxParam} <X className="w-3 h-3 text-muted" />
                        </button>
                     )}
-                    <button onClick={clearAllFilters} className="text-[10px] text-[#99907c] uppercase tracking-widest hover:text-[#F2CA50] ml-2">Clear All</button>
+                    <button onClick={clearAllFilters} className="text-[10px] text-muted uppercase tracking-widest hover:text-gold-ink ml-2">Clear All</button>
                   </div>
                 )}
               </div>
@@ -445,9 +445,9 @@ const ProductListing = () => {
                   type="button"
                   onClick={() => setFiltersOpen((v) => !v)}
                   aria-pressed={filtersOpen}
-                  className="hidden lg:flex items-center gap-2 h-[42px] px-4 rounded-full border border-white/10 text-[#e5e2e1] hover:border-[#F2CA50]/50 hover:text-[#F2CA50] transition-colors text-[11px] uppercase tracking-widest font-bold"
+                  className="hidden lg:flex items-center gap-2 h-[42px] px-4 rounded-full border border-ink/10 text-ink-2 hover:border-gold-ink/50 hover:text-gold-ink transition-colors text-[11px] uppercase tracking-widest font-bold"
                 >
-                  <SlidersHorizontal className="w-4 h-4 text-[#F2CA50]" />
+                  <SlidersHorizontal className="w-4 h-4 text-gold-ink" />
                   {filtersOpen ? "Hide Filters" : "Show Filters"}
                 </button>
                 <SortDropdown
@@ -463,10 +463,10 @@ const ProductListing = () => {
               {refineOpen && (
                 <>
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden" onClick={() => setRefineOpen(false)} />
-                  <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ duration: 0.3 }} className="fixed bottom-0 left-0 right-0 h-[90vh] bg-[#0e0e0e] border-t border-white/10 z-[101] rounded-t-[24px] lg:hidden flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-white/5">
-                      <span className="text-[#fafafa] font-bold tracking-widest uppercase text-sm">Filters</span>
-                      <button onClick={() => setRefineOpen(false)} className="text-[#99907c] hover:text-[#F2CA50]"><X className="w-6 h-6" /></button>
+                  <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ duration: 0.3 }} className="fixed bottom-0 left-0 right-0 h-[90vh] bg-page border-t border-ink/10 z-[101] rounded-t-[24px] lg:hidden flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-ink/5">
+                      <span className="text-ink font-bold tracking-widest uppercase text-sm">Filters</span>
+                      <button onClick={() => setRefineOpen(false)} className="text-muted hover:text-gold-ink"><X className="w-6 h-6" /></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">
                       <FilterSidebar
@@ -480,9 +480,9 @@ const ProductListing = () => {
                         onClearAll={clearAllFilters} priceMin={priceBounds.min} priceMax={priceBounds.max}
                       />
                     </div>
-                    <div className="p-4 border-t border-white/5 bg-[#0e0e0e] flex gap-3 sticky bottom-0">
-                      <button onClick={() => { clearAllFilters(); setRefineOpen(false); }} className="flex-1 py-4 border border-[#4d4635] text-[#e5e2e1] uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Reset</button>
-                      <button onClick={() => setRefineOpen(false)} className="flex-1 py-4 bg-[#F2CA50] text-[#0e0e0e] uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Apply Options</button>
+                    <div className="p-4 border-t border-ink/5 bg-page flex gap-3 sticky bottom-0">
+                      <button onClick={() => { clearAllFilters(); setRefineOpen(false); }} className="flex-1 py-4 border border-line text-ink-2 uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Reset</button>
+                      <button onClick={() => setRefineOpen(false)} className="flex-1 py-4 bg-gold text-ongold uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Apply Options</button>
                     </div>
                   </motion.div>
                 </>
@@ -494,22 +494,22 @@ const ProductListing = () => {
               <ProductGridSkeleton count={8} featuredEvery={Infinity} />
             ) : filteredProducts.length === 0 ? (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-32 flex flex-col items-center justify-center text-center px-4">
-                <div className="w-24 h-24 mb-6 border border-white/5 flex items-center justify-center rounded-full bg-[#1A1A1A]">
-                  <span className="text-[#99907c] font-serif text-4xl">ø</span>
+                <div className="w-24 h-24 mb-6 border border-ink/5 flex items-center justify-center rounded-full bg-card">
+                  <span className="text-muted font-serif text-4xl">ø</span>
                 </div>
-                <h3 className="text-[#fafafa] se-serif text-[28px] mb-2">No Matches Found</h3>
-                <p className="text-[#99907c] max-w-md mx-auto se-body text-[15px] mb-8">
+                <h3 className="text-ink se-serif text-[28px] mb-2">No Matches Found</h3>
+                <p className="text-muted max-w-md mx-auto se-body text-[15px] mb-8">
                   {keywordParam
                     ? `We couldn't find any products matching “${keywordParam}”.`
                     : "We couldn't find any products matching your current filters."}
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   {keywordParam && (
-                    <button onClick={() => updateParams((p) => p.delete("keyword"))} className="h-[52px] px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
+                    <button onClick={() => updateParams((p) => p.delete("keyword"))} className="h-[52px] px-8 bg-transparent border border-gold-ink text-gold-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-gold hover:text-ongold transition-colors">
                       Clear Search
                     </button>
                   )}
-                  <button onClick={clearAllFilters} className="h-[52px] px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
+                  <button onClick={clearAllFilters} className="h-[52px] px-8 bg-transparent border border-gold-ink text-gold-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-gold hover:text-ongold transition-colors">
                     Clear Filters
                   </button>
                 </div>
@@ -535,12 +535,12 @@ const ProductListing = () => {
       <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
          <button
             onClick={() => setRefineOpen(true)}
-            className="flex items-center gap-2 h-[48px] px-6 rounded-full bg-[#131313] border border-white/20 text-[#fafafa] shadow-[0_8px_30px_rgb(0,0,0,0.8)] font-sans font-bold uppercase tracking-wider text-[11px]"
+            className="flex items-center gap-2 h-[48px] px-6 rounded-full bg-panel border border-ink/20 text-ink shadow-[0_8px_30px_rgb(0,0,0,0.8)] font-sans font-bold uppercase tracking-wider text-[11px]"
           >
-            <SlidersHorizontal className="w-4 h-4 text-[#F2CA50]" />
+            <SlidersHorizontal className="w-4 h-4 text-gold-ink" />
             Filters
             {hasFilterActive && (
-              <span className="w-2 h-2 rounded-full bg-[#F2CA50] ml-1" />
+              <span className="w-2 h-2 rounded-full bg-gold ml-1" />
             )}
           </button>
       </div>

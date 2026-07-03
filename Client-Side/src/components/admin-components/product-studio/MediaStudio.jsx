@@ -99,20 +99,20 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md">
+    <div className="rounded-2xl border border-ink/[0.08] bg-ink/[0.02] p-6 backdrop-blur-md">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Media Studio</h2>
-          <p className="mt-1 text-xs text-white/50">Upload images and tag by variant color for storefront switching.</p>
+          <h2 className="text-lg font-semibold text-ink">Media Studio</h2>
+          <p className="mt-1 text-xs text-ink/50">Upload images and tag by variant color for storefront switching.</p>
           <UploadGuidelines dims="1600×2000" aspect="4:5" maxSize="5 MB" />
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-white/50">{images.length} assets</span>
+          <span className="text-xs text-ink/50">{images.length} assets</span>
           {isEditing && onOpenGallery && (
             <button
               type="button"
               onClick={onOpenGallery}
-              className="flex items-center gap-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+              className="flex items-center gap-1.5 rounded-full border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gold-ink2 transition hover:bg-gold-deep/20"
             >
               <ExternalLink className="h-3 w-3" />
               Manage in Gallery
@@ -150,7 +150,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="group relative flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-white/10 bg-black/20 text-white/50 transition-colors hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/5 hover:text-[#D4AF37]"
+          className="group relative flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-ink/10 bg-black/20 text-ink/50 transition-colors hover:border-gold-ink2/50 hover:bg-gold-deep/5 hover:text-gold-ink2"
         >
           <Upload className="h-6 w-6 transition-transform group-hover:-translate-y-1" />
           <span className="text-xs font-semibold uppercase tracking-wider">Upload Media</span>
@@ -172,7 +172,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
             <div
               key={imgKey}
               className={`group relative aspect-[4/5] overflow-hidden rounded-xl border bg-black/40 ${
-                isPrimary ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]/30' : 'border-white/10'
+                isPrimary ? 'border-gold-ink2 ring-2 ring-gold-ink2/30' : 'border-ink/10'
               }`}
             >
               <img
@@ -183,7 +183,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
               <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100" />
 
               {isPrimary && (
-                <span className="absolute left-2 top-2 rounded-full bg-[#D4AF37] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
+                <span className="absolute left-2 top-2 rounded-full bg-gold-deep px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
                   Primary
                 </span>
               )}
@@ -194,8 +194,8 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                   onClick={() => setPrimary(imgKey)}
                   className={`rounded-full p-1.5 backdrop-blur-md transition ${
                     isPrimary
-                      ? 'bg-[#D4AF37] text-black'
-                      : 'bg-black/60 text-white/70 hover:bg-[#D4AF37]/80 hover:text-black'
+                      ? 'bg-gold-deep text-black'
+                      : 'bg-black/60 text-ink/70 hover:bg-gold-deep/80 hover:text-black'
                   }`}
                   title="Set as primary"
                 >
@@ -204,7 +204,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                 <button
                   type="button"
                   onClick={() => removeImage(imgKey)}
-                  className="rounded-full bg-black/60 p-1.5 text-white/70 backdrop-blur-md transition hover:bg-red-500 hover:text-white"
+                  className="rounded-full bg-black/60 p-1.5 text-ink/70 backdrop-blur-md transition hover:bg-red-500 hover:text-ink"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -215,7 +215,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                   type="button"
                   onClick={() => reorderImage(index, -1)}
                   disabled={index === 0}
-                  className="rounded bg-black/60 p-1 text-white/70 backdrop-blur-md hover:text-white disabled:opacity-30"
+                  className="rounded bg-black/60 p-1 text-ink/70 backdrop-blur-md hover:text-ink disabled:opacity-30"
                 >
                   <ChevronUp className="h-3 w-3" />
                 </button>
@@ -223,7 +223,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                   type="button"
                   onClick={() => reorderImage(index, 1)}
                   disabled={index === images.length - 1}
-                  className="rounded bg-black/60 p-1 text-white/70 backdrop-blur-md hover:text-white disabled:opacity-30"
+                  className="rounded bg-black/60 p-1 text-ink/70 backdrop-blur-md hover:text-ink disabled:opacity-30"
                 >
                   <ChevronDown className="h-3 w-3" />
                 </button>
@@ -241,7 +241,7 @@ export const MediaStudio = ({ onOpenGallery, isEditing = false }) => {
                   }}
                   list="media-studio-variant-colors"
                   placeholder="Variant Color (e.g. Black)"
-                  className="w-full rounded-lg border border-white/20 bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur-md focus:border-[#D4AF37] focus:outline-none"
+                  className="w-full rounded-lg border border-ink/20 bg-black/60 px-3 py-1.5 text-xs text-ink backdrop-blur-md focus:border-gold-ink2 focus:outline-none"
                 />
               </div>
             </div>

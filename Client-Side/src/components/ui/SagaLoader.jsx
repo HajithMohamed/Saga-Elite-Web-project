@@ -51,12 +51,12 @@ export default function SagaLoader({ onDone, force = false }) {
     <AnimatePresence>
       {show && (
         <motion.div
-          className="fixed inset-0 z-[100] pointer-events-auto overflow-hidden bg-[#070707]"
+          className="fixed inset-0 z-[100] pointer-events-auto overflow-hidden bg-page"
           exit={{ opacity: 0, transition: { duration: 0.3, ease: "easeOut" } }}
         >
           {/* Wipe mask — clears upward, revealing the page beneath */}
           <motion.div
-            className="absolute inset-x-0 bottom-0 bg-[#070707] z-30 origin-bottom"
+            className="absolute inset-x-0 bottom-0 bg-page z-30 origin-bottom"
             initial={{ scaleY: 1 }}
             animate={phase >= 7 ? { scaleY: 0 } : { scaleY: 1 }}
             transition={{ duration: 0.85, ease: [0.76, 0, 0.24, 1] }}
@@ -95,14 +95,14 @@ export default function SagaLoader({ onDone, force = false }) {
                 transition={{ duration: 0.9, times: [0, 0.2, 0.5, 0.8, 1], ease: "easeInOut" }}
               >
                 <span
-                  className="block w-1.5 h-1.5 rounded-full bg-[#f2ca50]"
+                  className="block w-1.5 h-1.5 rounded-full bg-gold"
                   style={{ boxShadow: "0 0 24px 4px rgba(242,202,80,0.5)" }}
                 />
               </motion.div>
 
               {/* Top eyebrow */}
               <motion.div
-                className="se-label text-[10px] tracking-[0.5em] text-[#99907c]"
+                className="se-label text-[10px] tracking-[0.5em] text-muted"
                 initial={{ opacity: 0, y: 6 }}
                 animate={phase >= 5 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
                 transition={{ duration: 0.55, ease: "easeOut" }}
@@ -113,19 +113,19 @@ export default function SagaLoader({ onDone, force = false }) {
               {/* Two hairlines drawing outward */}
               <div className="flex items-center justify-center" style={{ width: "min(420px, 80vw)" }}>
                 <motion.div
-                  className="h-px bg-[#4d4635] origin-right flex-1"
+                  className="h-px bg-line origin-right flex-1"
                   initial={{ scaleX: 0 }}
                   animate={phase >= 2 ? { scaleX: 1 } : { scaleX: 0 }}
                   transition={{ duration: 0.55, ease: [0.65, 0, 0.35, 1] }}
                 />
                 <motion.div
-                  className="mx-3 w-1 h-1 rounded-full bg-[#f2ca50]"
+                  className="mx-3 w-1 h-1 rounded-full bg-gold"
                   initial={{ opacity: 0, scale: 0 }}
                   animate={phase >= 2 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
                 />
                 <motion.div
-                  className="h-px bg-[#4d4635] origin-left flex-1"
+                  className="h-px bg-line origin-left flex-1"
                   initial={{ scaleX: 0 }}
                   animate={phase >= 2 ? { scaleX: 1 } : { scaleX: 0 }}
                   transition={{ duration: 0.55, ease: [0.65, 0, 0.35, 1] }}
@@ -139,7 +139,7 @@ export default function SagaLoader({ onDone, force = false }) {
                   {SAGA.map((ch, i) => (
                     <motion.span
                       key={i}
-                      className="se-wordmark text-[#fafafa] inline-block"
+                      className="se-wordmark text-ink inline-block"
                       style={{
                         fontSize: "clamp(48px, 8vw, 104px)",
                         lineHeight: 1,
@@ -165,7 +165,7 @@ export default function SagaLoader({ onDone, force = false }) {
                 {/* Line 2: ELITE rises */}
                 <div className="overflow-hidden">
                   <motion.div
-                    className="se-instrument text-[#f2ca50]"
+                    className="se-instrument text-gold-ink"
                     style={{
                       fontSize: "clamp(20px, 3vw, 36px)",
                       letterSpacing: "0.42em",
@@ -183,7 +183,7 @@ export default function SagaLoader({ onDone, force = false }) {
 
               {/* Gold underline */}
               <motion.div
-                className="h-px bg-[#f2ca50] origin-center"
+                className="h-px bg-gold origin-center"
                 style={{ width: "min(180px, 50vw)" }}
                 initial={{ scaleX: 0 }}
                 animate={phase >= 5 ? { scaleX: 1 } : { scaleX: 0 }}
@@ -192,7 +192,7 @@ export default function SagaLoader({ onDone, force = false }) {
 
               {/* Tagline */}
               <motion.div
-                className="se-label text-[11px] text-[#d0c5af]"
+                className="se-label text-[11px] text-cream"
                 style={{ letterSpacing: "0.32em" }}
                 initial={{ opacity: 0, y: 6 }}
                 animate={phase >= 5 ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
@@ -205,13 +205,13 @@ export default function SagaLoader({ onDone, force = false }) {
 
           {/* Bottom-right loading status */}
           <motion.div
-            className="absolute right-6 bottom-6 z-25 flex items-center gap-2 se-mono text-[10px] text-[#574500]"
+            className="absolute right-6 bottom-6 z-25 flex items-center gap-2 se-mono text-[10px] text-goldshadow"
             initial={{ opacity: 0 }}
             animate={phase >= 1 && phase < 6 ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
             <motion.span
-              className="w-1.5 h-1.5 rounded-full bg-[#f2ca50]"
+              className="w-1.5 h-1.5 rounded-full bg-gold"
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -220,7 +220,7 @@ export default function SagaLoader({ onDone, force = false }) {
 
           {/* Top-left chapter mark */}
           <motion.div
-            className="absolute left-6 top-6 z-25 se-label text-[10px] tracking-[0.42em] text-[#574500]"
+            className="absolute left-6 top-6 z-25 se-label text-[10px] tracking-[0.42em] text-goldshadow"
             initial={{ opacity: 0, x: -8 }}
             animate={phase >= 2 && phase < 6 ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
             transition={{ duration: 0.5, ease: "easeOut" }}

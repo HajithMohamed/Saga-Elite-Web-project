@@ -296,7 +296,7 @@ const ImageUpload = ({
   return (
     <div className={`w-full space-y-4 ${className}`}>
       {label && (
-        <div className="inline-flex items-center rounded-full border border-[#D4AF37]/20 bg-[#111]/80 px-3 py-1 text-xs uppercase tracking-[0.2em] text-[#D4AF37]">
+        <div className="inline-flex items-center rounded-full border border-gold-ink2/20 bg-panel/80 px-3 py-1 text-xs uppercase tracking-[0.2em] text-gold-ink2">
           Upload category logo: {label}
         </div>
       )}
@@ -305,7 +305,7 @@ const ImageUpload = ({
         onDrop={handleDrop}
         onClick={() => !disabled && inputRef.current?.click()}
         className={`border-2 border-dashed border-gray-800 rounded-lg p-6 flex flex-col items-center gap-2 ${
-          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-[#D4AF37]"
+          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-gold-ink2"
         }`}
       >
         <Input
@@ -325,7 +325,7 @@ const ImageUpload = ({
       </div>
       
       {uploadGuidelines && (
-        <div className="text-xs text-[#99907c] mt-2 space-y-1">
+        <div className="text-xs text-muted mt-2 space-y-1">
           {uploadGuidelines.map((guideline, i) => (
              <p key={i}>• {guideline}</p>
           ))}

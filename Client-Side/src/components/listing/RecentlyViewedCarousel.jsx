@@ -38,14 +38,14 @@ const RecentlyViewedCarousel = () => {
   if (items.length < 2) return null;
 
   return (
-    <section className="bg-[#0a0a0a] py-16 md:py-20 border-y border-[#1a1a1a]">
+    <section className="bg-page py-16 md:py-20 border-y border-card">
       <div className="max-w-[1440px] mx-auto px-6">
         <header className="flex items-end justify-between mb-8">
           <div>
             <Eyebrow tone="gold" size="sm">
               Continue Browsing
             </Eyebrow>
-            <h3 className="mt-3 font-display text-[28px] md:text-[40px] leading-none uppercase text-[#FAF7F2]">
+            <h3 className="mt-3 font-display text-[28px] md:text-[40px] leading-none uppercase text-ink">
               Recently Viewed
             </h3>
           </div>
@@ -55,7 +55,7 @@ const RecentlyViewedCarousel = () => {
               onClick={() => emblaApi?.scrollPrev()}
               disabled={!canPrev}
               aria-label="Scroll left"
-              className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="h-10 w-10 flex items-center justify-center border border-line text-cream hover:text-gold-ink hover:border-gold-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowLeft size={14} />
             </button>
@@ -64,7 +64,7 @@ const RecentlyViewedCarousel = () => {
               onClick={() => emblaApi?.scrollNext()}
               disabled={!canNext}
               aria-label="Scroll right"
-              className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="h-10 w-10 flex items-center justify-center border border-line text-cream hover:text-gold-ink hover:border-gold-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowRight size={14} />
             </button>

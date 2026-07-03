@@ -6,20 +6,20 @@ import { cn } from "@/lib/utils";
 const MOTION_EASE = [0.16, 1, 0.3, 1];
 
 const STATUS_STYLES = {
-  pending_payment: { color: "text-[#F2CA50]", bg: "bg-[#F2CA50]/10", border: "border-[#F2CA50]/30", icon: Clock, label: "Pending" },
+  pending_payment: { color: "text-gold-ink", bg: "bg-gold/10", border: "border-gold-ink/30", icon: Clock, label: "Pending" },
   proof_submitted: { color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/30", icon: Clock, label: "Under Review" },
   pending_bank_confirmation: { color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/30", icon: Clock, label: "Bank Verification" },
-  verified: { color: "text-[#34C759]", bg: "bg-[#34C759]/10", border: "border-[#34C759]/30", icon: CheckCircle2, label: "Approved" },
-  rejected: { color: "text-[#FF453A]", bg: "bg-[#FF453A]/10", border: "border-[#FF453A]/30", icon: XCircle, label: "Rejected" },
+  verified: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: CheckCircle2, label: "Approved" },
+  rejected: { color: "text-danger", bg: "bg-danger/10", border: "border-danger/30", icon: XCircle, label: "Rejected" },
   expired: { color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", icon: AlertTriangle, label: "Expired" },
 };
 
 const SummaryRow = ({ label, value, highlight = false }) => {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-white/5 py-3 last:border-0">
-      <span className="se-label text-[9px] tracking-[0.22em] text-[#574500]">{label}</span>
-      <span className={cn("text-sm", highlight ? "font-semibold text-[#F2CA50]" : "text-[#e5e2e1]")}>
+    <div className="flex items-center justify-between gap-3 border-b border-ink/5 py-3 last:border-0">
+      <span className="se-label text-[9px] tracking-[0.22em] text-goldshadow">{label}</span>
+      <span className={cn("text-sm", highlight ? "font-semibold text-gold-ink" : "text-ink-2")}>
         {value}
       </span>
     </div>
@@ -59,16 +59,16 @@ const PaymentSummaryCard = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.15 }}
-      className="w-full overflow-hidden rounded-[24px] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_rgba(0,0,0,0.35)] lg:max-w-[420px]"
+      className="w-full overflow-hidden rounded-[24px] border border-ink/10 bg-page shadow-[0_24px_80px_rgba(0,0,0,0.35)] lg:max-w-[420px]"
       aria-label="Payment summary"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-white/5 px-6 py-4">
+      <div className="flex items-center justify-between gap-3 border-b border-ink/5 px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
-            <Receipt className="h-5 w-5 text-[#d0c5af]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink/10 bg-ink/[0.03]">
+            <Receipt className="h-5 w-5 text-cream" />
           </div>
-          <h3 className="se-serif text-lg text-[#e5e2e1]">Payment Summary</h3>
+          <h3 className="se-serif text-lg text-ink-2">Payment Summary</h3>
         </div>
 
         {/* Status badge */}

@@ -69,7 +69,7 @@ const ProductStudioContent = ({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
-      className="fixed inset-0 z-[100] bg-[#0a0a0a] overflow-x-hidden overflow-y-auto"
+      className="fixed inset-0 z-[100] bg-page overflow-x-hidden overflow-y-auto"
     >
       <StickyHeader
         onBack={onBack}

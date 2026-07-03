@@ -46,9 +46,9 @@ const Pagination = ({
   const btnBase =
     "inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40";
   const btnIdle =
-    "border-white/10 text-[#99907c] hover:border-[#D4AF37]/40 hover:text-[#D4AF37]";
+    "border-ink/10 text-muted hover:border-gold-ink2/40 hover:text-gold-ink2";
   const btnActive =
-    "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37]";
+    "border-gold-ink2/50 bg-gold-deep/10 text-gold-ink2";
 
   return (
     <div

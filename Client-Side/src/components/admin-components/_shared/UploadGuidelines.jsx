@@ -25,9 +25,9 @@ export const UploadGuidelines = ({
 
   return (
     <p
-      className={`mt-2 flex items-center gap-1.5 text-[11px] leading-relaxed text-white/40 ${className}`.trim()}
+      className={`mt-2 flex items-center gap-1.5 text-[11px] leading-relaxed text-ink/40 ${className}`.trim()}
     >
-      <Info className="h-3 w-3 shrink-0 text-white/30" aria-hidden />
+      <Info className="h-3 w-3 shrink-0 text-ink/30" aria-hidden />
       {parts.join(" · ")}
     </p>
   );

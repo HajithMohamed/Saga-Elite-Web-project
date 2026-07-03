@@ -56,17 +56,17 @@ const luhnOk = (digits) => {
 };
 
 const PageHeader = () => (
-  <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0a0a0a]/85 backdrop-blur-xl">
+  <header className="sticky top-0 z-40 border-b border-ink/5 bg-page/85 backdrop-blur-xl">
     <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 md:px-8">
       <Link to="/shopping/home" className="flex flex-col leading-none">
-        <span className="se-serif text-2xl tracking-[0.18em] text-[#e5e2e1]">SAGA ELITE</span>
-        <span className="se-label mt-1 text-[9px] tracking-[0.32em] text-[#99907c]">
+        <span className="se-serif text-2xl tracking-[0.18em] text-ink-2">SAGA ELITE</span>
+        <span className="se-label mt-1 text-[9px] tracking-[0.32em] text-muted">
           Rare Fit Forever
         </span>
       </Link>
-      <div className="flex items-center gap-2 rounded-full border border-[#f2ca50]/20 bg-[#f2ca50]/5 px-4 py-2">
-        <Lock className="h-3.5 w-3.5 text-[#f2ca50]" />
-        <span className="se-label text-[9px] tracking-[0.28em] text-[#d0c5af]">
+      <div className="flex items-center gap-2 rounded-full border border-gold-ink/20 bg-gold/5 px-4 py-2">
+        <Lock className="h-3.5 w-3.5 text-gold-ink" />
+        <span className="se-label text-[9px] tracking-[0.28em] text-cream">
           <span className="hidden sm:inline">Secure Checkout · </span>SSL Protected
         </span>
       </div>
@@ -75,16 +75,16 @@ const PageHeader = () => (
 );
 
 const DemoBanner = () => (
-  <div className="rounded-[2rem] border border-[#f2ca50]/30 bg-[#f2ca50]/10 p-5 sm:p-6">
+  <div className="rounded-[2rem] border border-gold-ink/30 bg-gold/10 p-5 sm:p-6">
     <div className="flex items-start gap-3">
-      <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[#f2ca50]" />
+      <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-gold-ink" />
       <div>
-        <p className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50]">
+        <p className="se-label text-[10px] tracking-[0.28em] text-gold-ink">
           Demo Mode — No Real Charge
         </p>
-        <p className="se-body mt-2 text-sm text-[#e5e2e1]">
+        <p className="se-body mt-2 text-sm text-ink-2">
           This is a sample gateway. Use test card{" "}
-          <span className="se-mono text-[#f2ca50]">4111 1111 1111 1111</span> with any future
+          <span className="se-mono text-gold-ink">4111 1111 1111 1111</span> with any future
           expiry and 3-digit CVV. Our team will verify the sample transaction manually until the
           PayHere gateway is live.
         </p>
@@ -98,24 +98,24 @@ const SubmittedPanel = ({ payment }) => (
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, ease: MOTION_EASE }}
-    className="rounded-[2rem] border border-[#f2ca50]/10 bg-[#0d0d0d] p-6 sm:p-10"
+    className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10"
   >
     <div className="mx-auto flex max-w-md flex-col items-center text-center">
-      <div className="rounded-full bg-[#f2ca50]/10 p-5">
-        <CheckCircle2 className="h-10 w-10 text-[#f2ca50]" />
+      <div className="rounded-full bg-gold/10 p-5">
+        <CheckCircle2 className="h-10 w-10 text-gold-ink" />
       </div>
-      <h2 className="se-serif mt-6 text-2xl text-[#e5e2e1]">Card payment received</h2>
-      <p className="se-body mt-3 text-sm text-[#99907c]">
+      <h2 className="se-serif mt-6 text-2xl text-ink-2">Card payment received</h2>
+      <p className="se-body mt-3 text-sm text-muted">
         Reference{" "}
-        <span className="se-mono text-[#e5e2e1]">{payment?.referenceNumber || "—"}</span>
+        <span className="se-mono text-ink-2">{payment?.referenceNumber || "—"}</span>
       </p>
-      <p className="se-body mt-5 text-sm text-[#d0c5af]">
+      <p className="se-body mt-5 text-sm text-cream">
         Our team is verifying your sample card transaction. You'll get an email and WhatsApp
         update once the order is confirmed — usually within a few minutes.
       </p>
       <Link
         to="/shopping/home"
-        className="se-label mt-8 inline-flex items-center gap-2 rounded-full border border-[#f2ca50]/30 bg-[#f2ca50]/5 px-6 py-3 text-[10px] tracking-[0.28em] text-[#f2ca50] transition-colors hover:bg-[#f2ca50]/15"
+        className="se-label mt-8 inline-flex items-center gap-2 rounded-full border border-gold-ink/30 bg-gold/5 px-6 py-3 text-[10px] tracking-[0.28em] text-gold-ink transition-colors hover:bg-gold/15"
       >
         Back to shopping
       </Link>
@@ -259,18 +259,18 @@ const CardPaymentPage = () => {
 
   if (!orderId) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-[#e5e2e1]">
+      <div className="min-h-screen bg-page text-ink-2">
         <PageHeader />
         <main className="mx-auto max-w-2xl px-4 py-20 text-center">
           <h1 className="se-serif text-3xl">Card payment unavailable</h1>
-          <p className="se-body mt-4 text-sm text-[#99907c]">
+          <p className="se-body mt-4 text-sm text-muted">
             We couldn't find an order to pay for on this link. Please return to checkout to
             place your order again.
           </p>
           <button
             type="button"
             onClick={() => navigate("/shopping/checkout")}
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#f2ca50] px-6 py-3 text-[10px] tracking-[0.28em] text-black uppercase"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-[10px] tracking-[0.28em] text-black uppercase"
           >
             Return to checkout
           </button>
@@ -280,17 +280,17 @@ const CardPaymentPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e2e1] pb-20">
+    <div className="min-h-screen bg-page text-ink-2 pb-20">
       <PageHeader />
 
       <main className="mx-auto max-w-3xl px-4 py-10 md:py-14 space-y-8">
         <div>
-          <p className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
+          <p className="se-label text-[10px] tracking-[0.32em] text-muted">
             Step 4 of 4
           </p>
-          <h1 className="se-serif mt-2 text-3xl sm:text-4xl text-[#e5e2e1]">Card payment</h1>
-          <p className="se-body mt-2 text-sm text-[#99907c]">
-            Order reference <span className="se-mono text-[#d0c5af]">{orderId}</span>
+          <h1 className="se-serif mt-2 text-3xl sm:text-4xl text-ink-2">Card payment</h1>
+          <p className="se-body mt-2 text-sm text-muted">
+            Order reference <span className="se-mono text-cream">{orderId}</span>
           </p>
         </div>
 
@@ -304,25 +304,25 @@ const CardPaymentPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: MOTION_EASE }}
             onSubmit={handleSubmit}
-            className="rounded-[2rem] border border-[#f2ca50]/10 bg-[#0d0d0d] p-6 sm:p-10 space-y-6"
+            className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10 space-y-6"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-[#f2ca50]" />
-                <span className="se-label text-[10px] tracking-[0.28em] text-[#f2ca50]">
+                <CreditCard className="h-5 w-5 text-gold-ink" />
+                <span className="se-label text-[10px] tracking-[0.28em] text-gold-ink">
                   Card details
                 </span>
               </div>
               {brand ? (
-                <span className="se-label text-[10px] tracking-[0.28em] text-[#d0c5af]">
+                <span className="se-label text-[10px] tracking-[0.28em] text-cream">
                   {brand}
                 </span>
               ) : null}
             </div>
 
             {presetAmount ? (
-              <div className="rounded-2xl border border-white/5 bg-[#131313] px-5 py-4">
-                <p className="se-label text-[9px] tracking-[0.32em] text-[#99907c]">
+              <div className="rounded-2xl border border-ink/5 bg-panel px-5 py-4">
+                <p className="se-label text-[9px] tracking-[0.32em] text-muted">
                   Amount due
                 </p>
                 <p className="se-instrument mt-1 text-2xl text-[var(--accent)]">
@@ -332,7 +332,7 @@ const CardPaymentPage = () => {
             ) : null}
 
             <div>
-              <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-[#99907c] mb-2">
+              <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
                 Cardholder name
               </label>
               <input
@@ -341,7 +341,7 @@ const CardPaymentPage = () => {
                 value={form.cardholderName}
                 onChange={handleChange("cardholderName")}
                 placeholder="As printed on the card"
-                className="w-full bg-[#0a0a0a] border border-[#4d4635]/40 rounded-xl px-4 py-3 text-[#e5e2e1] placeholder-[#4d4635] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
               />
               {errors.cardholderName ? (
                 <p className="mt-2 text-xs text-rose-400">{errors.cardholderName}</p>
@@ -349,7 +349,7 @@ const CardPaymentPage = () => {
             </div>
 
             <div>
-              <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-[#99907c] mb-2">
+              <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
                 Card number
               </label>
               <input
@@ -359,7 +359,7 @@ const CardPaymentPage = () => {
                 value={form.cardNumber}
                 onChange={handleChange("cardNumber")}
                 placeholder="1234 5678 9012 3456"
-                className="w-full bg-[#0a0a0a] border border-[#4d4635]/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-[#e5e2e1] placeholder-[#4d4635] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
               />
               {errors.cardNumber ? (
                 <p className="mt-2 text-xs text-rose-400">{errors.cardNumber}</p>
@@ -368,7 +368,7 @@ const CardPaymentPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-[#99907c] mb-2">
+                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
                   Expiry (MM/YY)
                 </label>
                 <input
@@ -378,14 +378,14 @@ const CardPaymentPage = () => {
                   value={form.expiry}
                   onChange={handleChange("expiry")}
                   placeholder="MM/YY"
-                  className="w-full bg-[#0a0a0a] border border-[#4d4635]/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-[#e5e2e1] placeholder-[#4d4635] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
                 />
                 {errors.expiry ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.expiry}</p>
                 ) : null}
               </div>
               <div>
-                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-[#99907c] mb-2">
+                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
                   CVV
                 </label>
                 <input
@@ -395,7 +395,7 @@ const CardPaymentPage = () => {
                   value={form.cvv}
                   onChange={handleChange("cvv")}
                   placeholder="•••"
-                  className="w-full bg-[#0a0a0a] border border-[#4d4635]/40 rounded-xl px-4 py-3 se-mono tracking-[0.4em] text-[#e5e2e1] placeholder-[#4d4635] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.4em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
                 />
                 {errors.cvv ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.cvv}</p>
@@ -405,7 +405,7 @@ const CardPaymentPage = () => {
 
             {!isAuthenticated ? (
               <div>
-                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-[#99907c] mb-2">
+                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
                   Email used at checkout
                 </label>
                 <input
@@ -413,7 +413,7 @@ const CardPaymentPage = () => {
                   value={form.email}
                   onChange={handleChange("email")}
                   placeholder="you@example.com"
-                  className="w-full bg-[#0a0a0a] border border-[#4d4635]/40 rounded-xl px-4 py-3 text-[#e5e2e1] placeholder-[#4d4635] focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
                 />
                 {errors.email ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.email}</p>
@@ -445,15 +445,15 @@ const CardPaymentPage = () => {
             </button>
 
             <div className="grid grid-cols-3 gap-4 pt-2 text-center">
-              <div className="flex flex-col items-center gap-2 text-[#99907c]">
+              <div className="flex flex-col items-center gap-2 text-muted">
                 <Lock size={16} />
                 <span className="text-[9px] uppercase tracking-widest">Encrypted</span>
               </div>
-              <div className="flex flex-col items-center gap-2 text-[#99907c]">
+              <div className="flex flex-col items-center gap-2 text-muted">
                 <ShieldCheck size={16} />
                 <span className="text-[9px] uppercase tracking-widest">Admin verified</span>
               </div>
-              <div className="flex flex-col items-center gap-2 text-[#99907c]">
+              <div className="flex flex-col items-center gap-2 text-muted">
                 <Sparkles size={16} />
                 <span className="text-[9px] uppercase tracking-widest">Sample mode</span>
               </div>

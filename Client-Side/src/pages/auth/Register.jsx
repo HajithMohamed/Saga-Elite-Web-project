@@ -42,7 +42,7 @@ const calculateStrength = (reqs) => {
   if (score <= 2) return { label: "Fair", color: "bg-orange-500", text: "text-orange-500" };
   if (score <= 3) return { label: "Good", color: "bg-yellow-500", text: "text-yellow-500" };
   if (score <= 4) return { label: "Strong", color: "bg-emerald-400", text: "text-emerald-400" };
-  return { label: "Excellent", color: "bg-[#F2CA50]", text: "text-[#F2CA50]" };
+  return { label: "Excellent", color: "bg-gold", text: "text-gold-ink" };
 };
 
 const PasswordChecklist = ({ password }) => {
@@ -57,16 +57,16 @@ const PasswordChecklist = ({ password }) => {
   ];
 
   return (
-    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+    <div className="mt-4 rounded-xl border border-ink/5 bg-ink/[0.02] p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c]">Password Strength</span>
+        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-muted">Password Strength</span>
         <span className={`se-label text-[10px] uppercase tracking-[0.2em] font-bold ${strength.text}`}>{strength.label}</span>
       </div>
       <div className="flex gap-1 mb-4 h-1">
         {[...Array(5)].map((_, i) => {
           const score = Object.values(reqs).filter(Boolean).length;
           return (
-            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-white/10'}`} />
+            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-ink/10'}`} />
           );
         })}
       </div>
@@ -74,7 +74,7 @@ const PasswordChecklist = ({ password }) => {
         {allReqs.map((req, idx) => (
           <div key={idx} className="flex items-center gap-2">
             {req.met ? <Check className="w-3 h-3 text-emerald-400" /> : <X className="w-3 h-3 text-rose-400/50" />}
-            <span className={`text-xs ${req.met ? 'text-[#e5e2e1]' : 'text-[#99907c]'}`}>{req.label}</span>
+            <span className={`text-xs ${req.met ? 'text-ink-2' : 'text-muted'}`}>{req.label}</span>
           </div>
         ))}
       </div>
@@ -165,11 +165,11 @@ const Register = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center py-12 text-center"
         >
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F2CA50]/10 border border-[#F2CA50]/20 mb-6">
-            <CheckCircle2 className="h-12 w-12 text-[#F2CA50]" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gold/10 border border-gold-ink/20 mb-6">
+            <CheckCircle2 className="h-12 w-12 text-gold-ink" />
           </div>
-          <h2 className="se-serif text-3xl text-[#e5e2e1]">Welcome to the Elite</h2>
-          <p className="se-body mt-4 text-[#99907c] max-w-sm">Redirecting to email verification...</p>
+          <h2 className="se-serif text-3xl text-ink-2">Welcome to the Elite</h2>
+          <p className="se-body mt-4 text-muted max-w-sm">Redirecting to email verification...</p>
         </motion.div>
       </AuthPageWrapper>
     );
@@ -257,17 +257,17 @@ const Register = () => {
 
         <div className="flex items-start gap-3 mt-4">
           <label className="flex items-start gap-3 cursor-pointer group mt-1">
-            <div className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded border border-white/20 bg-transparent transition-colors group-hover:border-[#F2CA50]">
+            <div className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded border border-ink/20 bg-transparent transition-colors group-hover:border-gold-ink">
               <input
                 type="checkbox"
                 className="peer absolute inset-0 opacity-0 cursor-pointer"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
               />
-              <CheckCircle2 className="h-4 w-4 text-[#F2CA50] opacity-0 transition-opacity peer-checked:opacity-100" />
+              <CheckCircle2 className="h-4 w-4 text-gold-ink opacity-0 transition-opacity peer-checked:opacity-100" />
             </div>
-            <span className="se-body text-xs leading-relaxed text-[#99907c] group-hover:text-[#d0c5af] transition-colors">
-              I agree to the <Link to="/legal/terms-and-conditions" className="text-[#F2CA50] hover:underline" target="_blank">Terms & Conditions</Link> and <Link to="/legal/privacy-policy" className="text-[#F2CA50] hover:underline" target="_blank">Privacy Policy</Link>.
+            <span className="se-body text-xs leading-relaxed text-muted group-hover:text-cream transition-colors">
+              I agree to the <Link to="/legal/terms-and-conditions" className="text-gold-ink hover:underline" target="_blank">Terms & Conditions</Link> and <Link to="/legal/privacy-policy" className="text-gold-ink hover:underline" target="_blank">Privacy Policy</Link>.
             </span>
           </label>
         </div>
@@ -275,7 +275,7 @@ const Register = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
+          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-gold/50"
         >
           {isLoading ? "Creating Account..." : "Register"}
           {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
@@ -286,7 +286,7 @@ const Register = () => {
         <div className="mt-8">
           <div className="mb-6 flex items-center gap-4">
             <Hairline tone="soft" />
-            <span className="se-label text-[10px] uppercase tracking-[0.28em] text-[#574500] whitespace-nowrap">
+            <span className="se-label text-[10px] uppercase tracking-[0.28em] text-goldshadow whitespace-nowrap">
               Or register with
             </span>
             <Hairline tone="soft" />
@@ -306,12 +306,12 @@ const Register = () => {
         </div>
       )}
 
-      <div className="mt-8 text-center border-t border-white/5 pt-6">
-        <p className="se-body text-sm text-[#99907c]">
+      <div className="mt-8 text-center border-t border-ink/5 pt-6">
+        <p className="se-body text-sm text-muted">
           Already have an account?{" "}
           <Link
             to="/auth/login"
-            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-[#F2CA50] transition-colors hover:text-[#ffe088]"
+            className="se-label text-[10px] font-medium uppercase tracking-[0.2em] text-gold-ink transition-colors hover:text-gold-ink"
           >
             Sign In
           </Link>

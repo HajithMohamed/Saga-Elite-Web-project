@@ -25,9 +25,19 @@
     />
 
     <title>Saga Elite — Rare Fit Forever</title>
+
+    <!-- Apply the persisted theme before first paint (avoids light/dark flash) -->
+    <script>
+      try {
+        var t = localStorage.getItem("saga-theme");
+        document.documentElement.classList.add(t === "light" ? "light" : "dark");
+      } catch (e) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
   </head>
 
-  <body class="overflow-x-hidden antialiased bg-[#0a0a0a]">
+  <body class="overflow-x-hidden antialiased bg-page">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

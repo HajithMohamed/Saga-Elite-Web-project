@@ -23,7 +23,7 @@ const calculateStrength = (reqs) => {
   if (score <= 2) return { label: "Fair", color: "bg-orange-500", text: "text-orange-500" };
   if (score <= 3) return { label: "Good", color: "bg-yellow-500", text: "text-yellow-500" };
   if (score <= 4) return { label: "Strong", color: "bg-emerald-400", text: "text-emerald-400" };
-  return { label: "Excellent", color: "bg-[#F2CA50]", text: "text-[#F2CA50]" };
+  return { label: "Excellent", color: "bg-gold", text: "text-gold-ink" };
 };
 
 const PasswordChecklist = ({ password }) => {
@@ -38,16 +38,16 @@ const PasswordChecklist = ({ password }) => {
   ];
 
   return (
-    <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+    <div className="mt-4 rounded-xl border border-ink/5 bg-ink/[0.02] p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c]">Password Strength</span>
+        <span className="se-label text-[10px] uppercase tracking-[0.2em] text-muted">Password Strength</span>
         <span className={`se-label text-[10px] uppercase tracking-[0.2em] font-bold ${strength.text}`}>{strength.label}</span>
       </div>
       <div className="flex gap-1 mb-4 h-1">
         {[...Array(5)].map((_, i) => {
           const score = Object.values(reqs).filter(Boolean).length;
           return (
-            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-white/10'}`} />
+            <div key={i} className={`h-full flex-1 rounded-full transition-colors duration-500 ${i < score ? strength.color : 'bg-ink/10'}`} />
           );
         })}
       </div>
@@ -55,7 +55,7 @@ const PasswordChecklist = ({ password }) => {
         {allReqs.map((req, idx) => (
           <div key={idx} className="flex items-center gap-2">
             {req.met ? <Check className="w-3 h-3 text-emerald-400" /> : <X className="w-3 h-3 text-rose-400/50" />}
-            <span className={`text-xs ${req.met ? 'text-[#e5e2e1]' : 'text-[#99907c]'}`}>{req.label}</span>
+            <span className={`text-xs ${req.met ? 'text-ink-2' : 'text-muted'}`}>{req.label}</span>
           </div>
         ))}
       </div>
@@ -96,7 +96,7 @@ const SetNewPassword = () => {
   if (!email || !otp) {
     return (
       <AuthPageWrapper title="Session Expired" description="Your password reset session has expired. Please request a new recovery link." badgeText="Session Lost">
-        <Link to="/auth/forgot-password" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A]">
+        <Link to="/auth/forgot-password" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover">
           Return to Forgot Password
         </Link>
       </AuthPageWrapper>
@@ -126,10 +126,10 @@ const SetNewPassword = () => {
     return (
       <AuthPageWrapper title="Password Updated Successfully" description="Your password has been changed. You can now use your new password to access your account." badgeText="Recovery Complete">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-8 text-center">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F2CA50]/10 border border-[#F2CA50]/20 mb-8">
-            <CheckCircle2 className="h-12 w-12 text-[#F2CA50]" />
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gold/10 border border-gold-ink/20 mb-8">
+            <CheckCircle2 className="h-12 w-12 text-gold-ink" />
           </div>
-          <Link to="/auth/login" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A]">
+          <Link to="/auth/login" className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover">
             Return to Login
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
@@ -181,17 +181,17 @@ const SetNewPassword = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
+          className="group relative flex h-[56px] w-full mt-6 items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-gold/50"
         >
           {isLoading ? "Securing..." : "Set New Password"}
           {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
         </button>
       </form>
 
-      <div className="mt-8 text-center border-t border-white/5 pt-6">
+      <div className="mt-8 text-center border-t border-ink/5 pt-6">
         <Link
           to="/auth/login"
-          className="inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#F2CA50] transition-colors"
+          className="inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.2em] text-muted hover:text-gold-ink transition-colors"
         >
           <ArrowLeft className="h-3 w-3" />
           Cancel Recovery

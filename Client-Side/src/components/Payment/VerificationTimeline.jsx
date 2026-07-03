@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 const MOTION_EASE = [0.16, 1, 0.3, 1];
 
 const EVENT_ICONS = {
-  completed: { icon: CheckCircle2, color: "text-[#34C759]", bg: "bg-[#34C759]/15", ring: "ring-[#34C759]/30" },
-  active: { icon: Loader2, color: "text-[#F2CA50]", bg: "bg-[#F2CA50]/15", ring: "ring-[#F2CA50]/30", spin: true },
-  pending: { icon: Circle, color: "text-[#574500]", bg: "bg-white/[0.03]", ring: "ring-white/10" },
-  rejected: { icon: XCircle, color: "text-[#FF453A]", bg: "bg-[#FF453A]/15", ring: "ring-[#FF453A]/30" },
+  completed: { icon: CheckCircle2, color: "text-success", bg: "bg-success/15", ring: "ring-success/30" },
+  active: { icon: Loader2, color: "text-gold-ink", bg: "bg-gold/15", ring: "ring-gold-ink/30", spin: true },
+  pending: { icon: Circle, color: "text-goldshadow", bg: "bg-ink/[0.03]", ring: "ring-ink/10" },
+  rejected: { icon: XCircle, color: "text-danger", bg: "bg-danger/15", ring: "ring-danger/30" },
   expired: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/15", ring: "ring-amber-500/30" },
 };
 
@@ -122,19 +122,19 @@ const VerificationTimeline = ({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.3 }}
-      className="rounded-[24px] border border-white/10 bg-[#0d0d0d] p-6 sm:p-8"
+      className="rounded-[24px] border border-ink/10 bg-page p-6 sm:p-8"
       aria-label="Verification timeline"
     >
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
-          <FileText className="h-5 w-5 text-[#d0c5af]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink/10 bg-ink/[0.03]">
+          <FileText className="h-5 w-5 text-cream" />
         </div>
         <div>
-          <h3 className="se-serif text-lg text-[#e5e2e1]">
+          <h3 className="se-serif text-lg text-ink-2">
             Verification Timeline
           </h3>
-          <p className="se-label text-[8px] tracking-[0.25em] text-[#574500]">
+          <p className="se-label text-[8px] tracking-[0.25em] text-goldshadow">
             Track your payment progress
           </p>
         </div>
@@ -143,7 +143,7 @@ const VerificationTimeline = ({
       {/* Timeline */}
       <div className="relative pl-5">
         {/* Vertical line */}
-        <div className="absolute bottom-4 left-[11px] top-2 w-px bg-white/10" />
+        <div className="absolute bottom-4 left-[11px] top-2 w-px bg-ink/10" />
 
         <div className="space-y-1">
           {events.map((event, index) => {
@@ -186,21 +186,21 @@ const VerificationTimeline = ({
                     className={cn(
                       "text-sm font-medium",
                       event.status === "completed"
-                        ? "text-[#d0c5af]"
+                        ? "text-cream"
                         : event.status === "active"
-                          ? "text-[#F2CA50]"
+                          ? "text-gold-ink"
                           : event.status === "rejected"
-                            ? "text-[#FF453A]"
-                            : "text-[#574500]"
+                            ? "text-danger"
+                            : "text-goldshadow"
                     )}
                   >
                     {event.label}
                   </p>
                   {dateStr && (
-                    <p className="mt-0.5 text-xs text-[#574500]">{dateStr}</p>
+                    <p className="mt-0.5 text-xs text-goldshadow">{dateStr}</p>
                   )}
                   {event.note && (
-                    <p className="mt-1 rounded-lg bg-white/[0.02] px-3 py-2 text-xs leading-5 text-[#99907c]">
+                    <p className="mt-1 rounded-lg bg-ink/[0.02] px-3 py-2 text-xs leading-5 text-muted">
                       {event.note}
                     </p>
                   )}

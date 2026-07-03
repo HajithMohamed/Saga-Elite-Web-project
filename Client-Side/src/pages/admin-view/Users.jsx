@@ -64,11 +64,11 @@ const SORT_OPTIONS = [
 const USER_PAGE_LIMIT = 10;
 
 const MEMBERSHIP_STYLES = {
-  vip: "border-[#f2ca50] bg-[#f2ca50]/15 text-[#f2ca50]",
+  vip: "border-gold-ink bg-gold/15 text-gold-ink",
   legend: "border-purple-400/40 bg-purple-400/10 text-purple-300",
   rare: "border-cyan-400/40 bg-cyan-400/10 text-cyan-300",
   elite: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-  standard: "border-white/10 bg-white/5 text-gray-300",
+  standard: "border-ink/10 bg-ink/5 text-gray-300",
 };
 
 // Customer tags drive segmentation in Marketing + Notifications. Order matters
@@ -79,7 +79,7 @@ const CUSTOMER_TAGS = [
     key: "vip",
     label: "VIP",
     description: "Manual flag for high-touch service",
-    accent: "border-[#f2ca50]/50 bg-[#f2ca50]/15 text-[#f2ca50]",
+    accent: "border-gold-ink/50 bg-gold/15 text-gold-ink",
   },
   {
     key: "high_spender",
@@ -136,7 +136,7 @@ const statCards = [
     key: "totalUsers",
     label: "Total Customers",
     icon: Users,
-    accent: "text-[#D4AF37]",
+    accent: "text-gold-ink2",
   },
   {
     key: "activeUsers",
@@ -185,7 +185,7 @@ const statusBadgeClasses = (isActive) =>
 const providerBadgeClasses = (provider) =>
   provider === "google"
     ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
-    : "border-white/10 bg-black/60 text-gray-300";
+    : "border-ink/10 bg-black/60 text-gray-300";
 
 const UsersPage = () => {
   const dispatch = useDispatch();
@@ -496,11 +496,11 @@ const UsersPage = () => {
         title="Customer 360"
         description="Review account health, activity, and customer relationship details."
       >
-        <div className="flex w-full flex-col gap-8 text-white">
+        <div className="flex w-full flex-col gap-8 text-ink">
           {/* Header & KPI Strip */}
-          <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between rounded-[2rem] border border-[#D4AF37]/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
+          <section className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between rounded-[2rem] border border-gold-ink2/15 bg-[radial-gradient(circle_at_top_left,_rgba(212,175,55,0.18),_transparent_35%),linear-gradient(180deg,_#111111_0%,_#090909_100%)] p-8">
             <div className="max-w-3xl">
-              <h1 className="mt-4 text-4xl font-serif font-semibold text-white">
+              <h1 className="mt-4 text-4xl font-serif font-semibold text-ink">
                 Customer Intelligence
               </h1>
               <p className="mt-4 text-sm leading-7 text-gray-400">
@@ -512,7 +512,7 @@ const UsersPage = () => {
                 type="button"
                 onClick={handleRefresh}
                 disabled={isListLoading || isDetailLoading || isMutating}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-5 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37]/40 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-black/60 px-5 py-3 text-sm font-semibold text-ink transition hover:border-gold-ink2/40 disabled:opacity-50"
               >
                 <RefreshCcw className="h-4 w-4" /> Refresh
               </button>
@@ -523,31 +523,31 @@ const UsersPage = () => {
             {statCards.map((card) => {
               const Icon = card.icon;
               return (
-                <div key={card.key} className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 transition hover:border-[#D4AF37]/30 group">
+                <div key={card.key} className="relative overflow-hidden rounded-[1.5rem] border border-ink/10 bg-panel p-5 transition hover:border-gold-ink2/30 group">
                   <div className="flex items-start justify-between">
                     <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">{card.label}</span>
                     <Icon className={`h-4 w-4 ${card.accent}`} />
                   </div>
-                  <div className="mt-4 text-3xl font-serif font-semibold text-white">
+                  <div className="mt-4 text-3xl font-serif font-semibold text-ink">
                     {stats?.[card.key]?.toLocaleString() || "0"}
                   </div>
-                  <div className="absolute -bottom-px left-0 w-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent transition-all duration-700 group-hover:w-full" />
+                  <div className="absolute -bottom-px left-0 w-0 h-px bg-gradient-to-r from-transparent via-gold-deep to-transparent transition-all duration-700 group-hover:w-full" />
                 </div>
               );
             })}
-             <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#101010] p-5 transition hover:border-[#D4AF37]/30 group">
+             <div className="relative overflow-hidden rounded-[1.5rem] border border-ink/10 bg-panel p-5 transition hover:border-gold-ink2/30 group">
                 <div className="flex items-start justify-between">
                   <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Predicted Churn</span>
                   <AlertTriangle className="h-4 w-4 text-rose-400" />
                 </div>
-                <div className="mt-4 text-3xl font-serif font-semibold text-white">Tracking</div>
+                <div className="mt-4 text-3xl font-serif font-semibold text-ink">Tracking</div>
                 <div className="absolute -bottom-px left-0 w-0 h-px bg-gradient-to-r from-transparent via-rose-500 to-transparent transition-all duration-700 group-hover:w-full" />
              </div>
           </section>
 
           {/* Filters + List (Full width) */}
-          <section className="rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-6">
-            <div className="flex flex-col gap-4 border-b border-white/10 pb-5">
+          <section className="rounded-[2rem] border border-ink/10 bg-page p-6">
+            <div className="flex flex-col gap-4 border-b border-ink/10 pb-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex gap-2 flex-wrap">
                   {MEMBERSHIP_FILTER_TABS.map((tab) => (
@@ -559,8 +559,8 @@ const UsersPage = () => {
                       }}
                       className={`px-3 py-1.5 text-xs rounded-sm border transition-all ${
                         membershipFilter === tab.value
-                          ? "border-[#D4AF37]/60 bg-[#D4AF37]/10 text-[#D4AF37]"
-                          : "border-white/10 bg-black/40 text-gray-400 hover:border-white/30 hover:text-white"
+                          ? "border-gold-ink2/60 bg-gold-deep/10 text-gold-ink2"
+                          : "border-ink/10 bg-black/40 text-gray-400 hover:border-ink/30 hover:text-ink"
                       }`}
                     >
                       {tab.label}
@@ -574,13 +574,13 @@ const UsersPage = () => {
                       value={searchTerm}
                       onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                       placeholder="Search customers..."
-                      className="h-9 w-64 rounded-sm border border-white/10 bg-black/60 pl-9 pr-3 text-xs text-white outline-none focus:border-[#D4AF37]/50 transition"
+                      className="h-9 w-64 rounded-sm border border-ink/10 bg-black/60 pl-9 pr-3 text-xs text-ink outline-none focus:border-gold-ink2/50 transition"
                     />
                   </label>
                   <select
                     value={statusFilter}
                     onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    className="h-9 rounded-sm border border-white/10 bg-black/60 px-3 text-xs text-white outline-none focus:border-[#D4AF37]/50"
+                    className="h-9 rounded-sm border border-ink/10 bg-black/60 px-3 text-xs text-ink outline-none focus:border-gold-ink2/50"
                   >
                     <option value="all">Any Status</option>
                     <option value="active">Active</option>
@@ -598,20 +598,20 @@ const UsersPage = () => {
                    ))}
                  </div>
               ) : users.length === 0 ? (
-                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-black/40 p-8 text-center text-sm text-gray-400">
+                 <div className="rounded-[1.5rem] border border-dashed border-ink/10 bg-black/40 p-8 text-center text-sm text-gray-400">
                    No customers matched the current filters.
                  </div>
               ) : (
-                <div className="overflow-x-auto scrollbar-thin rounded-xl border border-white/10">
+                <div className="overflow-x-auto scrollbar-thin rounded-xl border border-ink/10">
                   <table className="w-full text-sm text-left whitespace-nowrap">
-                    <thead className="bg-[#111111] uppercase tracking-[0.18em] text-[10px] text-gray-400 border-b border-white/10">
+                    <thead className="bg-panel uppercase tracking-[0.18em] text-[10px] text-gray-400 border-b border-ink/10">
                       <tr>
                         <th className="px-5 py-4 w-12">
                           <input
                             type="checkbox"
                             checked={bulk.isAllSelected}
                             onChange={bulk.toggleAll}
-                            className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                            className="h-4 w-4 cursor-pointer accent-gold-deep"
                           />
                         </th>
                         <th className="px-4 py-4 font-semibold">Customer</th>
@@ -629,8 +629,8 @@ const UsersPage = () => {
                           <tr
                             key={user._id}
                             onClick={() => setSelectedUserId(user._id)}
-                            className={`border-b border-white/5 cursor-pointer transition-colors ${
-                              isSelectedRow ? "bg-[#181510] border-l-2 border-l-[#D4AF37]" : "hover:bg-[#151515] border-l-2 border-l-transparent"
+                            className={`border-b border-ink/5 cursor-pointer transition-colors ${
+                              isSelectedRow ? "bg-[#181510] border-l-2 border-l-gold-ink2" : "hover:bg-panel border-l-2 border-l-transparent"
                             }`}
                           >
                             <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
@@ -638,16 +638,16 @@ const UsersPage = () => {
                                 type="checkbox"
                                 checked={bulk.isSelected(user._id)}
                                 onChange={() => bulk.toggle(user._id)}
-                                className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                                className="h-4 w-4 cursor-pointer accent-gold-deep"
                               />
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-white/10 text-xs font-bold text-[#D4AF37]">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-gradient-to-br from-card to-page border border-ink/10 text-xs font-bold text-gold-ink2">
                                   {(user.email || "?").slice(0, 2).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="font-semibold text-white tracking-wide text-[13px]">{user.email}</span>
+                                  <span className="font-semibold text-ink tracking-wide text-[13px]">{user.email}</span>
                                   <span className="text-[10px] font-mono text-gray-500 mt-0.5">{user._id}</span>
                                 </div>
                               </div>
@@ -660,7 +660,7 @@ const UsersPage = () => {
                                 {user.membership || "standard"}
                               </span>
                             </td>
-                            <td className="px-4 py-4 text-right font-mono text-[13px] text-[#D4AF37]">
+                            <td className="px-4 py-4 text-right font-mono text-[13px] text-gold-ink2">
                               {formatMoney(user.relationship.totalSpent)}
                             </td>
                             <td className="px-4 py-4 text-center font-mono text-[13px] text-gray-300">
@@ -669,12 +669,12 @@ const UsersPage = () => {
                             <td className="px-4 py-4 min-w-[200px]">
                               <div className="flex flex-wrap gap-1.5 max-w-[240px]">
                                 {user.tags?.slice(0, 3).map(tag => (
-                                  <span key={tag} className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-sm text-[9px] uppercase text-gray-400">
+                                  <span key={tag} className="px-1.5 py-0.5 bg-ink/5 border border-ink/10 rounded-sm text-[9px] uppercase text-gray-400">
                                     {tag.replace('_', ' ')}
                                   </span>
                                 ))}
                                 {(user.tags?.length || 0) > 3 && (
-                                  <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded-sm text-[9px] text-gray-500">
+                                  <span className="px-1.5 py-0.5 bg-ink/5 border border-ink/10 rounded-sm text-[9px] text-gray-500">
                                     +{user.tags.length - 3}
                                   </span>
                                 )}
@@ -696,7 +696,7 @@ const UsersPage = () => {
             </div>
             
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs">
-               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+               <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-ink/45">
                  Showing {showingFrom}-{showingTo} of {paginationTotal}
                </div>
                <div className="flex items-center gap-2">
@@ -704,7 +704,7 @@ const UsersPage = () => {
                    type="button"
                    disabled={paginationPage <= 1 || isListLoading}
                    onClick={() => setCurrentPage(Math.max(1, paginationPage - 1))}
-                   className="h-8 px-3 rounded-sm border border-white/10 bg-transparent text-gray-400 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:pointer-events-none transition"
+                   className="h-8 px-3 rounded-sm border border-ink/10 bg-transparent text-gray-400 hover:border-gold-ink2/40 hover:text-gold-ink2 disabled:opacity-30 disabled:pointer-events-none transition"
                  >
                    Prev
                  </button>
@@ -713,7 +713,7 @@ const UsersPage = () => {
                    type="button"
                    disabled={paginationPage >= totalPages || isListLoading}
                    onClick={() => setCurrentPage(Math.min(totalPages, paginationPage + 1))}
-                   className="h-8 px-3 rounded-sm border border-white/10 bg-transparent text-gray-400 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] disabled:opacity-30 disabled:pointer-events-none transition"
+                   className="h-8 px-3 rounded-sm border border-ink/10 bg-transparent text-gray-400 hover:border-gold-ink2/40 hover:text-gold-ink2 disabled:opacity-30 disabled:pointer-events-none transition"
                  >
                    Next
                  </button>
@@ -725,20 +725,20 @@ const UsersPage = () => {
           {selectedUser && (
              <>
              <div className="flex items-center gap-4 py-2">
-                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent flex-1" />
-                <span className="font-serif text-[#D4AF37] text-xl">Customer 360</span>
-                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent flex-1" />
+                <div className="h-px bg-gradient-to-r from-transparent via-gold-deep/30 to-transparent flex-1" />
+                <span className="font-serif text-gold-ink2 text-xl">Customer 360</span>
+                <div className="h-px bg-gradient-to-r from-transparent via-gold-deep/30 to-transparent flex-1" />
              </div>
              
              {isDetailLoading ? (
                <div className="flex items-center justify-center p-12">
-                 <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+                 <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
                </div>
              ) : (
                <section className="grid grid-cols-12 gap-5">
                  {/* LEFT PANE - Profile, Actions, Notes */}
                  <aside className="col-span-12 lg:col-span-3 space-y-5">
-                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-6 relative overflow-hidden">
+                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-6 relative overflow-hidden">
                       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: "radial-gradient(circle at top, rgba(212,175,55,0.15), transparent 70%)" }} />
                       <div className="relative text-center flex flex-col items-center">
                         <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] mb-4 ${membershipBadgeClasses(selectedUser.membership)}`}>
@@ -746,67 +746,67 @@ const UsersPage = () => {
                           {selectedUser.membership || "standard"}
                         </span>
                         
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#050505] text-xl font-serif text-[#D4AF37]">
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-ink/10 bg-gradient-to-br from-card to-page text-xl font-serif text-gold-ink2">
                           {(selectedUser.email || "?").slice(0, 2).toUpperCase()}
                         </div>
                         
                         <div className="mt-4 flex items-center justify-center gap-2 w-full">
-                           <h2 className="text-xl font-semibold text-white break-all">{selectedUser.email.split('@')[0]}</h2>
-                           {selectedUser.isVerified && <ShieldCheck className="h-4 w-4 text-[#D4AF37]" />}
+                           <h2 className="text-xl font-semibold text-ink break-all">{selectedUser.email.split('@')[0]}</h2>
+                           {selectedUser.isVerified && <ShieldCheck className="h-4 w-4 text-gold-ink2" />}
                         </div>
                         <div className="text-[11px] font-mono text-gray-500 mt-1">{selectedUser.email}</div>
                         <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-2">Member via {selectedUser.provider}</div>
                       </div>
                       
-                      <div className="h-px bg-white/10 w-full my-5" />
+                      <div className="h-px bg-ink/10 w-full my-5" />
                       
                       <ul className="space-y-3 text-xs">
                         <li className="flex items-center gap-3 text-gray-400">
-                          <MapPin className="h-3.5 w-3.5 text-[#D4AF37]" />
+                          <MapPin className="h-3.5 w-3.5 text-gold-ink2" />
                           <span className="truncate">{selectedUser.addresses?.[0]?.city || "No saved city"}, {selectedUser.addresses?.[0]?.country || "LK"}</span>
                         </li>
                         <li className="flex items-center gap-3 text-gray-400">
-                          <Clock3 className="h-3.5 w-3.5 text-[#D4AF37]" />
+                          <Clock3 className="h-3.5 w-3.5 text-gold-ink2" />
                           <span>Joined {formatDate(selectedUser.createdAt)}</span>
                         </li>
                       </ul>
                       
                       <div className="mt-5 flex flex-wrap gap-2">
                         {selectedUser.tags?.map((t) => (
-                           <span key={t} className="px-2 py-1 bg-white/5 border border-white/10 text-gray-300 rounded-sm text-[9px] uppercase tracking-wider">{t.replace('_', ' ')}</span>
+                           <span key={t} className="px-2 py-1 bg-ink/5 border border-ink/10 text-gray-300 rounded-sm text-[9px] uppercase tracking-wider">{t.replace('_', ' ')}</span>
                         ))}
                       </div>
                    </div>
 
-                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
                      <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 block mb-4">Quick Actions</span>
                      <div className="grid grid-cols-2 gap-2">
-                       <button onClick={handleStatusToggle} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-[#D4AF37]/30 transition group text-left">
-                         <UserCog className="h-4 w-4 text-gray-400 group-hover:text-[#D4AF37]" />
+                       <button onClick={handleStatusToggle} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-gold-ink2/30 transition group text-left">
+                         <UserCog className="h-4 w-4 text-gray-400 group-hover:text-gold-ink2" />
                          <span className="text-[11px]">{selectedUser.isActive ? "Deactivate" : "Activate"}</span>
                        </button>
-                       <button onClick={() => setResetConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-[#D4AF37]/30 transition group text-left">
-                         <KeyRound className="h-4 w-4 text-gray-400 group-hover:text-[#D4AF37]" />
+                       <button onClick={() => setResetConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-gold-ink2/30 transition group text-left">
+                         <KeyRound className="h-4 w-4 text-gray-400 group-hover:text-gold-ink2" />
                          <span className="text-[11px]">Reset Pass</span>
                        </button>
-                       <button onClick={() => setDeleteConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-white/5 bg-black/40 hover:border-red-400/30 transition group text-left col-span-2">
+                       <button onClick={() => setDeleteConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-red-400/30 transition group text-left col-span-2">
                          <Trash2 className="h-4 w-4 text-gray-400 group-hover:text-red-400" />
                          <span className="text-[11px] text-rose-200">Delete Account</span>
                        </button>
                      </div>
                    </div>
                    
-                   <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Admin Notes</span>
-                        <StickyNote className="h-3.5 w-3.5 text-[#D4AF37]" />
+                        <StickyNote className="h-3.5 w-3.5 text-gold-ink2" />
                       </div>
                       <div className="space-y-3 max-h-[220px] overflow-y-auto pr-2 scrollbar-thin">
                         {(selectedUser.adminNotes || []).length === 0 ? (
                           <div className="text-[11px] text-gray-500 italic">No internal notes</div>
                         ) : (
                           [...selectedUser.adminNotes].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map((note, idx) => (
-                            <div key={idx} className="bg-black/40 border border-white/5 p-3 rounded-xl">
+                            <div key={idx} className="bg-black/40 border border-ink/5 p-3 rounded-xl">
                               <p className="text-xs text-gray-300 leading-snug">{note.note}</p>
                               <div className="text-[9px] uppercase text-gray-600 mt-2">{note.author?.email?.split('@')[0] || "Admin"} · {formatDate(note.createdAt)}</div>
                             </div>
@@ -818,12 +818,12 @@ const UsersPage = () => {
                           value={noteDraft}
                           onChange={(e) => setNoteDraft(e.target.value)}
                           placeholder="Type a note..."
-                          className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#D4AF37]/50"
+                          className="flex-1 bg-black/60 border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink outline-none focus:border-gold-ink2/50"
                         />
                         <button
                           onClick={handleAddNote}
                           disabled={!noteDraft.trim() || noteSubmitting}
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20 disabled:opacity-50"
+                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-gold-deep/10 text-gold-ink2 border border-gold-ink2/20 hover:bg-gold-deep/20 disabled:opacity-50"
                         >
                            <Plus className="h-4 w-4" />
                         </button>
@@ -833,21 +833,21 @@ const UsersPage = () => {
 
                  {/* CENTER PANE - Activity, View Products, Orders */}
                  <div className="col-span-12 lg:col-span-6 space-y-5">
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010]">
-                      <div className="px-6 py-5 border-b border-white/10">
+                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel">
+                      <div className="px-6 py-5 border-b border-ink/10">
                         <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-[#D4AF37]" />
-                          <h3 className="font-serif text-xl tracking-tight text-white">Activity Timeline</h3>
+                          <Activity className="h-4 w-4 text-gold-ink2" />
+                          <h3 className="font-serif text-xl tracking-tight text-ink">Activity Timeline</h3>
                         </div>
                       </div>
                       <ol className="px-8 py-6 relative">
-                        <div className="absolute left-[40px] top-8 bottom-8 w-px bg-white/10" />
+                        <div className="absolute left-[40px] top-8 bottom-8 w-px bg-ink/10" />
                         {selectedUser.activityTimeline?.length ? (
                           selectedUser.activityTimeline.map((activity, idx) => {
                             const ActivityIcon = activityIconMap[activity.type] || Activity;
                             return (
                               <li key={idx} className="relative pl-12 pb-6 last:pb-0">
-                                <span className="absolute left-0 top-0.5 h-6 w-6 rounded-md border border-white/10 bg-[#111] flex items-center justify-center text-[#D4AF37]">
+                                <span className="absolute left-0 top-0.5 h-6 w-6 rounded-md border border-ink/10 bg-panel flex items-center justify-center text-gold-ink2">
                                   <ActivityIcon className="h-3 w-3" />
                                 </span>
                                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
@@ -866,13 +866,13 @@ const UsersPage = () => {
                       </ol>
                     </div>
 
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-6">
+                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-6">
                       <div className="flex items-center gap-2 mb-5">
-                        <Package className="h-4 w-4 text-[#D4AF37]" />
-                        <h3 className="font-serif text-xl tracking-tight text-white">Order History</h3>
+                        <Package className="h-4 w-4 text-gold-ink2" />
+                        <h3 className="font-serif text-xl tracking-tight text-ink">Order History</h3>
                       </div>
                       <table className="w-full text-left text-sm">
-                        <thead className="text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/10">
+                        <thead className="text-[10px] uppercase tracking-widest text-gray-500 border-b border-ink/10">
                            <tr>
                              <th className="pb-3 px-2">Order</th>
                              <th className="pb-3 px-2">Date</th>
@@ -884,11 +884,11 @@ const UsersPage = () => {
                         <tbody>
                           {selectedUser.recentOrders?.length ? (
                             selectedUser.recentOrders.map(o => (
-                              <tr key={o._id} className="border-b border-white/5 last:border-0 hover:bg-black/30 transition">
+                              <tr key={o._id} className="border-b border-ink/5 last:border-0 hover:bg-black/30 transition">
                                 <td className="py-3 px-2 font-mono text-[11px] text-gray-300">{o.referenceNumber || o._id.slice(-6).toUpperCase()}</td>
                                 <td className="py-3 px-2 text-[11px] text-gray-500">{formatDate(o.createdAt)}</td>
                                 <td className="py-3 px-2 text-right text-[12px]">{o.items?.length || 0}</td>
-                                <td className="py-3 px-2 text-right font-mono text-[12px] text-[#D4AF37]">{formatMoney(o.totalAmount)}</td>
+                                <td className="py-3 px-2 text-right font-mono text-[12px] text-gold-ink2">{formatMoney(o.totalAmount)}</td>
                                 <td className="py-3 px-2 pl-6"><StatusBadge status={o.status || "processing"} /></td>
                               </tr>
                             ))
@@ -902,11 +902,11 @@ const UsersPage = () => {
 
                  {/* RIGHT PANE - Insights, Churn */}
                  <aside className="col-span-12 lg:col-span-3 space-y-5">
-                    <div className="rounded-[1.5rem] border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-5 relative overflow-hidden">
-                       <span className="text-[10px] uppercase tracking-[0.18em] text-[#D4AF37]/80 block mb-2">Lifetime Value</span>
-                       <div className="font-serif text-3xl text-white tracking-tight">{formatMoney(selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent)}</div>
+                    <div className="rounded-[1.5rem] border border-gold-ink2/30 bg-gold-deep/5 p-5 relative overflow-hidden">
+                       <span className="text-[10px] uppercase tracking-[0.18em] text-gold-ink2/80 block mb-2">Lifetime Value</span>
+                       <div className="font-serif text-3xl text-ink tracking-tight">{formatMoney(selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent)}</div>
                        <div className="text-[11px] text-gray-400 mt-2">Across {selectedUser.relationship?.orderCount || 0} orders</div>
-                       <div className="h-px bg-[#D4AF37]/20 w-full my-4" />
+                       <div className="h-px bg-gold-deep/20 w-full my-4" />
                        <div className="flex justify-between text-xs">
                           <span className="text-gray-500">Predicted 12m</span>
                           <span className="text-gray-300 font-mono">
@@ -915,10 +915,10 @@ const UsersPage = () => {
                        </div>
                     </div>
 
-                    <div className="rounded-[1.5rem] border border-white/10 bg-[#101010] p-5">
+                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
                        <div className="flex items-center justify-between mb-4">
                          <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Viewed Categories</span>
-                         <Eye className="h-3.5 w-3.5 text-[#D4AF37]" />
+                         <Eye className="h-3.5 w-3.5 text-gold-ink2" />
                        </div>
                        <div className="flex flex-col gap-3">
                           {selectedUser.intelligence?.preferredCategories?.length ? (
@@ -938,7 +938,7 @@ const UsersPage = () => {
                          <span className="text-[10px] uppercase tracking-[0.18em] text-rose-300">Churn Risk</span>
                          <AlertTriangle className="h-4 w-4 text-rose-400" />
                        </div>
-                       <div className="font-serif text-4xl text-white">{selectedUser.intelligence?.predictedChurnRisk || 0}<span className="text-lg text-gray-500">/100</span></div>
+                       <div className="font-serif text-4xl text-ink">{selectedUser.intelligence?.predictedChurnRisk || 0}<span className="text-lg text-gray-500">/100</span></div>
                        <div className="mt-3 text-[11px] text-rose-200/60 leading-relaxed">
                          {selectedUser.intelligence?.predictedChurnRisk > 70 
                            ? "High risk of abandonment. Consider an exclusive re-engagement offer."

@@ -49,17 +49,17 @@ const ForYou = () => {
   }
 
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] se-body min-h-screen">
+    <div className="bg-page text-ink-2 se-body min-h-screen">
       <main className="px-5 md:px-12 max-w-7xl mx-auto py-16 md:py-24">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Sparkles className="h-6 w-6 text-[#f2ca50]" />
+            <Sparkles className="h-6 w-6 text-gold-ink" />
             <div>
               <Eyebrow tone="muted" size="xs">For you</Eyebrow>
-              <h1 className="se-serif text-[#e5e2e1] text-4xl md:text-5xl mt-2">
+              <h1 className="se-serif text-ink-2 text-4xl md:text-5xl mt-2">
                 Picked from your trail
               </h1>
-              <p className="mt-3 max-w-xl text-sm text-[#99907c]">
+              <p className="mt-3 max-w-xl text-sm text-muted">
                 {mode === "personalized"
                   ? "Tailored from what you've viewed, wishlisted, and bought on Saga Elite."
                   : "Trending picks across the catalogue. Browse a few items and we'll personalise this further."}
@@ -69,12 +69,12 @@ const ForYou = () => {
           <button
             type="button"
             onClick={() => setShowInfo((v) => !v)}
-            className="relative inline-flex items-center gap-2 text-xs text-[#99907c] hover:text-[#f2ca50]"
+            className="relative inline-flex items-center gap-2 text-xs text-muted hover:text-gold-ink"
           >
             <Info className="h-4 w-4" />
             Why these?
             {showInfo ? (
-              <span className="absolute right-0 top-7 z-10 w-72 rounded border border-[#4d4635] bg-[#0a0a0a] px-3 py-2 text-xs text-[#d0c5af] shadow-lg">
+              <span className="absolute right-0 top-7 z-10 w-72 rounded border border-line bg-page px-3 py-2 text-xs text-cream shadow-lg">
                 Recommendations come only from your on-site activity (views, wishlist, cart, purchases). We don't read your search history or social media activity — that data isn't accessible to us, and we wouldn't use it if it were.
               </span>
             ) : null}
@@ -83,24 +83,24 @@ const ForYou = () => {
 
         {loading ? (
           <div className="flex h-64 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#4d4635] border-t-[#f2ca50]" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-gold-ink" />
           </div>
         ) : error ? (
-          <div className="border border-[#93000a]/40 bg-[#93000a]/10 px-6 py-10 text-center">
-            <p className="se-body text-sm text-[#ffb4ab]">{error}</p>
+          <div className="border border-danger-deep/40 bg-danger-deep/10 px-6 py-10 text-center">
+            <p className="se-body text-sm text-danger-ink">{error}</p>
           </div>
         ) : products.length === 0 ? (
-          <div className="border border-[#4d4635] bg-[#0e0e0e] px-8 py-16 text-center">
+          <div className="border border-line bg-page px-8 py-16 text-center">
             <Eyebrow tone="muted" size="xs">Nothing here yet</Eyebrow>
-            <h3 className="mt-4 se-serif text-[#e5e2e1] text-3xl">
+            <h3 className="mt-4 se-serif text-ink-2 text-3xl">
               Browse a few pieces and come back.
             </h3>
-            <p className="mt-3 max-w-md mx-auto text-sm text-[#d0c5af]">
+            <p className="mt-3 max-w-md mx-auto text-sm text-cream">
               We need a little signal before this becomes useful.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-px bg-line/40 border border-line/40">
             {products.map((product, idx) => (
               <ProductCard key={product._id} product={product} index={idx} />
             ))}

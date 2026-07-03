@@ -189,9 +189,9 @@ const PaymentVerificationPage = () => {
 
   if (isAdminLoading && !currentPayment) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+      <div className="flex min-h-screen items-center justify-center bg-page text-ink">
         <div className="flex items-center gap-3 text-gray-300">
-          <Loader2 className="h-5 w-5 animate-spin text-[#D4AF37]" /> Loading payment details…
+          <Loader2 className="h-5 w-5 animate-spin text-gold-ink2" /> Loading payment details…
         </div>
       </div>
     );
@@ -199,16 +199,16 @@ const PaymentVerificationPage = () => {
 
   if (!currentPayment) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-6 text-white">
-        <div className="max-w-xl rounded-[28px] border border-white/10 bg-[#0b0b0b] p-8 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#D4AF37]">Manual Payment</p>
+      <div className="flex min-h-screen items-center justify-center bg-page px-6 text-ink">
+        <div className="max-w-xl rounded-[28px] border border-ink/10 bg-page p-8 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.32em] text-gold-ink2">Manual Payment</p>
           <h1 className="mt-4 text-3xl font-black">Payment not found</h1>
           <p className="mt-3 text-sm leading-6 text-gray-400">
             The selected payment record could not be loaded. Return to the queue and open another payment.
           </p>
           <Link
             to="/admin/payments/pending"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-gold-deep px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
           >
             <ArrowLeft className="h-4 w-4" /> Back to queue
           </Link>
@@ -230,24 +230,24 @@ const PaymentVerificationPage = () => {
     expired: "text-gray-300 border-gray-500/20 bg-gray-500/10",
   };
 
-  const eyebrow = "text-[10px] font-semibold uppercase tracking-[0.28em] text-[#D4AF37]";
+  const eyebrow = "text-[10px] font-semibold uppercase tracking-[0.28em] text-gold-ink2";
 
   return (
     <motion.div
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="min-h-screen bg-[#050505] px-6 py-8 text-white lg:px-8"
+      className="min-h-screen bg-page px-6 py-8 text-ink lg:px-8"
     >
       <div className="flex w-full flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] border border-ink/10 bg-page px-6 py-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-[#D4AF37]">Payment verification</p>
-            <h1 className="mt-2 text-2xl font-black text-white">Review receipt and customer details</h1>
+            <p className="text-xs uppercase tracking-[0.35em] text-gold-ink2">Payment verification</p>
+            <h1 className="mt-2 text-2xl font-black text-ink">Review receipt and customer details</h1>
           </div>
           <Link
             to="/admin/payments/pending"
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:border-[#D4AF37]/30"
+            className="inline-flex items-center gap-2 rounded-full border border-ink/10 px-4 py-3 text-sm font-semibold text-ink transition hover:border-gold-ink2/30"
           >
             <ArrowLeft className="h-4 w-4" /> Back to queue
           </Link>
@@ -264,26 +264,26 @@ const PaymentVerificationPage = () => {
           {/* LEFT — Card details panel (for card payments) OR proof viewer (manual) */}
           {isCardPayment ? (
             <section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
-              <div className="rounded-[1.75rem] border border-[#D4AF37]/30 bg-[#0b0b0b] p-6">
+              <div className="rounded-[1.75rem] border border-gold-ink2/30 bg-page p-6">
                 <div className="flex items-center justify-between gap-3 pb-4">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-[#D4AF37]" />
-                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+                    <CreditCard className="h-4 w-4 text-gold-ink2" />
+                    <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-ink2">
                       Card payment details
                     </p>
                   </div>
                   {card.simulated ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-gold-ink2">
                       <Sparkles className="h-3 w-3" /> Sample
                     </span>
                   ) : null}
                 </div>
 
-                <div className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(135deg,#1a1410_0%,#0b0b0b_60%)] p-6">
+                <div className="rounded-[1.5rem] border border-ink/10 bg-[linear-gradient(135deg,#1a1410_0%,#0b0b0b_60%)] p-6">
                   <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gray-500">
                     {(card.brand || "card").toUpperCase()}
                   </p>
-                  <p className="mt-6 font-mono text-2xl tracking-[0.32em] text-white">
+                  <p className="mt-6 font-mono text-2xl tracking-[0.32em] text-ink">
                     •••• •••• •••• {card.last4 || "----"}
                   </p>
                   <div className="mt-6 flex items-end justify-between">
@@ -291,13 +291,13 @@ const PaymentVerificationPage = () => {
                       <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-gray-500">
                         Cardholder
                       </p>
-                      <p className="mt-1 text-sm text-white">{card.cardholderName || "—"}</p>
+                      <p className="mt-1 text-sm text-ink">{card.cardholderName || "—"}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-gray-500">
                         Expiry
                       </p>
-                      <p className="mt-1 font-mono text-sm text-white">
+                      <p className="mt-1 font-mono text-sm text-ink">
                         {card.expiryMonth ? String(card.expiryMonth).padStart(2, "0") : "--"}/
                         {card.expiryYear ? String(card.expiryYear).slice(-2) : "--"}
                       </p>
@@ -306,15 +306,15 @@ const PaymentVerificationPage = () => {
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                     <p className={eyebrow}>Gateway reference</p>
                     <p className="mt-1 break-all font-mono text-[11px] text-gray-300">
                       {card.gatewayReference || "—"}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                     <p className={eyebrow}>Brand</p>
-                    <p className="mt-1 text-sm text-white">
+                    <p className="mt-1 text-sm text-ink">
                       {card.brand ? card.brand.toUpperCase() : "—"}
                     </p>
                   </div>
@@ -334,11 +334,11 @@ const PaymentVerificationPage = () => {
             </section>
           ) : (
           <section className="space-y-4 xl:sticky xl:top-6 xl:self-start">
-            <div className="rounded-[1.75rem] border border-[#D4AF37]/15 bg-[#0b0b0b] p-4">
+            <div className="rounded-[1.75rem] border border-gold-ink2/15 bg-page p-4">
               <div className="flex items-center justify-between gap-3 px-2 pb-3 pt-1">
                 <div className="flex items-center gap-2">
-                  <ScanLine className="h-4 w-4 text-[#D4AF37]" />
-                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4AF37]">
+                  <ScanLine className="h-4 w-4 text-gold-ink2" />
+                  <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-ink2">
                     Payment proof
                   </p>
                 </div>
@@ -346,13 +346,13 @@ const PaymentVerificationPage = () => {
                   <button
                     type="button"
                     onClick={() => setProofLightboxOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-black/60 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-gold-ink2/40 hover:text-gold-ink2"
                   >
                     <Maximize2 className="h-3 w-3" /> Enlarge
                   </button>
                 ) : null}
               </div>
-              <div className="overflow-hidden rounded-[20px] border border-white/10 bg-black/60">
+              <div className="overflow-hidden rounded-[20px] border border-ink/10 bg-black/60">
                 {currentPayment.proofUrl ? (
                   currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
                     <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-gray-300">
@@ -363,7 +363,7 @@ const PaymentVerificationPage = () => {
                         href={currentPayment.proofUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
+                        className="rounded-full bg-gold-deep px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black"
                       >
                         Open receipt
                       </a>
@@ -372,7 +372,7 @@ const PaymentVerificationPage = () => {
                     <button
                       type="button"
                       onClick={() => setProofLightboxOpen(true)}
-                      className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+                      className="group relative block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink2"
                     >
                       <img
                         src={currentPayment.proofUrl}
@@ -380,7 +380,7 @@ const PaymentVerificationPage = () => {
                         style={{ filter: filterStyle }}
                         className="max-h-[640px] w-full cursor-zoom-in object-contain transition group-hover:opacity-95"
                       />
-                      <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+                      <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-black/70 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-gold-ink2">
                         View full size
                       </span>
                     </button>
@@ -394,7 +394,7 @@ const PaymentVerificationPage = () => {
             </div>
 
             {currentPayment.proofUrl && !currentPayment.proofUrl.match(/\.pdf(\?|$)/i) ? (
-              <div className="rounded-[1.5rem] border border-white/10 bg-[#0b0b0b] p-5">
+              <div className="rounded-[1.5rem] border border-ink/10 bg-page p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gray-400">
                     Image enhancement
@@ -403,7 +403,7 @@ const PaymentVerificationPage = () => {
                     <button
                       type="button"
                       onClick={resetFilters}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-black/40 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.22em] text-gray-300 transition hover:border-gold-ink2/40 hover:text-gold-ink2"
                     >
                       <RotateCcw className="h-3 w-3" /> Reset
                     </button>
@@ -431,7 +431,7 @@ const PaymentVerificationPage = () => {
                           brightness: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-[#D4AF37]"
+                      className="w-full accent-gold-deep"
                     />
                   </label>
                   <label className="block">
@@ -455,7 +455,7 @@ const PaymentVerificationPage = () => {
                           contrast: Number(e.target.value),
                         }))
                       }
-                      className="w-full accent-[#D4AF37]"
+                      className="w-full accent-gold-deep"
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -469,8 +469,8 @@ const PaymentVerificationPage = () => {
                       }
                       className={`rounded-xl border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] transition ${
                         imageFilters.grayscale > 0
-                          ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37]"
-                          : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                          ? "border-gold-ink2/40 bg-gold-deep/10 text-gold-ink2"
+                          : "border-ink/10 bg-black/40 text-gray-300 hover:border-ink/20"
                       }`}
                     >
                       Grayscale
@@ -485,8 +485,8 @@ const PaymentVerificationPage = () => {
                       }
                       className={`rounded-xl border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] transition ${
                         imageFilters.invert > 0
-                          ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-[#D4AF37]"
-                          : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                          ? "border-gold-ink2/40 bg-gold-deep/10 text-gold-ink2"
+                          : "border-ink/10 bg-black/40 text-gray-300 hover:border-ink/20"
                       }`}
                     >
                       Invert
@@ -500,42 +500,42 @@ const PaymentVerificationPage = () => {
 
           {/* RIGHT — Identity, order details, OCR, bank, decision */}
           <aside className="space-y-6">
-            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-5">
+            <div className="rounded-[1.75rem] border border-ink/10 bg-page p-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.24em] ${statusTone[currentPayment.status] || statusTone.pending_payment}`}>
                   {currentPayment.status}
                 </span>
-                <span className="rounded-full bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-gray-300">
+                <span className="rounded-full bg-ink/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-gray-300">
                   {currentPayment.currency} {formatCurrency(currentPayment.amount)}
                 </span>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                   <p className={eyebrow}>Reference</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate font-mono text-base tracking-[0.18em] text-[#D4AF37]">
+                    <p className="truncate font-mono text-base tracking-[0.18em] text-gold-ink2">
                       {currentPayment.referenceNumber}
                     </p>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(currentPayment.referenceNumber);
                       }}
-                      className="shrink-0 rounded-full border border-[#D4AF37]/50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] transition hover:bg-[#D4AF37]/10 hover:text-white"
+                      className="shrink-0 rounded-full border border-gold-ink2/50 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-gold-ink2 transition hover:bg-gold-deep/10 hover:text-ink"
                     >
                       Copy
                     </button>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                   <p className={eyebrow}>Customer</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-sm text-white">{customerEmail}</p>
+                    <p className="truncate text-sm text-ink">{customerEmail}</p>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(customerEmail);
                       }}
-                      className="shrink-0 rounded-full border border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
+                      className="shrink-0 rounded-full border border-ink/20 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink transition hover:bg-ink/10"
                     >
                       Copy
                     </button>
@@ -544,17 +544,17 @@ const PaymentVerificationPage = () => {
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                   <p className={eyebrow}>Order ID</p>
                   <p className="mt-1 break-all font-mono text-[11px] text-gray-300">{order._id}</p>
                 </div>
-                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                   <p className={eyebrow}>Submitted</p>
-                  <p className="mt-1 text-xs text-white">{formatDateTime(currentPayment.proofSubmittedAt)}</p>
+                  <p className="mt-1 text-xs text-ink">{formatDateTime(currentPayment.proofSubmittedAt)}</p>
                 </div>
-                <div className="rounded-xl border border-white/5 bg-black/35 p-3">
+                <div className="rounded-xl border border-ink/5 bg-black/35 p-3">
                   <p className={eyebrow}>Expires</p>
-                  <p className="mt-1 text-xs text-white">{formatDateTime(currentPayment.expiresAt)}</p>
+                  <p className="mt-1 text-xs text-ink">{formatDateTime(currentPayment.expiresAt)}</p>
                 </div>
               </div>
 
@@ -570,19 +570,19 @@ const PaymentVerificationPage = () => {
               )}
             </div>
 
-            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <Landmark className="h-4 w-4 text-[#D4AF37]" /> Order summary
+            <div className="rounded-[1.75rem] border border-ink/10 bg-page p-6">
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <Landmark className="h-4 w-4 text-gold-ink2" /> Order summary
               </div>
               <div className="mt-4 space-y-3 text-sm text-gray-300">
                 <p>
                   <span className={eyebrow}>Order total</span>
-                  <span className="mt-1 block text-base text-white">LKR {formatCurrency(order.totalAmount || currentPayment.amount)}</span>
+                  <span className="mt-1 block text-base text-ink">LKR {formatCurrency(order.totalAmount || currentPayment.amount)}</span>
                 </p>
                 <div>
                   <span className={eyebrow}>Contact number</span>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="block text-white">{order.contactNumber || "—"}</span>
+                    <span className="block text-ink">{order.contactNumber || "—"}</span>
                     {order.contactNumber && (
                       <a
                         href={`https://wa.me/${order.contactNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi, regarding your Saga Elite order ${currentPayment.referenceNumber}`)}`}
@@ -597,20 +597,20 @@ const PaymentVerificationPage = () => {
                 </div>
                 <p>
                   <span className={eyebrow}>Order status</span>
-                  <span className="mt-1 block text-white">{order.status || "—"}</span>
+                  <span className="mt-1 block text-ink">{order.status || "—"}</span>
                 </p>
                 <p>
                   <span className={eyebrow}>Payment method</span>
-                  <span className="mt-1 block text-white">{order.paymentMethod || "—"}</span>
+                  <span className="mt-1 block text-ink">{order.paymentMethod || "—"}</span>
                 </p>
               </div>
             </div>
 
             {currentPayment.ocr?.processedAt ? (
-              <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
+              <div className="rounded-[1.75rem] border border-ink/10 bg-page p-6">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                    <ScanLine className="h-4 w-4 text-[#D4AF37]" /> OCR audit
+                  <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    <ScanLine className="h-4 w-4 text-gold-ink2" /> OCR audit
                   </div>
                   {currentPayment.ocr.decision ? (
                     <span
@@ -635,10 +635,10 @@ const PaymentVerificationPage = () => {
                 </p>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                     <p className={eyebrow}>Extracted reference</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="font-mono text-sm text-white">
+                      <span className="font-mono text-sm text-ink">
                         {currentPayment.ocr.extractedReference || "—"}
                       </span>
                       {currentPayment.ocr.referenceMatched === true ? (
@@ -652,10 +652,10 @@ const PaymentVerificationPage = () => {
                       ) : null}
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                  <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                     <p className={eyebrow}>Extracted amount</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-sm text-white">
+                      <span className="text-sm text-ink">
                         {currentPayment.ocr.extractedAmount != null
                           ? formatCurrency(currentPayment.ocr.extractedAmount)
                           : "—"}
@@ -674,17 +674,17 @@ const PaymentVerificationPage = () => {
                 </div>
 
                 {currentPayment.ocr.decisionReason ? (
-                  <p className="mt-4 rounded-2xl border border-white/5 bg-black/30 p-3 text-xs leading-5 text-gray-300">
+                  <p className="mt-4 rounded-2xl border border-ink/5 bg-black/30 p-3 text-xs leading-5 text-gray-300">
                     {currentPayment.ocr.decisionReason}
                   </p>
                 ) : null}
 
                 {currentPayment.ocr.extractedText ? (
                   <details className="mt-3">
-                    <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-[#D4AF37]">
+                    <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-gold-ink2">
                       Show full extracted text
                     </summary>
-                    <pre className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
+                    <pre className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-xl border border-ink/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
                       {currentPayment.ocr.extractedText}
                     </pre>
                   </details>
@@ -692,10 +692,10 @@ const PaymentVerificationPage = () => {
               </div>
             ) : null}
 
-            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
+            <div className="rounded-[1.75rem] border border-ink/10 bg-page p-6">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <Banknote className="h-4 w-4 text-[#D4AF37]" /> Bank confirmation
+                <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Banknote className="h-4 w-4 text-gold-ink2" /> Bank confirmation
                 </div>
                 {currentPayment.bankVerification?.confirmed ? (
                   <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
@@ -719,39 +719,39 @@ const PaymentVerificationPage = () => {
               currentPayment.bankVerification?.emailMessageId ? (
                 <>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                       <p className={eyebrow}>Bank reference</p>
-                      <p className="mt-1 font-mono text-sm text-white">
+                      <p className="mt-1 font-mono text-sm text-ink">
                         {currentPayment.bankVerification?.extractedReference || "—"}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                       <p className={eyebrow}>Bank amount</p>
-                      <p className="mt-1 text-sm text-white">
+                      <p className="mt-1 text-sm text-ink">
                         {currentPayment.bankVerification?.extractedAmount != null
                           ? formatCurrency(currentPayment.bankVerification.extractedAmount)
                           : "—"}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                       <p className={eyebrow}>Source</p>
-                      <p className="mt-1 text-sm text-white">
+                      <p className="mt-1 text-sm text-ink">
                         {currentPayment.bankVerification?.bankName || "—"}
                         {currentPayment.bankVerification?.source
                           ? ` · ${currentPayment.bankVerification.source}`
                           : ""}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/5 bg-black/35 p-3">
+                    <div className="rounded-2xl border border-ink/5 bg-black/35 p-3">
                       <p className={eyebrow}>Confirmed at</p>
-                      <p className="mt-1 text-sm text-white">
+                      <p className="mt-1 text-sm text-ink">
                         {formatDateTime(currentPayment.bankVerification?.confirmedAt)}
                       </p>
                     </div>
                     {currentPayment.bankVerification?.transactionId ? (
-                      <div className="rounded-2xl border border-white/5 bg-black/35 p-3 sm:col-span-2">
+                      <div className="rounded-2xl border border-ink/5 bg-black/35 p-3 sm:col-span-2">
                         <p className={eyebrow}>Bank transaction id</p>
-                        <p className="mt-1 break-all font-mono text-sm text-white">
+                        <p className="mt-1 break-all font-mono text-sm text-ink">
                           {currentPayment.bankVerification.transactionId}
                         </p>
                       </div>
@@ -768,17 +768,17 @@ const PaymentVerificationPage = () => {
 
                   {currentPayment.bankVerification?.rawSnippet ? (
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-[#D4AF37]">
+                      <summary className="cursor-pointer text-[11px] uppercase tracking-[0.22em] text-gray-500 hover:text-gold-ink2">
                         Show bank email snippet
                       </summary>
-                      <pre className="mt-3 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
+                      <pre className="mt-3 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl border border-ink/5 bg-black/40 p-3 text-[11px] leading-5 text-gray-300">
                         {currentPayment.bankVerification.rawSnippet}
                       </pre>
                     </details>
                   ) : null}
                 </>
               ) : (
-                <p className="mt-4 rounded-2xl border border-white/5 bg-black/30 p-3 text-xs leading-5 text-gray-400">
+                <p className="mt-4 rounded-2xl border border-ink/5 bg-black/30 p-3 text-xs leading-5 text-gray-400">
                   Awaiting bank notification — usually arrives within 2-5
                   minutes of the customer's transfer. If the bank email never
                   comes, manually verify in your banking app and approve below.
@@ -823,29 +823,29 @@ const PaymentVerificationPage = () => {
               </div>
             ) : null}
 
-            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <MessageSquareText className="h-4 w-4 text-[#D4AF37]" /> Admin notes
+            <div className="rounded-[1.75rem] border border-ink/10 bg-page p-6">
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <MessageSquareText className="h-4 w-4 text-gold-ink2" /> Admin notes
               </div>
               <p className={`mt-2 ${eyebrow} text-gray-500`}>Internal only</p>
               <textarea
                 value={adminNotes}
                 onChange={(event) => setAdminNotes(event.target.value)}
                 placeholder="Optional internal note"
-                className="mt-4 min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                className="mt-4 min-h-[120px] w-full rounded-2xl border border-ink/10 bg-black/70 px-4 py-3 text-sm text-ink outline-none focus:border-gold-ink2"
               />
             </div>
 
-            <div className="rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <ShieldAlert className="h-4 w-4 text-[#D4AF37]" /> Rejection reason
+            <div className="rounded-[1.75rem] border border-ink/10 bg-page p-6">
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <ShieldAlert className="h-4 w-4 text-gold-ink2" /> Rejection reason
               </div>
               <p className={`mt-2 ${eyebrow} text-gray-500`}>Required to reject</p>
               <textarea
                 value={rejectionReason}
                 onChange={(event) => setRejectionReason(event.target.value)}
                 placeholder="Required if rejecting proof"
-                className="mt-4 min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/70 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]"
+                className="mt-4 min-h-[120px] w-full rounded-2xl border border-ink/10 bg-black/70 px-4 py-3 text-sm text-ink outline-none focus:border-gold-ink2"
               />
               <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-stretch">
                 <PrimaryButton
@@ -890,12 +890,12 @@ const PaymentVerificationPage = () => {
               animate="visible"
               exit="exit"
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[92vh] max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b] p-3 shadow-2xl"
+              className="relative max-h-[92vh] max-w-5xl overflow-hidden rounded-2xl border border-ink/10 bg-page p-3 shadow-2xl"
             >
               <button
                 type="button"
                 onClick={() => setProofLightboxOpen(false)}
-                className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white"
+                className="absolute right-4 top-4 z-10 rounded-full border border-ink/20 bg-black/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-ink"
               >
                 Close
               </button>

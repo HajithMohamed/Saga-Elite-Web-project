@@ -100,14 +100,14 @@ export const SizeGuideBuilder = ({ value, onChange }) => {
         <button
           type="button"
           onClick={() => setMode('table')}
-          className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all ${mode === 'table' ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-[#111] border border-[#2a2a2a] text-white/50 hover:text-white hover:border-white/20'}`}
+          className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all ${mode === 'table' ? 'bg-gold-deep text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-panel border border-elevated text-ink/50 hover:text-ink hover:border-ink/20'}`}
         >
           Table Builder
         </button>
         <button
           type="button"
           onClick={() => setMode('raw')}
-          className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all ${mode === 'raw' ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-[#111] border border-[#2a2a2a] text-white/50 hover:text-white hover:border-white/20'}`}
+          className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all ${mode === 'raw' ? 'bg-gold-deep text-black shadow-[0_0_15px_rgba(212,175,55,0.2)]' : 'bg-panel border border-elevated text-ink/50 hover:text-ink hover:border-ink/20'}`}
         >
           Raw Text
         </button>
@@ -122,10 +122,10 @@ export const SizeGuideBuilder = ({ value, onChange }) => {
           data-lenis-prevent="true"
         />
       ) : (
-        <div className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-4 overflow-x-auto" data-lenis-prevent="true">
+        <div className="rounded-xl border border-ink/10 bg-black/40 p-4 space-y-4 overflow-x-auto" data-lenis-prevent="true">
           <input
             type="text"
-            className="w-full bg-transparent border-b border-white/10 px-2 py-1 text-sm text-white placeholder-white/30 outline-none focus:border-[#D4AF37]"
+            className="w-full bg-transparent border-b border-ink/10 px-2 py-1 text-sm text-ink placeholder-ink/30 outline-none focus:border-gold-ink2"
             placeholder="Description (optional)"
             value={description}
             onChange={(e) => {
@@ -137,17 +137,17 @@ export const SizeGuideBuilder = ({ value, onChange }) => {
           <div className="min-w-max">
             <div className="flex gap-2 mb-2">
               {headers.map((h, cIdx) => (
-                <div key={cIdx} className="flex-1 min-w-[100px] flex items-center gap-1 bg-white/5 rounded-md px-2 py-1">
+                <div key={cIdx} className="flex-1 min-w-[100px] flex items-center gap-1 bg-ink/5 rounded-md px-2 py-1">
                   <input
                     type="text"
                     value={h}
                     onChange={(e) => handleHeaderChange(cIdx, e.target.value)}
-                    className="w-full bg-transparent text-xs font-bold uppercase tracking-wider text-[#D4AF37] outline-none"
+                    className="w-full bg-transparent text-xs font-bold uppercase tracking-wider text-gold-ink2 outline-none"
                   />
-                  <button type="button" onClick={() => removeColumn(cIdx)} className="text-white/20 hover:text-rose-400">&times;</button>
+                  <button type="button" onClick={() => removeColumn(cIdx)} className="text-ink/20 hover:text-rose-400">&times;</button>
                 </div>
               ))}
-              <button type="button" onClick={addColumn} className="px-2 text-xs text-white/40 hover:text-white">+</button>
+              <button type="button" onClick={addColumn} className="px-2 text-xs text-ink/40 hover:text-ink">+</button>
             </div>
 
             {rows.map((row, rIdx) => (
@@ -158,19 +158,19 @@ export const SizeGuideBuilder = ({ value, onChange }) => {
                       type="text"
                       value={cell}
                       onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
-                      className="w-full bg-white/5 border border-transparent focus:border-white/20 rounded-md px-2 py-1.5 text-sm text-white outline-none"
+                      className="w-full bg-ink/5 border border-transparent focus:border-ink/20 rounded-md px-2 py-1.5 text-sm text-ink outline-none"
                     />
                   </div>
                 ))}
-                <button type="button" onClick={() => removeRow(rIdx)} className="px-2 text-white/20 hover:text-rose-400">&times;</button>
+                <button type="button" onClick={() => removeRow(rIdx)} className="px-2 text-ink/20 hover:text-rose-400">&times;</button>
               </div>
             ))}
-            <button type="button" onClick={addRow} className="mt-2 px-3 py-1 text-xs uppercase tracking-wider text-[#D4AF37] border border-[#D4AF37]/30 rounded-md hover:bg-[#D4AF37]/10">+ Add Row</button>
+            <button type="button" onClick={addRow} className="mt-2 px-3 py-1 text-xs uppercase tracking-wider text-gold-ink2 border border-gold-ink2/30 rounded-md hover:bg-gold-deep/10">+ Add Row</button>
           </div>
 
           <input
             type="text"
-            className="w-full bg-transparent border-b border-white/10 px-2 py-1 text-sm text-white placeholder-white/30 outline-none focus:border-[#D4AF37] mt-4"
+            className="w-full bg-transparent border-b border-ink/10 px-2 py-1 text-sm text-ink placeholder-ink/30 outline-none focus:border-gold-ink2 mt-4"
             placeholder="Footer / Notes (optional)"
             value={footer}
             onChange={(e) => {

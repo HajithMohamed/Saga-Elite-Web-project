@@ -49,7 +49,7 @@ const ContentManagement = () => {
   return (
     <div className="w-full">
       {/* Tab bar */}
-      <div className="sticky top-0 z-20 -mx-4 mb-2 border-b border-[#4d4635]/50 bg-[#0a0a0a]/90 px-4 py-3 backdrop-blur-md md:-mx-6 md:px-6">
+      <div className="sticky top-0 z-20 -mx-4 mb-2 border-b border-line/50 bg-page/90 px-4 py-3 backdrop-blur-md md:-mx-6 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -61,8 +61,8 @@ const ContentManagement = () => {
                 onClick={() => selectTab(tab.id)}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition-all ${
                   isActive
-                    ? "border-[#D4AF37]/60 bg-[#D4AF37]/10 text-[#f2ca50]"
-                    : "border-transparent text-[#99907c] hover:border-[#4d4635] hover:bg-[#131313] hover:text-[#e5e2e1]"
+                    ? "border-gold-ink2/60 bg-gold-deep/10 text-gold-ink"
+                    : "border-transparent text-muted hover:border-line hover:bg-panel hover:text-ink-2"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -76,8 +76,8 @@ const ContentManagement = () => {
       {/* Active manager (renders its own AdminPage shell) */}
       <Suspense
         fallback={
-          <div className="flex items-center justify-center py-24 text-[#99907c]">
-            <Loader2 className="h-6 w-6 animate-spin text-[#D4AF37]" />
+          <div className="flex items-center justify-center py-24 text-muted">
+            <Loader2 className="h-6 w-6 animate-spin text-gold-ink2" />
           </div>
         }
       >

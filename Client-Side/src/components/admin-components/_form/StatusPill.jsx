@@ -13,12 +13,12 @@ import React from "react";
  *  - archived (rose) | active (emerald) | inactive (gray) | warning (amber)
  */
 const TONES = {
-  draft:      { dot: "bg-white/40",        text: "text-white/60",     ring: "border-white/10",            bg: "bg-white/[0.04]" },
+  draft:      { dot: "bg-ink/40",        text: "text-ink/60",     ring: "border-ink/10",            bg: "bg-ink/[0.04]" },
   scheduled:  { dot: "bg-sky-400",         text: "text-sky-300",      ring: "border-sky-400/30",          bg: "bg-sky-400/[0.08]" },
-  published:  { dot: "bg-[#D4AF37]",       text: "text-[#D4AF37]",    ring: "border-[#D4AF37]/30",        bg: "bg-[#D4AF37]/[0.08]" },
-  live:       { dot: "bg-[#D4AF37]",       text: "text-[#D4AF37]",    ring: "border-[#D4AF37]/30",        bg: "bg-[#D4AF37]/[0.08]" },
+  published:  { dot: "bg-gold-deep",       text: "text-gold-ink2",    ring: "border-gold-ink2/30",        bg: "bg-gold-deep/[0.08]" },
+  live:       { dot: "bg-gold-deep",       text: "text-gold-ink2",    ring: "border-gold-ink2/30",        bg: "bg-gold-deep/[0.08]" },
   active:     { dot: "bg-emerald-400",     text: "text-emerald-300",  ring: "border-emerald-400/30",      bg: "bg-emerald-400/[0.08]" },
-  inactive:   { dot: "bg-white/40",        text: "text-white/60",     ring: "border-white/10",            bg: "bg-white/[0.04]" },
+  inactive:   { dot: "bg-ink/40",        text: "text-ink/60",     ring: "border-ink/10",            bg: "bg-ink/[0.04]" },
   archived:   { dot: "bg-rose-400",        text: "text-rose-300",     ring: "border-rose-400/30",         bg: "bg-rose-400/[0.08]" },
   warning:    { dot: "bg-amber-400",       text: "text-amber-300",    ring: "border-amber-400/30",        bg: "bg-amber-400/[0.08]" },
   error:      { dot: "bg-rose-500",        text: "text-rose-400",     ring: "border-rose-500/40",         bg: "bg-rose-500/[0.10]" },
