@@ -3,8 +3,99 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Category = require("../Models/Category");
 const slugify = require("slugify");
+const { CUSTOMER_ACCOUNT_ROLES } = require("../Utils/admin-roles");
 
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parsePositiveInt = (value, fallback, max = 100) => {
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+};
+
+const buildAdminUserFilter = (query = {}) => {
+  const filter = { role: { $in: CUSTOMER_ACCOUNT_ROLES } };
+  const { search, status, role, membership } = query;
+
+  if (search && String(search).trim()) {
+    const safeSearch = escapeRegex(String(search).trim());
+    filter.$or = [
+      { email: { $regex: safeSearch, $options: "i" } },
+      { username: { $regex: safeSearch, $options: "i" } },
+      { phoneNumber: { $regex: safeSearch, $options: "i" } },
+      { provider: { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
+  let isActiveFilter;
+  if (status === "active") {
+    isActiveFilter = true;
+  } else if (status === "inactive") {
+    isActiveFilter = false;
+  }
+
+  if (membership === "blocked") {
+    if (isActiveFilter === true) {
+      filter._id = null;
+    } else {
+      isActiveFilter = false;
+    }
+  } else if (membership && membership !== "all") {
+    filter.membership = membership;
+  }
+
+  if (typeof isActiveFilter === "boolean") {
+    filter.isActive = isActiveFilter;
+  }
+
+  if (role) {
+    const normalizedRole = String(role).toLowerCase();
+    if (normalizedRole !== "all" && CUSTOMER_ACCOUNT_ROLES.includes(normalizedRole)) {
+      filter.role = normalizedRole;
+    } else if (normalizedRole !== "all") {
+      filter._id = null;
+    }
+  }
+
+  return filter;
+};
+
+const getAdminUserSort = (sort) => {
+  switch (sort) {
+    case "spent_desc":
+      return { totalSpent: -1, createdAt: -1 };
+    case "orders_desc":
+      return { orderCount: -1, createdAt: -1 };
+    case "last_active":
+      return { lastOrderAt: -1, createdAt: -1 };
+    case "newest":
+    default:
+      return { createdAt: -1 };
+  }
+};
+
+const buildPaginatedResults = ({ data, totalDocuments, page, limit }) => {
+  const results = {
+    total: totalDocuments,
+    page,
+    limit,
+    results: data.length,
+    totalPages: Math.max(1, Math.ceil(totalDocuments / limit)),
+    data,
+  };
+
+  const skip = (page - 1) * limit;
+
+  if (skip + limit < totalDocuments) {
+    results.next = { page: page + 1, limit };
+  }
+
+  if (skip > 0) {
+    results.previous = { page: page - 1, limit };
+  }
+
+  return results;
+};
 
 const normalizeCategoryPath = (value) => {
   const segments = String(value || "")
@@ -40,8 +131,8 @@ const resolveCategoryValues = async (value) => {
 
 const paginatedResult = (Model) =>
   catchAsync(async (req, res, next) => {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
+    const page = parsePositiveInt(req.query.page, 1, 100000);
+    const limit = parsePositiveInt(req.query.limit, 10, 100);
     const skip = (page - 1) * limit;
 
     const {
@@ -248,23 +339,41 @@ const paginatedResult = (Model) =>
       totalDocuments = await Model.countDocuments(matchStage);
     }
 
-    const results = {
-      total: totalDocuments,
+    res.paginatedResults = buildPaginatedResults({
+      data,
+      totalDocuments,
       page,
       limit,
-      results: data.length,
+    });
+    next();
+  });
+
+paginatedResult.adminUsers = (Model) =>
+  catchAsync(async (req, res, next) => {
+    const page = parsePositiveInt(req.query.page, 1, 100000);
+    const limit = parsePositiveInt(req.query.limit, 10, 100);
+    const skip = (page - 1) * limit;
+    const filter = buildAdminUserFilter(req.query);
+    const sort = getAdminUserSort(req.query.sort);
+
+    const [data, totalDocuments] = await Promise.all([
+      Model.find(filter)
+        .select(
+          "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+        )
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Model.countDocuments(filter),
+    ]);
+
+    res.paginatedResults = buildPaginatedResults({
       data,
-    };
-
-    if (skip + limit < totalDocuments) {
-      results.next = { page: page + 1, limit };
-    }
-
-    if (skip > 0) {
-      results.previous = { page: page - 1, limit };
-    }
-
-    res.paginatedResults = results;
+      totalDocuments,
+      page,
+      limit,
+    });
     next();
   });
 

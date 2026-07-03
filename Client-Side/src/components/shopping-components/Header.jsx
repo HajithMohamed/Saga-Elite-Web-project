@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, User, Menu, LogOut, Settings, X, Heart, Star, CreditCard, Search, ChevronRight } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,57 +10,85 @@ import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
 import axios from 'axios';
 import { API_V1_URL as API_BASE } from '@/lib/api';
 
+const AnnouncementBar = () => {
+  const [index, setIndex] = useState(0);
+  const announcements = [
+    "🚚 Free Islandwide Delivery on eligible orders",
+    "✨ New Collection Available",
+    "🔥 Exclusive Limited Drops Every Month"
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % announcements.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [announcements.length]);
+
+  return (
+    <div className="w-full bg-accent text-primary h-[36px] md:h-[40px] flex items-center justify-center overflow-hidden z-50 relative cursor-default hover:[animation-play-state:paused]">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="font-sans text-[12px] md:text-[14px] font-bold tracking-wide"
+        >
+          {announcements[index]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const userMenuRef = useRef(null);
+  const searchRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  
   const { open: openAuthDrawer } = useAuthDrawer();
   const { currentPayment } = useSelector((state) => state.manualPayment || {});
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
   const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
+  
   const cartCount = totalQuantity || 0;
   const wishlistCount = wishlistItems?.length || 0;
-  const [menuCategories, setMenuCategories] = useState([]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setUserMenuOpen(false);
-      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchExpanded(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 80);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Fetch dynamic categories for the header menu
-  useEffect(() => {
-    let mounted = true;
-    const fetchMenu = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/categories/menu`);
-        if (!mounted) return;
-        setMenuCategories(res.data?.data || []);
-      } catch (err) {
-        // silent fallback to empty menu
-      }
-    };
-    fetchMenu();
-    return () => { mounted = false; };
-  }, []);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/shopping/product-list?keyword=${encodeURIComponent(searchQuery)}`);
+      setSearchExpanded(false);
+    }
+  };
 
-  const hasPendingPayment =
-    currentPayment?.status === 'pending_payment' || currentPayment?.status === 'proof_submitted';
+  const hasPendingPayment = currentPayment?.status === 'pending_payment' || currentPayment?.status === 'proof_submitted';
 
   const computeTimeLeft = () => {
     if (!currentPayment?.expiresAt) return { hours: 0, minutes: 0 };
@@ -77,318 +105,207 @@ const Header = () => {
     setUserMenuOpen(false);
     try {
       await dispatch(logoutUserAction()).unwrap();
-      toast({
-        title: 'Signed out',
-        description: 'See you next time.',
-        variant: 'success',
-      });
-      navigate('/auth/login');
+      toast({ title: 'Signed out', description: 'See you next time.', variant: 'success' });
+      navigate('/');
     } catch (err) {
-      toast({
-        title: 'Logout failed',
-        description: err?.message || 'Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Logout failed', description: err?.message || 'Please try again.', variant: 'destructive' });
     }
   };
 
+  const navLinks = [
+    { label: 'Home', path: '/shopping/home' },
+    { label: 'Women', path: '/shopping/product-list?category=Ladies' },
+    { label: 'Men', path: '/shopping/product-list?category=Gents' },
+    { label: 'Unisex', path: '/shopping/product-list?category=Unisex' },
+    { label: 'New Arrivals', path: '/shopping/product-list?category=new' },
+    { label: 'Sale', path: '/shopping/product-list?category=sale' },
+  ];
+
   return (
-    <header className={`sticky top-0 z-50 w-full text-white transition-all duration-300 ${scrolled ? 'bg-black/50 backdrop-blur-xl border-b border-[#D4AF37]/15 shadow-xl' : 'bg-transparent border-b border-transparent'}`}>
-      <div className="container mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
+    <div className="sticky top-0 z-50 w-full flex flex-col">
+      <AnnouncementBar />
+      <header 
+        className={`w-full transition-all duration-300 bg-black/80 backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.08)]
+        ${scrolled ? 'h-[64px] md:h-[68px] lg:h-[72px]' : 'h-[72px] md:h-[76px] lg:h-[80px]'}`}
+      >
+        <div className={`h-full max-w-[1280px] mx-auto flex items-center justify-between px-[16px] md:px-[32px] lg:px-[80px]`}>
+          
+          {/* Mobile Menu Toggle */}
+          <div className="md:hidden flex items-center">
+            <button aria-label="Toggle navigation menu" onClick={() => setMenuOpen(!menuOpen)} className="text-secondary-foreground hover:text-foreground transition-colors">
+              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
 
-        {/* Left: Mobile Menu */}
-        <div className="md:hidden flex items-center">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-[#D4AF37] hover:text-white transition-colors"
-          >
-            {menuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
-        </div>
-
-        {/* Logo */}
-        <Link to="/shopping/home" className="flex items-center gap-3">
-          <img
-            src="/LOGO.png"
-            alt="Saga Elite Logo"
-            className="h-12 w-12 object-cover rounded-md"
-          />
-          <span className="hidden md:block font-bold text-xl tracking-widest text-[#D4AF37] uppercase">
-            Saga Elite
-          </span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium uppercase tracking-widest">
-          <Link to="/shopping/home" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-            <>Home<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
-          </Link>
-          {menuCategories.map((cat) => (
-            <div
-              key={cat._id}
-              className="relative group py-4"
-            >
-              {/* Category Label */}
-              <Link
-                to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
-                className="text-sm tracking-[0.22em] uppercase font-bold text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200 cursor-pointer flex items-center gap-1"
-              >
-                {cat.name}
-                {cat.children && cat.children.length > 0 && (
-                  <ChevronRight className="w-4 h-4 ml-1 rotate-90 group-hover:rotate-90 transition-transform duration-200 md:rotate-0" />
-                )}
-                <span className="absolute bottom-2 left-0 h-[2px] w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_8px_rgba(242,202,80,0.8)]" />
-              </Link>
-
-              {/* Dropdown - appears on hover */}
-              {cat.children && cat.children.length > 0 && (
-                <div className="absolute left-0 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-2">
-                  <div className="bg-white rounded-md shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] min-w-[220px] py-2 border border-gray-100 relative overflow-hidden">
-                    {/* Decorative top border */}
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#D4AF37] to-[#D4AF37]/40"></div>
-                    
-                    {cat.children.map((subcat, idx) => (
-                      <Link
-                        key={subcat._id}
-                        to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}&subCategory=${encodeURIComponent(subcat.slug)}`}
-                        className={`px-5 py-3 text-black text-xs uppercase tracking-[0.15em] font-medium hover:bg-[#f8f5f0] hover:text-[#D4AF37] transition-all duration-200 flex items-center justify-between group/sub ${idx !== cat.children.length - 1 ? 'border-b border-gray-50' : ''}`}
-                      >
-                        <span className="relative overflow-hidden">
-                          <span className="relative z-10">{subcat.name}</span>
-                          <span className="absolute bottom-0 left-0 w-0 h-px bg-[#D4AF37] transition-all duration-300 group-hover/sub:w-full"></span>
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0 transition-all duration-300 text-[#D4AF37]" />
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-          <Link to="/shopping/product-list?category=archive" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-            <>Archive<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
-          </Link>
-          <Link to="/shopping/drops" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-            <>Drops<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
-          </Link>
-          <Link to="/about" className="relative group se-label text-[11px] tracking-[0.22em] text-[#d0c5af] hover:text-[#f2ca50] transition-colors duration-200">
-            <>About<span className="absolute -bottom-0.5 left-0 h-px w-0 bg-[#f2ca50] transition-all duration-300 group-hover:w-full [box-shadow:0_0_6px_rgba(242,202,80,0.7)]" /></>
-          </Link>
-        </nav>
-
-        {/* Right: Icons */}
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => navigate('/shopping/product-list')}
-            aria-label="Search products"
-            className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors"
-          >
-            <Search className="w-5 h-5" strokeWidth={1.5} />
-          </button>
-          <NotificationsDropdown />
-          <Link
-            to="/shopping/wishlist"
-            className="relative text-white hover:text-[#D4AF37] transition-colors"
-          >
-            <Heart className="w-6 h-6" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-                {wishlistCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            to="/shopping/cart"
-            className="relative text-white hover:text-[#D4AF37] transition-colors"
-          >
-            <ShoppingCart className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-              {cartCount}
+          {/* Logo */}
+          <Link to="/shopping/home" className="flex items-center gap-3">
+            <img src="/LOGO.png" alt="Saga Elite Logo" className={`object-cover rounded-md transition-all duration-300 ${scrolled ? 'h-10 w-10' : 'h-12 w-12'}`} />
+            <span className={`hidden md:block font-display font-bold tracking-widest text-accent uppercase transition-all duration-300 ${scrolled ? 'text-lg' : 'text-xl'}`}>
+              Saga Elite
             </span>
           </Link>
 
-          {/* User icon — opens drawer if guest, dropdown if authenticated */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => isAuthenticated ? setUserMenuOpen(!userMenuOpen) : openAuthDrawer('login')}
-              className="text-white hover:text-[#D4AF37] transition-colors focus:outline-none"
-              aria-label={isAuthenticated ? 'Account menu' : 'Sign in'}
-            >
-              {user?.profilePicture ? (
-                <div className="relative">
-                  <img
-                    src={user.profilePicture}
-                    alt="avatar"
-                    className="w-8 h-8 rounded-full object-cover border border-[#D4AF37]/40"
-                  />
-                  {hasPendingPayment && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
-                  )}
-                </div>
-              ) : (
-                <div className="relative">
-                  <User className="w-6 h-6" />
-                  {hasPendingPayment && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-black" />
-                  )}
-                </div>
-              )}
-            </button>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8 text-[12px] font-sans font-bold uppercase tracking-[0.1em]">
+            {navLinks.map((link) => {
+              const isActive = location.pathname + location.search === link.path || 
+                               (link.path === '/shopping/home' && location.pathname === '/shopping/home');
+              return (
+                <Link 
+                  key={link.label} 
+                  to={link.path} 
+                  className={`relative group py-2 transition-colors duration-200 ${isActive ? 'text-accent' : 'text-secondary-foreground hover:text-accent'}`}
+                >
+                  {link.label}
+                  <span className={`absolute bottom-0 left-0 h-[2px] bg-accent transition-all duration-200 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`} />
+                </Link>
+              );
+            })}
+          </nav>
 
-            {userMenuOpen && (
-              <div className="absolute right-0 mt-3 w-64 bg-[#0a0a0a] border border-[#D4AF37]/20 rounded shadow-xl divide-y divide-[#D4AF37]/10">
-                <div className="px-4 py-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-widest">
-                    Signed in as
-                  </p>
-                  <p className="text-sm text-white font-medium truncate mt-0.5">
-                    {user?.email || 'Guest'}
-                  </p>
-                </div>
-                {hasPendingPayment && (
-                  <div className="px-4 py-3 bg-amber-500/10 border-l-2 border-amber-500">
-                    <p className="text-xs text-amber-500 font-medium mb-1">
-                      ⚠️ Pending payment — expires in {hours}h {minutes}m
-                    </p>
-                    <Link
-                      to={`/shopping/manual-payment/${encodeURIComponent(currentPayment?.slug || currentPayment?.referenceNumber || '')}`}
-                      onClick={() => setUserMenuOpen(false)}
-                      className="text-[10px] uppercase font-bold text-amber-400 hover:text-amber-300 tracking-wider"
-                    >
-                      → Complete payment
-                    </Link>
-                  </div>
+          {/* Right Icons */}
+          <div className="flex items-center gap-4 md:gap-6">
+            
+            {/* Expandable Search */}
+            <div className="hidden md:flex relative items-center justify-end" ref={searchRef}>
+              <AnimatePresence>
+                {searchExpanded && (
+                  <motion.form 
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: window.innerWidth >= 1024 ? 420 : 320, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    onSubmit={handleSearch}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10"
+                  >
+                    <input 
+                      type="text" 
+                      placeholder="Search Saga Elite..." 
+                      className="w-full h-10 bg-surface border border-border rounded-full pl-4 pr-12 text-sm text-foreground focus:outline-none focus:border-accent transition-colors"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoFocus
+                    />
+                  </motion.form>
                 )}
-                <div className="py-1">
-                  <Link
-                    to="/shopping/account"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    My Account
-                  </Link>
-                  <Link
-                    to="/shopping/orders"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    My Orders
-                  </Link>
-                  <Link
-                    to="/account/my-reviews"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <Star className="w-4 h-4" />
-                    My Reviews
-                  </Link>
-                  <Link
-                    to="/account/payments"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Payment History
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-red-400 hover:bg-white/5 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile nav drawer */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: '-100%' }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: '-100%' }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col md:hidden"
-          >
-            {/* Header row */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#4d4635]/50">
-              <Link to="/shopping/home" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
-                <img src="/LOGO.png" alt="Saga Elite" className="h-10 w-10 object-cover" />
-                <span className="se-label text-[#f2ca50] text-[13px] tracking-[0.25em]">
-                  SAGA ELITE
-                </span>
-              </Link>
-              <button onClick={() => setMenuOpen(false)} className="text-[#d0c5af] hover:text-white transition-colors" aria-label="Close menu">
-                <X className="w-6 h-6" strokeWidth={1.5} />
+              </AnimatePresence>
+              <button 
+                aria-label="Toggle search input"
+                onClick={() => setSearchExpanded(!searchExpanded)} 
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors z-20 ${searchExpanded ? 'text-accent' : 'text-secondary-foreground hover:text-foreground'}`}
+              >
+                <Search className="w-5 h-5" strokeWidth={2} />
               </button>
             </div>
 
-            {/* Nav links */}
-            <nav className="flex-1 flex flex-col justify-center px-8 gap-2">
-              {menuCategories.length > 0 ? (
-                menuCategories.map((cat, i) => (
-                  <motion.div
-                    key={cat._id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
-                  >
-                    <Link
-                      to={`/shopping/product-list?category=${encodeURIComponent(cat.slug)}`}
-                      onClick={() => setMenuOpen(false)}
-                      className="block se-serif text-[#e5e2e1] text-4xl leading-[1.1] hover:text-[#f2ca50] transition-colors py-2 border-b border-[#4d4635]/30"
-                    >
-                      {cat.name}
-                    </Link>
-                  </motion.div>
-                ))
-              ) : (
-                [
-                  { label: 'Home',        to: '/shopping/home' },
-                  { label: 'Gents',       to: '/shopping/product-list?category=Gents' },
-                  { label: 'Ladies',      to: '/shopping/product-list?category=Ladies' },
-                  { label: 'Unisex',      to: '/shopping/product-list?category=Unisex' },
-                  { label: 'Drops',       to: '/shopping/drops' },
-                  { label: 'About',       to: '/about' },
-                ].map((item, i) => (
-                  <motion.div
-                    key={item.to}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.4 }}
-                  >
-                    <Link
-                      to={item.to}
-                      onClick={() => setMenuOpen(false)}
-                      className="block se-serif text-[#e5e2e1] text-4xl leading-[1.1] hover:text-[#f2ca50] transition-colors py-2 border-b border-[#4d4635]/30"
-                    >
-                      {item.label}
-                    </Link>
-                  </motion.div>
-                ))
-              )}
-            </nav>
+            {/* Mobile Search Icon */}
+            <button 
+              aria-label="Open search"
+              className="md:hidden w-8 h-8 rounded-full flex items-center justify-center text-secondary-foreground hover:text-foreground"
+              onClick={() => navigate('/shopping/product-list')}
+            >
+              <Search className="w-5 h-5" strokeWidth={2} />
+            </button>
 
-            {/* Bottom bar */}
-            <div className="px-8 py-6 border-t border-[#4d4635]/50">
-              <p className="se-mono text-[#4d4635] text-[10px] tracking-widest">
-                RARE FIT · FOREVER
-              </p>
+            {/* Wishlist */}
+            <Link aria-label="View wishlist" to="/shopping/wishlist" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
+              <Heart className="w-4 h-4" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-accent text-primary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Cart */}
+            <Link aria-label="View cart" to="/shopping/cart" className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all">
+              <ShoppingCart className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 bg-accent text-primary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                {cartCount}
+              </span>
+            </Link>
+
+            {/* User Account */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                aria-label="User account menu"
+                onClick={() => isAuthenticated ? setUserMenuOpen(!userMenuOpen) : openAuthDrawer('login')}
+                className="relative w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center text-foreground hover:text-accent transition-all"
+              >
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt="avatar" className="w-full h-full rounded-full object-cover border border-border" />
+                ) : (
+                  <User className="w-4 h-4" />
+                )}
+                {hasPendingPayment && <span className="absolute top-0 right-0 w-2 h-2 bg-amber-500 rounded-full border border-primary" />}
+              </button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 mt-4 w-64 bg-surface border border-border rounded-lg shadow-large divide-y divide-border overflow-hidden z-50"
+                  >
+                    <div className="px-4 py-3">
+                      <p className="text-[10px] text-secondary-foreground uppercase tracking-widest font-bold">Signed in as</p>
+                      <p className="text-sm text-foreground font-medium truncate mt-1">{user?.email || 'Guest'}</p>
+                    </div>
+                    <div className="py-2">
+                      <Link to="/shopping/account" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2 text-sm text-secondary-foreground hover:text-accent hover:bg-card transition-colors">
+                        <Settings className="w-4 h-4" /> My Account
+                      </Link>
+                      <Link to="/shopping/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2 text-sm text-secondary-foreground hover:text-accent hover:bg-card transition-colors">
+                        <ShoppingCart className="w-4 h-4" /> My Orders
+                      </Link>
+                      <Link to="/account/my-reviews" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2 text-sm text-secondary-foreground hover:text-accent hover:bg-card transition-colors">
+                        <Star className="w-4 h-4" /> My Reviews
+                      </Link>
+                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-sm text-secondary-foreground hover:text-error hover:bg-card transition-colors">
+                        <LogOut className="w-4 h-4" /> Sign Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
+          </div>
+        </div>
+
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: '-100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '-100%' }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-[100] bg-background flex flex-col md:hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+                <Link to="/shopping/home" onClick={() => setMenuOpen(false)} className="flex items-center gap-3">
+                  <img src="/LOGO.png" alt="Saga Elite" className="h-10 w-10 object-cover" />
+                  <span className="font-display font-bold text-accent text-[16px] uppercase tracking-widest">SAGA ELITE</span>
+                </Link>
+                <button onClick={() => setMenuOpen(false)} className="text-secondary-foreground hover:text-foreground">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <nav className="flex-1 flex flex-col justify-center px-8 gap-4">
+                {navLinks.map((link, i) => (
+                  <motion.div key={link.path} initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.06 }}>
+                    <Link to={link.path} onClick={() => setMenuOpen(false)} className="block font-display font-bold text-foreground text-4xl hover:text-accent transition-colors py-2 border-b border-border">
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+    </div>
   );
 };
 

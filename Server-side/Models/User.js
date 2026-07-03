@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
       validate: {
         validator: function (value) {
           if (this.provider === "google") return true;
-          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(value);
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(value);
         },
         message:
           "Password must contain at least 8 characters, including uppercase, lowercase, number and special character",
@@ -191,6 +191,16 @@ const userSchema = new mongoose.Schema(
     resetPasswordOtp: String,
     resetPasswordOtpExpires: Date,
 
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorOtp: {
+      type: String,
+      select: false,
+    },
+    twoFactorOtpExpires: Date,
+
     cart: [
       {
         product: {
@@ -225,6 +235,7 @@ const userSchema = new mongoose.Schema(
         label: { type: String, trim: true },
         street: { type: String, required: true, trim: true },
         city: { type: String, required: true, trim: true },
+        district: { type: String, trim: true },
         postalCode: { type: String, required: true, trim: true },
         country: { type: String, required: true, trim: true, default: "Sri Lanka" },
         isDefault: { type: Boolean, default: false }

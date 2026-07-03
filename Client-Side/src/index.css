@@ -2,12 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens (CSS variables) ─────────────────────────────
+   Canonical Saga Elite tokens, mirroring tailwind.config.js + DESIGN_SPEC.md.
+   Exposed as CSS custom properties so they can be consumed outside Tailwind
+   (inline styles, third-party widgets, future theming). Tailwind classes
+   remain the primary API — keep these in sync with the config. */
+:root {
+  /* Core / surfaces */
+  --se-bg: #121212;
+  --se-fg: #FFFFFF;
+  --se-surface: #1A1A1A;
+  --se-surface-1: #202020;
+  --se-surface-2: #2a2a2a;
+  --se-surface-3: #393939;
+  --se-page: #121212;
+
+  /* Brand / accent */
+  --se-gold: #F2CA50;
+  --se-gold-deep: #FFD86A;
+  --se-gold-light: #FFD86A;
+  --se-on-gold: #0E0E0E;
+  --se-on-gold-editorial: #0E0E0E;
+
+  /* Muted / lines */
+  --se-muted: #B5B5B5;
+  --se-muted-2: #99907c;
+  --se-faint: #333333;
+  --se-border: rgba(255, 255, 255, 0.08);
+  --se-ring: #F2CA50;
+
+  /* Semantic */
+  --se-danger: #FF453A;
+  --se-danger-solid: #FF453A;
+  --se-new: #34C759;
+  --se-info: #a4d2e2;
+  --se-info-accent: #38BDF8;
+  --se-success: #34C759;
+  --se-urgent: #FF6B35;
+  --se-vip: #a855f7;
+
+  /* Radius */
+  --se-radius-sm: 8px;
+  --se-radius-md: 16px;
+  --se-radius-lg: 20px;
+  --se-radius-xl: 24px;
+  --se-radius-2xl: 24px;
+  --se-radius-3xl: 24px;
+  --se-radius-full: 9999px;
+
+  /* Elevation */
+  --se-shadow-gold: 0 0 40px rgba(242, 202, 80, 0.15);
+  --se-shadow-elegant: 0 16px 40px rgba(0, 0, 0, 0.16);
+  --se-focus-ring: 0 0 0 2px #121212, 0 0 0 4px #F2CA50;
+
+  /* Motion — easing */
+  --se-ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --se-ease-cinematic: cubic-bezier(0.19, 1, 0.22, 1);
+  --se-ease-payment: cubic-bezier(0.16, 1, 0.3, 1);
+  --se-ease-image: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Motion — duration */
+  --se-dur-micro: 180ms;
+  --se-dur-standard: 250ms;
+  --se-dur-reveal: 550ms;
+  --se-dur-image: 650ms;
+  --se-dur-cinematic: 1000ms;
+}
+
 @layer components {
   /* ── Editorial type system ────────────────────────────────
-     Display / Brand: Cinzel
+     Display / Brand: Playfair Display
      Headlines: Playfair Display
-     Body / labels: Inter
-     Numerics: JetBrains Mono */
+     Body / labels / numerics: Inter
+  */
 
   .se-serif {
     font-family: 'Playfair Display', Georgia, serif;
@@ -24,17 +91,17 @@
   }
 
   .se-display {
-    font-family: 'Cinzel', serif;
+    font-family: 'Playfair Display', serif;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     font-style: normal !important;
   }
 
   .se-wordmark {
-    font-family: 'Cinzel', serif;
+    font-family: 'Playfair Display', serif;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     font-style: normal !important;
   }
@@ -45,9 +112,17 @@
     letter-spacing: -0.005em;
     line-height: 1.6;
   }
+  
+  /* Global Layout Standard */
+  .se-section {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+  .se-container {
+    @apply w-full max-w-[1280px] mx-auto px-4 md:px-8;
+  }
 
   .se-mono {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -67,11 +142,23 @@
   }
 
   /* Hairline system */
-  .se-hairline { border-color: #4d4635; }
-  .se-hairline-soft { border-color: rgba(255,255,255,0.08); }
+  .se-hairline {
+    border-color: #4d4635;
+  }
 
-  .se-divider-h { height: 1px; background: #4d4635; }
-  .se-divider-soft-h { height: 1px; background: rgba(255,255,255,0.08); }
+  .se-hairline-soft {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .se-divider-h {
+    height: 1px;
+    background: #4d4635;
+  }
+
+  .se-divider-soft-h {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+  }
 
   /* Image fallback */
   .se-img-fallback {
@@ -89,6 +176,56 @@
     box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
   }
 
+  /* ── GLOBAL COMPONENTS ──────────────────────────────── */
+  .se-btn {
+    @apply inline-flex items-center justify-center font-sans font-bold uppercase tracking-wider text-[11px] md:text-[12px] transition-all duration-200 ease-out hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0;
+  }
+  .se-btn-primary {
+    @apply h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] hover:shadow-[0_0_24px_rgba(242,202,80,0.3)];
+  }
+  .se-btn-secondary {
+    @apply h-[52px] px-6 bg-[#131313] border border-white/10 text-[#fafafa] rounded-[16px] hover:border-[#F2CA50] hover:bg-white/5;
+  }
+  .se-btn-ghost {
+    @apply h-[48px] px-6 bg-transparent text-[#99907c] hover:text-[#fafafa] hover:bg-white/5 rounded-[16px];
+  }
+  .se-btn-icon {
+    @apply w-[48px] h-[48px] rounded-[16px] flex items-center justify-center shrink-0 bg-white/5 text-[#fafafa] hover:bg-[#F2CA50] hover:text-[#0e0e0e];
+  }
+
+  .se-card {
+    @apply bg-[#1A1A1A] border border-white/5 rounded-[20px] p-6 shadow-elegant transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-[#F2CA50]/30;
+  }
+
+  .se-input {
+    @apply w-full h-[56px] bg-[#131313] border border-white/10 rounded-[16px] px-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors;
+  }
+  
+  .se-textarea {
+    @apply w-full h-[160px] bg-[#131313] border border-white/10 rounded-[16px] p-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors resize-none;
+  }
+
+  /* ── Contact page glass / gold system ─────────────── */
+  .glass {
+    @apply bg-[#131313]/70 backdrop-blur-xl border border-[#4d4635]/30;
+  }
+
+  .gold-text {
+    @apply bg-gradient-to-r from-[#f2ca50] to-[#d4af37] bg-clip-text text-transparent;
+  }
+
+  .gold-border {
+    @apply border border-[#f2ca50]/30;
+  }
+
+  .gold-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-[#f2ca50]/50 to-transparent;
+  }
+
+  .bg-gradient-gold {
+    @apply bg-gradient-to-r from-[#f2ca50] to-[#d4af37];
+  }
+
   /* ── Cinematic Effects ──────────────────────────────── */
   .bg-grain {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
@@ -102,6 +239,7 @@
     clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
     transition: clip-path 1.2s cubic-bezier(0.19, 1, 0.22, 1);
   }
+
   .clip-reveal.is-revealed {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
@@ -113,7 +251,17 @@
   }
 
   .admin-page-header {
-    @apply mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#0b0b0b] p-6 lg:flex-row lg:items-end lg:justify-between;
+    @apply relative mb-6 flex flex-col gap-4 overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0b0b0b] via-[#0f0f0f] to-[#050505] p-6 shadow-2xl shadow-black/80 lg:flex-row lg:items-end lg:justify-between;
+  }
+
+  .admin-page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent);
   }
 
   .admin-page-eyebrow {
@@ -160,40 +308,52 @@
   .tiptap-editor h2 {
     @apply mt-4 mb-2 text-xl font-semibold tracking-tight text-white;
   }
+
   .tiptap-editor h3 {
     @apply mt-3 mb-1.5 text-lg font-semibold tracking-tight text-white;
   }
+
   .tiptap-editor p {
     @apply mb-2 leading-7 text-[#e5e2e1];
   }
+
   .tiptap-editor ul {
     @apply mb-3 list-disc pl-6 text-[#e5e2e1];
   }
+
   .tiptap-editor ol {
     @apply mb-3 list-decimal pl-6 text-[#e5e2e1];
   }
+
   .tiptap-editor li {
     @apply mb-1;
   }
+
   .tiptap-editor blockquote {
     @apply my-3 border-l-2 border-[#D4AF37]/60 pl-4 italic text-[#d0c5af];
   }
+
   .tiptap-editor strong {
     @apply font-semibold text-white;
   }
+
   .tiptap-editor a {
     @apply text-[#D4AF37] underline underline-offset-4;
   }
+
   .tiptap-editor table {
     @apply my-3 w-full border-collapse;
   }
+
   .tiptap-editor th,
   .tiptap-editor td {
     @apply border border-white/10 px-3 py-2 align-top text-sm;
   }
+
   .tiptap-editor th {
     @apply bg-white/5 text-left font-semibold;
   }
+
   .tiptap-editor p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     color: #4d4635;
@@ -209,11 +369,52 @@
     color: theme('colors.foreground');
     font-family: 'Inter', system-ui, sans-serif;
   }
-  
+
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation-duration: 0.25s;
     animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+}
+
+.category-modal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar globally */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* ── Reduced Motion ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Safe Area (Mobile Bottom Nav) ───────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Mobile Bottom Nav Spacer ────────────────────── */
+@media (max-width: 768px) {
+  main,
+  .se-main-content {
+    padding-bottom: 80px;
   }
 }

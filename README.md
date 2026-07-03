@@ -633,7 +633,7 @@ Saga-Elite-Web-project
 ## 🚀 Deployment Plan
 
 - Client-Side → Vercel / Netlify
-- Server-side → Render / AWS
+- Server-side → Railway / AWS
 - Database → MongoDB Atlas
 - Domain & SSL → Hosting provider
 

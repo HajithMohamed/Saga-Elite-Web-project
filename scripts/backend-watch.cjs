@@ -4,6 +4,11 @@ const path = require("node:path");
 
 const repoRoot = path.resolve(__dirname, "..");
 const backendDir = path.join(repoRoot, "Server-side");
+const { seedDemoAdmins } = require(path.join(
+  backendDir,
+  "scripts",
+  "seed-demo-admins.js"
+));
 const watchTargets = [
   "server.js",
   "Config",
@@ -19,6 +24,24 @@ let child = null;
 let restartTimer = null;
 let restarting = false;
 let shuttingDown = false;
+
+const shouldSeedDemoAdmins =
+  String(process.env.NODE_ENV || "").toLowerCase() !== "production" &&
+  String(process.env.SKIP_DEMO_ADMIN_SEED || "").toLowerCase() !== "true";
+
+async function bootstrapDemoAdmins() {
+  if (!shouldSeedDemoAdmins) {
+    return;
+  }
+
+  console.log("Bootstrapping demo admin accounts for local development");
+
+  try {
+    await seedDemoAdmins();
+  } catch (error) {
+    console.error(`Demo admin bootstrap failed: ${error.message}`);
+  }
+}
 
 function startServer() {
   child = spawn(process.execPath, ["server.js"], {
@@ -115,7 +138,15 @@ for (const target of watchTargets) {
   watchTarget(target);
 }
 
-startServer();
+async function bootstrap() {
+  await bootstrapDemoAdmins();
+  startServer();
+}
+
+bootstrap().catch((error) => {
+  console.error(`Backend bootstrap failed: ${error.message}`);
+  process.exit(1);
+});
 
 process.on("SIGINT", () => stopServer("SIGINT"));
 process.on("SIGTERM", () => stopServer("SIGTERM"));

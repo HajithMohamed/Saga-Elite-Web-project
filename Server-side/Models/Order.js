@@ -28,6 +28,12 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    // Snapshot of the product/variant image at order time so the order summary
+    // always renders a thumbnail, even if the product is later edited/deleted.
+    productImage: {
+      type: String,
+      trim: true,
+    },
     size: {
       type: String,
       trim: true,
@@ -97,9 +103,21 @@ const orderSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    // Optional billing/permanent address — equals shippingAddress when the
+    // customer ticks "delivery address is same as permanent address".
+    billingAddress: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
     contactNumber: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 50,
+    },
+    alternativePhone: {
+      type: String,
       trim: true,
       maxlength: 50,
     },
@@ -185,17 +203,6 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
-    gift: {
-      giftId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Gift",
-        default: null,
-      },
-      revealed: {
-        type: Boolean,
-        default: false,
-      },
-    },
     notes: {
       type: String,
       trim: true,
@@ -210,6 +217,11 @@ const orderSchema = new mongoose.Schema(
     couponDiscount: {
       type: Number,
       default: 0,
+    },
+    shippingFee: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     expiresAt: {
       type: Date,

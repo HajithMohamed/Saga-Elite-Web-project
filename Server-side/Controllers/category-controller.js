@@ -89,6 +89,7 @@ const getMenu = catchAsync(async (req, res, next) => {
 const getFeatured = catchAsync(async (req, res, next) => {
   const featured = await Category.find({ isFeatured: true, isActive: true })
     .sort({ sortOrder: 1, name: 1 })
+    .populate({ path: "imageRef", select: "url" })
     .lean();
   res.status(200).json({ success: true, results: featured.length, data: featured });
 });
@@ -106,7 +107,10 @@ const getBySlug = catchAsync(async (req, res, next) => {
 });
 
 const getAll = catchAsync(async (req, res, next) => {
-  const cats = await Category.find({}).sort({ sortOrder: 1, name: 1 }).lean();
+  const cats = await Category.find({})
+    .sort({ sortOrder: 1, name: 1 })
+    .populate({ path: "imageRef", select: "url" })
+    .lean();
   res.status(200).json({ success: true, results: cats.length, data: cats });
 });
 

@@ -2,12 +2,24 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 
-// Suppress THREE.Clock deprecation warning from @react-three/fiber internals.
-// This is a known upstream issue — fiber still references THREE.Clock which was
-// deprecated in three.js r184+. Safe to remove once fiber is updated.
+// Suppress known three.js dev-time noise from @react-three/fiber internals.
+// Fiber still references THREE.Clock in some paths, and WebGLRenderer can log
+// a context-loss message during StrictMode remounts in development.
+const _origLog = console.log;
 const _origWarn = console.warn;
+const shouldSuppressThreeMessage = (args) =>
+  typeof args[0] === "string" &&
+  (args[0].includes("THREE.Clock") ||
+    args[0].includes("THREE.WebGLRenderer: Context Lost.") ||
+    args[0].includes("THREE.WebGLRenderer: Context Restored."));
+
+console.log = (...args) => {
+  if (shouldSuppressThreeMessage(args)) return;
+  _origLog.apply(console, args);
+};
+
 console.warn = (...args) => {
-  if (typeof args[0] === "string" && args[0].includes("THREE.Clock")) return;
+  if (shouldSuppressThreeMessage(args)) return;
   _origWarn.apply(console, args);
 };
 import App from "./App.jsx";

@@ -12,6 +12,8 @@ import {
 import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNumber";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
 import { toast } from "@/hooks/use-toast";
+import Pagination from "@/components/common-components/Pagination";
+import usePagination from "@/hooks/use-pagination";
 
 const STATUS_OPTIONS = ["new", "in_progress", "resolved", "closed"];
 
@@ -99,6 +101,11 @@ const ContactInquiriesPage = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const { page, setPage, pageCount, total, pageItems, pageSize } = usePagination(
+    filtered,
+    10
+  );
+
   const statCounts = {
     total: inquiries.length,
     new: inquiries.filter((i) => i.status === "new").length,
@@ -150,7 +157,10 @@ const ContactInquiriesPage = () => {
               <input
                 type="search"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="Search by name, email, or subject…"
                 className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
               />
@@ -160,7 +170,10 @@ const ContactInquiriesPage = () => {
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => setStatusFilter(opt)}
+                  onClick={() => {
+                    setStatusFilter(opt);
+                    setPage(1);
+                  }}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
                     statusFilter === opt
                       ? "border-[#D4AF37]/40 bg-[#D4AF37]/15 text-white"
@@ -190,7 +203,7 @@ const ContactInquiriesPage = () => {
             </div>
           ) : (
             <div className="mt-6 space-y-3">
-              {filtered.map((inquiry) => {
+              {pageItems.map((inquiry) => {
                 const cfg = statusConfig[inquiry.status] || statusConfig.new;
                 const StatusIcon = cfg.icon;
                 const isExpanded = expandedId === inquiry._id;
@@ -306,6 +319,14 @@ const ContactInquiriesPage = () => {
                   </motion.div>
                 );
               })}
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                total={total}
+                pageSize={pageSize}
+                label="inquiries"
+              />
             </div>
           )}
         </AdminPanel>

@@ -278,7 +278,7 @@ export function Btn({
     default: "h-11 px-6 text-[11px]",
     sm: "h-9 px-4 text-[10px]",
     lg: "h-14 px-8 text-xs",
-    icon: "h-10 w-10 p-0 text-[11px]",
+    icon: "h-11 w-11 p-0 text-[11px]",
   };
   const variants = {
     default: "bg-[#f2ca50] text-[#3c2f00] hover:bg-[#ffe088] border border-[#e9c349]",
@@ -726,6 +726,12 @@ export function ColorSwatch({
 }) {
   const fill = resolveColor(color);
   const labelText = label || color || "color";
+  // Expand the tap target to ≥44px (WCAG 2.5.5 / brand 48px guideline) for the
+  // larger PDP swatches, without bloating the compact in-card previews — those
+  // stay at their visual size (<24px → hit area = visual size). The visual
+  // swatch (border/ring/dot) lives on an inner span so the larger hit area is
+  // transparent and invisible.
+  const hitArea = size >= 24 ? Math.max(size, 44) : size;
   return (
     <button
       type="button"
@@ -735,49 +741,56 @@ export function ColorSwatch({
       aria-label={`Select color ${labelText}`}
       title={labelText}
       className={cn(
-        "relative inline-flex items-center justify-center rounded-full border transition-all",
+        "group relative inline-flex items-center justify-center rounded-full",
         "se-focus disabled:cursor-not-allowed",
-        selected
-          ? "border-[#f2ca50] ring-2 ring-[#f2ca50] ring-offset-2 ring-offset-[#0a0a0a]"
-          : "border-[#4d4635] hover:border-[#99907c]",
-        disabled && !selected && "opacity-35",
         className
       )}
-      style={{ width: size, height: size }}
+      style={{ minWidth: hitArea, minHeight: hitArea }}
     >
       <span
-        className="block rounded-full"
-        style={{
-          width: size - 8,
-          height: size - 8,
-          background: fill,
-          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
-        }}
-      />
-      {selected && (
+        className={cn(
+          "relative flex items-center justify-center rounded-full border transition-all",
+          selected
+            ? "border-[#f2ca50] ring-2 ring-[#f2ca50] ring-offset-2 ring-offset-[#0a0a0a]"
+            : "border-[#4d4635] group-hover:border-[#99907c]",
+          disabled && !selected && "opacity-35"
+        )}
+        style={{ width: size, height: size }}
+      >
         <span
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          aria-hidden="true"
-        >
-          <Check
-            size={Math.max(10, Math.floor(size * 0.42))}
-            strokeWidth={2.25}
-            className="text-[#0a0a0a] mix-blend-difference"
-            style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.6))" }}
-          />
-        </span>
-      )}
-      {disabled && !selected && (
-        <span
-          className="absolute inset-0 pointer-events-none"
-          aria-hidden="true"
+          className="block rounded-full"
           style={{
-            background:
-              "linear-gradient(45deg, transparent 47%, rgba(229,226,225,0.7) 47%, rgba(229,226,225,0.7) 53%, transparent 53%)",
-            borderRadius: "50%",
+            width: size - 8,
+            height: size - 8,
+            background: fill,
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.2)",
           }}
         />
-      )}
+        {selected && (
+          <span
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            aria-hidden="true"
+          >
+            <Check
+              size={Math.max(10, Math.floor(size * 0.42))}
+              strokeWidth={2.25}
+              className="text-[#0a0a0a] mix-blend-difference"
+              style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.6))" }}
+            />
+          </span>
+        )}
+        {disabled && !selected && (
+          <span
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden="true"
+            style={{
+              background:
+                "linear-gradient(45deg, transparent 47%, rgba(229,226,225,0.7) 47%, rgba(229,226,225,0.7) 53%, transparent 53%)",
+              borderRadius: "50%",
+            }}
+          />
+        )}
+      </span>
     </button>
   );
 }

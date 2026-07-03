@@ -4,6 +4,8 @@ const User = require("../Models/User");
 const createSendToken = require("../Utils/create-send-token");
 const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const Customer = require("../Models/Customer");
+const { ensureCustomerRecord } = require("../Services/migration-service");
 const logger = require("../Utils/logger");
 
 // Mirror of google-auth-controller. Two Facebook-specific differences:
@@ -119,6 +121,19 @@ const facebookAuth = catchAsync(async (req, res, next) => {
       await user.save({ validateBeforeSave: false });
     }
 
+    // Update Customer session tracking
+    try {
+      await Customer.findOneAndUpdate(
+        { userId: user._id },
+        { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+      );
+    } catch (err) {
+      logger.warn("Customer session update failed on Facebook login", {
+        userId: user._id,
+        error: err.message,
+      });
+    }
+
     return createSendToken(user, 200, res, "Signed in successfully");
   }
 
@@ -131,6 +146,16 @@ const facebookAuth = catchAsync(async (req, res, next) => {
     provider: "facebook",
     isVerified: true,
   });
+
+  // Ensure Customer enrichment record exists
+  try {
+    await ensureCustomerRecord({ userId: user._id, email: user.email });
+  } catch (err) {
+    logger.warn("Customer record creation failed after Facebook sign-up", {
+      userId: user._id,
+      error: err.message,
+    });
+  }
 
   // Welcome email (non-blocking; mirrors Google flow).
   const welcomeBody = `

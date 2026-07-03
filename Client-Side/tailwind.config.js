@@ -10,10 +10,10 @@ export default {
     extend: {
       /* ── Typography System ───────────────────────── */
       fontFamily: {
-        display: ['Cinzel', 'Playfair Display', 'serif'],
+        display: ['Playfair Display', 'serif'],
         serif: ['Playfair Display', 'serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        mono: ['Inter', 'system-ui', 'sans-serif'], // fallback to inter for mono to enforce 2 fonts rule
         headline: ['Playfair Display', 'serif'],
         body: ['Inter', 'system-ui', 'sans-serif'],
         label: ['Inter', 'system-ui', 'sans-serif'],
@@ -21,70 +21,60 @@ export default {
 
       /* ── Radius System ───────────────────────── */
       borderRadius: {
-        lg: '8px',
-        md: '6px',
-        sm: '4px',
+        sm: '8px',
+        md: '12px',
+        lg: '16px',
+        xl: '20px',
+        xxl: '24px',
         full: '9999px',
+        hero: '24px',
       },
 
       /* ── Color System (Saga Gold Dark Theme) ─────────── */
       colors: {
-        background: '#0e0e0e',
-        foreground: '#e5e2e1',
-
-        surface: '#131313',
-        'surface-1': '#1f1f1f',
-        'surface-2': '#2a2a2a',
-        'surface-3': '#393939',
-
-        'admin-shell': '#050505',
-        'admin-card': '#0b0b0b',
+        background: '#121212',
+        foreground: '#FFFFFF',
+        
+        surface: '#1A1A1A',
+        card: '#202020',
+        divider: 'rgba(255,255,255,0.08)',
 
         primary: {
-          DEFAULT: '#f2ca50',
-          hover: '#d4af37',
-          foreground: '#0e0e0e',
-          container: '#d4af37',
-        },
-
-        accent: {
-          DEFAULT: '#d4af37',
-          foreground: '#0e0e0e',
+          DEFAULT: '#0E0E0E',
+          foreground: '#FFFFFF',
         },
 
         secondary: {
-          DEFAULT: '#1f1f1f',
-          foreground: '#e5e2e1',
+          DEFAULT: '#1A1A1A',
+          foreground: '#B5B5B5',
         },
 
-        muted: {
-          DEFAULT: '#d0c5af',
-          foreground: '#131313',
+        accent: {
+          DEFAULT: '#F2CA50',
+          hover: '#FFD86A',
         },
 
-        border: '#4d4635',
-        input: '#4d4635',
-        ring: '#f2ca50',
+        success: '#34C759',
+        error: '#FF453A',
+        warning: '#FFCC00',
 
-        card: {
-          DEFAULT: '#131313',
-          foreground: '#e5e2e1',
-        },
+        border: 'rgba(255,255,255,0.08)',
+        input: '#202020',
+        ring: '#F2CA50',
 
-        popover: {
-          DEFAULT: '#131313',
-          foreground: '#e5e2e1',
-        },
+        gold: {
+          DEFAULT: '#F2CA50',
+          hover: '#FFD86A',
+        }
+      },
 
-        destructive: {
-          DEFAULT: '#ffb4ab',
-          foreground: '#0e0e0e',
-        },
-
-        /* ── Status Colors ───────────────── */
-        sale: '#ffb4ab',
-        new: '#1D9E75',
-        deal: '#f2ca50',
+      boxShadow: {
+        small: '0 4px 12px rgba(0,0,0,0.08)',
+        medium: '0 8px 24px rgba(0,0,0,0.12)',
+        large: '0 16px 40px rgba(0,0,0,0.16)',
+        elegant: '0 16px 40px rgba(0,0,0,0.16)',
+        gold: '0 0 40px rgba(242,202,80,0.15)',
+        focus: '0 0 0 4px #f2ca50',
       },
     },
   },

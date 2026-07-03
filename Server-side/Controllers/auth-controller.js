@@ -19,6 +19,10 @@ const {
 } = require("../Utils/phone-validator");
 const logger = require("../Utils/logger");
 const { recordLoginAttempt } = require("../Utils/login-activity-service");
+const { ensureWelcomeReward } = require("../Utils/reward-service");
+const Customer = require("../Models/Customer");
+const { migrateGuestToUser, ensureCustomerRecord } = require("../Services/migration-service");
+const { isAdminRole } = require("../Utils/admin-roles");
 
 // Best-effort WhatsApp dispatch for auth flows. Never throws — auth must
 // continue even if WhatsApp is misconfigured or the user has no phone.
@@ -170,6 +174,16 @@ const registerUser = catchAsync(async (req, res, next) => {
         provider: "local",
     });
 
+    // Ensure Customer enrichment record exists for this user
+    try {
+      await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+      logger.warn("Customer record creation failed after registration", {
+        userId: newUser._id,
+        error: err.message,
+      });
+    }
+
     // send user verification email using shared template helper
     const registrationBody = `
             <p style="color: #555; font-size: 14px;">
@@ -184,7 +198,7 @@ const registerUser = catchAsync(async (req, res, next) => {
                 </span>
             </div>
             <p style="color: #555; font-size: 14px;">
-                This code will expire in <strong>10 minutes</strong>.
+                This code will expire in <strong>${otpExpiryMinutes()} minutes</strong>.
             </p>
             <p style="color: #555; font-size: 14px;">
                 If you did not request this, please ignore this email.
@@ -224,10 +238,6 @@ const registerUser = catchAsync(async (req, res, next) => {
             email: newUser.email,
             isVerified: newUser.isVerified,
         },
-        mailError: mailError ? mailError.message : undefined,
-        whatsAppError: whatsAppResult.error
-            ? whatsAppResult.error.message
-            : whatsAppResult.reason,
     });
 });
 
@@ -259,7 +269,7 @@ const otpVerify = catchAsync(async(req, res, next)=>{
     await user.save({ validateBeforeSave: false });
 
     const welcomeBody = `
-                <p>Hi ${user.userName || "there"},</p>
+                <p>Hi ${user.username || "there"},</p>
                 <p>Thank you for verifying your email address. Your Saga Elite account is now active.</p>
                 <p>Explore our exclusive collections and enjoy limited‑edition fashion built for the bold.</p>
                 <br/>
@@ -274,6 +284,32 @@ const otpVerify = catchAsync(async(req, res, next)=>{
         });
     } catch (err) {
         logger.error("Welcome email failed after OTP verification", { error: err });
+    }
+
+    await ensureWelcomeReward(user).catch((err) =>
+        logger.warn("Welcome reward issuance failed", {
+            userId: user._id,
+            error: err?.message,
+        })
+    );
+
+    try {
+        await migrateGuestToUser(req.guestToken, user);
+    } catch (err) {
+        logger.warn("Guest migration on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even when no guest token was present
+    try {
+        await ensureCustomerRecord({ userId: user._id, email: user.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on otpVerify failed", {
+            userId: user._id,
+            error: err.message,
+        });
     }
 
     await trySendAuthWhatsApp(
@@ -310,14 +346,14 @@ const resendOTP = catchAsync(async (req, res, next) => {
 
     try {
         const resendBody = `
-                    <p>Hi ${user.userName || "there"},</p>
+                    <p>Hi ${user.username || "there"},</p>
                     <p>We received a request to resend your verification code for Saga Elite.</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <span style="font-size: 28px; letter-spacing: 6px; font-weight: bold; color: #000;">
                             ${newOTP}
                         </span>
                     </div>
-                    <p><strong>Note:</strong> This code is valid for the next 10 minutes. Please do not share it with anyone.</p>
+                    <p><strong>Note:</strong> This code is valid for the next ${otpExpiryMinutes()} minutes. Please do not share it with anyone.</p>
                     <p>If you didn’t request this, you can safely ignore this email.</p>
                 `;
 
@@ -415,12 +451,61 @@ const login = catchAsync(async (req, res, next) => {
         });
     }
 
+    // Admin 2FA: if admin role AND twoFactorEnabled, send OTP (no token)
+    if (isAdminRole(user.role) && user.twoFactorEnabled) {
+        const twoFactorOtp = generateOtp(6);
+        user.twoFactorOtp = twoFactorOtp;
+        user.twoFactorOtpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save({ validateBeforeSave: false });
+
+        const subject = "Saga Elite — Two-Factor Authentication Code";
+        const message = `Your 2FA code is: ${twoFactorOtp}\nValid for 10 minutes.`;
+        try {
+            await sendMail({
+                email: user.email,
+                subject,
+                message,
+                html: buildEmailTemplate(subject, message),
+            });
+        } catch (error) {
+            user.twoFactorOtp = undefined;
+            user.twoFactorOtpExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+            return next(new AppError("Error sending OTP email, please try again.", 500));
+        }
+
+        recordLoginAttempt({
+            req,
+            userId: user._id,
+            emailAttempted: email,
+            success: true,
+        });
+        return res.status(200).json({
+            status: "two_factor_required",
+            success: false,
+            email: user.email,
+        });
+    }
+
     recordLoginAttempt({
         req,
         userId: user._id,
         emailAttempted: email,
         success: true,
     });
+
+    // Update Customer session tracking
+    try {
+        await Customer.findOneAndUpdate(
+            { userId: user._id },
+            { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+        );
+    } catch (err) {
+        logger.warn("Customer session update failed on login", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
 
     createSendToken(user, 200, res, "Login successful");
 });
@@ -584,7 +669,7 @@ const resendResetPasswordOtp = catchAsync(async (req, res, next) => {
                         ${otp}
                     </span>
                 </div>
-                <p>This code is valid for <strong>15 minutes</strong>.</p>
+                <p>This code is valid for <strong>${otpExpiryMinutes()} minutes</strong>.</p>
                 <p>If you didn't request this, please ignore this email.</p>
             `;
 
@@ -669,11 +754,15 @@ const resetPassword = catchAsync(async(req, res, next)=>{
                 <p>You can now log in with your new password.</p>
             `;
 
-    await sendMail({
-        email: user.email,
-        subject: "Saga Elite – Password Changed Successfully",
-        html: buildEmailTemplate("Password Changed", resetSuccessBody),
-    });
+    try {
+        await sendMail({
+            email: user.email,
+            subject: "Saga Elite – Password Changed Successfully",
+            html: buildEmailTemplate("Password Changed", resetSuccessBody),
+        });
+    } catch (err) {
+        logger.error("Password reset confirmation email failed", { error: err });
+    }
 
     res.status(200).json({
         status: "success",
@@ -686,7 +775,14 @@ const resetPassword = catchAsync(async(req, res, next)=>{
 const checkAuth = catchAsync(async (req, res, next) => {
     const user = req.userInfo;
     if (!user) {
-        return next(new AppError("User not found", 404));
+        return res.status(200).json({
+            status: "success",
+            success: false,
+            message: "No authenticated user",
+            data: {
+                user: null,
+            },
+        });
     }
     res.status(200).json({
         status: "success",
@@ -738,6 +834,25 @@ const registerGuest = catchAsync(async (req, res, next) => {
         await guest.save();
     }
 
+    try {
+        await migrateGuestToUser(req.guestToken, newUser);
+    } catch (err) {
+        logger.warn("Guest migration on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
+    }
+
+    // Ensure Customer record exists even without guest token
+    try {
+        await ensureCustomerRecord({ userId: newUser._id, email: newUser.email });
+    } catch (err) {
+        logger.warn("Customer record ensure on registerGuest failed", {
+            userId: newUser._id,
+            error: err.message,
+        });
+    }
+
     const registrationBody = `
         <p>Hi there,</p>
         <p>Welcome to <strong>Saga Elite</strong>!</p>
@@ -761,6 +876,83 @@ const registerGuest = catchAsync(async (req, res, next) => {
     createSendToken(newUser, 201, res, "Registration successful. Check your email for password.");
 });
 
+const verifyTwoFactor = catchAsync(async (req, res, next) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        return next(new AppError("Email and OTP are required", 400));
+    }
+
+    const user = await User.findOne({ email }).select("+twoFactorOtp");
+    if (!user) {
+        return next(new AppError("User not found", 404));
+    }
+
+    if (!user.twoFactorOtp || !user.twoFactorOtpExpires) {
+        return next(new AppError("No active 2FA session. Please log in again.", 400));
+    }
+
+    if (user.twoFactorOtpExpires < Date.now()) {
+        user.twoFactorOtp = undefined;
+        user.twoFactorOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("OTP has expired. Please request a new one.", 400));
+    }
+
+    if (user.twoFactorOtp !== otp) {
+        return next(new AppError("Invalid OTP", 401));
+    }
+
+    user.twoFactorOtp = undefined;
+    user.twoFactorOtpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    createSendToken(user, 200, res, "Two-factor authentication successful");
+});
+
+const resendTwoFactorOtp = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return next(new AppError("Email is required", 400));
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        return next(new AppError("User not found", 404));
+    }
+
+    if (!isAdminRole(user.role) || !user.twoFactorEnabled) {
+        return next(new AppError("2FA not enabled for this account", 400));
+    }
+
+    const twoFactorOtp = generateOtp(6);
+    user.twoFactorOtp = twoFactorOtp;
+    user.twoFactorOtpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save({ validateBeforeSave: false });
+
+    const subject = "Saga Elite — Two-Factor Authentication Code (Resend)";
+    const message = `Your 2FA code is: ${twoFactorOtp}\nValid for 10 minutes.`;
+    try {
+        await sendMail({
+            email: user.email,
+            subject,
+            message,
+            html: buildEmailTemplate(subject, message),
+        });
+    } catch (error) {
+        user.twoFactorOtp = undefined;
+        user.twoFactorOtpExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return next(new AppError("Error sending OTP email, please try again.", 500));
+    }
+
+    res.status(200).json({
+        status: "success",
+        message: "OTP resent successfully",
+    });
+});
+
 module.exports = {
     registerUser,
     otpVerify,
@@ -775,4 +967,6 @@ module.exports = {
     checkAuth,
     checkGuest,
     registerGuest,
+    verifyTwoFactor,
+    resendTwoFactorOtp,
 };

@@ -5,6 +5,7 @@ const Product = require("../Models/Product");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Coupon = require("../Models/Coupon");
+const UserCoupon = require("../Models/UserCoupon");
 const SiteConfig = require("../Models/SiteConfig");
 const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
@@ -77,10 +78,25 @@ const tryIssueReviewReward = async (review) => {
       discountType,
       discountValue,
       maxUses,
+      perUserLimit: 1,
       startsAt,
       endsAt,
       isActive: true,
+      isPersonalized: true,
       issuedFor: "review_reward",
+    });
+
+    await UserCoupon.create({
+      user: review.userId,
+      coupon: coupon._id,
+      code: coupon.code,
+      source: "review_reward",
+      sourceRef: review._id,
+      expiresAt: endsAt,
+      metadata: {
+        reviewId: review._id,
+        productId: review.productId,
+      },
     });
 
     review.rewardCouponIssued = true;
@@ -416,7 +432,7 @@ const getProductReviews = catchAsync(async (req, res, next) => {
 const getUserReviews = catchAsync(async (req, res, next) => {
   const userId = req.userInfo?._id;
 
-  const reviews = await Review.find({ userId })
+  const reviews = await Review.find({ userId, status: { $ne: "archived" } })
     .sort({ createdAt: -1 })
     .populate("userId", "email firstName lastName")
     .populate({
@@ -621,7 +637,7 @@ const getAllReviews = catchAsync(async (req, res, next) => {
   // the legacy `status` query is honoured for backward compatibility.
   const filter = {};
   const requestedStatus = String(req.query.status || "").toLowerCase();
-  if (["approved", "pending", "rejected"].includes(requestedStatus)) {
+  if (["approved", "pending", "rejected", "archived"].includes(requestedStatus)) {
     filter.status = requestedStatus;
   } else {
     filter.status = "approved";
@@ -909,6 +925,84 @@ const featureReview = catchAsync(async (req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
+| Archive / restore a review (admin soft delete)
+|--------------------------------------------------------------------------
+*/
+const archiveReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (review.status === "archived") {
+    return next(new AppError("Review is already archived", 400));
+  }
+
+  const wasApproved = review.status === "approved";
+  review.previousStatus = review.status;
+  review.status = "archived";
+  review.archivedAt = new Date();
+  await review.save({ validateBeforeSave: false });
+
+  if (wasApproved) {
+    await recalculateProductRating(review.productId);
+  }
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-archived",
+  });
+
+  req.adminAction = "Archived review";
+
+  res.status(200).json({
+    success: true,
+    message: "Review archived",
+    review,
+  });
+});
+
+const restoreReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  if (review.status !== "archived") {
+    return next(new AppError("Review is not archived", 400));
+  }
+
+  review.status = review.previousStatus || "approved";
+  review.previousStatus = null;
+  review.archivedAt = null;
+  await review.save({ validateBeforeSave: false });
+
+  if (review.status === "approved") {
+    await recalculateProductRating(review.productId);
+  }
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId: review._id,
+    productId: review.productId,
+    source: "review-restored",
+  });
+
+  req.adminAction = "Restored archived review";
+
+  res.status(200).json({
+    success: true,
+    message: "Review restored",
+    review,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Reviews analytics (admin)
 |--------------------------------------------------------------------------
 */
@@ -947,7 +1041,7 @@ const getReviewsAnalytics = catchAsync(async (_req, res) => {
     ]),
   ]);
 
-  const totalsByStatus = { pending: 0, approved: 0, rejected: 0 };
+  const totalsByStatus = { pending: 0, approved: 0, rejected: 0, archived: 0 };
   totals.forEach((entry) => {
     if (entry._id) totalsByStatus[entry._id] = entry.count;
   });
@@ -997,6 +1091,7 @@ const bulkModerateReviews = catchAsync(async (req, res) => {
   const succeeded = [];
   const failed = [];
   const touchedProductIds = new Set();
+  const ratingRecalcProductIds = new Set();
 
   for (const id of ids) {
     try {
@@ -1009,6 +1104,29 @@ const bulkModerateReviews = catchAsync(async (req, res) => {
       if (action === "feature") review.isFeatured = true;
       else if (action === "unfeature") review.isFeatured = false;
       else if (action === "category") review.category = category;
+      else if (action === "archive") {
+        if (review.status === "archived") {
+          failed.push({ id, reason: "already archived" });
+          continue;
+        }
+        if (review.status === "approved" && review.productId) {
+          ratingRecalcProductIds.add(String(review.productId));
+        }
+        review.previousStatus = review.status;
+        review.status = "archived";
+        review.archivedAt = new Date();
+      } else if (action === "restore") {
+        if (review.status !== "archived") {
+          failed.push({ id, reason: "not archived" });
+          continue;
+        }
+        review.status = review.previousStatus || "approved";
+        review.previousStatus = null;
+        review.archivedAt = null;
+        if (review.status === "approved" && review.productId) {
+          ratingRecalcProductIds.add(String(review.productId));
+        }
+      }
 
       await review.save({ validateBeforeSave: false });
       succeeded.push(id);
@@ -1016,6 +1134,10 @@ const bulkModerateReviews = catchAsync(async (req, res) => {
     } catch (err) {
       failed.push({ id, reason: err.message || "unexpected error" });
     }
+  }
+
+  for (const productId of ratingRecalcProductIds) {
+    await recalculateProductRating(productId);
   }
 
   if (succeeded.length > 0) {
@@ -1064,6 +1186,8 @@ module.exports = {
   getDropAnalytics,
   replyToReview,
   featureReview,
+  archiveReview,
+  restoreReview,
   getReviewsAnalytics,
   bulkModerateReviews,
 };

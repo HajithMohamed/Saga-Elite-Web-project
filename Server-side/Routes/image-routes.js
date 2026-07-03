@@ -16,6 +16,7 @@ const {
   reorderImages,
   deleteAllImages,
   updateImage,
+  updateImageMeta,
 } = require("../Controllers/image-controller");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
@@ -74,5 +75,6 @@ router.patch("/toggle-active/:id", authMiddleware, adminMiddleware, requirePermi
 router.delete("/delete-image/:id", authMiddleware, adminMiddleware, requirePermission("products"), adminLogMiddleware, deleteImage);
 router.delete("/delete-all-images", authMiddleware, adminMiddleware, requirePermission("products"), validateDeleteAllImages, adminLogMiddleware, deleteAllImages);
 router.patch("/reorder-images", authMiddleware, adminMiddleware, requirePermission("products"), validateImageReorder, adminLogMiddleware, reorderImages);
+router.patch("/meta/:id", authMiddleware, adminMiddleware, requirePermission("products"), validateObjectIdParam("id", "image id"), adminLogMiddleware, updateImageMeta);
 
 module.exports = router;

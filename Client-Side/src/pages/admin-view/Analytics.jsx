@@ -11,8 +11,6 @@ import {
   Users,
   Star,
   AlertTriangle,
-  Sparkles,
-  Lightbulb,
   Shirt,
   Heart,
   Skull,
@@ -40,172 +38,12 @@ const TABS = [
   { key: "customers", label: "Customers", icon: Users },
   { key: "fashion", label: "Fashion", icon: Shirt },
   { key: "reviews", label: "Sentiment", icon: Star },
-  { key: "ai", label: "AI Insights", icon: Sparkles },
 ];
 
 // "Fashion" reuses the products endpoint but renders a streetwear-specific view.
 // Mapped here so fetchTab can share cache with the Products tab.
 const TAB_ENDPOINT_OVERRIDE = {
   fashion: "products",
-};
-
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
-
-const SEVERITY_STYLES = {
-  high: "border-rose-400/40 bg-rose-400/10 text-rose-300",
-  medium: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-  low: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-};
-
-const ConfidenceBadge = ({ value }) => {
-  if (typeof value !== "number") return null;
-  const tone =
-    value >= 75
-      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
-      : value >= 50
-      ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-      : "border-rose-400/40 bg-rose-400/10 text-rose-300";
-  return (
-    <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${tone}`}>
-      {value}% conf
-    </span>
-  );
-};
-
-const AIInsightsTab = () => {
-  const [recommendation, setRecommendation] = React.useState(null);
-  const [alerts, setAlerts] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    Promise.all([
-      axios.get(`${API_BASE}/admin/recommendations/analytics`, { withCredentials: true }).catch(() => null),
-      axios.get(`${API_BASE}/admin/alerts`, { withCredentials: true }).catch(() => null),
-    ])
-      .then(([recRes, alertRes]) => {
-        if (cancelled) return;
-        setRecommendation(recRes?.data?.data?.recommendation || null);
-        setAlerts(alertRes?.data?.data?.alerts || []);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err?.message || "Could not load AI insights");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center gap-3 border border-[#ffb4ab]/40 bg-[#ffb4ab]/5 p-4 text-sm text-[#ffb4ab]">
-        <AlertTriangle className="h-4 w-4" /> {error}
-      </div>
-    );
-  }
-
-  const sortedRecs = recommendation?.recommendations
-    ? [...recommendation.recommendations].sort(
-        (a, b) =>
-          (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9) ||
-          (b.confidence || 0) - (a.confidence || 0)
-      )
-    : [];
-
-  return (
-    <div className="space-y-6">
-      {alerts.length > 0 ? (
-        <div className="rounded-lg border border-rose-400/40 bg-rose-400/5 p-4">
-          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-rose-300">
-            <AlertTriangle className="h-4 w-4" />
-            {alerts.length} active alert{alerts.length === 1 ? "" : "s"}
-          </h3>
-          <ul className="mt-3 space-y-2">
-            {alerts.slice(0, 5).map((a) => (
-              <li key={a._id} className="text-sm text-[#e5e2e1]">
-                <span className="font-bold">{a.title}:</span>{" "}
-                <span className="text-[#99907c]">{a.message}</span>
-              </li>
-            ))}
-          </ul>
-          <a href="/admin/alerts" className="mt-3 inline-block text-xs uppercase tracking-wider text-[#f2ca50] hover:underline">
-            See all alerts →
-          </a>
-        </div>
-      ) : null}
-
-      {!recommendation ? (
-        <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-8 text-center">
-          <Sparkles className="mx-auto h-8 w-8 text-[#f2ca50]" />
-          <p className="mt-3 text-sm text-[#99907c]">
-            No AI analytics insight yet. The daily job runs at 03:45. Visit{" "}
-            <a href="/admin/recommendations" className="text-[#f2ca50] hover:underline">
-              /admin/recommendations
-            </a>{" "}
-            to generate one now.
-          </p>
-        </div>
-      ) : (
-        <>
-          {recommendation.summary ? (
-            <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-4">
-              <h3 className="text-xs uppercase tracking-wider text-[#99907c]">Summary</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#e5e2e1]">{recommendation.summary}</p>
-            </div>
-          ) : null}
-
-          {sortedRecs.length > 0 ? (
-            <div className="rounded-lg border border-[#4d4635]/60 bg-[#0a0a0a] p-4">
-              <h3 className="text-xs uppercase tracking-wider text-[#99907c]">Recommended actions</h3>
-              <ul className="mt-3 space-y-3">
-                {sortedRecs.map((rec, idx) => (
-                  <li key={idx} className="border-t border-[#4d4635]/40 pt-3 first:border-t-0 first:pt-0">
-                    <div className="flex items-start gap-2">
-                      <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[#f2ca50]" />
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-bold uppercase tracking-wide text-[#e5e2e1]">{rec.area}</span>
-                          <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${SEVERITY_STYLES[rec.priority] || SEVERITY_STYLES.medium}`}>
-                            {rec.priority}
-                          </span>
-                          <ConfidenceBadge value={rec.confidence} />
-                        </div>
-                        <p className="mt-1 text-sm text-[#e5e2e1]">{rec.action}</p>
-                        {rec.expectedImpact ? (
-                          <p className="mt-1 text-xs italic text-[#99907c]">Expected: {rec.expectedImpact}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <a href="/admin/recommendations" className="mt-4 inline-block text-xs uppercase tracking-wider text-[#f2ca50] hover:underline">
-                Open full Recommendations hub →
-              </a>
-            </div>
-          ) : null}
-
-          <p className="text-center text-xs text-[#4d4635]">
-            Generated {new Date(recommendation.generatedAt).toLocaleString()} by {recommendation.model || "AI"}
-          </p>
-        </>
-      )}
-    </div>
-  );
 };
 
 const formatCurrency = (value) =>
@@ -1323,15 +1161,10 @@ export default function AdminAnalytics() {
   );
 
   useEffect(() => {
-    // The AI Insights tab fetches its own data; skip the analytics endpoint.
-    if (activeTab === "ai") return;
     fetchTab(activeTab, range);
   }, [activeTab, range, fetchTab]);
 
   const tabContent = () => {
-    if (activeTab === "ai") {
-      return <AIInsightsTab />;
-    }
     const data = dataByTab[activeTab];
     if (loading && !data) {
       return (

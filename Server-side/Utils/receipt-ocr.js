@@ -3,13 +3,15 @@
 // auto-verify / auto-reject decisions before the receipt is stored.
 //
 // Tesseract.js handles photographed/scanned images. pdf-parse extracts
-// embedded text from digital bank statements (PDFs from internet banking).
-// Scanned PDFs without embedded text are not supported here — the caller
-// should reject them and ask the customer to upload an image instead.
+// embedded text from digital bank statements (PDFs from internet banking)
+// and renders image-only PDFs so Tesseract can OCR those pages too.
 
 const { createWorker } = require("tesseract.js");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 const logger = require("./logger");
+
+const MIN_READABLE_TEXT_LENGTH = 20;
+const MAX_PDF_OCR_PAGES = 3;
 
 // Reference is "SE" + 6 alphanumeric uppercase. Be permissive at parse time
 // (OCR may insert spaces or hyphens) and re-normalize on the result.
@@ -71,16 +73,104 @@ const extractAmountCandidates = (text) => {
   return candidates;
 };
 
+const readImageWithWorker = async (worker, imageBuffer) => {
+  const result = await worker.recognize(imageBuffer);
+  return {
+    text: String(result?.data?.text || "").trim(),
+    confidence: Number.isFinite(result?.data?.confidence) ? result.data.confidence : null,
+  };
+};
+
 const extractTextFromPdf = async (buffer) => {
+  let parser;
   try {
-    const result = await pdfParse(buffer);
-    return {
-      text: String(result?.text || "").trim(),
-      confidence: null, // pdf-parse is text extraction, not OCR
-    };
+    parser = new PDFParse({ data: buffer });
+
+    let embeddedText = "";
+    try {
+      const result = await parser.getText();
+      embeddedText = String(result?.text || "").trim();
+    } catch (textError) {
+      logger.warn("PDF embedded text extraction failed", { error: textError?.message });
+    }
+
+    if (embeddedText.length >= MIN_READABLE_TEXT_LENGTH) {
+      return {
+        text: embeddedText,
+        confidence: null, // embedded PDF text extraction is not OCR
+      };
+    }
+
+    let screenshotResult;
+    try {
+      screenshotResult = await parser.getScreenshot({
+        scale: 2,
+        first: MAX_PDF_OCR_PAGES,
+      });
+    } catch (screenshotError) {
+      logger.warn("PDF screenshot rendering failed", { error: screenshotError?.message });
+      return { text: embeddedText, confidence: null };
+    }
+
+    const pages = Array.isArray(screenshotResult?.pages) ? screenshotResult.pages : [];
+    if (!pages.length) {
+      return { text: embeddedText, confidence: null };
+    }
+
+    let worker;
+    try {
+      worker = await createWorker("eng");
+      const pageTexts = [];
+      const confidences = [];
+
+      for (const page of pages) {
+        const imageData = page?.data;
+        if (!imageData) continue;
+
+        const imageBuffer = Buffer.isBuffer(imageData)
+          ? imageData
+          : Buffer.from(imageData);
+        const pageOcr = await readImageWithWorker(worker, imageBuffer);
+
+        if (pageOcr.text) pageTexts.push(pageOcr.text);
+        if (Number.isFinite(pageOcr.confidence)) confidences.push(pageOcr.confidence);
+      }
+
+      const combinedText = [embeddedText, ...pageTexts]
+        .filter(Boolean)
+        .join("\n\n")
+        .trim();
+      const confidence = confidences.length
+        ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
+        : null;
+
+      return {
+        text: combinedText,
+        confidence,
+      };
+    } catch (ocrError) {
+      logger.error("Tesseract OCR failed for PDF", { error: ocrError?.message });
+      return { text: embeddedText, confidence: null };
+    } finally {
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch (terminateError) {
+          logger.warn("Tesseract worker terminate failed", { error: terminateError?.message });
+        }
+      }
+    }
   } catch (error) {
-    logger.warn("pdf-parse failed", { error: error?.message });
+    logger.warn("PDF parsing failed", { error: error?.message });
     return { text: "", confidence: null };
+  } finally {
+    if (parser) {
+      try {
+        await parser.destroy();
+      } catch (destroyError) {
+        logger.warn("PDF parser destroy failed", { error: destroyError?.message });
+      }
+    }
   }
 };
 
@@ -88,14 +178,13 @@ const extractTextFromImage = async (buffer) => {
   let worker;
   try {
     worker = await createWorker("eng");
-    const result = await worker.recognize(buffer);
-    return {
-      text: String(result?.data?.text || "").trim(),
-      confidence: Number.isFinite(result?.data?.confidence) ? result.data.confidence : null,
-    };
+    return await readImageWithWorker(worker, buffer);
   } catch (error) {
     logger.error("Tesseract OCR failed", { error: error?.message });
-    return { text: "", confidence: null };
+    return {
+      text: "",
+      confidence: null,
+    };
   } finally {
     if (worker) {
       try {
@@ -149,7 +238,7 @@ const processReceipt = async (buffer, mimetype, expected) => {
     ? await extractTextFromPdf(buffer)
     : await extractTextFromImage(buffer);
 
-  if (!text || text.length < 20) {
+  if (!text || text.length < MIN_READABLE_TEXT_LENGTH) {
     return {
       ok: false,
       reason: "unreadable",

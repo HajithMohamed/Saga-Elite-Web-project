@@ -1,83 +1,78 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, LayoutGrid, Heart, User } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthDrawer } from '@/components/auth-components/AuthDrawer';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Home, Search, Grid, Heart, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const AnimatedBadge = ({ count }) => {
-  if (!count || count <= 0) return null;
+const MobileBottomNav = () => {
+  const location = useLocation();
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false); // scrolling down
+      } else {
+        setIsVisible(true);  // scrolling up
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  const navItems = [
+    { key: "home", label: "Home", icon: Home, to: "/shopping/home" },
+    { key: "search", label: "Search", icon: Search, to: "/shopping/product-list" },
+    { key: "categories", label: "Categories", icon: Grid, to: "/shopping/product-list" },
+    { key: "wishlist", label: "Wishlist", icon: Heart, to: "/shopping/account/wishlist" },
+    { key: "account", label: "Account", icon: User, to: "/shopping/account" },
+  ];
+
   return (
-    <AnimatePresence mode="wait">
-      <motion.span
-        key={count}
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
-        exit={{ scale: 0.6, opacity: 0 }}
-        className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-[#f2ca50] text-[#1b1c1c] se-mono text-[9px] font-semibold z-10"
-      >
-        {count > 99 ? '99+' : count}
-      </motion.span>
+    <AnimatePresence>
+      {isVisible && (
+        <motion.nav
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          exit={{ y: 100 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="md:hidden fixed bottom-0 left-0 w-full z-40 pb-safe"
+          aria-label="Mobile navigation"
+        >
+          <div className="bg-[#0e0e0e]/95 backdrop-blur-[16px] border-t border-white/5 flex items-center justify-around h-[72px] px-2 shadow-[0_-8px_30px_rgba(0,0,0,0.4)]">
+            {navItems.map((item) => {
+              const isActive = location.pathname.includes(item.to) || (item.key === 'home' && location.pathname === '/shopping/home');
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  aria-label={item.label}
+                  className="flex flex-col items-center justify-center w-full h-full gap-1 group relative"
+                >
+                  <item.icon 
+                    className={`w-6 h-6 transition-all duration-250 ${isActive ? 'text-[#F2CA50]' : 'text-[#99907c] group-hover:text-[#fafafa]'}`} 
+                    strokeWidth={isActive ? 2 : 1.5}
+                  />
+                  <span className={`text-[10px] font-sans transition-colors ${isActive ? 'text-[#F2CA50] font-bold' : 'text-[#99907c] group-hover:text-[#fafafa]'}`}>
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <motion.div 
+                      layoutId="bottomNavIndicator"
+                      className="absolute -top-[1px] w-8 h-[2px] bg-[#F2CA50] rounded-full shadow-[0_0_10px_#F2CA50]"
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </motion.nav>
+      )}
     </AnimatePresence>
   );
 };
 
-const MobileBottomNav = () => {
-  const location = useLocation();
-  const { user } = useSelector((state) => state.auth);
-  const { items: wishlistItems } = useSelector((state) => state.cart.wishlist || { items: [] });
-  const wishlistCount = wishlistItems?.length || 0;
-  const { open: openAuthDrawer } = useAuthDrawer();
-
-  const tabs = [
-    { id: 'home', to: '/shopping/home', icon: Home, label: 'Home' },
-    { id: 'search', to: '/shopping/search', icon: Search, label: 'Search' },
-    { id: 'categories', to: '/shopping/product-list', icon: LayoutGrid, label: 'Categories' },
-    { id: 'wishlist', to: '/shopping/wishlist', icon: Heart, label: 'Wishlist', badge: wishlistCount },
-    { id: 'account', to: user ? '/shopping/account' : null, icon: User, label: 'Account' },
-  ];
-
-  return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-[#4d4635] pb-safe">
-      <div className="flex items-center justify-around h-16 px-2">
-        {tabs.map((tab) => {
-          const isActive = location.pathname === tab.to || (tab.id === 'categories' && location.pathname.includes('/product-list'));
-          const Icon = tab.icon;
-
-          // Account tab — open drawer if guest
-          if (tab.id === 'account' && !user) {
-            return (
-              <button
-                key={tab.id}
-                onClick={() => openAuthDrawer('login')}
-                className="relative flex flex-col items-center justify-center w-full h-full transition-colors text-[#d0c5af] hover:text-[#e5e2e1]"
-              >
-                <div className="relative"><Icon size={20} strokeWidth={1.5} /></div>
-                <span className="se-label mt-1 text-[9px] tracking-[0.15em]">{tab.label}</span>
-              </button>
-            );
-          }
-
-          return (
-            <Link
-              key={tab.id}
-              to={tab.to}
-              className={`relative flex flex-col items-center justify-center w-full h-full transition-colors ${
-                isActive ? 'text-[#f2ca50]' : 'text-[#d0c5af] hover:text-[#e5e2e1]'
-              }`}
-            >
-              <div className="relative">
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                {tab.badge !== undefined && <AnimatedBadge count={tab.badge} />}
-              </div>
-              <span className="se-label mt-1 text-[9px] tracking-[0.15em]">{tab.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
-};
-
 export default MobileBottomNav;
-

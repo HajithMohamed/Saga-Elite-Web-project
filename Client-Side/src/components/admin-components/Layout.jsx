@@ -25,7 +25,7 @@ const Layout = () => {
 
       <div className="flex flex-1 flex-col lg:pl-64">
         <Header onMenuToggle={() => setIsSidebarOpen((state) => !state)} />
-        <main className="flex-1 flex-col flex overflow-y-auto pb-16 lg:pb-0">
+        <main className="flex-1 flex-col flex overflow-y-auto pb-16 lg:pb-0" data-lenis-prevent="true">
           <Outlet />
         </main>
       </div>

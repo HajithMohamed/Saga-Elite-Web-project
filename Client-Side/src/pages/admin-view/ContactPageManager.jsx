@@ -16,6 +16,8 @@ import {
 import { Link } from "react-router-dom";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { invalidateShopAbout } from "@/hooks/use-shop-about";
+import useUnsavedChanges from "@/hooks/use-unsaved-changes";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import { pageVariants } from "@/components/admin-components/_shared/animations";
 import {
@@ -131,6 +133,9 @@ const ContactPageManager = () => {
     [values, original]
   );
 
+  // Warn on tab close / refresh while contact-page edits are unsaved.
+  useUnsavedChanges(dirtyKeys.length > 0);
+
   const saveTab = async () => {
     const keys = TAB_KEYS[activeTab] || [];
     const changed = keys.filter(
@@ -152,6 +157,7 @@ const ContactPageManager = () => {
         )
       );
       toast({ title: "Saved", variant: "success" });
+      invalidateShopAbout();
       await load();
     } catch (err) {
       toast({

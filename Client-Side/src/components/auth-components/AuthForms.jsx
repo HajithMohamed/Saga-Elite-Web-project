@@ -8,9 +8,11 @@ import {
   googleSignInAction, googleSignUpAction,
   facebookSignInAction, facebookSignUpAction,
   verifyOtpAction, resendOtpAction,
+  verifyTwoFactorAction, resendTwoFactorOtpAction,
 } from "@/store/auth-slice";
 import { toast } from "@/hooks/use-toast";
 import { firstPasswordError } from "@/lib/password-strength";
+import { describeAuthError } from "@/lib/auth-errors";
 import LuxuryInput from "./LuxuryInput";
 import OtpCells from "./OtpCells";
 import GoogleAuthButton from "./GoogleAuthButton";
@@ -23,10 +25,12 @@ const PHONE = /^(\+?94|0)?7[0-9]{8}$/;
 const GOOGLE = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const FB = Boolean(import.meta.env.VITE_FACEBOOK_APP_ID);
 
-export const resolveUser = (p) =>
+void motion;
+
+const resolveUser = (p) =>
   p?.data?.user ?? (p?.data && typeof p.data === "object" ? p.data : null) ?? p?.user ?? null;
 
-export const resolveDest = (user) => {
+const resolveDest = (user) => {
   const r = String(user?.role || "").toLowerCase();
   return ["admin","super_admin","superadmin","sub_admin"].includes(r) ? "/admin/dashboard" : "/shopping/home";
 };
@@ -47,6 +51,19 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Admin two-factor step — entered when login answers with a token-less
+  // { status: "two_factor_required" } response.
+  const [step, setStep] = useState("login"); // "login" | "two_factor"
+  const [twoFactorOtp, setTwoFactorOtp] = useState("");
+  const [twoFactorSeconds, setTwoFactorSeconds] = useState(0);
+  const [twoFactorResending, setTwoFactorResending] = useState(false);
+
+  useEffect(() => {
+    if (step !== "two_factor" || twoFactorSeconds <= 0) return undefined;
+    const id = setInterval(() => setTwoFactorSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [step, twoFactorSeconds]);
 
   const validate = useCallback((d, t) => {
     const e = {};
@@ -71,10 +88,64 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
     if (Object.keys(fresh).length) return;
     await go(async () => {
       const r = await dispatch(loginUserAction(fd)).unwrap();
+
+      // Token-less 200s — branch BEFORE toasting/navigating.
+      if (r?.status === "two_factor_required") {
+        setTwoFactorOtp("");
+        setTwoFactorSeconds(45);
+        setStep("two_factor");
+        toast({ title: "Verification code sent", description: "Check your email for the 6-digit code." });
+        return;
+      }
+      if (r?.status === "must_change_password") {
+        toast({ title: "Password reset required", description: "Set a new password to continue." });
+        onClose();
+        navigate("/auth/forgot-password", { replace: true });
+        return;
+      }
+
       toast({ title: "Welcome back", variant: "success" });
       onClose();
       navigate(resolveDest(resolveUser(r)), { replace: true });
-    }).catch(err => toast({ title: "Login failed", description: err?.response?.data?.message || err?.message, variant: "destructive" }));
+    }).catch((err) => {
+      const { title, description } = describeAuthError(err, {
+        title: "Login failed",
+      });
+      toast({ title, description, variant: "destructive" });
+    });
+  };
+
+  const submitTwoFactor = async (e) => {
+    e.preventDefault();
+    if (twoFactorOtp.length < 6) return;
+    await go(async () => {
+      const r = await dispatch(
+        verifyTwoFactorAction({ email: fd.email, otp: twoFactorOtp })
+      ).unwrap();
+      toast({ title: "Welcome back", variant: "success" });
+      onClose();
+      navigate(resolveDest(resolveUser(r)), { replace: true });
+    }).catch((err) => {
+      const { title, description } = describeAuthError(err, {
+        title: "Verification failed",
+      });
+      toast({ title, description, variant: "destructive" });
+      setTwoFactorOtp("");
+    });
+  };
+
+  const resendTwoFactor = async () => {
+    setTwoFactorResending(true);
+    try {
+      await dispatch(resendTwoFactorOtpAction(fd.email)).unwrap();
+      toast({ title: "New code sent", description: "Check your email." });
+      setTwoFactorSeconds(45);
+    } catch (err) {
+      const { title, description } = describeAuthError(err, { title: "Could not resend code" });
+      toast({ title, description, variant: "destructive" });
+    } finally {
+      setTwoFactorResending(false);
+    }
   };
 
   const handleGoogle = async ({ access_token }) => {
@@ -92,6 +163,39 @@ export const LoginForm = ({ onClose, switchToRegister, onForgotPassword, initial
       onClose(); navigate(resolveDest(resolveUser(r)), { replace: true });
     }).catch(() => toast({ title: "Facebook sign-in failed", variant: "destructive" }));
   };
+
+  if (step === "two_factor") {
+    return (
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+        <button
+          onClick={() => { setStep("login"); setTwoFactorOtp(""); }}
+          className="flex items-center gap-1 se-label text-[9px] tracking-[0.2em] text-[#99907c] hover:text-[#f2ca50] transition-colors uppercase mb-5"
+        >
+          <ChevronLeft size={12} /> Back to login
+        </button>
+        <Eyebrow tone="gold" size="md">Two-Factor Security</Eyebrow>
+        <h2 className="mt-2 se-serif text-[#e5e2e1] text-2xl leading-snug">Verify<br />it&apos;s you.</h2>
+        <p className="mt-3 text-[11px] text-[#d0c5af]">
+          A six-digit code was sent to <span className="text-[#e5e2e1]">{fd.email}</span>. It expires in 10 minutes.
+        </p>
+        <form onSubmit={submitTwoFactor} className="mt-8 space-y-6">
+          <OtpCells length={6} value={twoFactorOtp} onChange={setTwoFactorOtp} disabled={loading} />
+          <Btn variant="default" className={`${AUTH_PRIMARY_BTN} w-full`} iconRight={ArrowRight} type="submit" disabled={loading || twoFactorOtp.length < 6}>
+            {loading ? "Verifying..." : "Verify & sign in"}
+          </Btn>
+        </form>
+        <div className="mt-5 text-center">
+          {twoFactorSeconds > 0
+            ? <span className="se-label text-[9px] tracking-widest text-[#99907c]">Resend in <span className="text-[#e5e2e1]">{twoFactorSeconds}s</span></span>
+            : <button onClick={resendTwoFactor} disabled={twoFactorResending} className="se-label text-[9px] tracking-widest text-[#f2ca50] hover:text-[#ffe088] disabled:opacity-50">{twoFactorResending ? "Sending..." : "Resend code"}</button>
+          }
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-[#574500]">
+          <ShieldCheck size={11} className="text-[#f2ca50]" /><span>Admin account protection</span>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
@@ -229,8 +333,8 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
     else if (d.password) { const pe = firstPasswordError(d.password); if (pe) e.password = pe; }
     if (t.confirmPassword && !d.confirmPassword) e.confirmPassword = "Confirm your password.";
     else if (d.confirmPassword && d.password !== d.confirmPassword) e.confirmPassword = "Passwords don't match.";
-    if (t.phoneNumber && !d.phoneNumber) e.phoneNumber = "Phone number required.";
-    else if (d.phoneNumber && !PHONE.test(d.phoneNumber.replace(/\s/g,""))) e.phoneNumber = "Valid Sri Lankan mobile (e.g. 0771234567).";
+    // phoneNumber is optional — only validate format if the user typed something
+    if (d.phoneNumber && !PHONE.test(d.phoneNumber.replace(/\s/g,""))) e.phoneNumber = "Valid Sri Lankan mobile (e.g. 0771234567).";
     return e;
   }, []);
 
@@ -240,7 +344,7 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    const t = { username: true, email: true, password: true, confirmPassword: true, phoneNumber: true };
+    const t = { username: true, email: true, password: true, confirmPassword: true };
     setTouched(t);
     const fresh = validate(fd, t);
     setErrors(fresh);
@@ -251,7 +355,10 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
       toast({ title: "Welcome to the atelier", description: "Verify your email to continue.", variant: "success" });
       onOtpRequired();
     } catch (err) {
-      toast({ title: "Registration failed", description: err?.response?.data?.message || err?.message, variant: "destructive" });
+      const { title, description } = describeAuthError(err, {
+        title: "Registration failed",
+      });
+      toast({ title, description, variant: "destructive" });
     } finally { setLoading(false); }
   };
 
@@ -271,7 +378,7 @@ export const RegisterForm = ({ onBack, onOtpRequired }) => {
           {fd.password && <div className="mt-1"><PasswordStrengthMeter password={fd.password} /></div>}
         </div>
         <LuxuryInput id="r-confirm" type="password" label="Confirm Password" autoComplete="new-password" value={fd.confirmPassword} error={touched.confirmPassword ? errors.confirmPassword : ""} onChange={set("confirmPassword")} onBlur={() => setTouched(p => ({ ...p, confirmPassword: true }))} />
-        <LuxuryInput id="r-phone" type="tel" label="Mobile (Sri Lanka)" placeholder="0771234567" autoComplete="tel" value={fd.phoneNumber} error={touched.phoneNumber ? errors.phoneNumber : ""} onChange={set("phoneNumber")} onBlur={() => setTouched(p => ({ ...p, phoneNumber: true }))} />
+        <LuxuryInput id="r-phone" type="tel" label="Mobile (Sri Lanka) — Optional" placeholder="0771234567" autoComplete="tel" value={fd.phoneNumber} error={touched.phoneNumber ? errors.phoneNumber : ""} onChange={set("phoneNumber")} onBlur={() => setTouched(p => ({ ...p, phoneNumber: true }))} />
         <Btn variant="default" className={`${AUTH_PRIMARY_BTN} w-full`} iconRight={loading ? undefined : ArrowRight} type="submit" disabled={loading}>
           {loading ? "Creating account..." : "Create account"}
         </Btn>

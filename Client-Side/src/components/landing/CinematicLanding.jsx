@@ -3,9 +3,19 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { formatLkr } from "@/utils/currency";
+import axios from "axios";
+import { API_V1_URL as API_BASE } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 // BRAND MANIFESTO SECTION
 export const BrandManifesto = () => {
+  // Static editorial copy.
+  const heading = "Built for the";
+  const highlight = "rare few.";
+  const body =
+    "Every drop is intentionally limited. No mass production. No restocks. No trend chasing. We craft narrative-driven pieces that blur the line between fashion and identity.";
+  const tag = "This is not fast fashion";
+
   return (
     <section className="relative bg-[#050505] border-y border-[#1a1a1a] py-16 md:py-20 overflow-hidden">
       {/* Ambient animated grain & glow */}
@@ -22,8 +32,8 @@ export const BrandManifesto = () => {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="font-display text-[50px] md:text-[80px] leading-[0.95] text-[#FAF7F2] uppercase tracking-tighter"
           >
-            Built for the <br />{" "}
-            <span className="text-[#f2ca50] italic pr-4">rare few.</span>
+            {heading} <br />{" "}
+            <span className="text-[#f2ca50] italic pr-4">{highlight}</span>
           </motion.h2>
         </div>
 
@@ -41,14 +51,12 @@ export const BrandManifesto = () => {
             className="border-l border-[#f2ca50]/30 pl-8"
           >
             <p className="font-sans text-lg md:text-xl text-[#d0c5af] leading-relaxed mb-6 max-w-lg">
-              Every drop is intentionally limited. No mass production. No
-              restocks. No trend chasing. We craft narrative-driven pieces that
-              blur the line between fashion and identity.
+              {body}
             </p>
             <div className="flex items-center gap-3">
               <span className="w-12 h-[1px] bg-[#f2ca50]"></span>
               <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">
-                This is not fast fashion
+                {tag}
               </span>
             </div>
           </motion.div>
@@ -177,7 +185,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#0e0e0e] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -210,7 +218,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1f1a2e] via-[#0e0e0e] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1f1a2e] via-[#0e0e0e] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -241,7 +249,7 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
 
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#131313] to-[#050505]" style={{zIndex: -1}} />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a1a] via-[#131313] to-[#050505]" style={{ zIndex: -1 }} />
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-[#0a0a0a]/20 to-transparent group-hover:from-[#0a0a0a] transition-all" />
 
@@ -283,6 +291,24 @@ export const AsymmetricCategoryGrid = ({ categoryImages }) => {
 
 // CLOSING CREDITS FOOTER
 export const CinematicFooter = () => {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (email) {
+      try {
+        await axios.post(`${API_BASE}/newsletter/subscribe`, { email });
+        setSubscribed(true);
+        setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
+        setEmail("");
+        toast({ title: "Welcome to the Archive.", variant: "success" });
+      } catch (error) {
+        toast({ title: "Subscription failed", description: error?.response?.data?.message || "Please try again", variant: "destructive" });
+      }
+    }
+  };
+
   return (
     <footer className="relative bg-[#050505] pt-32 pb-16 overflow-hidden border-t border-[#1a1a1a]">
       {/* Huge Background Typography */}
@@ -306,10 +332,13 @@ export const CinematicFooter = () => {
           private events, and archived pieces.
         </p>
 
-        <form className="w-full max-w-md flex relative border-b border-[#4d4635] focus-within:border-[#f2ca50] transition-colors mb-24">
+        <form onSubmit={handleSubscribe} className="w-full max-w-md flex relative border-b border-[#4d4635] focus-within:border-[#f2ca50] transition-colors mb-24">
           <input
             type="email"
             placeholder="YOUR EMAIL ADDRESS"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
             className="w-full bg-transparent border-none outline-none font-mono text-xs tracking-widest text-[#FAF7F2] placeholder-[#4d4635] py-4 px-2"
           />
 
@@ -320,31 +349,6 @@ export const CinematicFooter = () => {
             Submit
           </button>
         </form>
-
-        <div className="w-full flex flex-col md:flex-row justify-end items-center gap-6 border-t border-[#1a1a1a] pt-8">
-          <div className="flex gap-6 font-mono text-[10px] tracking-[0.2em] text-[#99907c] uppercase">
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Instagram
-            </Link>
-
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Tiktok
-            </Link>
-
-            <Link
-              to="#"
-              className="hover:text-[#f2ca50] transition-colors"
-            >
-              Terms
-            </Link>
-          </div>
-        </div>
       </div>
     </footer>
   );

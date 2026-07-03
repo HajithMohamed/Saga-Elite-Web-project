@@ -25,14 +25,14 @@ test.describe("Permission gating on admin routes", () => {
     });
   });
 
-  test("marketing_manager can access /admin/notifications (has notifications perm)", async ({
+  test("marketing_manager can access /admin/coupons (has sendCampaigns perm)", async ({
     page,
     loginAs,
   }) => {
     await loginAs("marketing_manager");
-    await page.goto("/admin/notifications");
+    await page.goto("/admin/coupons");
     await expect(page.getByText(ACCESS_DENIED_TEXT)).not.toBeVisible();
-    await expect(page).toHaveURL(/\/admin\/notifications/);
+    await expect(page).toHaveURL(/\/admin\/coupons/);
   });
 
   test("order_manager is blocked from /admin/product (no products perm)", async ({

@@ -1,32 +1,43 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
-import { fetchUpcomingDrop, getLandingData } from "@/services/landing-api";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+import Reveal from "@/components/common-components/Reveal";
+import {
+  fetchUpcomingDrop,
+  getLandingData,
+  fetchBestSellers,
+  fetchMostWished,
+  fetchNewArrivals,
+  fetchHomeCategories,
+} from "@/services/landing-api";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import { useSocketEvent } from "@/hooks/use-socket-events";
+import { HomeSkeleton } from "@/components/ui/skeleton";
 import {
-  AnnouncementBar,
   HeroCarousel,
-  HeroBackdropFX,
   LiveDropCountdownXL,
-  ProductSlider,
-  OffersSlider,
-  MysteryGiftSpline,
-  WhyChooseSaga,
+  SeasonalCampaignSlider,
   TrendingFitsMarquee,
-  CommunityFeed,
-  Testimonials,
-  VipMembership,
 } from "@/components/landing/LandingSections";
-import {
-  BrandManifesto,
-  AsymmetricCategoryGrid,
-  CinematicFooter
-} from "@/components/landing/CinematicLanding";
 import ForYouRail from "@/components/landing/ForYouRail";
-import { ReactLenis } from "lenis/react";
-
+import {
+  WhyChooseSaga,
+  HowShoppingWorks,
+  CustomerTestimonials,
+  FAQPreview,
+  TrustBadgesStrip,
+} from "@/components/landing/TrustSections";
+import {
+  ProductRailGrid,
+  HowItWorks,
+  PromoBanner,
+  ShopByCategory,
+} from "@/components/landing/HomeSections";
+import { LuxuryDropSlider } from "@/components/landing/LuxuryHeroSection";
+import { EcosystemGrid, LiveActivityOverlay } from "@/components/landing/LuxuryEcosystemSections";
+import { ExclusiveDropsBanner } from "@/components/landing/ExclusiveDropsBanner";
+import { CommunityGallery, Newsletter, InstagramSection } from "@/components/landing/CommunitySections";
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -41,22 +52,35 @@ const Home = () => {
     categoryImages: { ladies: {}, gents: {}, unisex: {} },
     socialImages: [],
   });
+  const [grids, setGrids] = useState({
+    bestSellers: [],
+    mostWished: [],
+    newArrivals: [],
+  });
+  const [categories, setCategories] = useState([]);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     try {
       if (!silent) setLoading(true);
-      const [data, upcomingDrop] = await Promise.all([
-        getLandingData(),
-        fetchUpcomingDrop().catch(() => null),
-      ]);
+      const [data, upcomingDrop, bestSellers, mostWished, newArrivals, homeCategories] =
+        await Promise.all([
+          getLandingData(),
+          fetchUpcomingDrop().catch(() => null),
+          fetchBestSellers(8),
+          fetchMostWished(8),
+          fetchNewArrivals(8),
+          fetchHomeCategories(6),
+        ]);
       setPayload(data);
       setNextDrop(upcomingDrop);
+      setGrids({ bestSellers, mostWished, newArrivals });
+      setCategories(homeCategories);
     } catch (error) {
       console.error(error);
       if (!silent) {
         toast({
           title: "Failed to load",
-          description: "Could not fetch the latest drops.",
+          description: "Could not fetch the latest pieces.",
         });
       }
     } finally {
@@ -68,7 +92,7 @@ const Home = () => {
     load();
   }, [load]);
 
-  // Real-time refetch on product/drop CRUD (Fix #3 + #4) — debounced.
+  // Real-time refetch on product/drop/offer CRUD — debounced to coalesce bursts.
   const refetchTimer = useRef(null);
   const debouncedRefetch = useCallback(() => {
     if (refetchTimer.current) clearTimeout(refetchTimer.current);
@@ -82,15 +106,9 @@ const Home = () => {
   useSocketEvent("product:deleted", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:created", debouncedRefetch, [debouncedRefetch]);
   useSocketEvent("drop:updated", debouncedRefetch, [debouncedRefetch]);
+  useSocketEvent("offer:refresh", debouncedRefetch, [debouncedRefetch]);
 
   usePageMeta({ title: "Saga Elite — Own The Drop.", fullTitle: true });
-
-  const heroSlides = useMemo(() => {
-    if (payload.heroSlides && payload.heroSlides.length > 0) {
-      return payload.heroSlides;
-    }
-    return [];
-  }, [payload.heroSlides]);
 
   // Combine arrivals + trending into a single marquee feed.
   const trendingFeed = useMemo(
@@ -102,112 +120,112 @@ const Home = () => {
     [payload.gentsArrivals, payload.ladiesArrivals, payload.trending]
   );
 
-  const fallbackImage = "/placeholder.jpg";
-  const normalizedCategories = {
-    ladies: {
-      main: payload.categoryImages?.ladies?.main || payload.categoryImages?.ladies?.Dresses || fallbackImage,
-      Dresses: payload.categoryImages?.ladies?.Dresses || fallbackImage,
-    },
-    gents: {
-      main: payload.categoryImages?.gents?.main || payload.categoryImages?.gents?.Shirts || fallbackImage,
-      Shirts: payload.categoryImages?.gents?.Shirts || fallbackImage,
-    },
-    unisex: {
-      main: payload.categoryImages?.unisex?.main || payload.categoryImages?.unisex?.Unisex || fallbackImage,
-      Unisex: payload.categoryImages?.unisex?.Unisex || fallbackImage,
-    },
-  };
+  // New-arrivals grid prefers the sorted feed; falls back to the gendered arrivals.
+  const newArrivalsGrid = useMemo(() => {
+    if (grids.newArrivals.length) return grids.newArrivals;
+    return [...(payload.ladiesArrivals || []), ...(payload.gentsArrivals || [])];
+  }, [grids.newArrivals, payload.ladiesArrivals, payload.gentsArrivals]);
+
+  // Exclusive Drops feed: currently-live drops + the next upcoming drop, deduped.
+  // ExclusiveDropsBanner computes Upcoming/Live/Ended status per drop.
+  const exclusiveDrops = useMemo(() => {
+    const combined = [...(payload.activeDrops || []), nextDrop].filter(Boolean);
+    const seen = new Set();
+    return combined.filter((d) => {
+      const id = String(d?._id || d?.id || d?.slug || "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [payload.activeDrops, nextDrop]);
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center text-center">
-        <div className="absolute inset-0 bg-grain opacity-40 mix-blend-overlay pointer-events-none" />
-        <span className="font-display text-2xl md:text-4xl text-[#FAF7F2] uppercase tracking-[0.3em] animate-pulse">Saga Elite</span>
-        <span className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mt-4">Preparing Chapter</span>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   return (
-    <ReactLenis root options={{ lerp: 0.08, smoothWheel: true }}>
-      <div className="relative bg-[#0e0e0e] min-h-screen text-[#e5e2e1]">
-        {/* Ambient Three.js particle backdrop */}
-        <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
-          <HeroBackdropFX />
-        </div>
+    <div className="relative min-h-screen bg-background text-foreground">
+      <LiveActivityOverlay />
+      
+      {/* 1. New Luxury Hero Section */}
+      <LuxuryDropSlider slides={payload.heroSlides} />
 
-        <div className="relative z-10">
-          {/* 1. Announcement bar */}
-          <AnnouncementBar activeDrop={payload.activeDrop} />
+      {/* 2. The Ecosystem Grid */}
+      <EcosystemGrid />
 
-          {/* 2. Hero — cinematic */}
-          <HeroCarousel
-            slides={heroSlides}
-            activeDrops={payload.activeDrops}
-            nextDrop={nextDrop}
-          />
+      {/* 3. Offers & campaigns (admin-managed) */}
+      {payload.offers && payload.offers.length > 0 && (
+        <SeasonalCampaignSlider offers={payload.offers} />
+      )}
 
-          {/* 3. Collection selector — Asymmetric */}
-          <AsymmetricCategoryGrid categoryImages={normalizedCategories} />
+      {/* 4. Shop by category — DB-driven from the Category collection */}
+      <ShopByCategory categories={categories} />
 
-          {/* 4. Featured / Rare Pieces */}
-          {payload.trending && payload.trending.length > 0 && (
-            <ProductSlider
-              title="Rare Pieces"
-              subtitle="Elite Picks · Most Wanted"
-              products={payload.trending}
-            />
-          )}
+      {/* --- PROMPT 04 HOMEPAGE PRODUCT FLOW --- */}
 
-          {/* 5. Personalized rails */}
-          <ForYouRail variant="for-you" />
-          <ForYouRail variant="recently-viewed" />
-          <ForYouRail variant="trending-style" />
 
-          {/* 6. Active offers slider */}
-          {payload.offers && payload.offers.length > 0 && (
-            <OffersSlider offers={payload.offers} />
-          )}
+      {/* 6. Trending Products */}
+      <ProductRailGrid
+        id="trending"
+        title="Trending Now"
+        subtitle="Most loved by our customers."
+        products={payload.trending}
+        ctaHref="/shopping/product-list?sort=trending"
+        ctaLabel="View All Trending"
+        layout="grid"
+        filters={["Trending", "Popular", "Men", "Women"]}
+      />
 
-          {/* 7. Next drop countdown */}
-          {!payload.activeDrop && nextDrop?.releaseDate ? (
-            <LiveDropCountdownXL
-              targetDate={nextDrop.releaseDate}
-              title={nextDrop.name}
-              description="The next chapter opens soon. Members enter first."
-            />
-          ) : null}
+      {/* 7. New Arrivals */}
+      <ProductRailGrid
+        id="new"
+        title="New Arrivals"
+        subtitle="Fresh styles just added."
+        products={newArrivalsGrid}
+        ctaHref="/shopping/product-list?sort=new"
+        ctaLabel="View All New"
+        layout="carousel"
+        filters={["New", "Sale", "Shoes", "Accessories"]}
+      />
 
-          {/* 8. Brand Manifesto */}
-          <BrandManifesto />
+      {/* 8. Exclusive Drops */}
+      <ExclusiveDropsBanner drops={exclusiveDrops} />
 
-          {/* 9. Mystery gift */}
-          <MysteryGiftSpline />
+      {/* 9. Best Sellers */}
+      <ProductRailGrid
+        id="best"
+        title="Best Sellers"
+        subtitle="Most purchased products."
+        products={grids.bestSellers}
+        ctaHref="/shopping/product-list?sort=bestselling"
+        ctaLabel="View All Best Sellers"
+        layout="grid"
+      />
 
-          {/* 10. Why Saga Elite */}
-          <WhyChooseSaga />
+      {/* 10. Recommended For You */}
+      <ForYouRail variant="for-you" />
 
-          {/* 11. Trending fits */}
-          {trendingFeed.length > 0 && (
-            <TrendingFitsMarquee products={trendingFeed} />
-          )}
+      {/* --- PROMPT 05 TRUST SECTIONS --- */}
+      <WhyChooseSaga />
+      <HowShoppingWorks />
+      <CustomerTestimonials />
+      <FAQPreview />
+      <TrustBadgesStrip />
+      {/* --- END PROMPT 05 --- */}
 
-          {/* 12. Community / social proof */}
-          {payload.socialImages.length > 0 && (
-            <CommunityFeed images={payload.socialImages} />
-          )}
+      {/* --- PROMPT 06 COMMUNITY SECTIONS --- */}
+      <CommunityGallery />
+      <Newsletter />
+      <InstagramSection />
+      {/* --- END PROMPT 06 --- */}
 
-          {/* 13. Testimonials */}
-          <Testimonials />
+      {/* Additional Rails & Marquee kept at the bottom to avoid breaking flow */}
+      <ForYouRail variant="recently-viewed" />
+      <ForYouRail variant="trending-style" />
+      {trendingFeed.length > 0 && <TrendingFitsMarquee products={trendingFeed} />}
 
-          {/* 14. VIP / membership CTA */}
-          <VipMembership />
-
-          {/* 15. Cinematic Footer */}
-          <CinematicFooter />
-        </div>
-      </div>
-    </ReactLenis>
+      {/* Footer comes from the shared layout (MainFooter). */}
+    </div>
   );
 };
 

@@ -111,5 +111,7 @@ const imageSchema = new mongoose.Schema(
 
 // Compound index for fast image retrieval
 imageSchema.index({ refId: 1, refModel: 1, order: 1 });
+// Color-tagged image retrieval (variant image gallery switching)
+imageSchema.index({ refId: 1, refModel: 1, colorTag: 1, order: 1 });
 
 module.exports = mongoose.model("Image", imageSchema);

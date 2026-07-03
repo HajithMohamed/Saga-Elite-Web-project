@@ -49,9 +49,12 @@ const VariantSelectors = ({
   onColorChange,
   errors = {},
   disabled = false,
+  hideColors = false,
   className,
 }) => {
-  const sizes = getProductSizes(product);
+  const sizes = Array.isArray(product?.sizes) && product.sizes.length > 0 
+    ? product.sizes 
+    : getProductSizes(product);
   const colors = getColorsForSize(product, selectedSize);
 
   return (
@@ -86,39 +89,41 @@ const VariantSelectors = ({
       </div>
 
       {/* COLOR */}
-      <div>
-        <div className="flex items-baseline justify-between mb-3">
-          <Eyebrow tone="gold" size="xs">Colour</Eyebrow>
-          {selectedColor && (
-            <Eyebrow tone="muted" size="xs">{selectedColor}</Eyebrow>
-          )}
-        </div>
-        {colors.length === 0 ? (
-          <p className="se-body text-xs text-[#574500]">
-            Select a size to view available colours.
-          </p>
-        ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            {colors.map((color) => {
-              const isSelected = color === selectedColor;
-              const hasStock = colorHasStock(product, selectedSize, color);
-              const isDisabled = disabled || (!hasStock && !isSelected);
-              return (
-                <ColorSwatch
-                  key={color}
-                  color={color}
-                  label={color}
-                  size={36}
-                  selected={isSelected}
-                  disabled={isDisabled}
-                  onClick={() => onColorChange?.(color)}
-                />
-              );
-            })}
+      {!hideColors && (
+        <div>
+          <div className="flex items-baseline justify-between mb-3">
+            <Eyebrow tone="gold" size="xs">Colour</Eyebrow>
+            {selectedColor && (
+              <Eyebrow tone="muted" size="xs">{selectedColor}</Eyebrow>
+            )}
           </div>
-        )}
-        <FieldError>{errors.color}</FieldError>
-      </div>
+          {colors.length === 0 ? (
+            <p className="se-body text-xs text-[#574500]">
+              Select a size to view available colours.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              {colors.map((color) => {
+                const isSelected = color === selectedColor;
+                const hasStock = colorHasStock(product, selectedSize, color);
+                const isDisabled = disabled || (!hasStock && !isSelected);
+                return (
+                  <ColorSwatch
+                    key={color}
+                    color={color}
+                    label={color}
+                    size={28}
+                    selected={isSelected}
+                    disabled={isDisabled}
+                    onClick={() => onColorChange?.(color)}
+                  />
+                );
+              })}
+            </div>
+          )}
+          <FieldError>{errors.color}</FieldError>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,151 @@
+const mongoose = require("mongoose");
+
+const viewedProductSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  viewedAt: { type: Date, default: Date.now },
+  dwellMs: { type: Number, default: 0 },
+  variantId: { type: mongoose.Schema.Types.ObjectId },
+}, { _id: false });
+
+const activityEntrySchema = new mongoose.Schema({
+  type: { type: String, required: true, trim: true },
+  at: { type: Date, default: Date.now },
+  meta: { type: mongoose.Schema.Types.Mixed },
+}, { _id: false });
+
+// ── Customer: thin enrichment layer only ──
+// User remains the source of truth for registered account identity, auth,
+// roles, loyalty, and order totals. Customer owns guest/session behavior,
+// viewed products, preferences, and computed intelligence. Contact fields are
+// lookup/fallback snapshots, not the authoritative registered-user profile.
+const customerSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    lowercase: true,
+    trim: true,
+  },
+  type: {
+    type: String,
+    enum: ["guest", "registered"],
+    default: "guest",
+    index: true,
+  },
+
+  // Links to existing models — these are the REAL data sources
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  guestId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Guest",
+  },
+
+  guestToken: {
+    type: String,
+  },
+
+  name: { type: String, trim: true },
+
+  // Customer-owned behavioral enrichment.
+
+  // Recently viewed products (capped at 100)
+  viewedProducts: {
+    type: [viewedProductSchema],
+    default: [],
+    validate: {
+      validator: (v) => !v || v.length <= 100,
+      message: "Viewed products capped at 100",
+    },
+  },
+
+  // Activity log (capped at 200)
+  activityLog: {
+    type: [activityEntrySchema],
+    default: [],
+    validate: {
+      validator: (v) => !v || v.length <= 200,
+      message: "Activity log capped at 200",
+    },
+  },
+
+  // Session tracking
+  lastSessionAt: { type: Date, default: null },
+  sessionCount: { type: Number, default: 0 },
+  acquisitionChannel: { type: String, default: null },
+  firstSeenAt: { type: Date, default: Date.now },
+
+  // Behavioral intelligence (computed fields — not authoritative)
+  behavioralScore: { type: Number, default: 0 },
+  customerLifetimeValue: { type: Number, default: 0 },
+  predictedChurnRisk: { type: Number, default: 0 },
+  preferredCategories: { type: [String], default: [] },
+  avgOrderValue: { type: Number, default: 0 },
+
+  // Preferences (unique to Customer — not in User or Guest)
+  preferences: {
+    promoOptIn: { type: Boolean, default: true },
+    newsletterOptIn: { type: Boolean, default: false },
+  },
+
+  // Migration tracking
+  migratedFromGuest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Customer",
+    default: null,
+  },
+
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
+
+customerSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $type: "string" } },
+  }
+);
+customerSchema.index(
+  { guestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { guestId: { $type: "objectId" } },
+  }
+);
+customerSchema.index(
+  { userId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { userId: { $type: "objectId" } },
+  }
+);
+customerSchema.index(
+  { guestToken: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { guestToken: { $type: "string" } },
+  }
+);
+customerSchema.index({ email: 1, type: 1 });
+customerSchema.index({ guestToken: 1, type: 1 });
+customerSchema.index({ lastSessionAt: -1 });
+customerSchema.index({ behavioralScore: -1 });
+customerSchema.index({ customerLifetimeValue: -1 });
+customerSchema.index({ createdAt: -1 });
+
+customerSchema.pre("save", function () {
+  if (this.email == null) this.email = undefined;
+  if (this.guestId == null) this.guestId = undefined;
+  if (this.userId == null) this.userId = undefined;
+  if (this.guestToken == null) this.guestToken = undefined;
+  if (Array.isArray(this.activityLog) && this.activityLog.length > 200) {
+    this.activityLog = this.activityLog.slice(-200);
+  }
+});
+
+const Customer = mongoose.model("Customer", customerSchema);
+module.exports = Customer;

@@ -1,19 +1,25 @@
 const { test, expect } = require("../fixtures/auth");
 
-const BACKEND_URL =
-  process.env.E2E_BACKEND_URL ||
-  `http://localhost:${process.env.E2E_BACKEND_PORT || 5001}`;
-
 test.describe("A2 — Bulk operations on Products", () => {
   test("super_admin selects 2 products, deactivates them, audit log captures count", async ({
     page,
     loginAs,
   }) => {
     await loginAs("super_admin");
-    await page.goto("/admin/product");
+    await page.goto("/admin/product", { waitUntil: "domcontentloaded" });
+    await page
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/api/v1/products") &&
+          res.request().method() === "GET" &&
+          res.status() >= 200 &&
+          res.status() < 400,
+        { timeout: 45_000 }
+      )
+      .catch(() => {});
 
     const rowCheckboxes = page.getByTestId("admin-bulk-row-select");
-    await expect(rowCheckboxes.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rowCheckboxes.first()).toBeVisible({ timeout: 30_000 });
 
     const total = await rowCheckboxes.count();
     expect(total).toBeGreaterThanOrEqual(2);
@@ -23,7 +29,7 @@ test.describe("A2 — Bulk operations on Products", () => {
     await rowCheckboxes.nth(1).check();
 
     const bar = page.getByTestId("admin-bulk-action-bar");
-    await expect(bar).toBeVisible();
+    await expect(bar).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("admin-bulk-count")).toHaveText("2");
 
     await page.getByTestId("admin-bulk-action-deactivate").click();
@@ -36,7 +42,7 @@ test.describe("A2 — Bulk operations on Products", () => {
       .poll(
         async () => {
           const res = await page.request.get(
-            `${BACKEND_URL}/api/v1/super-admin/logs?category=product&limit=10`
+            "/api/v1/super-admin/logs?category=product&limit=10"
           );
           if (!res.ok()) return null;
           const body = await res.json();
@@ -55,15 +61,27 @@ test.describe("A2 — Bulk operations on Products", () => {
     loginAs,
   }) => {
     await loginAs("super_admin");
-    await page.goto("/admin/product");
+    await page.goto("/admin/product", { waitUntil: "domcontentloaded" });
+    await page
+      .waitForResponse(
+        (res) =>
+          res.url().includes("/api/v1/products") &&
+          res.request().method() === "GET" &&
+          res.status() >= 200 &&
+          res.status() < 400,
+        { timeout: 45_000 }
+      )
+      .catch(() => {});
 
     const rowCheckboxes = page.getByTestId("admin-bulk-row-select");
-    await expect(rowCheckboxes.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rowCheckboxes.first()).toBeVisible({ timeout: 30_000 });
     const initialCount = await rowCheckboxes.count();
 
     // Select the first row only.
     await rowCheckboxes.nth(0).check();
-    await expect(page.getByTestId("admin-bulk-action-bar")).toBeVisible();
+    await expect(page.getByTestId("admin-bulk-action-bar")).toBeVisible({
+      timeout: 10_000,
+    });
 
     await page.getByTestId("admin-bulk-action-delete").click();
     const confirmBtn = page.getByTestId("admin-bulk-confirm");

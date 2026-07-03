@@ -1,31 +1,74 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Home, MessageCircle, RotateCcw } from "lucide-react";
 
 const NotFound = () => {
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-6 py-16 text-white">
-      <div className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0b0b0b] p-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#D4AF37]">404</p>
-        <h1 className="mt-4 text-4xl font-black tracking-tight">Page not found</h1>
-        <p className="mt-4 text-sm text-white/65">
-          The page you tried to open is missing, moved, or no longer available.
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+    <section className="relative min-h-screen bg-[#0e0e0e] flex items-center justify-center overflow-hidden px-4">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#F2CA50]/[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-grain opacity-30" />
+      </div>
+
+      <div className="relative z-10 max-w-2xl text-center">
+        {/* Large 404 */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <p className="text-[10px] font-sans font-bold uppercase tracking-[0.4em] text-[#F2CA50] mb-6">
+            Error 404
+          </p>
+          <h1 className="se-serif text-[80px] md:text-[120px] lg:text-[160px] text-[#fafafa] leading-none tracking-tight mb-4 select-none">
+            404
+          </h1>
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-[#F2CA50] to-transparent mx-auto mb-8" />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <h2 className="font-sans text-2xl md:text-3xl font-bold text-[#fafafa] mb-4">
+            Page Not Found
+          </h2>
+          <p className="se-body text-[15px] text-[#99907c] max-w-md mx-auto mb-10 leading-relaxed">
+            The page you're looking for has been moved, removed, or doesn't exist. 
+            Let's get you back on track.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+        >
           <Link
             to="/shopping/home"
-            className="rounded-full bg-[#D4AF37] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#e3c45f]"
+            className="se-btn se-btn-primary gap-2 w-full sm:w-auto"
           >
-            Go to Home
+            <Home className="w-4 h-4" /> Return Home
           </Link>
+          <button
+            onClick={() => window.history.back()}
+            className="se-btn se-btn-secondary gap-2 w-full sm:w-auto"
+          >
+            <RotateCcw className="w-4 h-4" /> Go Back
+          </button>
           <Link
             to="/contact"
-            className="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:border-[#D4AF37] hover:text-[#D4AF37]"
+            className="se-btn se-btn-ghost gap-2 w-full sm:w-auto"
           >
-            Contact Support
+            <MessageCircle className="w-4 h-4" /> Contact Support
           </Link>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </section>
   );
 };
 

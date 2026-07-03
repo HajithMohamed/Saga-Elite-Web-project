@@ -1,425 +1,347 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Facebook, Instagram, Youtube, ArrowRight, CheckCircle2, ChevronDown, Lock, CreditCard, ShieldCheck, Mail, MapPin, Twitter } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useSelector } from "react-redux";
-import useShopAbout from "@/hooks/use-shop-about";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  Instagram,
+  Facebook,
+  Youtube,
+  Twitter,
+  MapPin,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Lock,
+  BadgeCheck,
+  ChevronDown,
+  Banknote,
+  Landmark,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { fetchSiteSettings } from "@/services/landing-api";
+import { TikTokIcon, WhatsAppIcon } from "@/components/common-components/BrandIcons";
 
-const MainFooter = () => {
-  const location = useLocation();
-  const isAdminView = location.pathname.startsWith("/admin");
+// ── Built-in fallback link columns (used until an admin configures them) ─────
+const DEFAULT_QUICK_LINKS = [
+  { label: "Home", url: "/" },
+  { label: "New Arrivals", url: "/shopping/product-list?sort=new" },
+  { label: "Women", url: "/shopping/product-list?category=women" },
+  { label: "Men", url: "/shopping/product-list?category=men" },
+  { label: "Unisex", url: "/shopping/product-list?category=unisex" },
+  { label: "Exclusive Drops", url: "/drops" },
+  { label: "Sale", url: "/shopping/product-list?sale=true" },
+];
 
-  // Pull editable shop content from siteConfig — falls back to literal copy
-  // when keys are unset, so the page never breaks during partial migrations.
-  const { data: about } = useShopAbout();
-  const tagline =
-    about?.shop_tagline ||
-    "Limited edition fashion inspired by street culture, exclusivity, and modern youth identity.";
-  const brandName = about?.shop_brand_name || "Saga Elite";
-  const whatsappDigits = (about?.shop_whatsapp_number || "").replace(/[^0-9]/g, "");
-  const whatsappHref = whatsappDigits ? `https://wa.me/${whatsappDigits}` : null;
-  const socialLinks = [
-    { Icon: Instagram, href: about?.shop_social_instagram, label: "Instagram" },
-    { Icon: Facebook, href: about?.shop_social_facebook, label: "Facebook" },
-    { Icon: Youtube, href: about?.shop_social_youtube, label: "YouTube" },
-    { Icon: Twitter, href: about?.shop_social_twitter, label: "Twitter" },
-  ].filter((s) => s.href);
-  
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
+const DEFAULT_SUPPORT_LINKS = [
+  { label: "Contact Us", url: "/contact" },
+  { label: "FAQs", url: "/contact" },
+  { label: "Shipping", url: "/legal/delivery-policy" },
+  { label: "Returns", url: "/legal/refund-policy" },
+  { label: "Track Order", url: "/account/orders" },
+  { label: "Size Guide", url: "/size-guide" },
+];
+
+const DEFAULT_COMPANY_LINKS = [
+  { label: "About", url: "/about" },
+  { label: "Careers", url: "/careers" },
+  { label: "Privacy Policy", url: "/legal/privacy-policy" },
+  { label: "Terms & Conditions", url: "/legal/terms-and-conditions" },
+  { label: "Cookie Policy", url: "/legal/privacy-policy" },
+];
+
+const DEFAULT_BRAND_DESC =
+  "Premium fashion marketplace delivering luxury clothing, footwear and accessories across Sri Lanka.";
+
+// Payment methods Saga Elite actually supports.
+const DEFAULT_PAYMENTS = [
+  { name: "Visa" },
+  { name: "Mastercard" },
+  { name: "Cash on Delivery" },
+  { name: "Bank Transfer" },
+];
+
+const SECURITY_BADGES = [
+  { icon: Lock, label: "SSL Secure" },
+  { icon: ShieldCheck, label: "Encrypted Checkout" },
+  { icon: BadgeCheck, label: "Verified Business" },
+  { icon: ShieldCheck, label: "Secure Payments" },
+];
+
+// Responsive sizing: 32px mobile · 36px tablet · 40px desktop.
+const PAY_CHIP = "h-8 md:h-9 lg:h-10";
+
+const VisaMark = () => (
+  <svg viewBox="0 0 48 16" className="h-full w-auto" role="img" aria-label="Visa">
+    <text x="24" y="13" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontStyle="italic" fontSize="13" fill="#1A1F71">VISA</text>
+  </svg>
+);
+
+const MastercardMark = () => (
+  <svg viewBox="0 0 40 24" className="h-full w-auto" role="img" aria-label="Mastercard">
+    <circle cx="16" cy="12" r="9" fill="#EB001B" />
+    <circle cx="24" cy="12" r="9" fill="#F79E1B" fillOpacity="0.9" />
+  </svg>
+);
+
+// One payment-method chip. Admin-uploaded icons win; otherwise we render a
+// recognizable inline mark for known brands and a labelled chip for the rest.
+function PaymentChip({ method }) {
+  const name = method?.name || "";
+  const key = name.toLowerCase().replace(/[^a-z]/g, "");
+
+  if (method?.iconUrl) {
+    return (
+      <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}>
+        <img src={method.iconUrl} alt={name} className="h-full w-auto object-contain py-1.5" loading="lazy" />
+      </div>
+    );
+  }
+  if (key.includes("visa")) {
+    return <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}><VisaMark /></div>;
+  }
+  if (key.includes("mastercard") || key === "mc") {
+    return <div className={cn("flex items-center justify-center rounded-[8px] bg-white px-2", PAY_CHIP)}><MastercardMark /></div>;
+  }
+  if (key.includes("cash") || key === "cod") {
+    return (
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
+        <Banknote className="w-4 h-4 text-[#f2ca50]" /> Cash on Delivery
+      </div>
+    );
+  }
+  if (key.includes("bank")) {
+    return (
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
+        <Landmark className="w-4 h-4 text-[#f2ca50]" /> Bank Transfer
+      </div>
+    );
+  }
+  return (
+    <div className={cn("flex items-center justify-center rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] font-semibold text-[#e5e2e1]", PAY_CHIP)}>
+      {name}
+    </div>
+  );
+}
+
+const linkClass =
+  "text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200";
+
+// Internal routes use <Link>; external (http/https) use <a>.
+function FooterLink({ link }) {
+  const url = link?.url || "#";
+  const isExternal = /^https?:\/\//i.test(url);
+  if (isExternal) {
+    return (
+      <a href={url} target={link.openInNewTab ? "_blank" : undefined} rel="noopener noreferrer" className={linkClass}>
+        {link.label}
+      </a>
+    );
+  }
+  return (
+    <Link to={url} target={link.openInNewTab ? "_blank" : undefined} className={linkClass}>
+      {link.label}
+    </Link>
+  );
+}
+
+export default function MainFooter() {
   const [activeAccordion, setActiveAccordion] = useState(null);
+  const [settings, setSettings] = useState(null);
 
-  const { isAuthenticated, user } = useSelector((state) => state.auth || { isAuthenticated: false, user: null });
+  useEffect(() => {
+    fetchSiteSettings().then(setSettings);
+  }, []);
 
-  if (isAdminView) return null;
+  const toggleAccordion = (index) => setActiveAccordion(activeAccordion === index ? null : index);
 
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if(email) {
-      setSubscribed(true);
-      setTimeout(() => setSubscribed(false), 5000); // Reset after 5s
-      setEmail("");
-    }
-  };
+  // Admin-managed content with graceful fallbacks.
+  const brandDesc = settings?.brandDescription || DEFAULT_BRAND_DESC;
+  const copyright = (settings?.copyright || "© {year} Saga Elite. All rights reserved.").replace(
+    "{year}",
+    String(new Date().getFullYear())
+  );
+  const quickLinks = settings?.quickLinks?.length ? settings.quickLinks : DEFAULT_QUICK_LINKS;
+  const supportLinks = settings?.supportLinks?.length ? settings.supportLinks : DEFAULT_SUPPORT_LINKS;
+  const companyLinks = settings?.shopLinks?.length ? settings.shopLinks : DEFAULT_COMPANY_LINKS;
+  const payments = settings?.paymentMethods?.length ? settings.paymentMethods : DEFAULT_PAYMENTS;
 
-  const toggleAccordion = (index) => {
-    setActiveAccordion(activeAccordion === index ? null : index);
-  };
+  const socials = [
+    settings?.instagramUrl && { Icon: Instagram, url: settings.instagramUrl, label: "Instagram" },
+    settings?.facebookUrl && { Icon: Facebook, url: settings.facebookUrl, label: "Facebook" },
+    settings?.tiktokUrl && { Icon: TikTokIcon, url: settings.tiktokUrl, label: "TikTok" },
+    settings?.twitterUrl && { Icon: Twitter, url: settings.twitterUrl, label: "X" },
+    settings?.youtubeUrl && { Icon: Youtube, url: settings.youtubeUrl, label: "YouTube" },
+  ].filter(Boolean);
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1, 
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 } 
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
-  };
-
-  const glowVariants = {
-    hover: { 
-      textShadow: "0px 0px 8px rgb(212, 175, 55)",
-      color: "#D4AF37",
-      x: 5,
-      transition: { duration: 0.3 }
-    }
+  const renderAccordion = (title, links, index) => {
+    const isOpen = activeAccordion === index;
+    return (
+      <div className="md:hidden border-b border-white/10">
+        <button
+          onClick={() => toggleAccordion(index)}
+          className="w-full h-[60px] flex items-center justify-between text-[#e5e2e1] font-sans font-semibold text-[15px]"
+        >
+          {title}
+          <ChevronDown className={cn("w-5 h-5 transition-transform duration-250", isOpen && "rotate-180")} />
+        </button>
+        <div className={cn("overflow-hidden transition-all duration-250", isOpen ? "max-h-[400px] pb-6" : "max-h-0")}>
+          <ul className="flex flex-col gap-4">
+            {links.map((link, i) => (
+              <li key={i}>
+                <FooterLink link={link} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <footer role="contentinfo" className="relative bg-[#050505] text-[#e5e2e1] mt-10 overflow-hidden font-sans">
-      
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-transparent pointer-events-none z-0"></div>
-      <div className="absolute top-0 left-1/4 w-1/2 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent z-0"></div>
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+    <footer className="bg-[#0E0E0E] border-t border-white/5 relative">
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
 
-      <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-6 lg:px-12 py-16">
-        
-        {/* 🔥 1️⃣ VIP CTA SECTION & 2️⃣ NEWSLETTER */}
-        <motion.div 
-          initial="hidden" 
-          whileInView="visible" 
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="mb-20 pb-16 border-b border-[#D4AF37]/20 flex flex-col lg:flex-row items-center justify-between gap-12"
-        >
-          {/* VIP CTA */}
-          <motion.div variants={itemVariants} className="text-center lg:text-left max-w-xl">
-            <h2 className="text-3xl md:text-5xl font-black tracking-widest text-white mb-4 uppercase drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-              JOIN THE ELITE
-            </h2>
-            <p className="text-[#a0a0a0] md:text-lg mb-8 leading-relaxed">
-              Unlock early access, rare drops, mystery rewards, and exclusive releases.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <Link to={isAuthenticated ? "/shopping/account" : "/auth/login"}>
-                <motion.button 
-                  whileHover={{ scale: 1.05, boxShadow: "0px 0px 20px rgba(212, 175, 55, 0.4)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-8 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8942E] text-black font-bold uppercase tracking-wider rounded-sm transition-all relative overflow-hidden group"
-                >
-                  <span className="relative z-10">{isAuthenticated ? "ENTER ELITE PORTAL" : "🔥 JOIN THE ELITE"}</span>
-                  <div className="absolute inset-0 h-full w-0 bg-white/20 group-hover:w-full transition-all duration-300 ease-out z-0"></div>
-                </motion.button>
-              </Link>
-              <Link to="/shopping/drops">
-                <motion.button 
-                  whileHover={{ color: "#ffffff", borderColor: "#ffffff" }}
-                  className="px-8 py-3 bg-transparent border border-[#555] text-[#ccc] font-bold uppercase tracking-wider rounded-sm transition-colors hover:bg-white/5"
-                >
-                  ⚡ EXPLORE DROPS
-                </motion.button>
-              </Link>
-            </div>
-          </motion.div>
+        {/* Desktop Layout: 5 Columns */}
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12 mb-16">
 
-          {/* Early Access / Newsletter */}
-          <motion.div variants={itemVariants} className="w-full lg:w-auto max-w-md bg-white/[0.03] backdrop-blur-md border border-white/10 p-6 xl:p-8 rounded-xl shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
-              {subscribed ? "WELCOME TO THE LIST" : "EARLY ACCESS"}
-            </h3>
-            <p className="text-sm text-[#888] mb-6">
-              {subscribed ? "You will be notified before the next drop goes live." : "Be the first to know about limited collections."}
-            </p>
-            
-            <AnimatePresence mode="wait">
-              {subscribed ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-3 text-[#D4AF37] bg-[#D4AF37]/10 py-3 px-4 rounded-md border border-[#D4AF37]/30"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium text-sm tracking-widest uppercase">✔ YOU'RE ON THE ELITE LIST</span>
-                </motion.div>
-              ) : (
-                <motion.form 
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  onSubmit={handleSubscribe} 
-                  className="flex flex-col gap-3"
-                >
-                  <div className="relative">
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-black/50 border border-[#333] text-white px-4 py-3 rounded-md focus:outline-none focus:border-[#D4AF37] transition-all placeholder:text-[#555]"
-                    />
-                  </div>
-                  <motion.button 
-                    whileHover={{ backgroundColor: "#222" }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit" 
-                    className="w-full bg-white text-black font-bold uppercase tracking-widest py-3 rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
-                  >
-                    UNLOCK ACCESS <ArrowRight className="w-4 h-4" />
-                  </motion.button>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </motion.div>
-
-        {/* 🔥 3️⃣ MAIN FOOTER GRID */}
-        <motion.div 
-          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={containerVariants}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-12 mb-16"
-        >
-          {/* COLUMN 1 — BRAND IDENTITY */}
-          <motion.div variants={itemVariants} className="lg:col-span-4 flex flex-col">
-            <Link to="/shopping/home" className="flex items-center gap-3 group w-fit">
-              <div className="relative">
-                <img src="/LOGO.png" alt="Saga Elite Logo" className="h-14 w-14 object-contain group-hover:scale-110 transition-transform duration-300" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                <div className="absolute inset-0 bg-[#D4AF37] blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-full"></div>
-              </div>
-              <div className="flex flex-col">
-                <h3 className="font-black tracking-[0.25em] text-2xl text-white uppercase mt-1">{brandName.toUpperCase()}</h3>
-                <span className="text-[10px] text-[#D4AF37] tracking-[0.3em] uppercase opacity-80 group-hover:opacity-100 transition-opacity">Rare Fit Forever</span>
-              </div>
+          {/* Column 1: Brand */}
+          <div className="lg:col-span-1">
+            <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-6">
+              {settings?.brandName || "SAGA ELITE"}
             </Link>
-            <p className="text-sm text-[#777] mt-6 max-w-sm leading-relaxed">
-              {tagline}
-            </p>
-            <div className="mt-8 flex flex-col gap-2 text-xs text-[#555] font-mono tracking-wider">
-              <p>🔥 12K+ ELITE MEMBERS</p>
-              <p>🚀 150+ LIMITED PIECES SOLD</p>
-              <p>🎁 MYSTERY REWARDS ACTIVE</p>
-            </div>
-          </motion.div>
+            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
+          </div>
 
-          {/* Desktop Grid Columns (Hidden on mobile) */}
-          <div className="hidden md:grid md:grid-cols-4 lg:col-span-8 gap-8">
-            
-            {/* COLUMN 2 — SHOP */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Shop</h4>
-              <ul className="space-y-4">
-                {['Gents', 'Ladies', 'Unisex', 'New Drops', 'Limited Editions', 'Archive'].map((item) => (
-                  <li key={item}>
-                    <Link to={`/shopping/product-list`} className="text-sm text-[#888] font-medium transition-colors flex items-center group">
-                      <motion.span variants={glowVariants} whileHover="hover" className="relative group-hover:pl-2 transition-all block">
-                        {item}
-                        <span className="absolute left-0 -bottom-1 w-0 h-px bg-[#D4AF37] group-hover:w-full transition-all duration-300"></span>
-                      </motion.span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+          {/* Column 2: Quick Links */}
+          <div>
+            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Quick Links</h4>
+            <ul className="flex flex-col gap-4">
+              {quickLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
+              ))}
+            </ul>
+          </div>
 
-            {/* COLUMN 3 — SUPPORT */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Support</h4>
-              <ul className="space-y-4">
-                {['Contact Us', 'Delivery Information', 'Returns & Refunds', 'Payment Methods', 'FAQs'].map((item) => (
-                  <li key={item}>
-                    <Link to="/contact" className="text-sm text-[#888] font-medium transition-colors flex items-center group">
-                      <motion.span variants={glowVariants} whileHover="hover" className="relative block">
-                        {item}
-                      </motion.span>
-                    </Link>
-                  </li>
-                ))}
-                <li>
-                  <Link to="/shopping/find-payment" className="text-sm text-[#D4AF37] font-medium transition-colors flex items-center group">
-                    <motion.span variants={glowVariants} whileHover="hover" className="relative block">
-                      Find your payment
-                    </motion.span>
-                  </Link>
-                </li>
-                {whatsappHref ? (
-                  <li className="pt-4">
-                    <a href={whatsappHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-[#25D366]/10 text-[#25D366] px-3 py-2 border border-[#25D366]/20 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-[#25D366]/20 transition-colors">
-                      <CheckCircle2 className="w-4 h-4" /> WhatsApp Support
-                    </a>
-                  </li>
-                ) : null}
-              </ul>
-            </motion.div>
+          {/* Column 3: Customer Support */}
+          <div>
+            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Customer Support</h4>
+            <ul className="flex flex-col gap-4">
+              {supportLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
+              ))}
+            </ul>
+          </div>
 
-            {/* COLUMN 4 — COMPANY */}
-            <motion.div variants={itemVariants}>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-white mb-6">Company</h4>
-              <ul className="space-y-4">
-                {['About Saga Elite', 'Community', 'Collaborations', 'Terms & Conditions', 'Privacy Policy'].map((item, i) => (
-                  <li key={item}>
-                    <Link to={i > 2 ? "/legal/terms-and-conditions" : "/about"} className="text-sm text-[#888] font-medium transition-colors flex items-center group">
-                      <motion.span variants={glowVariants} whileHover="hover" className="relative block">
-                        {item}
-                      </motion.span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
+          {/* Column 4: Company */}
+          <div>
+            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Company</h4>
+            <ul className="flex flex-col gap-4">
+              {companyLinks.map((link, i) => (
+                <li key={i}><FooterLink link={link} /></li>
+              ))}
+            </ul>
+          </div>
 
-            {/* COLUMN 5 — ELITE ACCOUNT */}
-            <motion.div variants={itemVariants} className="bg-white/[0.02] p-5 rounded-lg border border-white/5 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-20 h-20 bg-[#D4AF37]/10 blur-2xl rounded-full"></div>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#D4AF37] mb-6 flex items-center gap-2">
-                <Lock className="w-3 h-3" /> Elite Hub
-              </h4>
-              
-              {isAuthenticated ? (
-                <div className="space-y-4">
-                  <div className="mb-4 pb-4 border-b border-white/10">
-                    <p className="text-xs text-[#888] uppercase tracking-wider mb-1">Elite Level</p>
-                    <p className="text-sm text-white font-bold tracking-widest">{user?.role === 'admin' || user?.role === 'super_admin' ? 'ADMIN' : 'VIP MEMBER'}</p>
-                    {/* Dummy progress bar for visual premium feel */}
-                    <div className="w-full h-1 bg-[#222] mt-2 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#D4AF37] to-[#f2ca50] w-3/4"></div>
-                    </div>
-                  </div>
-                  <ul className="space-y-3">
-                    {['My Account', 'Orders', 'Wishlist', 'Rewards'].map((item) => (
-                      <li key={item}>
-                        <Link to="/shopping/account" className="text-sm text-[#aaa] hover:text-white transition-colors block">
-                          {item}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <ul className="space-y-2 mb-4 text-xs text-[#888] font-medium">
-                    <li>🔥 Early Drop Access</li>
-                    <li>🎁 Mystery Rewards</li>
-                    <li>⭐ Save Wishlist</li>
-                  </ul>
-                  <div className="flex flex-col gap-2">
-                    <Link to="/auth/login" className="text-center w-full bg-white text-black py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-gray-200 transition-colors">
-                      Login
-                    </Link>
-                    <Link to="/auth/register" className="text-center w-full bg-transparent border border-white/20 text-white py-2 text-xs font-bold uppercase tracking-wider rounded hover:bg-white/10 transition-colors">
-                      Join Elite
-                    </Link>
-                  </div>
-                </div>
+          {/* Column 5: Contact (only fields that exist) */}
+          <div>
+            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Contact</h4>
+            <ul className="flex flex-col gap-4 text-[14px] text-[#99907c]">
+              {settings?.phone && (
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
               )}
-            </motion.div>
-          </div>
-
-          {/* Mobile Accordion Alternative (Visible only on small screens) */}
-          <div className="md:hidden flex flex-col space-y-2 w-full">
-            {[
-              { title: 'Shop', links: ['Gents', 'Ladies', 'Unisex', 'New Drops', 'Archive'] },
-              { title: 'Support', links: ['Contact Us', 'Delivery Info', 'Returns', 'FAQs'] },
-              { title: 'Company', links: ['About Us', 'Terms & Conditions', 'Privacy Policy'] },
-            ].map((section, idx) => (
-              <div key={section.title} className="border-b border-[#222] overflow-hidden">
-                <button 
-                  onClick={() => toggleAccordion(idx)}
-                  className="flex items-center justify-between w-full py-4 text-sm font-bold uppercase tracking-widest text-[#ccc]"
-                >
-                  {section.title}
-                  <motion.div animate={{ rotate: activeAccordion === idx ? 180 : 0 }} transition={{ duration: 0.3 }}>
-                    <ChevronDown className="w-4 h-4 text-[#D4AF37]" />
-                  </motion.div>
-                </button>
-                <AnimatePresence>
-                  {activeAccordion === idx && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <ul className="pb-4 space-y-3 px-2">
-                        {section.links.map(link => (
-                          <li key={link}>
-                            <Link to="#" className="text-sm text-[#777] hover:text-[#D4AF37] transition-colors">{link}</Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              {settings?.whatsapp && (
+                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />{settings.whatsapp}</li>
+              )}
+              {settings?.email && (
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+              )}
+              {settings?.address && (
+                <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-[#f2ca50] shrink-0 mt-1" /><span>{settings.address}</span></li>
+              )}
+            </ul>
+            {socials.length > 0 && (
+              <div className="flex gap-4 mt-6">
+                {socials.map((social, i) => (
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                    <social.Icon className="w-5 h-5" />
+                  </a>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
-        </motion.div>
+        </div>
 
-        {/* 🔥 5️⃣ COMMUNITY & SOCIAL STRIP */}
-        <div className="flex flex-col md:flex-row items-center justify-between py-8 border-y border-[#222] mb-8 gap-6">
+        {/* Mobile Layout: Accordions */}
+        <div className="md:hidden mb-12">
+          <div className="mb-8">
+            <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-4">
+              {settings?.brandName || "SAGA ELITE"}
+            </Link>
+            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
+          </div>
+
+          {renderAccordion("Quick Links", quickLinks, 1)}
+          {renderAccordion("Support", supportLinks, 2)}
+          {renderAccordion("Company", companyLinks, 3)}
+
+          <div className="border-b border-white/10 py-6">
+            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-4">Contact</h4>
+            <ul className="flex flex-col gap-3 text-[14px] text-[#99907c] mb-6">
+              {settings?.phone && (
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
+              )}
+              {settings?.whatsapp && (
+                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />{settings.whatsapp}</li>
+              )}
+              {settings?.email && (
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+              )}
+            </ul>
+            {socials.length > 0 && (
+              <div className="flex gap-4">
+                {socials.map((social, i) => (
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                    <social.Icon className="w-5 h-5" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Payment & Security Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 py-8 border-y border-white/10 mb-8">
+          <div>
+            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4">Payment Methods</div>
+            <div className="flex flex-wrap items-center gap-3">
+              {payments.map((method, i) => (
+                <PaymentChip key={i} method={method} />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4 lg:text-right">Security &amp; Trust</div>
+            <div className="flex flex-wrap gap-4 lg:justify-end">
+              {SECURITY_BADGES.map((badge, i) => (
+                <div key={i} className="flex items-center gap-2 text-[#99907c]">
+                  <badge.icon className="w-4 h-4" />
+                  <span className="text-[12px]">{badge.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-[#99907c]">
+          <p>{copyright}</p>
           <div className="flex items-center gap-6">
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#555] hidden sm:block">Connect</span>
-            <div className="flex items-center gap-4">
-              {socialLinks.length > 0 ? (
-                socialLinks.map(({ Icon, href, label }) => (
-                  <motion.a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    whileHover={{ scale: 1.1, color: "#D4AF37" }}
-                    whileTap={{ scale: 0.9 }}
-                    className="w-10 h-10 rounded-full border border-[#333] flex items-center justify-center text-[#888] hover:border-[#D4AF37] transition-all relative overflow-hidden group"
-                  >
-                    <Icon className="w-4 h-4 relative z-10" />
-                    <div className="absolute inset-0 bg-[#D4AF37]/10 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300"></div>
-                  </motion.a>
-                ))
-              ) : (
-                <span className="text-[10px] text-[#444] uppercase tracking-widest">Socials coming soon</span>
-              )}
-            </div>
-          </div>
-
-          {/* 🔥 6️⃣ PAYMENT & TRUST BAR */}
-          <div className="flex items-center gap-4 text-xs font-medium text-[#666] tracking-wider uppercase flex-wrap justify-center">
-            <div className="flex items-center gap-1.5" title="SSL Encrypted">
-              <ShieldCheck className="w-4 h-4 text-[#444]" /> Secure SSL
-            </div>
-            <span className="text-[#333] hidden sm:inline">|</span>
-            <div className="flex items-center gap-1.5" title="Islandwide Delivery">
-              <MapPin className="w-4 h-4 text-[#444]" /> Islandwide Delivery
-            </div>
-            <span className="text-[#333] hidden sm:inline">|</span>
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-[#444]" />
-              <div className="flex gap-2 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300">
-                {/* Visa SVG */}
-                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
-                  <path fill="#1434CB" d="M16.5 6.3h-2.4l-1.5 9.4h2.4l1.5-9.4zM24.7 6.4c-.4-.1-1.1-.3-2-.3-2.2 0-3.7 1.2-3.7 2.9 0 1.2 1.1 1.9 1.9 2.3.8.4 1.1.7 1.1 1.1 0 .6-.8.9-1.5.9-1 0-1.5-.2-2-.4l-.3-.1-.3 2.1c.5.2 1.4.5 2.4.5 2.4 0 3.9-1.2 3.9-3 0-1-.7-1.8-1.9-2.3-.7-.4-1.2-.6-1.2-1 0-.4.5-.8 1.4-.8.8 0 1.4.2 1.8.4l.2.1.3-2.1zM31 6.3h-1.9c-.6 0-1 .2-1.3.8L23.3 15.7h2.5l.5-1.4h3l.3 1.4h2.2L31 6.3zm-2.4 6l.6-1.7c0-.1.1-.3.1-.4 0 .1.1.2.2.3l.4 1.8h-1.3zM12.9 6.3L10 12.8l-.3-1.6c-.5-2.2-2.1-4.4-4-5l2.6 9.5h2.5l4-9.4h-2zM4 6.3H.1l-.1.4c2.5.6 4.2 1.8 5 3.3L3.8 6.3z" />
-                </svg>
-                {/* MasterCard SVG */}
-                <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg" className="bg-white rounded p-1">
-                  <path fill="#EB001B" d="M12.3 5.4h1.7v13.2h-1.7V5.4z" />
-                  <circle fill="#EB001B" cx="15.8" cy="12" r="6.6" />
-                  <circle fill="#F79E1B" cx="22.2" cy="12" r="6.6" />
-                  <path fill="#FF5F00" d="M19 18c2-1.3 3.3-3.5 3.3-6s-1.3-4.7-3.3-6c-2 1.3-3.3 3.5-3.3 6s1.3 4.7 3.3 6z" />
-                </svg>
-                {/* PayHere / Generic SVG placeholder for PayHere */}
-                <div className="bg-white rounded px-2 py-0.5 flex items-center justify-center border border-white/20">
-                  <span className="text-[#0e0e0e] text-[9px] font-bold">PAYHERE</span>
-                </div>
-              </div>
-            </div>
+            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Privacy Policy</Link>
+            <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50] transition-colors">Terms</Link>
+            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Cookies</Link>
           </div>
         </div>
-
-        {/* BOTTOM COPYRIGHT BAR */}
-        <div className="flex flex-col-reverse md:flex-row items-center justify-between text-[11px] text-[#555] uppercase tracking-widest font-mono">
-          <p>© 2026 SAGA ELITE — RARE FIT FOREVER.</p>
-          
-          <div className="flex items-center gap-3 mb-4 md:mb-0">
-            <div className="flex items-center gap-2 bg-[#D4AF37]/10 px-3 py-1 rounded text-[#D4AF37] border border-[#D4AF37]/20">
-              <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full"></motion.div>
-              DROP 08 LIVE
-            </div>
-          </div>
-        </div>
-        
       </div>
     </footer>
   );
-};
-
-export default MainFooter;
+}

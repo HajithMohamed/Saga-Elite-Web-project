@@ -119,9 +119,7 @@ jobs:
         with:
           node-version: 20.x
           cache: npm
-
-      - name: Install root dependencies (Playwright)
-        run: npm ci || npm install
+          cache-dependency-path: package-lock.json
 
       - name: Install Server-side dependencies
         working-directory: ./Server-side
@@ -131,8 +129,14 @@ jobs:
         working-directory: ./Client-Side
         run: npm ci || npm install
 
+      - name: Install root dependencies (including Playwright)
+        run: npm ci
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Verify Playwright CLI
+        run: npx playwright --version
 
       - name: Prepare e2e env file
         run: cp e2e/.env.test.example e2e/.env.test

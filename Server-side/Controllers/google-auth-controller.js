@@ -4,6 +4,8 @@ const User = require("../Models/User");
 const createSendToken = require("../Utils/create-send-token");
 const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
+const Customer = require("../Models/Customer");
+const { ensureCustomerRecord } = require("../Services/migration-service");
 const logger = require("../Utils/logger");
 
 // ── shared helper: exchange Google access token for profile ──
@@ -51,7 +53,20 @@ const googleAuth = catchAsync(async (req, res, next) => {
             user.profilePicture = picture || user.profilePicture;
             await user.save({ validateBeforeSave: false });
         }
-        
+
+        // Update Customer session tracking
+        try {
+            await Customer.findOneAndUpdate(
+                { userId: user._id },
+                { $set: { lastSessionAt: new Date() }, $inc: { sessionCount: 1 } }
+            );
+        } catch (err) {
+            logger.warn("Customer session update failed on Google login", {
+                userId: user._id,
+                error: err.message,
+            });
+        }
+
         return createSendToken(user, 200, res, "Signed in successfully");
     }
 
@@ -63,6 +78,16 @@ const googleAuth = catchAsync(async (req, res, next) => {
         provider: "google",
         isVerified: true,
     });
+
+    // Ensure Customer enrichment record exists
+    try {
+        await ensureCustomerRecord({ userId: user._id, email: user.email });
+    } catch (err) {
+        logger.warn("Customer record creation failed after Google sign-up", {
+            userId: user._id,
+            error: err.message,
+        });
+    }
 
     // send welcome email (non-blocking)
     const welcomeBody = `

@@ -11,6 +11,26 @@ import { compressImageFile } from "@/lib/image-compression";
 const placeholder =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMTMxMzEzIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjZDBjNWFmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zZW0iPk5vIEltYWdlPC90ZXh0Pgo8L3N2Zz4=";
 
+// Read an image file's natural dimensions (used for banner ratio validation).
+const readImageDimensions = (file) =>
+  new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    } catch {
+      resolve(null);
+    }
+  });
+
 const ImageUpload = ({
   images = [],
   setImages,
@@ -19,34 +39,72 @@ const ImageUpload = ({
   refId,
   refModel,
   type,
-  type,
   label, // Added label prop
-  colorTag, // Added colorTag prop
+  colorTag, // Color tag for variant-based image grouping
   disabled = false,
   stagedOnly = false,
   onUploadSuccess,
+  // Optional dimension/ratio validation (used by the drop-banner slot). When
+  // any of these are set, selected files are checked and a warning surfaced via
+  // setUploadError + onValidationError. Validation never hard-blocks staging.
+  requiredRatio, // e.g. 21/9
+  minWidth,
+  minHeight,
+  onValidationError,
+  uploadGuidelines,
 }) => {
   const inputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [updatingIndex, setUpdatingIndex] = useState(null);
 
+  const hasValidation = Boolean(requiredRatio || minWidth || minHeight);
+
+  // Returns a human-readable problem string, or null when the file is fine.
+  const validateFileDimensions = async (file) => {
+    if (!hasValidation) return null;
+    const dims = await readImageDimensions(file);
+    if (!dims || !dims.width || !dims.height) return null;
+    const { width, height } = dims;
+    const issues = [];
+    if (minWidth && width < minWidth) issues.push(`width ${width}px is below the ${minWidth}px minimum`);
+    if (minHeight && height < minHeight) issues.push(`height ${height}px is below the ${minHeight}px minimum`);
+    if (requiredRatio) {
+      const ratio = width / height;
+      // ~12% tolerance around the target ratio.
+      if (Math.abs(ratio - requiredRatio) / requiredRatio > 0.12) {
+        issues.push(`aspect ratio ${ratio.toFixed(2)}:1 isn't close to the recommended 21:9`);
+      }
+    }
+    return issues.length ? issues.join("; ") : null;
+  };
+
   /* ---------------- FILE SELECT ---------------- */
 
-  const handleImageFileChange = async (event) => {
-    const files = event.target.files;
-    if (!files?.length) return;
+  // Shared pipeline: optionally validate dimensions, compress, then stage.
+  const processFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
 
-    const preparedFiles = await Promise.all(
-      Array.from(files).map((file) => compressImageFile(file))
-    );
+    if (hasValidation) {
+      setUploadError(null);
+      for (const file of files) {
+        const problem = await validateFileDimensions(file);
+        if (problem) {
+          const msg = `For the best appearance on the homepage, please upload a banner image with a 21:9 aspect ratio (recommended size: 1280 × 420 pixels). The selected image's ${problem}.`;
+          setUploadError(msg);
+          if (onValidationError) onValidationError(msg);
+        }
+      }
+    }
 
+    const preparedFiles = await Promise.all(files.map((file) => compressImageFile(file)));
     const newImages = preparedFiles.map((file) => ({
       file,
       url: URL.createObjectURL(file),
       isUploaded: false,
       label,
-      colorTag,
+      colorTag: colorTag || "",
     }));
 
     if (isMultiple) {
@@ -56,28 +114,11 @@ const ImageUpload = ({
     }
   };
 
-  const handleDrop = async (event) => {
+  const handleImageFileChange = (event) => processFiles(event.target.files);
+
+  const handleDrop = (event) => {
     event.preventDefault();
-    const files = event.dataTransfer.files;
-    if (!files?.length) return;
-
-    const preparedFiles = await Promise.all(
-      Array.from(files).map((file) => compressImageFile(file))
-    );
-
-    const newImages = preparedFiles.map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-      isUploaded: false,
-      label,
-      colorTag,
-    }));
-
-    if (isMultiple) {
-      setImages((prev) => [...prev, ...newImages]);
-    } else {
-      setImages(newImages);
-    }
+    processFiles(event.dataTransfer.files);
   };
 
   const handleDragOver = (e) => e.preventDefault();
@@ -137,43 +178,60 @@ const ImageUpload = ({
     setIsUploading(true);
     setUploadError(null);
 
-    const formData = new FormData();
-    formData.append("refModel", refModel);
-    if (refId) formData.append("refId", refId);
-    if (type) formData.append("type", type);
-    if (label) formData.append("label", label); // Append label if exists
-    if (colorTag) formData.append("colorTag", colorTag); // Append colorTag if exists
-
-    filesToUpload.forEach((img) =>
-      formData.append("images", img.file)
-    );
-
     try {
-      const res = await axios.post(
-        `${API_BASE}/image/upload-image`,
-        formData,
-        {
+      const groups = filesToUpload.reduce((map, img) => {
+        const tag = String(img.colorTag || colorTag || "").trim();
+        const key = tag.toLowerCase();
+        const existing = map.get(key) || { colorTag: tag, images: [] };
+        existing.images.push(img);
+        map.set(key, existing);
+        return map;
+      }, new Map());
+
+      const uploaded = [];
+
+      for (const group of groups.values()) {
+        const formData = new FormData();
+        formData.append("refModel", refModel);
+        if (refId) formData.append("refId", refId);
+        if (type) formData.append("type", type);
+        if (label) formData.append("label", label);
+        if (group.colorTag) formData.append("colorTag", group.colorTag);
+
+        group.images.forEach((img) => formData.append("images", img.file));
+
+        const res = await axios.post(`${API_BASE}/image/upload-image`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
-        }
-      );
-
-      if (res.data.success) {
-        const uploaded = res.data.images.map((img) => ({
-          ...img,
-          isUploaded: true,
-        }));
-
-        images.forEach((img) => {
-          if (!img.isUploaded) URL.revokeObjectURL(img.url);
         });
 
-        setImages(uploaded);
-        if (onUploadSuccess) {
-          onUploadSuccess(uploaded);
+        if (!res.data.success) {
+          throw new Error(res.data.message || "Upload failed");
         }
+
+        uploaded.push(
+          ...(res.data.images || []).map((img) => ({
+            ...img,
+            isUploaded: true,
+          }))
+        );
+      }
+
+      images.forEach((img) => {
+        if (!img.isUploaded) URL.revokeObjectURL(img.url);
+      });
+
+      if (isMultiple) {
+        const uploadedSourceSet = new Set(filesToUpload);
+        setImages((prev) => [
+          ...prev.filter((img) => !uploadedSourceSet.has(img)),
+          ...uploaded,
+        ]);
       } else {
-        setUploadError(res.data.message || "Upload failed");
+        setImages(uploaded);
+      }
+      if (onUploadSuccess) {
+        onUploadSuccess(uploaded);
       }
     } catch (err) {
       setUploadError(
@@ -265,6 +323,14 @@ const ImageUpload = ({
           Click or Drag to upload images
         </p>
       </div>
+      
+      {uploadGuidelines && (
+        <div className="text-xs text-[#99907c] mt-2 space-y-1">
+          {uploadGuidelines.map((guideline, i) => (
+             <p key={i}>• {guideline}</p>
+          ))}
+        </div>
+      )}
 
       {images.length > 0 && (
         <>

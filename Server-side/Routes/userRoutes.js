@@ -1,6 +1,8 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
 const { requireAdmin: adminMiddleware, requirePermission } = require("../Middlewares/admin-middleware");
+const paginatedResult = require("../Middlewares/pagination-middleware");
+const User = require("../Models/User");
 const {
   validateObjectIdParam,
   validateAdminUserStatus,
@@ -28,6 +30,7 @@ const {
   updateMyProfile,
   getMyAddresses,
   addMyAddress,
+  setDefaultAddress,
   removeMyAddress,
   getMyManualPayments,
 } = require("../Controllers/user-controller");
@@ -42,7 +45,7 @@ router.use(authMiddleware);
 router.get("/me", getMyProfile);
 router.patch("/me", updateMyProfile);
 
-router.get("/admin/users", adminMiddleware, requirePermission("users"), getAdminUsers);
+router.get("/admin/users", adminMiddleware, requirePermission("users"), paginatedResult.adminUsers(User), getAdminUsers);
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
 router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
 router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);
@@ -60,6 +63,7 @@ router.delete("/wishlist/:productId", validateObjectIdParam("productId", "produc
 
 router.get("/addresses", getMyAddresses);
 router.post("/addresses", addMyAddress);
+router.patch("/addresses/:addressId/default", validateObjectIdParam("addressId", "address id"), setDefaultAddress);
 router.delete("/addresses/:addressId", validateObjectIdParam("addressId", "address id"), removeMyAddress);
 
 router.get("/manual-payments", getMyManualPayments);

@@ -2,9 +2,20 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
+const defaultPagination = {
+  total: 0,
+  page: 1,
+  limit: 10,
+  results: 0,
+  totalPages: 1,
+  next: null,
+  previous: null,
+};
+
 const initialState = {
   users: [],
   stats: null,
+  pagination: defaultPagination,
   selectedUser: null,
   isListLoading: false,
   isDetailLoading: false,
@@ -14,15 +25,32 @@ const initialState = {
 
 export const fetchAdminUsers = createAsyncThunk(
   "adminUsers/fetchAll",
-  async (_, thunkAPI) => {
+  async (params = {}, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/user/admin/users`, {
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        status,
+        membership,
+        sort,
+      } = params;
+
+      const query = new URLSearchParams();
+      query.set("page", page);
+      query.set("limit", limit);
+      if (search) query.set("search", search);
+      if (status && status !== "all") query.set("status", status);
+      if (membership && membership !== "all") query.set("membership", membership);
+      if (sort) query.set("sort", sort);
+
+      const response = await axios.get(`${API_BASE}/user/admin/users?${query.toString()}`, {
         withCredentials: true,
       });
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to load users";
+      const message = serverMsg || error.message || "Failed to load customers";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -38,7 +66,7 @@ export const fetchAdminUserDetail = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to load user detail";
+      const message = serverMsg || error.message || "Failed to load customer detail";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -64,7 +92,7 @@ export const updateAdminUserStatus = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to update user";
+      const message = serverMsg || error.message || "Failed to update customer";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -82,7 +110,7 @@ export const triggerAdminPasswordReset = createAsyncThunk(
       return response.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to send password reset";
+      const message = serverMsg || error.message || "Failed to send customer password reset";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -98,7 +126,7 @@ export const deleteAdminUser = createAsyncThunk(
       return response.data.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to delete user";
+      const message = serverMsg || error.message || "Failed to delete customer";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -116,7 +144,7 @@ export const bulkTagUsers = createAsyncThunk(
       return response.data;
     } catch (error) {
       const serverMsg = error?.response?.data?.message;
-      const message = serverMsg || error.message || "Failed to bulk-tag users";
+      const message = serverMsg || error.message || "Failed to bulk-tag customers";
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -143,6 +171,10 @@ const adminUserSlice = createSlice({
         state.isListLoading = false;
         state.users = action.payload.users || [];
         state.stats = action.payload.stats || null;
+        state.pagination = {
+          ...defaultPagination,
+          ...(action.payload.pagination || {}),
+        };
       })
       .addCase(fetchAdminUsers.rejected, (state, action) => {
         state.isListLoading = false;

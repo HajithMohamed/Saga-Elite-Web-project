@@ -22,21 +22,55 @@ const offerSchema = new mongoose.Schema(
       enum: [
         "clearance",
         "tier-discount",
-        "mystery-box",
         "aging_stock",
         "new_product",
         "seasonal",
         "flash",
+        "percentage_discount",
+        "fixed_amount",
+        "category_discount",
+        "product_discount",
+        "buy_x_get_y",
+        "cart_value",
+        "seasonal_campaign",
       ],
       required: true,
     },
     discountPercent: {
       type: Number,
-      required: function () {
-        return this.type !== "mystery-box";
-      },
       min: 0,
       max: 100,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    minCartValue: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    triggerProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
+    rewardProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      default: null,
+    },
+    rewardQuantity: {
+      type: Number,
+      min: 1,
+      default: 1,
+    },
+    triggerQuantity: {
+      type: Number,
+      min: 1,
+      default: 1,
     },
     products: [
       {
@@ -47,6 +81,36 @@ const offerSchema = new mongoose.Schema(
     applicableCategories: {
       type: [String],
       default: [],
+    },
+    excludedProducts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
+    excludedCategories: {
+      type: [String],
+      default: [],
+    },
+    maxApplicationsPerUser: {
+      type: Number,
+      default: null,
+    },
+    maxApplicationsTotal: {
+      type: Number,
+      default: null,
+    },
+    bannerImage: {
+      type: String,
+      default: null,
+    },
+    themeColor: {
+      type: String,
+      default: null,
+    },
+    campaignLandingPage: {
+      type: String,
+      default: null,
     },
     startsAt: {
       type: Date,

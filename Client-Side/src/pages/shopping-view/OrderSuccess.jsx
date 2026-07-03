@@ -1,16 +1,21 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useEffect, useState, useMemo } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOrderById } from "@/store/order-slice";
-import { Check, Package, ShieldCheck, Truck, Copy, Clock, MessageCircle, ArrowRight, Star, Upload } from "lucide-react";
+import { Check, Package, ShieldCheck, Truck, Copy, Clock, MessageCircle, ArrowRight, Upload, Phone, Mail, FileText } from "lucide-react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { resolveColor } from "@/components/ui/editorial";
 import AppLoader from "@/components/ui/AppLoader";
 import { toast } from "@/hooks/use-toast";
+import usePageMeta from "@/hooks/use-page-meta";
+import ForYouRail from "@/components/landing/ForYouRail";
+import { Newsletter } from "@/components/landing/CommunitySections";
 
 const OrderSuccess = () => {
+  usePageMeta({ title: "Order Confirmed" });
+  
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   
   const stateOrderId = location.state?.orderId;
@@ -19,6 +24,7 @@ const OrderSuccess = () => {
   const totalAmountState = location.state?.amount || location.state?.totalAmount;
   
   const { currentOrder, isLoading } = useSelector((state) => state.order);
+  const { user } = useSelector((state) => state.auth);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -32,23 +38,23 @@ const OrderSuccess = () => {
     _id: displayOrderId,
     totalAmount: totalAmountState || "0.00",
     orderStatus: "pending",
+    paymentStatus: "pending",
     items: [],
     guestEmail: location.state?.email || "your email",
-    shippingAddress: "",
+    shippingAddress: null,
+    createdAt: new Date().toISOString(),
   };
 
   const primaryItem = order.items?.[0];
   const primaryProduct = primaryItem?.product;
-  const primaryVariant = primaryItem?.variant || primaryItem; // Depending on API response structure
+  const primaryVariant = primaryItem?.variant || primaryItem;
 
-  // Manual bank transfer recovery CTA (Fix #1).
   const manualPaymentSlug = location.state?.slug || currentOrder?.manualPayment?.slug;
-  const isManualBankTransfer =
-    (currentOrder?.paymentMethod || location.state?.paymentMethod) === "manual_bank_transfer";
-  const showUploadReceiptCta = Boolean(isManualBankTransfer && manualPaymentSlug);
+  const isManualBankTransfer = (currentOrder?.paymentMethod || location.state?.paymentMethod) === "manual_bank_transfer";
+  const showUploadReceiptCta = Boolean(isManualBankTransfer && manualPaymentSlug && order.paymentStatus === 'pending');
   
   const colorName = primaryVariant?.color || primaryItem?.color;
-  const themeColor = colorName ? resolveColor(colorName) : "#f2ca50";
+  const themeColor = colorName ? resolveColor(colorName) : "#F2CA50";
 
   useEffect(() => {
     document.documentElement.style.setProperty("--accent", themeColor);
@@ -66,290 +72,251 @@ const OrderSuccess = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatLKR = (value = 0) =>
-    `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
-      maximumFractionDigits: 0,
-    })}`;
-
-  const getStatusIndex = (status) => {
-    const statuses = ["pending", "inProcess", "inShipping", "delivered"];
-    return statuses.indexOf(status) !== -1 ? statuses.indexOf(status) : 0;
-  };
-
-  const statusIndex = getStatusIndex(order.orderStatus);
+  const formatCurrency = (amount = 0) =>
+    Number(amount).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (isLoading && !currentOrder) {
     return <AppLoader message="Securing your selection..." />;
   }
 
+  const firstName = user?.firstName || order.shippingAddress?.fullName?.split(" ")[0] || "";
+  const subtotal = order.items?.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0) || order.totalAmount;
+  const shipping = order.shippingFee || 0;
+  const discount = order.discountAmount || 0;
+  
+  const paymentStatusColor = order.paymentStatus === 'paid' || order.paymentStatus === 'success' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                           : order.paymentStatus === 'failed' ? 'text-red-400 bg-red-500/10 border-red-500/20' 
+                           : 'text-[#F2CA50] bg-[#F2CA50]/10 border-[#F2CA50]/20';
+
+  const orderStatusColor = order.orderStatus === 'delivered' ? 'text-emerald-400'
+                         : order.orderStatus === 'cancelled' ? 'text-red-400'
+                         : 'text-[#F2CA50]';
+
   return (
-    <main className="min-h-screen bg-[#060606] text-[#e5e2e1] pb-32 md:pb-24 relative overflow-hidden font-sans">
-      {/* Cinematic Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div 
-          className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
-          style={{ background: `radial-gradient(circle, var(--accent) 0%, transparent 70%)` }}
-        />
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay"></div>
-      </div>
-
-      <div className="max-w-[1280px] mx-auto px-6 md:px-8 pt-16 md:pt-24 relative z-10">
+    <main className="min-h-screen bg-[#0e0e0e] text-[#e5e2e1] pt-[64px] md:pt-[72px] relative overflow-x-hidden font-sans">
+      
+      {/* ── HERO SECTION ── */}
+      <section className="relative h-[220px] md:h-[260px] lg:h-[320px] overflow-hidden flex items-center justify-center w-full border-b border-white/5">
+        <div className="absolute inset-0">
+          <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[120px] opacity-10 bg-[#F2CA50]" />
+          <div className="absolute inset-0 bg-[#0e0e0e]/80" />
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] to-transparent" />
+        </div>
         
-        {/* SUCCESS HERO */}
-        <section className="w-full text-center mb-16">
+        <div className="relative z-10 w-full max-w-3xl px-4 text-center flex flex-col items-center">
           <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex items-center justify-center w-24 h-24 rounded-full mb-8 relative"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.7, type: "spring", bounce: 0.5 }}
+            className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1A1A1A] border border-[#F2CA50]/30 flex items-center justify-center shadow-[0_0_40px_rgba(242,202,80,0.15)] mb-6 relative"
           >
-            <div className="absolute inset-0 rounded-full border border-[var(--accent)]/30 animate-[spin_4s_linear_infinite]" />
-            <div className="absolute inset-2 rounded-full border border-[var(--accent)]/10" />
-            <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-full flex items-center justify-center shadow-[0_0_40px_var(--accent-glow)] backdrop-blur-md border border-[var(--accent)]/50">
-              <Check className="w-8 h-8 text-[var(--accent)]" />
-            </div>
+             <div className="absolute inset-0 rounded-full border border-[#F2CA50]/20 animate-ping opacity-20" style={{ animationDuration: '3s' }} />
+             <Check className="w-10 h-10 md:w-12 md:h-12 text-[#F2CA50]" />
           </motion.div>
-
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="se-serif text-3xl md:text-5xl text-[#fafafa] mb-3"
           >
-            <h1 className="se-serif text-4xl md:text-6xl tracking-tight text-white mb-6">
-              Your Exclusive Drop Is Confirmed
-            </h1>
-            <p className="text-[#99907c] text-lg max-w-2xl mx-auto leading-relaxed">
-              Welcome to the elite collection. Every Saga Elite piece is carefully prepared and hand-inspected before dispatch. 
-            </p>
-          </motion.div>
-
-          {/* Smart Order Number UI */}
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="mt-10 inline-flex flex-col items-center"
+            Thank You{firstName ? `, ${firstName}` : ''}!
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="se-body text-[#99907c] text-base md:text-lg max-w-xl mx-auto"
           >
-            <div className="bg-[#0d0d0d] border border-[#1c1b1b] rounded-2xl p-6 shadow-2xl flex items-center gap-6">
-              <div>
-                <span className="se-label text-[9px] uppercase tracking-[0.28em] text-[#574500] block mb-2">Order Reference</span>
-                <p className="se-mono text-xl md:text-2xl tracking-widest text-white">{order._id}</p>
-              </div>
-              <div className="w-px h-12 bg-[#1c1b1b]"></div>
-              <button 
-                onClick={copyToClipboard}
-                className="w-12 h-12 rounded-xl bg-[#1a1a1a] border border-[#333] flex items-center justify-center text-[#99907c] hover:text-[var(--accent)] hover:border-[var(--accent)]/50 transition-all group"
-              >
-                {copied ? <Check className="w-5 h-5 text-[var(--accent)]" /> : <Copy className="w-5 h-5 group-hover:scale-110 transition-transform" />}
-              </button>
-            </div>
-            {order.guestEmail && (
-              <p className="text-sm text-[#99907c] mt-4 flex items-center gap-2">
-                <Check className="w-4 h-4 text-[var(--accent)]" /> 
-                Confirmation sent to <span className="text-white font-medium">{order.guestEmail}</span>
-              </p>
-            )}
-          </motion.div>
-        </section>
+            Your order has been placed successfully. We are now preparing it for dispatch.
+          </motion.p>
+        </div>
+      </section>
 
-        {/* MAIN CONTENT GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-12">
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-12 md:py-16 grid lg:grid-cols-[1fr_400px] gap-8 lg:gap-12">
+        
+        {/* ── LEFT COLUMN ── */}
+        <div className="space-y-8">
           
-          {/* Left Column: Delivery Journey & Packaging */}
-          <div className="lg:col-span-7 space-y-8">
-            
-            {/* Delivery Journey */}
-            <section className="bg-[#0d0d0d] border border-[#1c1b1b] p-8 md:p-10 rounded-[2rem] relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                <Truck className="w-32 h-32 text-[var(--accent)]" />
-              </div>
-              <h2 className="se-serif text-2xl text-white mb-8">Your Delivery Journey</h2>
-              
-              <div className="relative space-y-8 mt-10">
-                <div className="absolute left-[15px] top-4 bottom-4 w-px bg-[#1c1b1b]"></div>
-                
-                {[
-                  { label: "Order Confirmed", desc: "Secured & verified", status: "pending", index: 0 },
-                  { label: "Quality Inspection", desc: "Hand-checked by our team", status: "inProcess", index: 1 },
-                  { label: "Premium Packaging", desc: "Signature unboxing preparation", status: "inProcess", index: 1 },
-                  { label: "Dispatched", desc: "En route to you", status: "inShipping", index: 2 },
-                  { label: "Delivered", desc: "Enjoy your Saga Elite piece", status: "delivered", index: 3 }
-                ].map((step, idx) => {
-                  // Slightly hacky logic to handle the 5 steps UI vs 4 API statuses
-                  const isCompleted = statusIndex >= step.index;
-                  const isActive = statusIndex === step.index && (idx === 0 || idx === 1 || idx === 3 || idx === 4); // simplistic active state
-                  
-                  return (
-                    <div key={idx} className="flex items-start gap-6 relative z-10">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-4 border-[#0d0d0d] transition-colors duration-500",
-                        isCompleted ? "bg-[var(--accent)]" : "bg-[#1a1a1a] border-[#333]"
-                      )}>
-                        {isCompleted && <Check className="w-3.5 h-3.5 text-[#000]" strokeWidth={3} />}
-                      </div>
-                      <div className={cn("pt-1", !isCompleted && "opacity-50")}>
-                        <h3 className={cn("font-semibold text-base", isCompleted ? "text-white" : "text-[#99907c]")}>{step.label}</h3>
-                        <p className="text-sm text-[#574500] mt-1">{step.desc}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Unboxing Experience Preview */}
-            <section className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#1c1b1b] p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-8">
-              <div className="w-full md:w-1/3 aspect-square bg-[#060606] rounded-xl border border-[#222] flex items-center justify-center relative overflow-hidden group">
-                <div className="absolute inset-0 bg-[var(--accent)]/5 group-hover:bg-[var(--accent)]/10 transition-colors"></div>
-                <Package className="w-16 h-16 text-[#333] group-hover:text-[var(--accent)] transition-colors duration-500" strokeWidth={1} />
-              </div>
-              <div className="w-full md:w-2/3">
-                <div className="inline-flex items-center gap-2 bg-[var(--accent)]/10 border border-[var(--accent)]/20 px-3 py-1 rounded-full mb-4">
-                  <Star className="w-3 h-3 text-[var(--accent)]" />
-                  <span className="se-label text-[9px] uppercase tracking-widest text-[var(--accent)]">Signature Experience</span>
+          {/* Order Header Info */}
+          <div className="flex flex-wrap items-center justify-between gap-6 bg-[#1A1A1A] rounded-[24px] border border-white/5 p-6 md:p-8">
+             <div>
+                <p className="se-label text-[10px] uppercase tracking-widest text-[#99907c] mb-2">Order Reference</p>
+                <div className="flex items-center gap-4">
+                   <h2 className="se-serif text-2xl md:text-[28px] text-[#fafafa] tracking-wider">{order._id}</h2>
+                   <button onClick={copyToClipboard} className="text-[#99907c] hover:text-[#F2CA50] transition-colors">
+                     {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+                   </button>
                 </div>
-                <h3 className="se-serif text-xl text-white mb-2">Delivered In Premium Packaging</h3>
-                <p className="text-[#99907c] text-sm leading-relaxed mb-4">
-                  Your selection includes authenticity protection, secure wrapping, and our signature Saga Elite matte-black box.
+                <p className="se-body text-[13px] text-[#99907c] mt-2">
+                  Placed on {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
-              </div>
-            </section>
-            
+             </div>
+             
+             <div className="flex flex-col gap-3 items-end text-right">
+                <div className={`px-4 py-2 rounded-full border text-[11px] uppercase tracking-widest font-bold ${paymentStatusColor}`}>
+                   {order.paymentStatus === 'paid' ? 'Payment Successful' : order.paymentStatus === 'failed' ? 'Payment Failed' : 'Payment Pending'}
+                </div>
+                <div className="text-[12px] text-[#99907c] flex items-center gap-2">
+                   <Truck className="w-4 h-4" /> Est. Delivery: 2–5 Business Days
+                </div>
+             </div>
           </div>
 
-          {/* Right Column: Product Hero & Order Summary */}
-          <aside className="lg:col-span-5 space-y-8">
-            
-            {/* Product Hero Showcase */}
-            {primaryProduct && (
-              <div className="bg-[#0d0d0d] border border-[var(--accent)]/20 p-6 md:p-8 rounded-[2rem] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 bg-[var(--accent)] text-black se-label text-[9px] tracking-widest px-4 py-2 rounded-bl-xl font-bold z-10">
-                  LIMITED RELEASE
-                </div>
-                
-                <div className="aspect-[4/5] bg-[#111] rounded-xl overflow-hidden mb-6 relative">
-                  <img 
-                    src={primaryProduct.image || primaryProduct.images?.[0] || "/placeholder-image.jpg"} 
-                    alt={primaryProduct.title}
-                    className="w-full h-full object-cover mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-transparent to-transparent opacity-80"></div>
-                </div>
-
-                <div>
-                  <h3 className="se-serif text-2xl text-white mb-2">{primaryProduct.title}</h3>
-                  <div className="flex flex-wrap gap-3 mt-4">
-                    {primaryVariant?.size && (
-                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white uppercase font-medium">
-                        Size: {primaryVariant.size}
-                      </div>
-                    )}
-                    {primaryVariant?.color && (
-                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white capitalize flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full border border-gray-600" style={{ backgroundColor: themeColor }}></span>
-                        {primaryVariant.color}
-                      </div>
-                    )}
-                    {primaryItem?.quantity > 1 && (
-                      <div className="px-3 py-1.5 bg-[#1a1a1a] border border-[#333] rounded-md text-xs text-white">
-                        Qty: {primaryItem.quantity}
-                      </div>
-                    )}
+          {/* Success Card */}
+          <div className="bg-[#1A1A1A] rounded-[24px] border border-white/5 p-6 md:p-8">
+             <h3 className="font-sans font-bold text-lg text-[#fafafa] mb-6">Order Status</h3>
+             <div className="space-y-4">
+                {[
+                  { label: "Order Confirmed", active: true, icon: ShieldCheck },
+                  { label: order.paymentStatus === 'paid' ? "Payment Received" : "Payment Pending", active: true, icon: FileText },
+                  { label: "Email Confirmation Sent", active: Boolean(order.guestEmail || user?.email), icon: Mail },
+                  { label: "Delivery Preparation Started", active: order.orderStatus !== 'pending', icon: Package },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step.active ? 'bg-[#F2CA50]/10 text-[#F2CA50]' : 'bg-white/5 text-white/20'}`}>
+                        {step.active ? <Check className="w-4 h-4" /> : <step.icon className="w-4 h-4" />}
+                     </div>
+                     <span className={`font-sans text-[14px] ${step.active ? 'text-[#e5e2e1]' : 'text-[#99907c]'}`}>
+                        {step.label}
+                     </span>
                   </div>
-                  
-                  {order.items?.length > 1 && (
-                    <p className="text-[#574500] text-xs mt-4 italic">
-                      + {order.items.length - 1} more item(s) in this collection
-                    </p>
-                  )}
+                ))}
+             </div>
+             {order.guestEmail && (
+                <p className="text-[13px] text-[#99907c] mt-6 pt-6 border-t border-white/5">
+                   We've sent a confirmation email to <span className="text-[#fafafa] font-medium">{order.guestEmail}</span>.
+                </p>
+             )}
+          </div>
+
+          {/* Manual Payment CTA */}
+          {showUploadReceiptCta && (
+             <div className="bg-[#F2CA50]/10 border border-[#F2CA50]/30 rounded-[24px] p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                <div className="w-16 h-16 rounded-full bg-[#F2CA50]/20 flex items-center justify-center shrink-0">
+                   <Upload className="w-8 h-8 text-[#F2CA50]" />
                 </div>
-              </div>
-            )}
-
-            {/* Financial Summary */}
-            <div className="bg-[#0d0d0d] border border-[#1c1b1b] p-8 rounded-[2rem]">
-              <h2 className="se-serif text-xl text-white mb-6">Order Summary</h2>
-              
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#99907c]">Total Processed</span>
-                  <span className="font-medium text-white">{formatLKR(order.totalAmount)}</span>
+                <div className="flex-1">
+                   <h3 className="font-sans font-bold text-lg text-[#F2CA50] mb-2">Manual Verification Required</h3>
+                   <p className="se-body text-[14px] text-[#e5e2e1]/80 mb-4 md:mb-0">
+                      Your order is on hold until we receive your payment receipt. Please transfer the funds and upload the receipt to proceed.
+                   </p>
                 </div>
-                <div className="flex justify-between items-center pt-4 border-t border-[#1c1b1b]">
-                  <span className="text-[#99907c]">Estimated Arrival</span>
-                  <span className="font-medium text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[var(--accent)]" /> 3-5 Business Days
-                  </span>
-                </div>
-              </div>
-              
-              <div className="mt-8 flex items-center gap-3 bg-[var(--accent)]/5 border border-[var(--accent)]/20 px-4 py-3 rounded-xl">
-                <ShieldCheck className="text-[var(--accent)] w-5 h-5 shrink-0" />
-                <span className="text-[10px] uppercase tracking-widest text-[var(--accent)] font-bold leading-relaxed">
-                  Secure Payment Verified
-                </span>
-              </div>
-            </div>
+                <button 
+                  onClick={() => navigate(`/shopping/manual-payment/${manualPaymentSlug}`, { state: { orderId: order._id } })}
+                  className="h-[52px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:-translate-y-1 transition-transform shrink-0 w-full md:w-auto"
+                >
+                  Upload Receipt
+                </button>
+             </div>
+          )}
 
-            {showUploadReceiptCta && (
-              <Link
-                to={`/shopping/manual-payment/${manualPaymentSlug}`}
-                className="flex items-center justify-center gap-3 rounded-xl bg-amber-500 px-6 py-4 text-sm font-bold uppercase tracking-widest text-black transition hover:bg-amber-400"
-              >
-                <Upload className="h-4 w-4" />
-                Upload your receipt
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            )}
-
-            {/* Customer Support & Sharing */}
-            <div className="grid grid-cols-2 gap-4">
-              <a
-                href="https://wa.me/94770704274"
-                target="_blank"
-                rel="noreferrer"
-                className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
-              >
-                <MessageCircle className="w-6 h-6 text-[#99907c] group-hover:text-green-500 transition-colors" />
-                <span className="text-xs text-[#e5e2e1] font-medium">WhatsApp Help</span>
-              </a>
-              <Link
-                to="/shopping/home"
-                className="bg-[#0d0d0d] hover:bg-[#111] border border-[#1c1b1b] p-4 rounded-xl flex flex-col items-center justify-center text-center gap-2 transition-colors group"
-              >
-                <ArrowRight className="w-6 h-6 text-[#99907c] group-hover:text-[var(--accent)] transition-colors" />
-                <span className="text-xs text-[#e5e2e1] font-medium">Explore More</span>
-              </Link>
-            </div>
-
-          </aside>
+          {/* Primary Actions */}
+          <div className="flex flex-col sm:flex-row gap-4">
+             <button 
+               onClick={() => navigate(`/shopping/order-tracking?orderId=${order._id}`)}
+               className="h-[56px] flex-1 bg-[#fafafa] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] transition-colors flex items-center justify-center gap-2"
+             >
+               Track My Order <ArrowRight className="w-4 h-4" />
+             </button>
+             <button 
+               onClick={() => navigate('/shopping/product-list')}
+               className="h-[56px] flex-1 border border-white/10 bg-[#1A1A1A] text-[#fafafa] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-[#F2CA50] hover:text-[#F2CA50] transition-colors"
+             >
+               Continue Shopping
+             </button>
+             {user && (
+               <button 
+                 onClick={() => navigate('/shopping/orders')}
+                 className="h-[56px] flex-1 border border-white/10 bg-[#1A1A1A] text-[#fafafa] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-white/30 transition-colors"
+               >
+                 View My Orders
+               </button>
+             )}
+          </div>
         </div>
 
-        {/* Recommended Products (Static for now to mimic luxury upsell) */}
-        <section className="mt-24 mb-12 border-t border-[#1c1b1b] pt-16">
-          <h2 className="se-serif text-3xl text-center text-white mb-12">Complete The Collection</h2>
-          <div className="flex justify-center">
-             <Link 
-              to="/shopping/product-list"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-[#111] border border-[#333] hover:border-[var(--accent)] text-white text-sm tracking-widest uppercase rounded-full transition-all group"
-             >
-               View Latest Arrivals
-               <ArrowRight className="w-4 h-4 text-[#99907c] group-hover:text-[var(--accent)] transition-colors group-hover:translate-x-1" />
-             </Link>
-          </div>
-        </section>
+        {/* ── RIGHT COLUMN (Order Summary) ── */}
+        <div className="space-y-8">
+           <div className="bg-[#1A1A1A] rounded-[24px] border border-white/5 p-6 md:p-8 sticky top-28">
+              <h3 className="font-sans font-bold text-lg text-[#fafafa] mb-6">Order Summary</h3>
+              
+              <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                 {order.items?.map((item, i) => (
+                    <div key={i} className="flex gap-4">
+                       <div className="w-16 h-20 bg-[#131313] rounded-[12px] border border-white/5 overflow-hidden shrink-0">
+                          {item.productImage || item.image || item.product?.images?.[0]?.url ? (
+                             <img src={item.productImage || item.image || item.product?.images?.[0]?.url} alt={item.title || item.productName || item.product?.name} className="w-full h-full object-cover" />
+                          ) : (
+                             <div className="w-full h-full flex items-center justify-center"><Package className="w-6 h-6 text-[#99907c]" /></div>
+                          )}
+                       </div>
+                       <div className="flex-1 py-1">
+                          <p className="font-sans font-semibold text-[13px] text-[#fafafa] line-clamp-1">{item.title || item.product?.name}</p>
+                          <p className="text-[11px] text-[#99907c] mt-1">
+                             {item.color && `Color: ${item.color} | `}{item.size && `Size: ${item.size}`}
+                          </p>
+                          <div className="flex justify-between items-center mt-2">
+                             <span className="text-[11px] text-[#99907c]">Qty: {item.quantity}</span>
+                             <span className="font-sans font-bold text-[13px] text-[#fafafa]">Rs {formatCurrency(item.price)}</span>
+                          </div>
+                       </div>
+                    </div>
+                 ))}
+              </div>
 
+              <div className="space-y-3 pt-6 border-t border-white/5 text-[14px]">
+                 <div className="flex justify-between text-[#99907c]">
+                    <span>Subtotal</span>
+                    <span>Rs {formatCurrency(subtotal)}</span>
+                 </div>
+                 <div className="flex justify-between text-[#99907c]">
+                    <span>Shipping</span>
+                    <span>{shipping === 0 ? 'Free' : `Rs ${formatCurrency(shipping)}`}</span>
+                 </div>
+                 {discount > 0 && (
+                    <div className="flex justify-between text-emerald-400">
+                       <span>Discount</span>
+                       <span>- Rs {formatCurrency(discount)}</span>
+                    </div>
+                 )}
+                 <div className="flex justify-between font-bold text-lg text-[#fafafa] pt-4 border-t border-white/5 mt-4">
+                    <span>Total</span>
+                    <span>Rs {formatCurrency(order.totalAmount)}</span>
+                 </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-white/5">
+                 <p className="se-label text-[10px] uppercase tracking-widest text-[#99907c] mb-2">Payment Method</p>
+                 <p className="font-sans text-[14px] text-[#fafafa]">
+                    {order.paymentMethod === 'manual_bank_transfer' ? 'Manual Bank Transfer' : 
+                     order.paymentMethod === 'cod' ? 'Cash on Delivery' : 
+                     'Online Payment'}
+                 </p>
+              </div>
+           </div>
+
+           {/* Support Block */}
+           <div className="bg-[#131313] rounded-[24px] border border-white/5 p-6 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-[#1A1A1A] flex items-center justify-center shrink-0">
+                 <MessageCircle className="w-5 h-5 text-[#F2CA50]" />
+              </div>
+              <div>
+                 <h4 className="font-sans font-semibold text-[14px] text-[#fafafa] mb-1">Need Help?</h4>
+                 <p className="text-[12px] text-[#99907c] mb-3">If you have any questions about your order, our elite support team is ready to assist.</p>
+                 <Link to="/legal/contact" className="text-[11px] font-bold uppercase tracking-wider text-[#F2CA50] hover:underline">
+                    Contact Support
+                 </Link>
+              </div>
+           </div>
+        </div>
       </div>
 
-      {/* Mobile Sticky Track Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#060606]/90 backdrop-blur-md border-t border-[#1c1b1b] md:hidden z-50">
-        <Link
-          to={`/shopping/order-tracking?orderId=${displayOrderId}`}
-          className="w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-widest text-xs rounded-xl flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]"
-        >
-          Track My Order
-        </Link>
-      </div>
+      {/* ── RECOMMENDATIONS ── */}
+      <ForYouRail variant="recently-viewed" />
+      
+      {/* ── NEWSLETTER ── */}
+      <Newsletter />
     </main>
   );
 };

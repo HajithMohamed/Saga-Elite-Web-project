@@ -130,6 +130,43 @@ export const deleteDrop = createAsyncThunk(
   }
 );
 
+export const bulkUpdateDrops = createAsyncThunk(
+  "drop/bulkUpdateDrops",
+  async ({ slugs, action }, { rejectWithValue }) => {
+    try {
+      const results = await Promise.allSettled(
+        slugs.map(async (slug) => {
+          if (action === "activate") {
+            return axios.patch(`${API_BASE}/drops/update-drop/${slug}`, { isPublished: true }, { withCredentials: true });
+          } else if (action === "deactivate") {
+            return axios.patch(`${API_BASE}/drops/update-drop/${slug}`, { isPublished: false }, { withCredentials: true });
+          } else if (action === "delete") {
+            return axios.delete(`${API_BASE}/drops/delete-drop/${slug}`, { withCredentials: true });
+          } else if (action === "archive") {
+            return axios.patch(`${API_BASE}/drops/archive-drop/${slug}`, {}, { withCredentials: true });
+          }
+          throw new Error("Unknown action");
+        })
+      );
+      
+      const succeeded = [];
+      const failed = [];
+      results.forEach((res, i) => {
+        if (res.status === "fulfilled") succeeded.push(slugs[i]);
+        else failed.push(slugs[i]);
+      });
+      
+      if (succeeded.length === 0 && failed.length > 0) {
+        return rejectWithValue("All bulk operations failed");
+      }
+      
+      return { succeeded, failed, action };
+    } catch (error) {
+      return rejectWithValue(error.message || "Bulk operation failed");
+    }
+  }
+);
+
 const dropSlice = createSlice({
   name: "drop",
   initialState,
@@ -196,6 +233,11 @@ const dropSlice = createSlice({
       })
       .addCase(deleteDrop.rejected, (state, action) => {
         state.error = action.payload;
+      })
+      .addCase(bulkUpdateDrops.fulfilled, (state, action) => {
+        // We typically rely on a subsequent getAllDrops fetch to refresh the UI
+        // But we can clear errors here
+        state.error = null;
       });
   },
 });

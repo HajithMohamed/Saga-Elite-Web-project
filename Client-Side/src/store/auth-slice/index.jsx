@@ -7,9 +7,24 @@ const unwrapAxiosError = (error) => {
   return serverMsg || error.message || "Request failed";
 };
 
+const fireEvent = (eventName, payload = {}) => {
+  try {
+    axiosInstance.post("/events/track", {
+      eventName,
+      payload,
+      metadata: {
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+      },
+    }).catch(() => {});
+  } catch {
+    /* fire-and-forget */
+  }
+};
+
 const initialState = {
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,
   user: null,
 };
 
@@ -72,6 +87,9 @@ export const checkAuthAction = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const response = await axiosInstance.get(`/auth/check-auth`);
+      if (response.data?.success === false) {
+        localStorage.removeItem('authToken');
+      }
       return response.data;
     } catch (error) {
       if (error?.response?.status === 401) {
@@ -261,6 +279,33 @@ export const registerGuestAction = createAsyncThunk(
   }
 );
 
+export const verifyTwoFactorAction = createAsyncThunk(
+  "auth/verify-2fa",
+  async (formData, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(`/auth/verify-2fa`, formData);
+      if (apiResponse.data?.token) {
+        localStorage.setItem('authToken', apiResponse.data.token);
+      }
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
+export const resendTwoFactorOtpAction = createAsyncThunk(
+  "auth/resend-2fa",
+  async (email, thunkAPI) => {
+    try {
+      const apiResponse = await axiosInstance.post(`/auth/resend-2fa`, { email });
+      return apiResponse.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(unwrapAxiosError(error));
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -279,6 +324,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.data;
         state.isAuthenticated = false;
+        fireEvent("register", { email: action.payload.data?.email });
       })
       .addCase(registerUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -318,6 +364,9 @@ const authSlice = createSlice({
         const isSuccess = action.payload.success || action.payload.status === "success";
         state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
         state.isAuthenticated = !!isSuccess;
+        if (isSuccess) {
+          fireEvent("login", { email: state.user?.email });
+        }
       })
       .addCase(loginUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -330,7 +379,9 @@ const authSlice = createSlice({
       })
       .addCase(checkAuthAction.fulfilled, (state, action) => {
         state.isLoading = false;
-        const isSuccess = action.payload.success || action.payload.status === "success";
+        const isSuccess =
+          action.payload.success === true ||
+          (action.payload.success !== false && action.payload.status === "success");
         state.user = isSuccess ? action.payload.data?.user : null;
         state.isAuthenticated = !!isSuccess;
       })
@@ -458,6 +509,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         localStorage.removeItem('authToken');
+        fireEvent("logout");
       })
       .addCase(logoutUserAction.rejected, (state) => {
         state.isLoading = false;
@@ -487,6 +539,31 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
+      })
+      // Verify 2FA
+      .addCase(verifyTwoFactorAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(verifyTwoFactorAction.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const isSuccess = action.payload.success || action.payload.status === "success";
+        state.user = isSuccess ? (action.payload.data?.user ?? action.payload.data) : null;
+        state.isAuthenticated = !!isSuccess;
+      })
+      .addCase(verifyTwoFactorAction.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      })
+      // Resend 2FA OTP
+      .addCase(resendTwoFactorOtpAction.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(resendTwoFactorOtpAction.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(resendTwoFactorOtpAction.rejected, (state) => {
+        state.isLoading = false;
       });
   },
 });

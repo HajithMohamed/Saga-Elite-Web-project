@@ -1,7 +1,8 @@
+# ── Server-side .dockerignore ─────────────────────────────────
 node_modules
 npm-debug.log
 .env
-.env.local
+.env.*
 .git
 .gitignore
 *.md
@@ -9,3 +10,4 @@ logs
 Uploads
 coverage
 *.log
+eng.traineddata

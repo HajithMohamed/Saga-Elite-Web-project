@@ -1,4 +1,8 @@
 import React, { Fragment, useState, useEffect } from "react";
+import useBulkSelection from "@/hooks/use-bulk-selection";
+import usePagination from "@/hooks/use-pagination";
+import useUnsavedChanges from "@/hooks/use-unsaved-changes";
+import Pagination from "@/components/common-components/Pagination";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
@@ -20,6 +24,11 @@ import {
   BarChart3,
   Film,
   Quote,
+  Loader2,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -28,6 +37,7 @@ import {
   deleteDrop,
   archiveDrop,
   createDrop,
+  bulkUpdateDrops,
 } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import { API_V1_URL as API_BASE } from "@/lib/api";
@@ -115,6 +125,28 @@ const ToggleSwitch = ({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+const DROP_DRAFT_KEY = "saga.admin.drop.draft";
+
+const loadDropDraft = () => {
+  try {
+    const raw = localStorage.getItem(DROP_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const clearDropDraft = () => {
+  try {
+    localStorage.removeItem(DROP_DRAFT_KEY);
+  } catch {
+    /* storage disabled — silent */
+  }
+};
+
 const initialFormData = {
   name: "",
   description: "",
@@ -132,6 +164,7 @@ const Drops = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [dropImages, setDropImages] = useState([]);
+  const [bannerImages, setBannerImages] = useState([]);
   const [currentEditedSlug, setCurrentEditedSlug] = useState(null);
   const [currentEditedId, setCurrentEditedId] = useState(null);
   const [dropGalleryImages, setDropGalleryImages] = useState([]);
@@ -163,7 +196,77 @@ const Drops = () => {
     setCurrentEditedSlug(null);
     setCurrentEditedId(null);
     setDropImages([]);
+    setBannerImages([]);
   };
+
+  const openNewDropForm = () => {
+    const draft = loadDropDraft();
+    setFormData(draft ? { ...initialFormData, ...draft } : initialFormData);
+    setCurrentEditedSlug(null);
+    setCurrentEditedId(null);
+    setDropImages([]);
+    setBannerImages([]);
+    setShowForm(true);
+    if (draft) {
+      toast({
+        title: "Draft restored",
+        description: "Resumed from your last unsaved drop draft.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!showForm || currentEditedSlug) return undefined;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(DROP_DRAFT_KEY, JSON.stringify(formData));
+      } catch {
+        /* quota or disabled — silent */
+      }
+    }, 600);
+    return () => clearTimeout(id);
+  }, [formData, showForm, currentEditedSlug]);
+
+  // Warn on tab close / refresh while the drop form is open with edits.
+  const isDropFormDirty =
+    showForm && JSON.stringify(formData) !== JSON.stringify(initialFormData);
+  useUnsavedChanges(isDropFormDirty);
+
+  const bulk = useBulkSelection(drops);
+  const dropsPg = usePagination(drops, 10);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkPendingAction, setBulkPendingAction] = useState(null);
+
+  const runBulkDropAction = React.useCallback(
+    async (action) => {
+      const slugs = bulk.selectedIds;
+      if (slugs.length === 0) return;
+      setBulkPending(true);
+      try {
+        const result = await dispatch(bulkUpdateDrops({ slugs, action })).unwrap();
+        const ok = result.succeeded?.length || 0;
+        const fail = result.failed?.length || 0;
+        toast({
+          title:
+            fail === 0
+              ? `Bulk ${action}: ${ok} drop${ok === 1 ? "" : "s"}`
+              : `Bulk ${action}: ${ok} updated, ${fail} skipped`,
+          variant: fail === 0 ? "success" : "destructive",
+        });
+        bulk.clear();
+        dispatch(getAllDrops());
+      } catch (err) {
+        toast({
+          title: `Bulk ${action} failed`,
+          description: typeof err === "string" ? err : "Try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkPending(false);
+      }
+    },
+    [bulk, dispatch, toast]
+  );
 
   async function uploadPendingDropImages(refId) {
     const pendingImages = dropImages.filter((img) => !img.isUploaded && img.file);
@@ -195,6 +298,45 @@ const Drops = () => {
     } catch (error) {
       toast({
         title: "Drop saved but image upload failed",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }
+
+  // 21:9 homepage banner (Image.type === "dropBanner"), kept separate from the
+  // portrait campaign gallery above.
+  async function uploadPendingBannerImages(refId) {
+    const pending = bannerImages.filter((img) => !img.isUploaded && img.file);
+    if (!pending.length || !refId) return true;
+
+    const fd = new FormData();
+    fd.append("refModel", "Drop");
+    fd.append("refId", refId);
+    fd.append("type", "dropBanner");
+    pending.forEach((img) => fd.append("images", img.file));
+
+    try {
+      const response = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+      if (!response.data?.success)
+        throw new Error(response.data?.message || "Banner upload failed");
+
+      setBannerImages((prev) => {
+        const existing = prev.filter((img) => !img.file);
+        const uploaded = (response.data.images || []).map((img) => ({
+          ...img,
+          isUploaded: true,
+        }));
+        return [...existing, ...uploaded];
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Drop saved but banner upload failed",
         description: error.response?.data?.message || error.message,
         variant: "destructive",
       });
@@ -286,10 +428,12 @@ const Drops = () => {
           updateDrop({ slug: currentEditedSlug, formData })
         ).unwrap();
         await uploadPendingDropImages(currentEditedId);
+        await uploadPendingBannerImages(currentEditedId);
       } else {
         result = await dispatch(createDrop(formData)).unwrap();
         const newId = result._id;
         await uploadPendingDropImages(newId);
+        await uploadPendingBannerImages(newId);
         setCurrentEditedId(newId);
         setCurrentEditedSlug(result.slug);
       }
@@ -302,6 +446,7 @@ const Drops = () => {
         className:
           "bg-surface border border-primary-container text-saga-primary",
       });
+      if (!currentEditedSlug) clearDropDraft();
       setShowDropSaved(true);
       resetForm();
     } catch (e) {
@@ -477,7 +622,9 @@ const Drops = () => {
           label="Drop Name"
           required
           helper="Shown on the homepage, drop page, and notifications. Keep it under 40 characters."
-          hint={`${formData.name.length} / 200`}
+          maxLength={200}
+          showCount
+          value={formData.name}
         >
           <LuxuryInput
             type="text"
@@ -492,7 +639,9 @@ const Drops = () => {
           label="Description"
           optional
           helper="A short narrative for the drop hero. Supports plain text."
-          hint={`${formData.description.length} / 2000`}
+          maxLength={2000}
+          showCount
+          value={formData.description}
         >
           <LuxuryTextarea
             value={formData.description}
@@ -550,35 +699,100 @@ const Drops = () => {
               Save the drop to upload images
             </p>
             <p className="mt-2 text-[11px] text-white/40">
-              Recommended hero size: 1600×2000 · JPG / WEBP · Max 5 MB
+              Drop-page gallery 1600×2000 (4:5) · Homepage banner 1280×420 (21:9) · JPG / PNG / WEBP · Max 5 MB
             </p>
           </div>
         ) : (
-          <>
-            <ImageUpload
-              images={dropImages}
-              setImages={setDropImages}
-              isMultiple
-              refModel="Drop"
-              refId={currentEditedId}
-              type="drop"
-            />
-            {dropImages.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  openDropGallery({
-                    name: formData.name,
-                    _id: currentEditedId,
-                    images: dropImages,
-                  })
-                }
-                className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
-              >
-                View all images
-              </button>
-            )}
-          </>
+          <div className="space-y-8">
+            {/* Portrait campaign gallery — drop page */}
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  Drop-page gallery
+                </h4>
+                <span className="text-[10px] text-white/40">Portrait · 4:5 · 1600×2000</span>
+              </div>
+              <ImageUpload
+                images={dropImages}
+                setImages={setDropImages}
+                isMultiple
+                refModel="Drop"
+                refId={currentEditedId}
+                type="drop"
+              />
+              {dropImages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openDropGallery({
+                      name: formData.name,
+                      _id: currentEditedId,
+                      images: dropImages,
+                    })
+                  }
+                  className="mt-3 inline-flex items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#D4AF37] hover:bg-[#D4AF37]/[0.16] transition"
+                >
+                  View all images
+                </button>
+              )}
+            </div>
+
+            {/* 21:9 homepage banner — separate dedicated slot */}
+            <div className="rounded-2xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.03] p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">
+                  Homepage banner (21:9)
+                </h4>
+                <span className="text-[10px] text-white/40">1280×420 · Cover</span>
+              </div>
+              <ul className="mb-3 space-y-1 text-[11px] leading-relaxed text-white/50">
+                <li>• Recommended 1280 × 420 px (21:9). Minimum 1280 × 420.</li>
+                <li>• JPG / PNG / WEBP · Max 5 MB.</li>
+                <li>• Keep models, logos &amp; key subjects within the centre 60% — edges get cropped on wide screens.</li>
+                <li>• Don&rsquo;t bake headings or buttons into the image; the site overlays those.</li>
+              </ul>
+              <ImageUpload
+                images={bannerImages}
+                setImages={setBannerImages}
+                isMultiple={false}
+                refModel="Drop"
+                refId={currentEditedId}
+                type="dropBanner"
+                requiredRatio={21 / 9}
+                minWidth={1280}
+                minHeight={420}
+              />
+
+              {/* Responsive preview — three 21:9 frames + centre safe-area guide */}
+              {bannerImages[0]?.url && (
+                <div className="mt-4">
+                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    Preview across devices
+                  </p>
+                  <div className="flex flex-wrap items-start gap-4">
+                    {[
+                      { label: "Desktop", w: "w-[280px]" },
+                      { label: "Tablet", w: "w-[200px]" },
+                      { label: "Mobile", w: "w-[130px]" },
+                    ].map((d) => (
+                      <div key={d.label} className="space-y-1">
+                        <div className={`${d.w} relative aspect-[1280/420] overflow-hidden rounded-lg border border-white/10 bg-black`}>
+                          <img
+                            src={bannerImages[0].url}
+                            alt={`${d.label} banner preview`}
+                            className="absolute inset-0 h-full w-full object-cover object-center"
+                          />
+                          {/* centre 60% safe-area guide */}
+                          <div className="pointer-events-none absolute inset-y-0 left-[20%] right-[20%] border-x border-dashed border-[#D4AF37]/40" />
+                        </div>
+                        <p className="text-center text-[9px] uppercase tracking-wider text-white/40">{d.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </FormSection>
 
@@ -701,15 +915,68 @@ const Drops = () => {
         <ToastFlash show={showDropSaved} message="Drop saved" />
       </div>
 
-      <div className="px-8 md:px-16 pt-8 pb-12 scroll-smooth">
+      <div className="flex-1 p-6 space-y-6">
+        {/* Bulk Action Bar inline for Drop Table */}
+        <AnimatePresence>
+          {bulk.selectedIds.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-center justify-between rounded-2xl bg-saga-primary/10 border border-saga-primary/30 p-3"
+            >
+              <div className="flex items-center gap-3 px-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-saga-primary/20 text-xs font-bold text-saga-primary">
+                  {bulk.selectedIds.length}
+                </span>
+                <span className="text-sm font-medium text-saga-primary">Drops Selected</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={bulkPending}
+                  onClick={() => runBulkDropAction("activate")}
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-saga-primary hover:text-black transition-colors disabled:opacity-50"
+                >
+                  Publish
+                </button>
+                <button
+                  disabled={bulkPending}
+                  onClick={() => runBulkDropAction("deactivate")}
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                >
+                  Unpublish
+                </button>
+                <button
+                  disabled={bulkPending}
+                  onClick={() => runBulkDropAction("archive")}
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+                >
+                  Archive
+                </button>
+                <div className="h-4 w-px bg-saga-primary/30 mx-1" />
+                <button
+                  disabled={bulkPending}
+                  onClick={() => runBulkDropAction("delete")}
+                  className="rounded-lg bg-black/40 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-400 hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Title + Actions */}
-        <div className="flex flex-col md:flex-row justify-end items-end mb-8 gap-8">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-4 gap-8">
+          <div>
+            <h2 className="text-xl font-serif text-white">All Drops</h2>
+            <p className="text-xs text-white/50 font-mono mt-1">
+              {drops.length} drop{drops.length === 1 ? "" : "s"} total
+            </p>
+          </div>
           <div className="flex flex-wrap gap-4">
             <PrimaryButton
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
+              onClick={openNewDropForm}
             >
               <Plus className="w-3 h-3" />
               New Drop
@@ -717,221 +984,195 @@ const Drops = () => {
           </div>
         </div>
 
-        {/* Table Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 mb-4 py-4 bg-surface-container-low text-[10px] uppercase tracking-[0.2em] text-outline-variant font-bold border border-outline-variant/10">
-          <div className="col-span-4">Drop Details</div>
-          <div className="col-span-3">Description</div>
-          <div className="col-span-2">Schedule</div>
-          <div className="col-span-1">Products</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1 text-right">Actions</div>
-        </div>
-
-        {/* Drop Rows */}
-        <MotionDiv
-          className="space-y-3"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {isLoading ? <SkeletonGrid count={5} /> : null}
-
-          {!isLoading &&
-            drops.map((drop) => {
-              const daysAway = daysUntilRelease(drop.releaseDate);
-              return (
-              <MotionDiv
-                key={drop._id}
-                variants={itemVariants}
-                whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
-                transition={{ duration: 0.2 }}
-                className="group relative grid grid-cols-1 md:grid-cols-12 gap-4 items-center admin-panel border border-outline-variant/5 bg-surface-container/30 p-6 transition-colors hover:bg-surface-bright/80"
-              >
-                {/* Left accent bar */}
-                <div className="absolute left-0 top-0 bottom-0 w-[2px] origin-top scale-y-0 bg-saga-primary transition-transform duration-300 group-hover:scale-y-100" />
-
-                {/* Drop image + name */}
-                <div className="col-span-1 md:col-span-4 flex items-center gap-6">
-                  <div className="w-16 h-16 bg-surface-container-highest shrink-0 overflow-hidden ring-1 ring-outline-variant/20 flex items-center justify-center">
-                    {drop.images && drop.images.length > 0 ? (
-                      <img
-                        className="w-full h-full object-cover"
-                        src={drop.images[0].url}
-                        alt={drop.name}
-                      />
-                    ) : (
-                      <Package className="w-6 h-6 text-outline-variant/50" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-white font-serif font-bold text-lg leading-tight group-hover:text-saga-primary transition-colors">
-                      {drop.name}
-                    </h4>
-                    <p className="text-xs text-on-surface-variant opacity-60 mt-1 uppercase font-mono">
-                      {drop.isArchived ? "Archived" : "Active Drop"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="col-span-1 md:col-span-3">
-                  <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-2">
-                    {drop.description || "No description provided."}
-                  </p>
-                </div>
-
-                {/* Schedule */}
-                <div className="col-span-1 md:col-span-2">
-                  <div className="flex flex-col gap-1 text-xs text-on-surface-variant font-mono">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Calendar className="w-3 h-3 shrink-0 text-saga-primary" />
-                      <span>
-                        {new Date(drop.releaseDate).toLocaleDateString()}
-                      </span>
-                      {daysAway != null ? (
-                        <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#D4AF37]">
-                          {daysAway} day{daysAway === 1 ? "" : "s"} away
-                        </span>
-                      ) : null}
-                    </div>
-                    {drop.endDate && (
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-3 h-3 text-saga-primary shrink-0" />
-                        <span>
-                          {new Date(drop.endDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Product count */}
-                <div className="col-span-1 md:col-span-1">
-                  <span className="text-sm text-on-surface">
-                    {drop.products?.length ?? 0} Items
-                  </span>
-                </div>
-
-                {/* Status */}
-                <div className="col-span-1 md:col-span-1">
-                  <div className="flex items-center gap-2">
-                    <PulseDot active={drop.isPublished} />
-                    <span
-                      className={`text-[10px] uppercase tracking-widest font-bold ${
-                        drop.isPublished
-                          ? "text-saga-primary"
-                          : "text-outline-variant"
-                      }`}
-                    >
-                      {drop.isPublished ? "Live" : "Draft"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="col-span-1 flex flex-wrap justify-end gap-3 md:col-span-1">
-                  <button
-                    type="button"
-                    onClick={() => openDropGallery(drop)}
-                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="View images"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentEditedId(drop._id);
-                      setCurrentEditedSlug(drop.slug);
-                      setFormData({
-                        name: drop.name,
-                        description: drop.description || "",
-                        headline: drop.headline || "",
-                        manifesto: drop.manifesto || "",
-                        cinematicMode: !!drop.cinematicMode,
-                        vipEarlyAccessHours: Number(drop.vipEarlyAccessHours) || 0,
-                        releaseDate: drop.releaseDate.split("T")[0],
-                        endDate: drop.endDate
-                          ? drop.endDate.split("T")[0]
-                          : "",
-                        isPublished: drop.isPublished,
-                        isArchived: drop.isArchived,
-                      });
-                      setDropImages(drop.images || []);
-                      setShowForm(true);
-                    }}
-                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="Edit"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleArchive(drop.slug, drop.isArchived)}
-                    className="hover:text-saga-primary transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="Toggle Archive"
-                  >
-                    <Archive className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDeleteConfirmSlug((s) => (s === drop.slug ? null : drop.slug))
-                    }
-                    className="hover:text-saga-error transition-colors text-on-surface-variant bg-surface-container-high p-2"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="col-span-1 md:col-span-12">
-                  <ConfirmInline
-                    show={deleteConfirmSlug === drop.slug}
-                    message="Delete this drop permanently?"
-                    onCancel={() => setDeleteConfirmSlug(null)}
-                    onConfirm={() => {
-                      const slug = drop.slug;
-                      setDeleteConfirmSlug(null);
-                      dispatch(deleteDrop(slug)).then((data) => {
-                        if (data.meta.requestStatus === "fulfilled") {
-                          dispatch(getAllDrops());
-                          toast({
-                            title: "Drop deleted successfully",
-                            className:
-                              "bg-surface border border-primary-container text-saga-primary",
-                          });
-                        } else {
-                          toast({
-                            title: "Failed to delete Drop",
-                            description: data?.payload?.message,
-                            variant: "destructive",
-                          });
-                        }
-                      });
-                    }}
+        {/* NATIVE DATA TABLE LAYOUT */}
+        <div className="w-full max-w-full overflow-x-auto rounded-3xl border border-[#D4AF37]/10 bg-[#0B0B0B]/80 backdrop-blur-xl">
+          <table className="min-w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-white/5 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                <th className="px-6 py-5 font-semibold w-12">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-white/20 bg-black/40 accent-[#D4AF37] focus:ring-[#D4AF37]/50"
+                    checked={bulk.isAllSelected}
+                    onChange={bulk.toggleAll}
                   />
-                </div>
-              </MotionDiv>
-            );
-            })}
-
-          {!isLoading && drops.length === 0 && (
-            <div className="py-20 text-center border border-dashed border-outline-variant/30 text-on-surface-variant font-sans">
-              <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No drops found in the ledger.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  resetForm();
-                  setShowForm(true);
-                }}
-                className="mt-6 border border-saga-primary/40 px-8 py-3 text-[10px] uppercase tracking-widest font-bold text-saga-primary hover:bg-saga-primary hover:text-surface transition-all duration-300"
-              >
-                Construct First Drop
-              </button>
-            </div>
-          )}
-        </MotionDiv>
+                </th>
+                <th className="px-6 py-5 font-semibold">Drop</th>
+                <th className="px-6 py-5 font-semibold hidden md:table-cell">Status</th>
+                <th className="px-6 py-5 font-semibold hidden lg:table-cell">Release</th>
+                <th className="px-6 py-5 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12">
+                    <SkeletonGrid count={3} />
+                  </td>
+                </tr>
+              ) : drops.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-white/40">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-mono text-xs uppercase tracking-widest">No drops found</p>
+                  </td>
+                </tr>
+              ) : (
+                dropsPg.pageItems.map((drop) => {
+                  const daysAway = daysUntilRelease(drop.releaseDate);
+                  return (
+                  <tr
+                    key={drop._id}
+                    className="group transition-colors hover:bg-white/[0.02]"
+                  >
+                    <td className="px-6 py-4 align-middle">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-white/20 bg-black/40 accent-[#D4AF37] focus:ring-[#D4AF37]/50"
+                        checked={bulk.selectedIds.includes(drop.slug)}
+                        onChange={() => bulk.toggle(drop.slug)}
+                      />
+                    </td>
+                    <td className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded bg-white/5 border border-white/10 flex items-center justify-center">
+                          {drop.images && drop.images.length > 0 ? (
+                            <img
+                              src={drop.images[0].url}
+                              alt={drop.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Package className="h-5 w-5 text-white/20" />
+                          )}
+                        </div>
+                        <div className="max-w-[200px] lg:max-w-[300px]">
+                          <p className="truncate text-sm font-semibold text-white group-hover:text-[#D4AF37] transition-colors">
+                            {drop.name}
+                          </p>
+                          <p className="truncate text-xs text-white/40 mt-0.5">
+                            {drop.description || "No description"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <PulseDot active={drop.isPublished} />
+                        <span
+                          className={`text-[10px] uppercase tracking-widest font-bold ${
+                            drop.isPublished ? "text-saga-primary" : "text-white/40"
+                          }`}
+                        >
+                          {drop.isPublished ? "Live" : "Draft"}
+                        </span>
+                        {drop.isArchived && (
+                          <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-white/50">
+                            Archived
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle hidden lg:table-cell">
+                      <div className="flex flex-col gap-1 text-xs text-white/60 font-mono">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-[#D4AF37]" />
+                          {new Date(drop.releaseDate).toLocaleDateString()}
+                        </div>
+                        {daysAway != null && (
+                          <span className="inline-flex w-fit items-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-2 py-0.5 text-[9px] uppercase tracking-wider text-[#D4AF37]">
+                            {daysAway} day{daysAway === 1 ? "" : "s"} away
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 align-middle text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => openDropGallery(drop)}
+                          className="p-2 text-white/40 hover:text-white transition-colors"
+                          title="Gallery"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentEditedId(drop._id);
+                            setCurrentEditedSlug(drop.slug);
+                            setFormData({
+                              name: drop.name,
+                              description: drop.description || "",
+                              headline: drop.headline || "",
+                              manifesto: drop.manifesto || "",
+                              cinematicMode: !!drop.cinematicMode,
+                              vipEarlyAccessHours: Number(drop.vipEarlyAccessHours) || 0,
+                              releaseDate: drop.releaseDate.split("T")[0],
+                              endDate: drop.endDate ? drop.endDate.split("T")[0] : "",
+                              isPublished: drop.isPublished,
+                              isArchived: drop.isArchived,
+                            });
+                            {
+                              const imgs = drop.images || [];
+                              setDropImages(imgs.filter((im) => im.type !== "dropBanner"));
+                              setBannerImages(imgs.filter((im) => im.type === "dropBanner"));
+                            }
+                            setShowForm(true);
+                          }}
+                          className="p-2 text-white/40 hover:text-[#D4AF37] transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmSlug((s) => (s === drop.slug ? null : drop.slug))}
+                          className="p-2 text-white/40 hover:text-red-400 transition-colors relative"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <div className="absolute right-0 top-full z-10 mt-1">
+                            <ConfirmInline
+                              show={deleteConfirmSlug === drop.slug}
+                              message="Delete drop permanently?"
+                              onCancel={() => setDeleteConfirmSlug(null)}
+                              onConfirm={() => {
+                                const slug = drop.slug;
+                                setDeleteConfirmSlug(null);
+                                dispatch(deleteDrop(slug)).then((data) => {
+                                  if (data.meta.requestStatus === "fulfilled") {
+                                    dispatch(getAllDrops());
+                                    toast({
+                                      title: "Drop deleted",
+                                      className: "bg-surface border border-primary-container text-saga-primary",
+                                    });
+                                  } else {
+                                    toast({ title: "Failed to delete Drop", variant: "destructive" });
+                                  }
+                                });
+                              }}
+                            />
+                          </div>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+                })
+              )}
+            </tbody>
+          </table>
+          <Pagination
+            page={dropsPg.page}
+            pageCount={dropsPg.pageCount}
+            onPageChange={dropsPg.setPage}
+            total={dropsPg.total}
+            pageSize={dropsPg.pageSize}
+            label="drops"
+            className="px-6 pb-5"
+          />
+        </div>
       </div>
 
       {/* Gallery Modal */}

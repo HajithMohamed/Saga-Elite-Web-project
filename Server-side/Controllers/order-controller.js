@@ -3,7 +3,6 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Product = require("../Models/Product");
 const Order = require("../Models/Order");
-const Gift = require("../Models/Gift");
 const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Guest = require("../Models/Guest");
@@ -14,6 +13,7 @@ const SiteConfig = require("../Models/SiteConfig");
 const UserActivityLog = require("../Models/UserActivityLog");
 const { computeMembershipTier } = require("../Utils/membership-tier");
 const { evaluateCoupon } = require("./coupon-controller");
+const { issueVipTierReward } = require("../Utils/reward-service");
 const { streamInvoicePdf } = require("../Utils/invoice-pdf");
 const { generateUniqueReference } = require("../Utils/referenceGenerator");
 const { isAdminRole, ADMIN_ROLES } = require("../Utils/admin-roles");
@@ -30,6 +30,7 @@ const logger = require("../Utils/logger");
 const runInTransaction = require("../Utils/safe-transaction");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
+const ONLINE_PAYMENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const escapeHtml = (str = "") =>
     String(str)
@@ -119,23 +120,49 @@ const addressMatchesOrder = (a, b) =>
     String(a?.postalCode || "").trim().toLowerCase() ===
     String(b?.postalCode || "").trim().toLowerCase();
 
+
+
 const createOrder = catchAsync(async (req, res, next) => {
     const {
         items,
-        user,
-        guest,
-        guestEmailNormalized,
         shippingAddress,
+        billingAddress,
         contactNumber,
+        alternativePhone,
         paymentMethod,
         paymentProofUrl,
         notes,
         couponCode,
-        isBankTransferPayment,
-        isLegacyManualPayment,
         structuredAddress,
-        normalizedCheckoutMode,
+        checkoutMode,
+        guestEmail,
+        shippingFee: rawShippingFee,
     } = req.body;
+
+    const user = req.userInfo || null;
+    const guestEmailNormalized = user ? null : String(guestEmail || "").trim().toLowerCase();
+    const normalizedCheckoutMode = checkoutMode === "buyNow" ? "buyNow" : "cart";
+    const isBankTransferPayment = paymentMethod === "manual_bank_transfer";
+    const isCardPayment = paymentMethod === "card";
+    const isPendingOnlinePayment = isBankTransferPayment || isCardPayment;
+    const isLegacyManualPayment = paymentMethod === "manual";
+    let guest = null;
+
+    if (!user && guestEmailNormalized) {
+        guest = await Guest.findOneAndUpdate(
+            { email: guestEmailNormalized },
+            {
+                $setOnInsert: {
+                    email: guestEmailNormalized,
+                },
+                $set: {
+                    lastUsedAt: new Date(),
+                    ...(contactNumber ? { phone: contactNumber } : {}),
+                },
+            },
+            { new: true, upsert: true }
+        );
+    }
 
     const createdOrder = await runInTransaction(async (session) => {
         const orderItems = [];
@@ -151,7 +178,9 @@ const createOrder = catchAsync(async (req, res, next) => {
                 );
             }
 
-            const product = await Product.findById(productId).session(session);
+            const product = await Product.findById(productId)
+                .populate({ path: "images", select: "url colorTag" })
+                .session(session);
 
             if (!product || !product.isActive) {
                 throw new AppError("Product not found or unavailable", 404);
@@ -210,12 +239,24 @@ const createOrder = catchAsync(async (req, res, next) => {
 
             await product.save({ session, validateModifiedOnly: true });
 
+            // Resolve a thumbnail for this line: prefer an image tagged with the
+            // chosen variant's colour, else fall back to the product's first image.
+            const productImages = Array.isArray(product.images) ? product.images : [];
+            const colorKey = String(variant.color || "").trim().toLowerCase();
+            const matchedImage = colorKey
+                ? productImages.find(
+                    (img) => String(img.colorTag || "").trim().toLowerCase() === colorKey
+                )
+                : null;
+            const productImage = matchedImage?.url || productImages[0]?.url || "";
+
             orderItems.push({
                 product: product._id,
                 productName: product.name,
                 productArtNo: product.artNo,
                 productSlug: product.slug,
                 variantSku: variant.sku,
+                productImage,
                 size: variant.size,
                 color: variant.color,
                 quantity,
@@ -228,6 +269,8 @@ const createOrder = catchAsync(async (req, res, next) => {
 
         let appliedCoupon = null;
         let appliedDiscount = 0;
+        let appliedUserCoupon = null;
+        const merchandiseSubtotal = totalAmount;
 
         if (couponCode && String(couponCode).trim()) {
             const productIds = items.map((it) => it.productId);
@@ -236,11 +279,15 @@ const createOrder = catchAsync(async (req, res, next) => {
                 code: couponCode,
                 subtotal: totalAmount,
                 productIds,
+                userId: user?._id || null,
+                user,
+                session,
             });
 
             if (result) {
                 appliedCoupon = result.coupon;
                 appliedDiscount = result.discount;
+                appliedUserCoupon = result.userCoupon || null;
 
                 totalAmount = Math.max(0, totalAmount - appliedDiscount);
 
@@ -262,25 +309,8 @@ const createOrder = catchAsync(async (req, res, next) => {
             }
         }
 
-        const dropId = req.body.dropId || null;
-        let selectedGift = null;
-
-        // Surprise gifts are a registered-user perk only.
-        if (user) {
-            if (dropId) {
-                selectedGift = await Gift.findOne({
-                    isActive: true,
-                    drop: dropId,
-                }).session(session);
-            }
-
-            if (!selectedGift) {
-                selectedGift = await Gift.findOne({
-                    isActive: true,
-                    drop: null,
-                }).session(session);
-            }
-        }
+        const shippingFee = Math.max(0, Number(rawShippingFee) || 0);
+        totalAmount = Math.max(0, totalAmount + shippingFee);
 
         // ✅ Single, complete orderPayload declaration (duplicate removed)
         const orderPayload = {
@@ -289,8 +319,11 @@ const createOrder = catchAsync(async (req, res, next) => {
             guestEmail: guestEmailNormalized,
             items: orderItems,
             totalAmount,
+            shippingFee,
             shippingAddress: shippingAddress.trim(),
+            billingAddress: billingAddress ? billingAddress.trim() : undefined,
             contactNumber: contactNumber.trim(),
+            alternativePhone: alternativePhone?.trim(),
             paymentMethod,
             paymentProofUrl: paymentProofUrl ? paymentProofUrl.trim() : undefined,
             referenceNumber: isLegacyManualPayment
@@ -299,29 +332,31 @@ const createOrder = catchAsync(async (req, res, next) => {
             notes: notes?.trim(),
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             couponDiscount: appliedDiscount || 0,
-            status: isBankTransferPayment
+            status: isPendingOnlinePayment
                 ? "pending_payment"
                 : ["manual", "cash"].includes(paymentMethod)
                     ? "verification_pending"
                     : "confirmed",
             paymentStatus:
-                isBankTransferPayment || ["manual", "cash"].includes(paymentMethod)
+                isPendingOnlinePayment || ["manual", "cash"].includes(paymentMethod)
                     ? "pending"
                     : "paid",
             expiresAt:
-                isLegacyManualPayment || paymentMethod === "cash"
-                    ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
-                    : undefined,
+                isPendingOnlinePayment
+                    ? new Date(Date.now() + ONLINE_PAYMENT_EXPIRY_MS)
+                    : isLegacyManualPayment || paymentMethod === "cash"
+                        ? new Date(Date.now() + CASH_ORDER_EXPIRY_MS)
+                        : undefined,
         };
 
-        if (selectedGift) {
-            orderPayload.gift = {
-                giftId: selectedGift._id,
-                revealed: false,
-            };
-        }
-
         const [orderDocument] = await Order.create([orderPayload], { session });
+
+        if (appliedUserCoupon && !appliedUserCoupon.redeemed) {
+            appliedUserCoupon.redeemed = true;
+            appliedUserCoupon.redeemedAt = new Date();
+            appliedUserCoupon.redeemedOrder = orderDocument._id;
+            await appliedUserCoupon.save({ session, validateModifiedOnly: true });
+        }
 
         if (Array.isArray(orderPayload.items) && orderPayload.items.length) {
             const purchaseRows = orderPayload.items.map((item) => ({
@@ -360,6 +395,7 @@ const createOrder = catchAsync(async (req, res, next) => {
                     label: structuredAddress.label,
                     street: String(structuredAddress.street).trim(),
                     city: String(structuredAddress.city).trim(),
+                    district: structuredAddress.district ? String(structuredAddress.district).trim() : undefined,
                     postalCode: String(structuredAddress.postalCode).trim(),
                     country: String(structuredAddress.country || "Sri Lanka").trim(),
                     isDefault: guest.addresses.length === 0,
@@ -381,6 +417,7 @@ const createOrder = catchAsync(async (req, res, next) => {
                 label: structuredAddress.label,
                 street: String(structuredAddress.street).trim(),
                 city: String(structuredAddress.city).trim(),
+                district: structuredAddress.district ? String(structuredAddress.district).trim() : undefined,
                 postalCode: String(structuredAddress.postalCode).trim(),
                 country: String(structuredAddress.country || "Sri Lanka").trim(),
                 isDefault: user.addresses.length === 0,
@@ -443,23 +480,55 @@ const createOrder = catchAsync(async (req, res, next) => {
         });
     }
 
-    // Customer-facing order-placed WhatsApp. The bank-transfer branch below
-    // sends its own (with payment instructions), so we only fire this for
-    // other payment methods (card, gpay, payhere, cash, etc.).
+    // Customer-facing order-placed WhatsApp. Bank-transfer branch sends its own
+    // instructions below; card orders get a link to the demo gateway page.
     if (!isBankTransferPayment) {
         const customerOrderPhone = cleanPhoneNumber(contactNumber);
         if (customerOrderPhone) {
+            const cardPaymentLink = isCardPayment
+                ? `${clientShopUrl()}/shopping/card-payment/${createdOrder._id}${
+                      guestEmailNormalized
+                          ? `?email=${encodeURIComponent(guestEmailNormalized)}`
+                          : ""
+                  }`
+                : null;
+
             sendWhatsAppMessage({
                 to: customerOrderPhone,
-                message:
-                    `Saga Elite: your order #${createdOrder._id} has been placed. ` +
-                    `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
-                    `We'll message you when it ships.`,
+                message: isCardPayment
+                    ? `Saga Elite: order #${createdOrder._id} placed. ` +
+                      `Complete card payment (LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}): ${cardPaymentLink}`
+                    : `Saga Elite: your order #${createdOrder._id} has been placed. ` +
+                      `Total LKR ${Number(createdOrder.totalAmount).toLocaleString("en-LK")}. ` +
+                      `We'll message you when it ships.`,
             }).catch((err) =>
                 logger.error("Customer order-placed WhatsApp failed", {
                     error: err?.message,
                 })
             );
+        }
+
+        if (isCardPayment) {
+            const customerEmail = user?.email || guestEmailNormalized;
+            const cardPaymentLink = `${clientShopUrl()}/shopping/card-payment/${createdOrder._id}${
+                guestEmailNormalized ? `?email=${encodeURIComponent(guestEmailNormalized)}` : ""
+            }`;
+
+            if (customerEmail) {
+                sendEmail({
+                    email: customerEmail,
+                    subject: "Complete your Saga Elite card payment",
+                    html: buildEmailTemplate(
+                        "Complete your card payment",
+                        `<p>Your order <strong>${createdOrder._id}</strong> is waiting for payment.</p>
+                         <p><strong>Amount:</strong> LKR ${createdOrder.totalAmount.toLocaleString()}</p>
+                         <p><a href="${cardPaymentLink}">Complete card payment →</a></p>
+                         <p>You have 24 hours to complete payment before the order expires.</p>`
+                    ),
+                }).catch((err) =>
+                    logger.error("Card payment link email failed", { error: err.message })
+                );
+            }
         }
     }
 
@@ -481,8 +550,12 @@ const createOrder = catchAsync(async (req, res, next) => {
         });
 
         const manualPayment = createdManualPayment;
-        const paymentLink = `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}`;
         const customerEmail = user?.email || guestEmailNormalized;
+        // Carry the order email in the link so guests skip the "confirm your email"
+        // gate when opening it (the page auto-verifies against this address).
+        const paymentLink =
+            `${clientShopUrl()}/shopping/manual-payment/${manualPayment.slug}` +
+            (customerEmail ? `?email=${encodeURIComponent(customerEmail)}` : "");
         const customerPhone = cleanPhoneNumber(contactNumber);
 
         if (customerEmail) {
@@ -847,13 +920,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             filter: { role: { $in: ADMIN_ROLES } },
         });
     } else if (status === "delivered") {
-        order.gift = order.gift || { giftId: null, revealed: false };
-        const hasGift = Boolean(order.gift.giftId);
-        if (hasGift && !order.gift.revealed) {
-            order.gift.revealed = true;
-            await order.save({ validateModifiedOnly: true });
-        }
-
         const productIds = (order.items || [])
             .map((it) => it?.product)
             .filter(Boolean);
@@ -893,6 +959,14 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
                             { _id: order.user },
                             { $set: { membership: nextTier } }
                         );
+                        issueVipTierReward(order.user, nextTier, { notify: true }).catch((rewardErr) =>
+                            logger.warn("[reward] VIP tier coupon failed", {
+                                orderId: order._id,
+                                userId: order.user,
+                                tier: nextTier,
+                                error: rewardErr?.message,
+                            })
+                        );
                     }
                 }
             } catch (membershipErr) {
@@ -905,8 +979,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
         }
 
         const deliveredOrder = await Order.findById(order._id)
-            .populate("user", "email")
-            .populate("gift.giftId");
+            .populate("user", "email");
 
         const line0 = order.items?.[0];
         const productSlug =
@@ -928,8 +1001,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             ? customer.email.split("@")[0]
             : "there";
         const itemCount = Array.isArray(order.items) ? order.items.length : 0;
-        const giftDescription =
-            deliveredOrder?.gift?.giftId?.description || "your surprise gift";
 
         if (customer?._id) {
             await createNotification({
@@ -941,23 +1012,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
                 entityType: "Order",
                 meta: { orderId: order._id, reviewUrl, status: "delivered" },
             });
-
-            if (hasGift) {
-                await createNotification({
-                    userId: customer._id,
-                    type: "order",
-                    title: "Your surprise gift is revealed",
-                    message: `Your Saga Elite surprise gift has been revealed! Open your package and discover ${giftDescription}.`,
-                    entityRef: order._id,
-                    entityType: "Order",
-                    meta: {
-                        orderId: order._id,
-                        status: "delivered",
-                        giftId: deliveredOrder?.gift?.giftId?._id || null,
-                        revealed: true,
-                    },
-                });
-            }
         }
 
         if (customer?.email) {
@@ -981,24 +1035,6 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
             }).catch((err) =>
                 logger.error("[review-notify] Email failed", { error: err.message })
             );
-
-            if (hasGift) {
-                sendEmail({
-                    email: customer.email,
-                    subject: "Your Saga Elite surprise gift has been revealed",
-                    html: buildEmailTemplate(
-                        "Your surprise gift is revealed",
-                        `<p>Hi ${greeting},</p>
-             <p>Your Saga Elite surprise gift has been revealed! Open your package and discover <strong>${escapeHtml(
-                            giftDescription
-                        )}</strong>.</p>
-             <p>We hope the gift adds something special to your order.</p>
-             <p>Thank you for shopping with Saga Elite.</p>`
-                    ),
-                }).catch((err) =>
-                    logger.error("[gift-notify] Email failed", { error: err.message })
-                );
-            }
         }
 
         const phone = cleanPhoneNumber(

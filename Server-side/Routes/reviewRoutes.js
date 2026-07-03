@@ -26,6 +26,8 @@ const {
   getDropAnalytics,
   replyToReview,
   featureReview,
+  archiveReview,
+  restoreReview,
   getReviewsAnalytics,
   bulkModerateReviews,
 } = require("../Controllers/reviewController");
@@ -49,6 +51,8 @@ adminRouter.get("/drop-analytics/:dropId", authMiddleware, adminMiddleware, requ
 adminRouter.patch("/:reviewId/category", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), validateReviewCategorize, adminLogMiddleware, categorizeReview);
 adminRouter.patch("/:reviewId/reply", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, replyToReview);
 adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, featureReview);
+adminRouter.patch("/:reviewId/archive", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, archiveReview);
+adminRouter.patch("/:reviewId/restore", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, restoreReview);
 adminRouter.patch("/bulk", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateBulkReviewAction, adminLogMiddleware, bulkModerateReviews);
 
 module.exports = { userRouter, adminRouter };
