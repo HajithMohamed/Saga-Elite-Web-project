@@ -492,8 +492,9 @@ const Checkout = () => {
     persistBuyNowItem(null);
     setIsBuyNow(false);
     setHasInitializedSource(true);
-    dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, location.state]);
+    // Guests have no server cart — skip the fetch instead of collecting 401s.
+    if (isAuthenticated) dispatch(fetchCartAction());
+  }, [cartStateItems, dispatch, location.state, isAuthenticated]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;

@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
-import { API_V1_URL as API_BASE } from "@/lib/api";
+import axiosInstance from "@/api/axiosInstance";
 
 const initialState = {
   cart: {
@@ -26,9 +25,7 @@ export const fetchCartAction = createAsyncThunk(
   "cart/fetchCart",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/user/cart`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get(`/user/cart`);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -40,13 +37,11 @@ export const addToCartAction = createAsyncThunk(
   "cart/addToCart",
   async ({ productId, variantId, quantity }, thunkAPI) => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/user/cart`,
-        { productId, variantId, quantity },
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await axiosInstance.post(`/user/cart`, {
+        productId,
+        variantId,
+        quantity,
+      });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -68,12 +63,9 @@ export const updateCartItemAction = createAsyncThunk(
         payload.variantId = variantId;
       }
 
-      const response = await axios.patch(
-        `${API_BASE}/user/cart/${itemId}`,
-        payload,
-        {
-          withCredentials: true,
-        }
+      const response = await axiosInstance.patch(
+        `/user/cart/${itemId}`,
+        payload
       );
       return response.data;
     } catch (error) {
@@ -86,9 +78,7 @@ export const removeFromCartAction = createAsyncThunk(
   "cart/removeFromCart",
   async (itemId, thunkAPI) => {
     try {
-      const response = await axios.delete(`${API_BASE}/user/cart/${itemId}`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.delete(`/user/cart/${itemId}`);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -100,9 +90,7 @@ export const fetchWishlistAction = createAsyncThunk(
   "cart/fetchWishlist",
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get(`${API_BASE}/user/wishlist`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get(`/user/wishlist`);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -114,13 +102,9 @@ export const addToWishlistAction = createAsyncThunk(
   "cart/addToWishlist",
   async ({ productId }, thunkAPI) => {
     try {
-      const response = await axios.post(
-        `${API_BASE}/user/wishlist`,
-        { productId },
-        {
-          withCredentials: true,
-        }
-      );
+      const response = await axiosInstance.post(`/user/wishlist`, {
+        productId,
+      });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(unwrapAxiosError(error));
@@ -132,11 +116,8 @@ export const removeFromWishlistAction = createAsyncThunk(
   "cart/removeFromWishlist",
   async (productId, thunkAPI) => {
     try {
-      const response = await axios.delete(
-        `${API_BASE}/user/wishlist/${productId}`,
-        {
-          withCredentials: true,
-        }
+      const response = await axiosInstance.delete(
+        `/user/wishlist/${productId}`
       );
       return response.data;
     } catch (error) {

@@ -76,6 +76,7 @@ const Cart = () => {
 
   const { items = [], totalPrice = 0, totalQuantity = 0, isLoading } =
     useSelector((state) => state.cart.cart);
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   const { offers } = useAllOffers();
   const [productList, setProductList] = useState([]);
@@ -127,8 +128,13 @@ const Cart = () => {
   }, [items, offers]);
 
   useEffect(() => {
+    // Guests have no server cart — skip the fetch instead of collecting 401s.
+    if (!isAuthenticated) {
+      setHasLoadedOnce(true);
+      return;
+    }
     dispatch(fetchCartAction()).finally(() => setHasLoadedOnce(true));
-  }, [dispatch]);
+  }, [dispatch, isAuthenticated]);
 
   const handleQuantity = async (item, quantity) => {
     if (

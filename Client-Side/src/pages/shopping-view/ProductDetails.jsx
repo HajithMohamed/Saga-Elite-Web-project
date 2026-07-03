@@ -43,6 +43,74 @@ import {
 } from "lucide-react";
 import { useProductOffers } from "@/hooks/use-product-offers";
 
+// Size guides are stored as plain text; rows written as "S | 91-96 | 68"
+// become a real table, everything else stays as prose paragraphs.
+const parseSizeGuide = (text) => {
+  const lines = String(text || "").split(/\r?\n/);
+  const blocks = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const isTableRow = line.includes("|") && line.split("|").length >= 2;
+
+    if (isTableRow) {
+      const cells = line.split("|").map((cell) => cell.trim());
+      const last = blocks[blocks.length - 1];
+      if (last?.type === "table") last.rows.push(cells);
+      else blocks.push({ type: "table", rows: [cells] });
+    } else if (line) {
+      const last = blocks[blocks.length - 1];
+      if (last?.type === "text") last.lines.push(line);
+      else blocks.push({ type: "text", lines: [line] });
+    }
+  }
+
+  return blocks;
+};
+
+const SizeGuideContent = ({ text }) => {
+  const blocks = useMemo(() => parseSizeGuide(text), [text]);
+
+  return (
+    <div className="space-y-4 text-[#d0c5af]">
+      {blocks.map((block, blockIndex) =>
+        block.type === "table" ? (
+          <div key={blockIndex} className="overflow-x-auto rounded-xl border border-[#4d4635]/40">
+            <table className="w-full min-w-[320px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-[#f2ca50]/10">
+                  {block.rows[0].map((cell, i) => (
+                    <th key={i} className="px-4 py-3 font-bold uppercase tracking-wider text-[11px] text-[#f2ca50] border-b border-[#4d4635]/40">
+                      {cell}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {block.rows.slice(1).map((row, rowIndex) => (
+                  <tr key={rowIndex} className={rowIndex % 2 === 1 ? "bg-white/[0.02]" : ""}>
+                    {row.map((cell, i) => (
+                      <td key={i} className={`px-4 py-2.5 border-b border-[#4d4635]/20 ${i === 0 ? "font-bold text-white" : ""}`}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div key={blockIndex} className="space-y-1">
+            {block.lines.map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
 const CARE_INSTRUCTION_OPTIONS = [
   { id: 'wash-cold', label: 'Machine wash cold (30°C)', icon: Waves },
   { id: 'wash-inside-out', label: 'Turn garment inside out before washing', icon: RotateCw },
@@ -933,7 +1001,7 @@ const ProductDetails = () => {
                 </div>
                 
                 {product.sizeGuide ? (
-                  <div className="whitespace-pre-wrap text-[#d0c5af]">{product.sizeGuide}</div>
+                  <SizeGuideContent text={product.sizeGuide} />
                 ) : (
                   <p className="italic text-[#99907c]">Size guide not available for this product.</p>
                 )}

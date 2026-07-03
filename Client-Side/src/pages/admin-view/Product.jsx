@@ -15,9 +15,7 @@ import { getAllDrops } from "@/store/admin/drop-slice";
 import { useToast } from "@/hooks/use-toast";
 import { useSocketEvent } from "@/hooks/use-socket-events";
 import ImageGalleryModal from "@/components/admin-components/ImageGalleryModal";
-import axios from "axios";
 import axiosInstance from "@/api/axiosInstance";
-import { API_V1_URL as API_BASE } from "@/lib/api";
 import {
   Plus,
   Trash2,
@@ -89,9 +87,7 @@ const rollbackCreatedProduct = async (product) => {
   if (!slug) return false;
 
   try {
-    await axios.delete(`${API_BASE}/products/delete-product/${encodeURIComponent(slug)}`, {
-      withCredentials: true,
-    });
+    await axiosInstance.delete(`/products/delete-product/${encodeURIComponent(slug)}`);
     return true;
   } catch (error) {
     console.error("[Product] rollback failed after image upload error", error);
@@ -284,7 +280,7 @@ const Product = () => {
 
   const loadCategoryTree = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE}/categories`);
+      const response = await axiosInstance.get(`/categories`);
       if (response.data?.success) {
         const categories = response.data.data || [];
         setCategoryTree(buildCategoryTree(categories));
@@ -441,7 +437,7 @@ const Product = () => {
 
   const fetchProductImages = async (id) => {
     try {
-      const res = await axios.get(`${API_BASE}/image/get-product-images/${id}`);
+      const res = await axiosInstance.get(`/image/get-product-images/${id}`);
       const loadedImages = (res.data.images || []).map((image) => ({
         ...image,
         isUploaded: true,
@@ -586,9 +582,8 @@ const Product = () => {
       if (group.colorTag) fd.append("colorTag", group.colorTag);
       group.images.forEach((img) => fd.append("images", img.file));
 
-      const res = await axios.post(`${API_BASE}/image/upload-image`, fd, {
+      const res = await axiosInstance.post(`/image/upload-image`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
       });
 
       uploadedImages.push(

@@ -238,7 +238,7 @@ export function WhyUsCompact() {
 export function ShopByCategory({ categories = [], loading = false }) {
   if (loading) {
     return (
-      <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
+      <section id="categories" className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
         <div className="mb-10 h-9 w-64 rounded-lg bg-[#131313] animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -252,7 +252,8 @@ export function ShopByCategory({ categories = [], loading = false }) {
   if (!categories || categories.length === 0) return null;
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
+    // The hero's "Browse Categories" button scrolls to this anchor.
+    <section id="categories" className="mx-auto w-full max-w-[1280px] px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
       <div className="mb-10 md:mb-14">
         <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1]">Shop by Category</h2>
 

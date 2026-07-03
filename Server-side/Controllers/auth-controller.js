@@ -137,19 +137,36 @@ const registerUser = catchAsync(async (req, res, next) => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-        return next(
-            new AppError(
-                "Provided email already exists, try a different one",
-                400
-            )
-        );
+        if (existingUser.provider && existingUser.provider !== "local") {
+            return next(
+                new AppError(
+                    `This email is already registered via ${existingUser.provider}. Please use the ${existingUser.provider} sign-in button instead.`,
+                    400
+                )
+            );
+        }
+
+        if (existingUser.isVerified) {
+            return next(
+                new AppError(
+                    "Provided email already exists, try a different one",
+                    400
+                )
+            );
+        }
+        // Unverified local account: ownership of the email was never proven,
+        // so let the registration be retried instead of dead-ending the user.
+        // Refresh the credentials and issue a fresh OTP (falls through below).
     }
 
     // Same phone shouldn't be reused across local accounts — otherwise the
     // WhatsApp OTP fan-out becomes ambiguous when two users get the same
     // code via the same channel.
     if (normalizedPhone) {
-        const phoneOwner = await User.findOne({ phoneNumber: normalizedPhone });
+        const phoneOwner = await User.findOne({
+            phoneNumber: normalizedPhone,
+            ...(existingUser ? { _id: { $ne: existingUser._id } } : {}),
+        });
         if (phoneOwner) {
             return next(
                 new AppError(
@@ -163,16 +180,28 @@ const registerUser = catchAsync(async (req, res, next) => {
     const otp = generateOtp();
     const otpExpires = getOtpExpiryDate();
 
-    const newUser = await User.create({
-        email,
-        password,
-        otp,
-        otpExpires,
-        phoneNumber: normalizedPhone || undefined,
-        username: username || undefined,
-        isVerified: false,
-        provider: "local",
-    });
+    let newUser;
+    if (existingUser) {
+        // Re-registration of an unverified account: overwrite the stale
+        // credentials and OTP. Use .save() so the pre-save hook re-hashes.
+        existingUser.password = password;
+        existingUser.otp = otp;
+        existingUser.otpExpires = otpExpires;
+        if (normalizedPhone) existingUser.phoneNumber = normalizedPhone;
+        if (username) existingUser.username = username;
+        newUser = await existingUser.save();
+    } else {
+        newUser = await User.create({
+            email,
+            password,
+            otp,
+            otpExpires,
+            phoneNumber: normalizedPhone || undefined,
+            username: username || undefined,
+            isVerified: false,
+            provider: "local",
+        });
+    }
 
     // Ensure Customer enrichment record exists for this user
     try {

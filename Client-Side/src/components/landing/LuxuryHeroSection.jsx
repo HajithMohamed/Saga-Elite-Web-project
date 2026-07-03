@@ -111,11 +111,16 @@ export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.35 }}
             >
-              <Link 
-                to="#categories"
+              <Link
+                to="/shopping/product-list"
                 onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('categories')?.scrollIntoView({ behavior: 'smooth' });
+                  const target = document.getElementById('categories');
+                  if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth' });
+                  }
+                  // No categories section on the page → let the Link
+                  // navigate to the full product listing instead.
                 }}
                 className="flex items-center justify-center bg-transparent border border-accent text-accent h-[52px] min-w-[180px] px-8 font-sans text-[16px] font-bold rounded-[16px] hover:-translate-y-[2px] transition-transform duration-250"
               >
