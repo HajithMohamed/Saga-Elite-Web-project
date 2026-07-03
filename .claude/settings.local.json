@@ -187,7 +187,10 @@
       "Bash(grep -nE \"un-auth|unauth|path=\\\\\"\\\\\\\\*\\\\\"|NotFound|Not-Found|element=\\\\{<Navigate\" App.jsx)",
       "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/C--Fullstack-development-course-Saga-Elite-Web-Project/c8a3cb4c-a722-491d-8b46-76beda0f557f/scratchpad/cleanup-themetest-user.js\")",
       "Bash(node -e \"const r=require\\('./Server-side/Utils/admin-roles'\\); console.log\\('ADMIN_ROLES:', JSON.stringify\\(r.ADMIN_ROLES\\)\\); console.log\\('SUPER_ADMIN_ROLES:', JSON.stringify\\(r.SUPER_ADMIN_ROLES\\)\\); console.log\\('exports keys:', Object.keys\\(r\\).join\\(', '\\)\\);\")",
-      "Bash(node -e \"const g=require\\('./Controllers/google-auth-controller'\\); const f=require\\('./Controllers/facebook-auth-controller'\\); console.log\\('google exports:', Object.keys\\(g\\).join\\(','\\)\\); console.log\\('facebook exports:', Object.keys\\(f\\).join\\(','\\)\\); const {isAdminRole}=require\\('./Utils/admin-roles'\\); console.log\\('guard test — customer:', isAdminRole\\('customer'\\), '| super_admin:', isAdminRole\\('super_admin'\\), '| sub_admin:', isAdminRole\\('sub_admin'\\), '| admin:', isAdminRole\\('admin'\\)\\);\")"
+      "Bash(node -e \"const g=require\\('./Controllers/google-auth-controller'\\); const f=require\\('./Controllers/facebook-auth-controller'\\); console.log\\('google exports:', Object.keys\\(g\\).join\\(','\\)\\); console.log\\('facebook exports:', Object.keys\\(f\\).join\\(','\\)\\); const {isAdminRole}=require\\('./Utils/admin-roles'\\); console.log\\('guard test — customer:', isAdminRole\\('customer'\\), '| super_admin:', isAdminRole\\('super_admin'\\), '| sub_admin:', isAdminRole\\('sub_admin'\\), '| admin:', isAdminRole\\('admin'\\)\\);\")",
+      "Bash(awk '/step.*login/,/step.*register/' src/components/auth-components/AuthForms.jsx)",
+      "Bash(curl -s -X POST http://localhost:5001/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@sagaelite.com\",\"password\":\"SuperSecret123!\"}' -w \"\\\\nHTTP %{http_code}\\\\n\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);const s=j.data||j;console.log\\(JSON.stringify\\(s,null,1\\)\\)}catch\\(e\\){console.log\\('raw:',d.slice\\(0,400\\)\\)}}\\)\")"
     ]
   }
 }

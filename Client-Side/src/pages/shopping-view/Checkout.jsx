@@ -971,10 +971,30 @@ const Checkout = () => {
   const proceedToStep = (step) => {
     if (currentStep === "contact") {
       const nextErrors = validateStep("contact");
-      if (Object.keys(nextErrors).length === 0) setCurrentStep("address");
+      if (Object.keys(nextErrors).length === 0) {
+        setCurrentStep("address");
+      } else {
+        toast({
+          title: "Check your contact details",
+          description: "Please complete the highlighted fields before continuing.",
+          variant: "destructive",
+        });
+      }
     } else if (currentStep === "address") {
       const nextErrors = validateStep("address");
-      if (Object.keys(nextErrors).length === 0) setCurrentStep("payment");
+      if (Object.keys(nextErrors).length === 0) {
+        setCurrentStep("payment");
+      } else {
+        // The delivery-address inputs live on the contact step, so send the
+        // user back there to see the highlighted fields — otherwise the button
+        // silently does nothing and the flow feels broken.
+        toast({
+          title: "Delivery address needed",
+          description: "Please complete your delivery address to continue.",
+          variant: "destructive",
+        });
+        setCurrentStep("contact");
+      }
     }
     else if (step) setCurrentStep(step); // allow backward nav without validation
   };
@@ -1485,7 +1505,8 @@ const Checkout = () => {
                     )}
                   </section>
 
-                  <div className="flex justify-end">
+                  {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
+                  <div className="hidden lg:flex justify-end">
                     <button onClick={() => proceedToStep("address")}
                       className="bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
                     >
@@ -1595,8 +1616,9 @@ const Checkout = () => {
 
                   <div className="flex items-center justify-between">
                     <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">← Back</button>
+                    {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
                     <button onClick={() => proceedToStep("payment")}
-                      className="bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
+                      className="hidden lg:block bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
                     >
                       Continue to Payment
                     </button>
@@ -1728,9 +1750,9 @@ const Checkout = () => {
                   </label>
                   {errors.termsAccepted && <span className="text-[10px] text-danger-ink -mt-4">{errors.termsAccepted}</span>}
 
-                  {/* CTA */}
+                  {/* CTA — desktop only; on mobile the sticky bottom bar places the order */}
                   <button onClick={handleSubmit} disabled={isSubmitting}
-                    className="w-full bg-gold text-black h-16 rounded-xl font-black uppercase tracking-[0.18em] text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_6px_30px_rgba(242,202,80,0.25)] flex items-center justify-center gap-2"
+                    className="w-full bg-gold text-black h-16 rounded-xl font-black uppercase tracking-[0.18em] text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_6px_30px_rgba(242,202,80,0.25)] hidden lg:flex items-center justify-center gap-2"
                   >
                     {isSubmitting
                       ? <><Loader2 className="animate-spin" size={18} /> Processing...</>
