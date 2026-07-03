@@ -52,7 +52,7 @@ const FlipNumber = ({ value }) => (
         animate={{ y: "0%", opacity: 1 }}
         exit={{ y: "-100%", opacity: 0 }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
-        className="block text-[#f2ca50] font-bold text-lg md:text-xl drop-shadow-[0_0_8px_rgba(242,202,80,0.15)]"
+        className="block text-gold-ink font-bold text-lg md:text-xl drop-shadow-[0_0_8px_rgba(242,202,80,0.15)]"
       >
         {value}
       </motion.span>
@@ -69,11 +69,11 @@ export const InlineDropCountdown = ({ endDate }) => {
   }, [endDate]);
 
   return (
-    <div className="flex items-center gap-4 text-[#e5e2e1] font-mono text-[11px] md:text-[13px] tracking-widest mt-4">
+    <div className="flex items-center gap-4 text-ink-2 font-mono text-[11px] md:text-[13px] tracking-widest mt-4">
       {[['D', timeLeft.days ?? timeLeft.d], ['H', timeLeft.hh ?? timeLeft.h], ['M', timeLeft.mm ?? timeLeft.m], ['S', timeLeft.ss ?? timeLeft.s]].map(([label, value]) => (
         <div key={label} className="flex items-center gap-1">
           <FlipNumber value={value !== undefined ? value.toString().padStart(2, '0') : '00'} />
-          <span className="text-[#99907c]">{label}</span>
+          <span className="text-muted">{label}</span>
         </div>
       ))}
     </div>
@@ -98,12 +98,12 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
   const liveDrop = activeDrops && activeDrops.length > 0 ? activeDrops[currentSlide] : null;
 
   return (
-    <section className="w-full bg-[#050505] border-b border-[#1f1f1f]">
+    <section className="w-full bg-page border-b border-card">
       {/* Container: Strict Heights from Prompt 07 */}
       <div className="w-full h-[480px] sm:h-[500px] md:h-[560px] lg:h-[620px] xl:h-[680px] flex flex-col lg:flex-row">
 
         {/* LEFT SECTION (75%) */}
-        <div className="relative w-full lg:w-[75%] h-[60%] md:h-full bg-[#111] overflow-hidden">
+        <div className="relative w-full lg:w-[75%] h-[60%] md:h-full bg-panel overflow-hidden">
           <AnimatePresence mode="wait">
             {liveDrop ? (
               <motion.div
@@ -115,7 +115,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                 className="w-full h-full grid grid-cols-1 md:grid-cols-[65%_35%] relative"
               >
                 {/* Image Area (65%) */}
-                <div className="w-full h-full relative overflow-hidden bg-[#0a0a0a]">
+                <div className="w-full h-full relative overflow-hidden bg-page">
                   <motion.img
                     src={liveDrop.images?.[0]?.url || liveDrop.coverImageUrl || "https://images.unsplash.com/photo-1549439602-43ebca2327af?w=1920&q=80"}
                     alt={liveDrop.name}
@@ -126,13 +126,13 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                   />
                   <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none" />
                   {/* Fade out on right for content blending */}
-                  <div className="hidden md:block absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-[#050505] to-transparent pointer-events-none" />
-                  <div className="md:hidden absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none" />
+                  <div className="hidden md:block absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-page to-transparent pointer-events-none" />
+                  <div className="md:hidden absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-page to-transparent pointer-events-none" />
                 </div>
 
                 {/* Content Area (35%) */}
-                <div className="absolute inset-0 md:relative flex flex-col justify-end md:justify-center p-8 md:p-12 lg:p-16 z-10 bg-gradient-to-t md:bg-gradient-to-l from-[#050505] via-[#050505]/90 to-transparent md:bg-[#050505]">
-                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50] mb-4 flex items-center gap-2">
+                <div className="absolute inset-0 md:relative flex flex-col justify-end md:justify-center p-8 md:p-12 lg:p-16 z-10 bg-gradient-to-t md:bg-gradient-to-l from-page via-page/90 to-transparent md:bg-page">
+                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-gold-ink mb-4 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
                     LIVE DROP
                   </span>
@@ -141,7 +141,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     initial={{ y: 20, opacity: 0 }} 
                     animate={{ y: 0, opacity: 1 }} 
                     transition={{ delay: 0.2, duration: 0.6 }}
-                    className="font-display text-4xl md:text-5xl lg:text-6xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md"
+                    className="font-display text-4xl md:text-5xl lg:text-6xl text-ink uppercase tracking-tighter leading-[0.9] mb-4 drop-shadow-md"
                   >
                     {liveDrop.name}
                   </motion.h1>
@@ -150,20 +150,20 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     initial={{ y: 15, opacity: 0 }} 
                     animate={{ y: 0, opacity: 1 }} 
                     transition={{ delay: 0.35, duration: 0.6 }}
-                    className="font-sans text-sm md:text-base text-[#d0c5af] leading-relaxed mb-8 max-w-sm line-clamp-3"
+                    className="font-sans text-sm md:text-base text-cream leading-relaxed mb-8 max-w-sm line-clamp-3"
                   >
                     {liveDrop.description}
                   </motion.p>
 
                   <div className="flex flex-col gap-4">
-                    <Link to={`/shopping/drop/${liveDrop.slug}`} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
+                    <Link to={`/shopping/drop/${liveDrop.slug}`} className="relative overflow-hidden group/btn inline-flex items-center justify-center bg-gold text-ongold px-8 py-4 font-sans text-[11px] uppercase tracking-[0.3em] font-bold">
                       <span className="relative z-10">SHOP NOW</span>
-                      <div className="absolute inset-0 bg-[#FAF7F2] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
+                      <div className="absolute inset-0 bg-ivory scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-500 ease-[0.19,1,0.22,1]" />
                     </Link>
 
                     {liveDrop.endDate && (
-                      <div className="flex flex-col justify-center border border-[#1f1f1f] bg-[#080808] px-6 py-4">
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-[#8c8577]">Ends In</span>
+                      <div className="flex flex-col justify-center border border-card bg-page px-6 py-4">
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Ends In</span>
                         <div className="-mt-2">
                           <InlineDropCountdown endDate={liveDrop.endDate} />
                         </div>
@@ -173,9 +173,9 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                 </div>
               </motion.div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0a]">
-                <span className="font-mono text-xs text-[#8c8577] uppercase tracking-widest mb-4">No Active Drops</span>
-                <Link to="/shopping/product-list" className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1">Explore Collections</Link>
+              <div className="w-full h-full flex flex-col items-center justify-center bg-page">
+                <span className="font-mono text-xs text-muted uppercase tracking-widest mb-4">No Active Drops</span>
+                <Link to="/shopping/product-list" className="font-mono text-[9px] uppercase tracking-[0.2em] text-gold-ink border-b border-gold-ink/30 pb-1">Explore Collections</Link>
               </div>
             )}
           </AnimatePresence>
@@ -187,7 +187,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                 <button
                   key={i}
                   onClick={() => setCurrentSlide(i)}
-                  className={`h-1 transition-all duration-300 ${i === currentSlide ? 'w-8 bg-[#f2ca50]' : 'w-2 bg-[#FAF7F2]/30 hover:bg-[#FAF7F2]/50'}`}
+                  className={`h-1 transition-all duration-300 ${i === currentSlide ? 'w-8 bg-gold' : 'w-2 bg-ivory/30 hover:bg-ivory/50'}`}
                 />
               ))}
             </div>
@@ -195,10 +195,10 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
         </div>
 
         {/* RIGHT SECTION (25%) */}
-        <div className="w-full lg:w-[25%] flex flex-col h-auto md:h-full border-t lg:border-t-0 lg:border-l border-[#1f1f1f]">
+        <div className="w-full lg:w-[25%] flex flex-col h-auto md:h-full border-t lg:border-t-0 lg:border-l border-card">
 
           {/* Top Card: Upcoming Drop (50% height) */}
-          <div className="flex-1 min-h-[250px] border-b border-[#1f1f1f] relative overflow-hidden group bg-[#080808] hover:bg-[#0c0c0c] transition-colors p-8 flex flex-col justify-center">
+          <div className="flex-1 min-h-[250px] border-b border-card relative overflow-hidden group bg-page hover:bg-page transition-colors p-8 flex flex-col justify-center">
             {nextDrop ? (
               <>
                 {/* Background Thumbnail */}
@@ -208,14 +208,14 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     alt={nextDrop.name}
                     className="w-full h-full object-cover opacity-20 group-hover:opacity-30 group-hover:scale-105 transition-all duration-[2s]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/90 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-page via-page/90 to-transparent" />
                 </div>
 
                 <div className="relative z-10 flex flex-col h-full justify-end">
-                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Upcoming Drop</span>
-                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-2 leading-none drop-shadow-md">{nextDrop.name}</h3>
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted mb-3 block">Upcoming Drop</span>
+                  <h3 className="font-display text-2xl lg:text-3xl text-ink uppercase tracking-wide group-hover:text-gold-ink transition-colors mb-2 leading-none drop-shadow-md">{nextDrop.name}</h3>
                   <div className="flex flex-col gap-1 mb-4">
-                    <p className="font-mono text-[10px] text-[#d0c5af] tracking-[0.1em]">
+                    <p className="font-mono text-[10px] text-cream tracking-[0.1em]">
                       {new Date(nextDrop.releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                     <div className="scale-75 origin-left -mt-2">
@@ -223,7 +223,7 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
                     </div>
                   </div>
                   <div>
-                    <Link to="/shopping/drops" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50] transition-colors">
+                    <Link to="/shopping/drops" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-gold-ink border-b border-gold-ink/30 pb-1 hover:border-gold-ink transition-colors">
                       Explore Details
                     </Link>
                   </div>
@@ -232,12 +232,12 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
             ) : (
               <>
                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-                  <Sparkles className="w-32 h-32 text-[#FAF7F2]" />
+                  <Sparkles className="w-32 h-32 text-ink" />
                 </div>
                 <div className="relative z-10">
-                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Coming Soon</span>
-                  <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-4 leading-none">A New Chapter<br />is forming.</h3>
-                  <Link to="/shopping/product-list" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#f2ca50] border-b border-[#f2ca50]/30 pb-1 hover:border-[#f2ca50] transition-colors">
+                  <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted mb-3 block">Coming Soon</span>
+                  <h3 className="font-display text-2xl lg:text-3xl text-ink uppercase tracking-wide group-hover:text-gold-ink transition-colors mb-4 leading-none">A New Chapter<br />is forming.</h3>
+                  <Link to="/shopping/product-list" className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-gold-ink border-b border-gold-ink/30 pb-1 hover:border-gold-ink transition-colors">
                     Explore Collections
                   </Link>
                 </div>
@@ -246,17 +246,17 @@ export const HeroCarousel = ({ activeDrops = [], nextDrop = null }) => {
           </div>
 
           {/* Bottom Card: VIP Access (50% height) */}
-          <div className="flex-1 min-h-[250px] relative overflow-hidden group bg-[#050505] hover:bg-[#0a0a0a] transition-colors p-8 flex flex-col justify-center">
+          <div className="flex-1 min-h-[250px] relative overflow-hidden group bg-page hover:bg-page transition-colors p-8 flex flex-col justify-center">
             <div className="absolute bottom-0 right-0 p-6 opacity-[0.03] group-hover:opacity-10 transition-opacity transform group-hover:scale-110">
-              <Diamond className="w-32 h-32 text-[#FAF7F2]" />
+              <Diamond className="w-32 h-32 text-ink" />
             </div>
             <div className="relative z-10">
-              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#8c8577] mb-3 block">Saga Elite</span>
-              <h3 className="font-display text-2xl lg:text-3xl text-[#FAF7F2] uppercase tracking-wide group-hover:text-[#f2ca50] transition-colors mb-2 leading-none">VIP Access</h3>
-              <p className="font-sans text-xs text-[#99907c] mb-6 max-w-[200px]">
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-muted mb-3 block">Saga Elite</span>
+              <h3 className="font-display text-2xl lg:text-3xl text-ink uppercase tracking-wide group-hover:text-gold-ink transition-colors mb-2 leading-none">VIP Access</h3>
+              <p className="font-sans text-xs text-muted mb-6 max-w-[200px]">
                 Early access benefits, exclusive member drops, and private events.
               </p>
-              <button onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')} className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-[#FAF7F2] border-b border-[#FAF7F2]/30 pb-1 hover:border-[#FAF7F2] transition-colors">
+              <button onClick={() => isAuthenticated ? undefined : openAuthDrawer('register')} className="inline-block font-mono text-[9px] uppercase tracking-[0.2em] text-ink border-b border-ink/30 pb-1 hover:border-ink transition-colors">
                 Unlock Privileges
               </button>
             </div>
@@ -300,28 +300,28 @@ export const SeasonalEventBanner = ({ targetDate, title, benefits = [], ctaText,
                 {/* Right Concrete */}
                 <div className="w-1/2 h-full bg-gradient-to-br from-[#dfdbd8] to-[#b3b1ad]" />
                 {/* Midline indent */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -ml-[1px] bg-[#1a1a1a]/10 shadow-[inset_1px_0_2px_rgba(0,0,0,0.1)]" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -ml-[1px] bg-card/10 shadow-[inset_1px_0_2px_rgba(0,0,0,0.1)]" />
                 {/* Horizontal line indent */}
-                <div className="absolute top-1/2 left-0 right-0 h-[2px] -mt-[1px] bg-[#1a1a1a]/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" />
+                <div className="absolute top-1/2 left-0 right-0 h-[2px] -mt-[1px] bg-card/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]" />
 
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="font-display text-5xl md:text-6xl lg:text-[80px] font-medium text-[#222]">
+                  <span className="font-display text-5xl md:text-6xl lg:text-[80px] font-medium text-ongold">
                     {value !== undefined ? value.toString().padStart(2, '0') : '00'}
                   </span>
                 </div>
               </div>
-              <span className="font-sans text-[15px] md:text-lg lg:text-[22px] text-[#222] font-medium">{label}</span>
+              <span className="font-sans text-[15px] md:text-lg lg:text-[22px] text-ongold font-medium">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Floating Benefit Bar */}
-        <div className="bg-[#faf7f2] rounded-xl p-4 md:p-6 lg:p-8 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)]">
+        <div className="bg-ivory rounded-xl p-4 md:p-6 lg:p-8 flex flex-col xl:flex-row items-center justify-between gap-6 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)]">
           <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 w-full xl:w-auto">
-            <h3 className="font-display text-2xl md:text-3xl text-[#111] whitespace-nowrap mb-2 xl:mb-0">
+            <h3 className="font-display text-2xl md:text-3xl text-ongold whitespace-nowrap mb-2 xl:mb-0">
               🎉 {title}
             </h3>
-            <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 font-sans text-[13px] md:text-[15px] text-[#222]">
+            <div className="flex flex-wrap justify-center xl:justify-start gap-x-6 gap-y-3 font-sans text-[13px] md:text-[15px] text-ongold">
               {benefits.map((b, i) => (
                 <span key={i} className="flex items-center gap-2 font-medium">
                   <span className="text-black font-bold">✓</span> {b}
@@ -332,7 +332,7 @@ export const SeasonalEventBanner = ({ targetDate, title, benefits = [], ctaText,
 
           {ctaText && (
             <Link to={ctaLink || "#"} className="shrink-0 w-full xl:w-auto">
-              <button className="w-full xl:w-auto bg-[#2b2a2a] text-[#ffffff] px-8 py-4 font-sans text-sm md:text-base font-medium rounded-lg hover:bg-black transition-colors whitespace-nowrap">
+              <button className="w-full xl:w-auto bg-elevated text-ink px-8 py-4 font-sans text-sm md:text-base font-medium rounded-lg hover:bg-page transition-colors whitespace-nowrap">
                 [{ctaText}]
               </button>
             </Link>
@@ -354,24 +354,24 @@ export const CountdownWidget = ({ targetDate, title, description }) => {
   }, [targetDate]);
 
   return (
-    <div className="bg-[#0b0b0b] border-y border-[#4d4635]/40 py-12 relative overflow-hidden">
+    <div className="bg-page border-y border-line/40 py-12 relative overflow-hidden">
       {/* Glow effects */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-1/2 bg-[#f2ca50]/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-1/2 bg-gold/5 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-[800px] mx-auto px-6 text-center relative z-10">
-        <h3 className="font-mono text-[12px] tracking-[0.4em] uppercase text-[#ffb4ab] mb-3 flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#ffb4ab] animate-pulse" />
+        <h3 className="font-mono text-[12px] tracking-[0.4em] uppercase text-danger-ink mb-3 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-danger-ink animate-pulse" />
           {title || "Next Drop"}
         </h3>
-        <p className="font-display text-2xl text-[#e5e2e1] mb-8">{description}</p>
+        <p className="font-display text-2xl text-ink-2 mb-8">{description}</p>
 
-        <div className="flex justify-center gap-4 text-[#e5e2e1]">
+        <div className="flex justify-center gap-4 text-ink-2">
           {[['Days', timeLeft.d], ['Hours', timeLeft.hh], ['Mins', timeLeft.mm], ['Secs', timeLeft.ss]].map(([label, value]) => (
             <div key={label} className="flex flex-col items-center">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-[#131313] border border-[#2a2a2a] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-                <span className="font-mono text-3xl md:text-4xl text-[#f2ca50]">{value.toString().padStart(2, '0')}</span>
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-panel border border-elevated rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <span className="font-mono text-3xl md:text-4xl text-gold-ink">{value.toString().padStart(2, '0')}</span>
               </div>
-              <span className="font-body text-[10px] uppercase tracking-widest text-[#d0c5af] mt-2">{label}</span>
+              <span className="font-body text-[10px] uppercase tracking-widest text-cream mt-2">{label}</span>
             </div>
           ))}
         </div>
@@ -385,22 +385,22 @@ export const IdentityCategoryGrid = ({ categories = [] }) => {
   return (
     <section className={`${sectionContainer} py-10`}>
       <div className="text-center mb-12">
-        <h3 className="font-display text-[32px] md:text-[42px] text-[#e5e2e1] uppercase">Choose Your Identity</h3>
-        <p className="font-mono text-[11px] text-[#d0c5af] tracking-[0.3em] uppercase mt-2">Elevated Aesthetics</p>
+        <h3 className="font-display text-[32px] md:text-[42px] text-ink-2 uppercase">Choose Your Identity</h3>
+        <p className="font-mono text-[11px] text-cream tracking-[0.3em] uppercase mt-2">Elevated Aesthetics</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
         {categories.map((cat) => (
-          <Link key={cat.name} to={cat.link} className="group block relative aspect-[3/4] overflow-hidden bg-[#131313]">
+          <Link key={cat.name} to={cat.link} className="group block relative aspect-[3/4] overflow-hidden bg-panel">
             <img src={cat.image} alt={cat.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-[0.19,1,0.22,1] group-hover:scale-105" loading="lazy" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/90 via-[#0e0e0e]/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-page/90 via-page/20 to-transparent" />
 
             {/* Outline box that draws on hover */}
-            <div className="absolute inset-4 border border-[#f2ca50]/0 group-hover:border-[#f2ca50]/50 transition-colors duration-500 rounded-sm pointer-events-none" />
+            <div className="absolute inset-4 border border-gold-ink/0 group-hover:border-gold-ink/50 transition-colors duration-500 rounded-sm pointer-events-none" />
 
             <div className="absolute bottom-8 w-full text-center transform transition-transform duration-500 group-hover:-translate-y-4">
-              <h4 className="font-display text-4xl text-[#e5e2e1] uppercase tracking-wider">{cat.name}</h4>
-              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#f2ca50] mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
+              <h4 className="font-display text-4xl text-ink-2 uppercase tracking-wider">{cat.name}</h4>
+              <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold-ink mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
                 Explore Collection
               </p>
             </div>
@@ -421,16 +421,16 @@ export const ProductSlider = ({ title, subtitle, products = [], deal = false }) 
 
   return (
     <section className={`${sectionContainer} py-8`}>
-      <div className="flex justify-between items-end mb-8 border-b border-[#2a2a2a] pb-4">
+      <div className="flex justify-between items-end mb-8 border-b border-elevated pb-4">
         <div>
-          <h3 className="font-display text-[28px] md:text-[36px] text-[#e5e2e1] uppercase">{title}</h3>
-          <p className="font-mono text-[10px] tracking-[0.2em] text-[#d0c5af] uppercase mt-2">{subtitle}</p>
+          <h3 className="font-display text-[28px] md:text-[36px] text-ink-2 uppercase">{title}</h3>
+          <p className="font-mono text-[10px] tracking-[0.2em] text-cream uppercase mt-2">{subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <button className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors" onClick={() => scrollBy(-300)} aria-label="Scroll left">
+          <button className="h-10 w-10 flex items-center justify-center border border-line text-cream hover:text-gold-ink hover:border-gold-ink transition-colors" onClick={() => scrollBy(-300)} aria-label="Scroll left">
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <button className="h-10 w-10 flex items-center justify-center border border-[#4d4635] text-[#d0c5af] hover:text-[#f2ca50] hover:border-[#f2ca50] transition-colors" onClick={() => scrollBy(300)} aria-label="Scroll right">
+          <button className="h-10 w-10 flex items-center justify-center border border-line text-cream hover:text-gold-ink hover:border-gold-ink transition-colors" onClick={() => scrollBy(300)} aria-label="Scroll right">
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -461,11 +461,11 @@ export const TrustBar = () => {
     { icon: Gift, text: "EXCLUSIVE PERKS" },
   ];
   return (
-    <section className="bg-[#0b0b0b] border-y border-[#1f1f1f] py-4">
+    <section className="bg-page border-y border-card py-4">
       <div className="max-w-[1000px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-center gap-4">
         {items.map((item) => (
-          <div key={item.text} className="flex items-center gap-3 text-[#d0c5af] font-mono text-[10px] tracking-[0.2em] uppercase">
-            <item.icon className="h-4 w-4 text-[#f2ca50]" />
+          <div key={item.text} className="flex items-center gap-3 text-cream font-mono text-[10px] tracking-[0.2em] uppercase">
+            <item.icon className="h-4 w-4 text-gold-ink" />
             {item.text}
           </div>
         ))}
@@ -515,7 +515,7 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
   const handlePrev = () => setCurrentIndex(prev => (prev - 1 + campaigns.length) % campaigns.length);
 
   return (
-    <section className="bg-[#050505] w-full min-h-[350px] md:min-h-[400px] relative overflow-hidden flex border-b border-[#1f1f1f]">
+    <section className="bg-page w-full min-h-[350px] md:min-h-[400px] relative overflow-hidden flex border-b border-card">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentCampaign._id || currentIndex}
@@ -535,34 +535,34 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
           }}
         >
           {/* LEFT 55%: Content */}
-          <div className="w-full md:w-[55%] flex flex-col justify-center px-8 py-8 md:px-12 lg:px-16 z-10 bg-[#050505] relative order-2 md:order-1">
+          <div className="w-full md:w-[55%] flex flex-col justify-center px-8 py-8 md:px-12 lg:px-16 z-10 bg-page relative order-2 md:order-1">
             <div className="absolute inset-0 bg-grain opacity-10 pointer-events-none" />
 
             <div className="relative z-10 max-w-xl">
-              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#f2ca50] mb-3 flex items-center gap-2">
-                <span className="w-1 h-1 bg-[#f2ca50] rounded-full animate-pulse" />
+              <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-gold-ink mb-3 flex items-center gap-2">
+                <span className="w-1 h-1 bg-gold rounded-full animate-pulse" />
                 {currentCampaign.campaignType || "Seasonal Campaign"}
               </span>
 
-              <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-[#FAF7F2] uppercase tracking-tighter leading-[0.9] mb-3 drop-shadow-sm">
+              <h2 className="font-display text-3xl md:text-4xl lg:text-5xl text-ink uppercase tracking-tighter leading-[0.9] mb-3 drop-shadow-sm">
                 {currentCampaign.title || currentCampaign.name}
               </h2>
 
-              <p className="font-sans text-xs md:text-sm text-[#d0c5af] leading-relaxed mb-6 font-light max-w-md line-clamp-3">
+              <p className="font-sans text-xs md:text-sm text-cream leading-relaxed mb-6 font-light max-w-md line-clamp-3">
                 {currentCampaign.description}
               </p>
 
               <div className="flex flex-wrap gap-x-6 gap-y-3 mb-6 items-center">
                 {currentCampaign.discountPercentage > 0 && (
                   <div className="flex flex-col">
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Discount</span>
-                    <span className="font-sans text-lg text-[#f2ca50] tracking-tighter">{currentCampaign.discountPercentage}% OFF</span>
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted mb-1">Discount</span>
+                    <span className="font-sans text-lg text-gold-ink tracking-tighter">{currentCampaign.discountPercentage}% OFF</span>
                   </div>
                 )}
 
                 {currentCampaign.endDate && (
                   <div className="flex flex-col">
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Ends In</span>
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted mb-1">Ends In</span>
                     <div className="scale-75 origin-left -ml-1 mt-0">
                       <InlineDropCountdown endDate={currentCampaign.endDate} />
                     </div>
@@ -571,21 +571,21 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
 
                 {currentCampaign.products && currentCampaign.products.length > 0 && (
                   <div className="flex flex-col">
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#8c8577] mb-1">Collection Size</span>
-                    <span className="font-sans text-xs text-[#FAF7F2] tracking-widest uppercase mt-0.5">{currentCampaign.products.length} Products</span>
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted mb-1">Collection Size</span>
+                    <span className="font-sans text-xs text-ink tracking-widest uppercase mt-0.5">{currentCampaign.products.length} Products</span>
                   </div>
                 )}
               </div>
 
               {currentCampaign.categories && currentCampaign.categories.length > 0 && (
-                <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-[#8c8577] mb-6">
+                <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-muted mb-6">
                   {currentCampaign.categories.join(' • ')}
                 </div>
               )}
 
               <Link
                 to={`/shopping/product-list?offer=${currentCampaign._id}`}
-                className="inline-flex bg-[#FAF7F2] text-[#050505] px-6 py-3 font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#f2ca50] transition-colors"
+                className="inline-flex bg-ivory text-ongold px-6 py-3 font-sans text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-gold transition-colors"
               >
                 SHOP COLLECTION
               </Link>
@@ -593,7 +593,7 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
           </div>
 
           {/* RIGHT 45%: Image */}
-          <div className="w-full md:w-[45%] h-[200px] md:h-auto relative bg-[#0a0a0a] overflow-hidden order-1 md:order-2 flex items-center justify-center pointer-events-none">
+          <div className="w-full md:w-[45%] h-[200px] md:h-auto relative bg-page overflow-hidden order-1 md:order-2 flex items-center justify-center pointer-events-none">
             {currentCampaign.bannerImage ? (
               <img
                 src={currentCampaign.bannerImage}
@@ -601,16 +601,16 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
                 className="w-full h-full object-cover object-center opacity-90 scale-105 hover:scale-110 transition-transform duration-[10s] ease-out"
               />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-[#12100A] via-[#050505] to-[#1A1608] flex items-center justify-center p-8 text-center">
-                <div className="font-display text-6xl md:text-8xl text-[#f2ca50]/5 uppercase tracking-tighter leading-none break-words absolute inset-0 flex items-center justify-center rotate-[-10deg] scale-150">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#12100A] via-page to-[#1A1608] flex items-center justify-center p-8 text-center">
+                <div className="font-display text-6xl md:text-8xl text-gold-ink/5 uppercase tracking-tighter leading-none break-words absolute inset-0 flex items-center justify-center rotate-[-10deg] scale-150">
                   {currentCampaign.title || currentCampaign.name}
                 </div>
-                <div className="relative z-10 border border-[#f2ca50]/20 p-8">
-                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#f2ca50]">Limited Edition</span>
+                <div className="relative z-10 border border-gold-ink/20 p-8">
+                  <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-gold-ink">Limited Edition</span>
                 </div>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] to-transparent md:bg-gradient-to-r md:from-[#050505] md:via-[#050505]/40 md:to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-page to-transparent md:bg-gradient-to-r md:from-page md:via-page/40 md:to-transparent" />
           </div>
         </motion.div>
       </AnimatePresence>
@@ -623,14 +623,14 @@ export const SeasonalCampaignSlider = ({ offers = [] }) => {
               <button
                 key={i}
                 onClick={() => setCurrentIndex(i)}
-                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-8 bg-[#f2ca50]' : 'w-2 bg-[#FAF7F2]/20 hover:bg-[#FAF7F2]/40'}`}
+                className={`h-1 transition-all duration-300 ${i === currentIndex ? 'w-8 bg-gold' : 'w-2 bg-ivory/20 hover:bg-ivory/40'}`}
               />
             ))}
           </div>
 
           <div className="hidden md:flex gap-4 items-center">
-            <button onClick={handlePrev} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowLeft className="w-5 h-5" /></button>
-            <button onClick={handleNext} className="text-[#8c8577] hover:text-[#f2ca50] transition-colors"><ArrowRight className="w-5 h-5" /></button>
+            <button onClick={handlePrev} className="text-muted hover:text-gold-ink transition-colors"><ArrowLeft className="w-5 h-5" /></button>
+            <button onClick={handleNext} className="text-muted hover:text-gold-ink transition-colors"><ArrowRight className="w-5 h-5" /></button>
           </div>
         </div>
       )}
@@ -654,7 +654,7 @@ export const DropCountdownBand = ({ activeDrop }) => {
   if (!activeDrop || !timeLeft) return null;
 
   return (
-    <div className="bg-[#f2ca50] text-[#0a0a0a] py-2 px-4 text-center">
+    <div className="bg-gold text-ongold py-2 px-4 text-center">
       <Link to={`/shopping/drop/${activeDrop.slug}`} className="flex flex-wrap items-center justify-center gap-2 md:gap-4 font-mono text-[10px] md:text-xs tracking-widest uppercase hover:opacity-80 transition-opacity">
         <span className="font-bold flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
@@ -712,8 +712,8 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
         {categories.map((cat) => {
           const label = cat.name;
           return (
-            <Link key={cat.name} to={cat.link} className="group relative overflow-hidden aspect-[3/4] cursor-pointer border border-[#4d4635]/60 transition-all duration-500 hover:border-[#f2ca50]/60 hover:[box-shadow:0_0_30px_rgba(242,202,80,0.20),inset_0_0_0_1px_rgba(242,202,80,0.15)] bg-[#131313]">
-              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]" />
+            <Link key={cat.name} to={cat.link} className="group relative overflow-hidden aspect-[3/4] cursor-pointer border border-line/60 transition-all duration-500 hover:border-gold-ink/60 hover:[box-shadow:0_0_30px_rgba(242,202,80,0.20),inset_0_0_0_1px_rgba(242,202,80,0.15)] bg-panel">
+              <div className="absolute inset-0 bg-gradient-to-b from-card to-page" />
               {cat.img && (
                 <img
                   src={cat.img}
@@ -723,12 +723,12 @@ export const CategoryLockup = ({ categoryImages = {} }) => {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-page via-page/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center text-center justify-end">
                 <div className="transition-transform duration-500 group-hover:-translate-y-2">
-                  <h3 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase tracking-widest">{cat.name}</h3>
+                  <h3 className="font-display text-4xl md:text-5xl text-ink uppercase tracking-widest">{cat.name}</h3>
                 </div>
-                <p className="mt-1 se-label font-bold text-[9px] tracking-[0.3em] text-[#d0c5af]/80 opacity-0 translate-y-2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
+                <p className="mt-1 se-label font-bold text-[9px] tracking-[0.3em] text-cream/80 opacity-0 translate-y-2 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
                   {label === 'Gents' ? 'BOLD · OVERSIZED · RARE' : label === 'Ladies' ? 'ICONIC · EDITORIAL · ELEGANT' : 'NO RULES · SHARED · UNLIMITED'}
                 </p>
               </div>
@@ -748,8 +748,8 @@ export const RecommendationsSection = ({ title = "Recommended For You", products
   return (
     <section className={`${sectionContainer} py-8`}>
       <div className="text-center mb-10">
-        <h3 className="font-display text-[28px] md:text-[36px] text-[#e5e2e1] uppercase">{title}</h3>
-        <div className="w-12 h-0.5 bg-[#f2ca50] mx-auto mt-4" />
+        <h3 className="font-display text-[28px] md:text-[36px] text-ink-2 uppercase">{title}</h3>
+        <div className="w-12 h-0.5 bg-gold mx-auto mt-4" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {products.slice(0, 4).map((product) => (
@@ -765,22 +765,22 @@ export const LiveDropSection = ({ activeDrop }) => {
   if (!activeDrop) return null;
 
   return (
-    <section className="py-10 bg-[#050505]">
+    <section className="py-10 bg-page">
       <div className={`${sectionContainer}`}>
-        <div className="border border-[#2a2a2a] p-8 md:p-12 relative overflow-hidden bg-[#0a0a0a]">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#f2ca50] opacity-5 blur-[100px] pointer-events-none" />
+        <div className="border border-elevated p-8 md:p-12 relative overflow-hidden bg-page">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gold opacity-5 blur-[100px] pointer-events-none" />
           <div className="flex flex-col md:flex-row gap-12 items-center relative z-10">
             <div className="flex-1">
-              <span className="bg-[#f2ca50] text-[#0a0a0a] font-mono text-[10px] px-3 py-1 uppercase tracking-widest font-bold">Live Selected Drop</span>
-              <h2 className="font-display text-4xl md:text-5xl text-[#FAF7F2] uppercase mt-6 mb-4 leading-none">{activeDrop.name}</h2>
-              <p className="font-sans text-[#FAF7F2]/70 text-sm mb-8 leading-relaxed max-w-md">{activeDrop.description}</p>
+              <span className="bg-gold text-ongold font-mono text-[10px] px-3 py-1 uppercase tracking-widest font-bold">Live Selected Drop</span>
+              <h2 className="font-display text-4xl md:text-5xl text-ink uppercase mt-6 mb-4 leading-none">{activeDrop.name}</h2>
+              <p className="font-sans text-ink/70 text-sm mb-8 leading-relaxed max-w-md">{activeDrop.description}</p>
               <InlineDropCountdown endDate={activeDrop.endDate} />
-              <Link to={`/shopping/drop/${activeDrop.slug}`} className="inline-block mt-8 bg-[#f2ca50] text-[#0a0a0a] px-8 py-4 font-mono text-[11px] tracking-[0.2em] font-bold hover:bg-[#ffe088] transition-colors uppercase">
+              <Link to={`/shopping/drop/${activeDrop.slug}`} className="inline-block mt-8 bg-gold text-ongold px-8 py-4 font-mono text-[11px] tracking-[0.2em] font-bold hover:bg-gold-hover transition-colors uppercase">
                 View The Collection
               </Link>
             </div>
             {(activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl) && (
-              <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-[#131313]">
+              <div className="flex-1 w-full aspect-square md:aspect-[4/3] bg-panel">
                 <img src={activeDrop?.images?.[0]?.url || activeDrop?.coverImageUrl} alt={activeDrop.name} className="w-full h-full object-cover" loading="lazy" />
               </div>
             )}
@@ -829,13 +829,13 @@ export const NewsletterSection = () => {
         : "Subscribe";
 
   return (
-    <section className="bg-[#050505] py-12 border-t border-[#1a1a1a]">
+    <section className="bg-page py-12 border-t border-card">
       <div className="max-w-2xl mx-auto px-6 text-center">
-        <Mail className="w-8 h-8 text-[#f2ca50] mx-auto mb-6" />
-        <h3 className="font-display text-4xl text-[#FAF7F2] uppercase mb-4">
+        <Mail className="w-8 h-8 text-gold-ink mx-auto mb-6" />
+        <h3 className="font-display text-4xl text-ink uppercase mb-4">
           Unlock Future Drops
         </h3>
-        <p className="font-sans text-sm text-[#99907c] mb-8">
+        <p className="font-sans text-sm text-muted mb-8">
           Be first when a drop goes live. Members only — no spam.
         </p>
         <form
@@ -848,30 +848,30 @@ export const NewsletterSection = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="ENTER YOUR EMAIL"
             disabled={status === "loading"}
-            className="flex-1 bg-[#131313] border border-[#2a2a2a] text-[#FAF7F2] px-4 py-3 font-mono text-[11px] outline-none focus:border-[#f2ca50] transition-colors disabled:opacity-60"
+            className="flex-1 bg-panel border border-elevated text-ink px-4 py-3 font-mono text-[11px] outline-none focus:border-gold-ink transition-colors disabled:opacity-60"
             required
           />
           <button
             type="submit"
             disabled={status === "loading" || status === "success"}
-            className="bg-[#FAF7F2] text-[#0a0a0a] px-8 py-3 font-mono text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-[#f2ca50] transition-colors disabled:opacity-60"
+            className="bg-ivory text-ongold px-8 py-3 font-mono text-[11px] font-bold tracking-[0.2em] uppercase hover:bg-gold transition-colors disabled:opacity-60"
           >
             {buttonLabel}
           </button>
         </form>
         {status === "success" ? (
-          <p className="mt-4 text-[#f2ca50] text-xs font-mono uppercase tracking-widest">
+          <p className="mt-4 text-gold-ink text-xs font-mono uppercase tracking-widest">
             You're on the list. Watch your inbox.
           </p>
         ) : null}
         {status === "error" ? (
-          <p className="mt-4 text-[#ffb4ab] text-xs font-mono">
+          <p className="mt-4 text-danger-ink text-xs font-mono">
             {errorMessage}
           </p>
         ) : null}
 
-        <div className="mt-8 pt-6 border-t border-[#1a1a1a]">
-          <p className="font-mono text-[10px] text-[#99907c] tracking-widest uppercase mb-3">
+        <div className="mt-8 pt-6 border-t border-card">
+          <p className="font-mono text-[10px] text-muted tracking-widest uppercase mb-3">
             Prefer WhatsApp? Get drop alerts in your chat.
           </p>
           <a
@@ -1006,16 +1006,16 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
   const secs = timeLeft.ss ?? timeLeft.s ?? "00";
 
   return (
-    <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
+    <section className="relative bg-page py-20 md:py-28 overflow-hidden border-y border-card">
       {/* Radial gold + violet ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#a855f7]/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-gold/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-vip/8 blur-[140px] rounded-full pointer-events-none" />
 
       {/* Floating particle accents */}
       {[...Array(18)].map((_, i) => (
         <motion.span
           key={i}
-          className="absolute w-1 h-1 rounded-full bg-[#f2ca50]/60"
+          className="absolute w-1 h-1 rounded-full bg-gold/60"
           style={{
             top: `${seededRandom(i + 1) * 100}%`,
             left: `${seededRandom(i + 19) * 100}%`,
@@ -1034,13 +1034,13 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
       ))}
 
       <div className="relative z-10 max-w-[1100px] mx-auto px-6 text-center">
-        <p className="font-mono text-[11px] tracking-[0.4em] uppercase text-[#a855f7] mb-3 flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse shadow-[0_0_10px_#a855f7]" />
+        <p className="font-mono text-[11px] tracking-[0.4em] uppercase text-vip mb-3 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-vip animate-pulse shadow-[0_0_10px_#a855f7]" />
           Hold Ready
         </p>
         <h2
           ref={headlineRef}
-          className="font-display text-[40px] md:text-[80px] leading-none uppercase text-[#FAF7F2] mb-3 tracking-tight"
+          className="font-display text-[40px] md:text-[80px] leading-none uppercase text-ink mb-3 tracking-tight"
           style={{ perspective: "600px" }}
         >
           {headline.split("").map((ch, i) => (
@@ -1055,7 +1055,7 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
           ))}
         </h2>
         {description && (
-          <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-2xl mx-auto mb-12">
+          <p className="font-sans text-base md:text-lg text-cream max-w-2xl mx-auto mb-12">
             {description}
           </p>
         )}
@@ -1068,13 +1068,13 @@ export const LiveDropCountdownXL = ({ targetDate, title = "Next Drop", descripti
             ["Secs", secs],
           ].map(([label, value]) => (
             <div key={label} className="flex flex-col items-center">
-              <div className="relative w-20 h-20 md:w-28 md:h-28 bg-[#0e0e0e] border border-[#4d4635] flex items-center justify-center">
-                <div className="absolute inset-0 bg-[#f2ca50]/5 blur-md" />
-                <span className="relative font-mono tabular-nums text-3xl md:text-5xl text-[#f2ca50] font-bold drop-shadow-[0_0_12px_rgba(242,202,80,0.4)]">
+              <div className="relative w-20 h-20 md:w-28 md:h-28 bg-page border border-line flex items-center justify-center">
+                <div className="absolute inset-0 bg-gold/5 blur-md" />
+                <span className="relative font-mono tabular-nums text-3xl md:text-5xl text-gold-ink font-bold drop-shadow-[0_0_12px_rgba(242,202,80,0.4)]">
                   {String(value).padStart(2, "0")}
                 </span>
               </div>
-              <span className="font-mono text-[10px] tracking-[0.3em] text-[#99907c] mt-3 uppercase">
+              <span className="font-mono text-[10px] tracking-[0.3em] text-muted mt-3 uppercase">
                 {label}
               </span>
             </div>
@@ -1150,17 +1150,17 @@ const TiltCard = ({ Icon, title, desc, index }) => {
         transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
         transition: "transform 0.2s ease-out",
       }}
-      className="group relative bg-[#0e0e0e] border border-[#1f1f1f] p-6 md:p-8 hover:border-[#f2ca50]/50 transition-colors"
+      className="group relative bg-page border border-card p-6 md:p-8 hover:border-gold-ink/50 transition-colors"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-[#f2ca50]/0 via-[#f2ca50]/5 to-[#a855f7]/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-gold/0 via-gold/5 to-vip/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       <div className="relative z-10">
-        <div className="w-12 h-12 mb-5 flex items-center justify-center border border-[#4d4635] bg-[#131313] group-hover:border-[#f2ca50] transition-colors">
-          <FeatureIcon className="w-5 h-5 text-[#f2ca50] group-hover:scale-110 transition-transform" strokeWidth={1.5} />
+        <div className="w-12 h-12 mb-5 flex items-center justify-center border border-line bg-panel group-hover:border-gold-ink transition-colors">
+          <FeatureIcon className="w-5 h-5 text-gold-ink group-hover:scale-110 transition-transform" strokeWidth={1.5} />
         </div>
-        <h3 className="font-display text-xl md:text-2xl text-[#FAF7F2] uppercase mb-2 tracking-wider">
+        <h3 className="font-display text-xl md:text-2xl text-ink uppercase mb-2 tracking-wider">
           {title}
         </h3>
-        <p className="font-sans text-sm text-[#99907c] leading-relaxed">{desc}</p>
+        <p className="font-sans text-sm text-muted leading-relaxed">{desc}</p>
       </div>
     </motion.div>
   );
@@ -1178,13 +1178,13 @@ export const WhyChooseSaga = () => {
   const headline = "Built for those who notice";
 
   return (
-    <section className="bg-[#050505] py-16 md:py-24 border-y border-[#1a1a1a]">
+    <section className="bg-page py-16 md:py-24 border-y border-card">
       <div className="max-w-[1440px] mx-auto px-6">
         <div className="text-center mb-12">
-          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-gold-ink mb-3">
             {eyebrow}
           </p>
-          <h2 className="font-display text-[36px] md:text-[52px] leading-none text-[#FAF7F2] uppercase">
+          <h2 className="font-display text-[36px] md:text-[52px] leading-none text-ink uppercase">
             {headline}
           </h2>
         </div>
@@ -1230,7 +1230,7 @@ const MarqueeProductTile = ({ product, fallbackImage }) => {
   return (
     <Wrapper
       {...wrapperProps}
-      className="relative shrink-0 w-[200px] md:w-[260px] aspect-[3/4] overflow-hidden border border-[#1f1f1f] bg-[#131313] group block"
+      className="relative shrink-0 w-[200px] md:w-[260px] aspect-[3/4] overflow-hidden border border-card bg-panel group block"
     >
       <img
         src={url}
@@ -1238,12 +1238,12 @@ const MarqueeProductTile = ({ product, fallbackImage }) => {
         loading="lazy"
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/90 via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-page/90 via-transparent to-transparent" />
       {product?.name && (
         <div className="absolute bottom-3 left-3 right-3">
-          <p className="font-sans text-xs text-[#FAF7F2] truncate">{product.name}</p>
+          <p className="font-sans text-xs text-ink truncate">{product.name}</p>
           {product.basePrice ? (
-            <p className="font-mono text-[10px] text-[#f2ca50] mt-1">
+            <p className="font-mono text-[10px] text-gold-ink mt-1">
               {formatLkr(
                 Math.round(
                   product.basePrice * (1 - (product.discountPercent || 0) / 100)
@@ -1286,15 +1286,15 @@ export const TrendingFitsMarquee = ({ products = [] }) => {
   const rowA = products.slice(0, half);
   const rowB = products.slice(half);
   return (
-    <section className="bg-[#0a0a0a] py-16 md:py-20 overflow-hidden">
+    <section className="bg-page py-16 md:py-20 overflow-hidden">
       <div className="max-w-[1440px] mx-auto px-6 mb-10 text-center">
-        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#a855f7] mb-3">
+        <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-vip mb-3">
           Most Wanted
         </p>
-        <h2 className="font-display text-[36px] md:text-[56px] leading-none text-[#FAF7F2] uppercase mb-3">
+        <h2 className="font-display text-[36px] md:text-[56px] leading-none text-ink uppercase mb-3">
           Trending Fits
         </h2>
-        <p className="font-sans text-sm text-[#99907c] max-w-md mx-auto">
+        <p className="font-sans text-sm text-muted max-w-md mx-auto">
           The pieces every other Saga is wearing this week.
         </p>
       </div>
@@ -1345,33 +1345,33 @@ export const VipMembership = () => {
   const perks = DEFAULT_VIP_PERKS;
 
   const ctaClass =
-    "inline-flex items-center gap-3 bg-[#f2ca50] hover:bg-[#ffe088] text-[#0a0a0a] px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group";
+    "inline-flex items-center gap-3 bg-gold hover:bg-gold-hover text-ongold px-10 py-5 font-mono text-[11px] tracking-[0.3em] uppercase font-bold transition-colors group";
   const ctaStyle = { boxShadow: "0 0 32px rgba(242,202,80,0.25)" };
 
   return (
-    <section className="relative bg-[#050505] py-20 md:py-28 overflow-hidden border-y border-[#1a1a1a]">
+    <section className="relative bg-page py-20 md:py-28 overflow-hidden border-y border-card">
       {/* Layered glow */}
-      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#f2ca50]/8 blur-[140px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-[#a855f7]/10 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-gold/8 blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-vip/10 blur-[140px] rounded-full pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(242,202,80,0.06),transparent_60%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-[900px] mx-auto px-6 text-center">
-        <div className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#f2ca50]/5 px-4 py-2 mb-6">
-          <Crown className="w-3.5 h-3.5 text-[#f2ca50]" />
-          <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-[#f2ca50]">
+        <div className="inline-flex items-center gap-2 border border-gold-ink/40 bg-gold/5 px-4 py-2 mb-6">
+          <Crown className="w-3.5 h-3.5 text-gold-ink" />
+          <span className="font-mono text-[10px] tracking-[0.32em] uppercase text-gold-ink">
             {eyebrow}
           </span>
         </div>
-        <h2 className="font-display text-[44px] md:text-[80px] leading-none text-[#FAF7F2] uppercase mb-6">
+        <h2 className="font-display text-[44px] md:text-[80px] leading-none text-ink uppercase mb-6">
           {headline}
           {highlight ? (
             <>
               {" "}
-              <span className="text-[#f2ca50]">{highlight}</span>
+              <span className="text-gold-ink">{highlight}</span>
             </>
           ) : null}
         </h2>
-        <p className="font-sans text-base md:text-lg text-[#d0c5af] max-w-xl mx-auto mb-10 leading-relaxed">
+        <p className="font-sans text-base md:text-lg text-cream max-w-xl mx-auto mb-10 leading-relaxed">
           {body}
         </p>
 
@@ -1381,10 +1381,10 @@ export const VipMembership = () => {
             return (
               <div
                 key={`${perk.label}-${i}`}
-                className="flex items-center gap-2 text-[#d0c5af]"
+                className="flex items-center gap-2 text-cream"
               >
                 <PerkIcon
-                  className="w-4 h-4 text-[#f2ca50]"
+                  className="w-4 h-4 text-gold-ink"
                   strokeWidth={1.5}
                 />
                 <span className="font-mono text-[10px] tracking-[0.22em] uppercase">

@@ -33,8 +33,8 @@ export function FormField({
           length > maxLength
             ? "text-rose-400"
             : nearLimit
-              ? "text-[#D4AF37]"
-              : "text-white/30"
+              ? "text-gold-ink2"
+              : "text-ink/30"
         }`}
       >
         {length} / {maxLength}
@@ -46,22 +46,22 @@ export function FormField({
       <div className="flex items-baseline justify-between gap-3">
         <label
           htmlFor={htmlFor}
-          className="text-[11px] uppercase tracking-[0.15em] font-semibold text-white/80 flex items-center gap-1.5"
+          className="text-[11px] uppercase tracking-[0.15em] font-semibold text-ink/80 flex items-center gap-1.5"
         >
           {label}
-          {required ? <span className="text-[#D4AF37]">*</span> : null}
+          {required ? <span className="text-gold-ink2">*</span> : null}
           {optional && !required ? (
-            <span className="ml-1 rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-white/40">
+            <span className="ml-1 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[9px] font-medium normal-case tracking-normal text-ink/40">
               optional
             </span>
           ) : null}
         </label>
         {counter || (hint ? (
-          <span className="text-[10px] tabular-nums text-white/30">{hint}</span>
+          <span className="text-[10px] tabular-nums text-ink/30">{hint}</span>
         ) : null)}
       </div>
       {helper ? (
-        <p className="text-[11px] leading-relaxed text-white/40">{helper}</p>
+        <p className="text-[11px] leading-relaxed text-ink/40">{helper}</p>
       ) : null}
       {children}
       {error ? (

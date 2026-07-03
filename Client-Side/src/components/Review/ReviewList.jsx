@@ -209,15 +209,15 @@ const ReviewList = ({ productId, initialStats }) => {
         onFilterChange={(rating) => setRatingFilter(rating)}
       />
 
-      <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-4 space-y-3">
+      <div className="rounded-3xl border border-ink/10 bg-page p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setWithPhotos((prev) => !prev)}
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
               withPhotos
-                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
-                : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+                ? "border-gold-ink2 bg-gold-deep/10 text-gold-ink2"
+                : "border-ink/10 text-ink/60 hover:border-ink/20 hover:text-ink"
             }`}
           >
             <Camera className="h-3.5 w-3.5" /> With photos
@@ -227,8 +227,8 @@ const ReviewList = ({ productId, initialStats }) => {
             onClick={() => setVerifiedOnly((prev) => !prev)}
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
               verifiedOnly
-                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
-                : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+                ? "border-gold-ink2 bg-gold-deep/10 text-gold-ink2"
+                : "border-ink/10 text-ink/60 hover:border-ink/20 hover:text-ink"
             }`}
           >
             <BadgeCheck className="h-3.5 w-3.5" /> Verified only
@@ -246,8 +246,8 @@ const ReviewList = ({ productId, initialStats }) => {
                 }
                 className={`rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition-colors ${
                   isActive
-                    ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]"
-                    : "border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+                    ? "border-gold-ink2 bg-gold-deep/10 text-gold-ink2"
+                    : "border-ink/10 text-ink/60 hover:border-ink/20 hover:text-ink"
                 }`}
               >
                 {option.label} · {count}
@@ -258,33 +258,33 @@ const ReviewList = ({ productId, initialStats }) => {
             <button
               type="button"
               onClick={clearAllFilters}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-white/50 hover:text-white"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-ink/50 hover:text-ink"
             >
               <X className="h-3 w-3" /> Clear ({activeFilterCount})
             </button>
           ) : null}
         </div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
           <input
             type="search"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search within reviews"
-            className="w-full rounded-full border border-white/10 bg-black/30 py-2.5 pl-11 pr-4 text-sm text-white placeholder:text-white/40 focus:border-[#D4AF37]/50 focus:outline-none"
+            className="w-full rounded-full border border-ink/10 bg-black/30 py-2.5 pl-11 pr-4 text-sm text-ink placeholder:text-ink/40 focus:border-gold-ink2/50 focus:outline-none"
           />
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/10 bg-[#0b0b0b] p-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-full border border-ink/10 bg-page p-2">
           <button
             type="button"
             onClick={() => setRatingFilter(null)}
             className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${
               ratingFilter === null
-                ? "bg-[#D4AF37] text-black"
-                : "text-white/60"
+                ? "bg-gold-deep text-black"
+                : "text-ink/60"
             }`}
           >
             All stars
@@ -296,8 +296,8 @@ const ReviewList = ({ productId, initialStats }) => {
               onClick={() => setRatingFilter(rating)}
               className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${
                 ratingFilter === rating
-                  ? "bg-[#D4AF37] text-black"
-                  : "text-white/60"
+                  ? "bg-gold-deep text-black"
+                  : "text-ink/60"
               }`}
             >
               {rating} star
@@ -308,7 +308,7 @@ const ReviewList = ({ productId, initialStats }) => {
         <select
           value={sort}
           onChange={(event) => setSort(event.target.value)}
-          className="rounded-full border border-white/10 bg-[#0b0b0b] px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/60"
+          className="rounded-full border border-ink/10 bg-page px-4 py-2 text-xs uppercase tracking-[0.2em] text-ink/60"
         >
           {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -325,7 +325,7 @@ const ReviewList = ({ productId, initialStats }) => {
           ))}
         </div>
       ) : reviewList.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#0b0b0b] p-10 text-center text-white/70">
+        <div className="rounded-3xl border border-ink/10 bg-page p-10 text-center text-ink/70">
           No reviews yet. Be the first to review this product!
         </div>
       ) : (
@@ -350,7 +350,7 @@ const ReviewList = ({ productId, initialStats }) => {
             type="button"
             onClick={handleLoadMore}
             disabled={loading}
-            className="rounded-full border border-white/10 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/60 hover:border-[#D4AF37]/60"
+            className="rounded-full border border-ink/10 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-ink/60 hover:border-gold-ink2/60"
           >
             {loading ? "Loading..." : "Load more"}
           </button>
@@ -359,7 +359,7 @@ const ReviewList = ({ productId, initialStats }) => {
 
       {canReview && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#D4AF37]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-ink2">
             Share your experience
           </p>
           <ReviewForm

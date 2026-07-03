@@ -104,13 +104,13 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
       {/* Header Area */}
       <div className="mb-8 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-3">
-          <Icon className="h-5 w-5 text-[#f2ca50]" />
+          <Icon className="h-5 w-5 text-gold-ink" />
           <div>
             <Eyebrow tone="muted" size="xs">{config.eyebrow}</Eyebrow>
-            <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1] leading-tight">
+            <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-ink-2 leading-tight">
               {displayTitle}
             </h2>
-            {displayDesc && <p className="mt-2 se-body text-[16px] md:text-[18px] text-[#99907c]">{displayDesc}</p>}
+            {displayDesc && <p className="mt-2 se-body text-[16px] md:text-[18px] text-muted">{displayDesc}</p>}
           </div>
           {config.infoText ? (
             <button
@@ -118,12 +118,12 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
               onMouseEnter={() => setShowInfo(true)}
               onMouseLeave={() => setShowInfo(false)}
               onClick={() => setShowInfo((v) => !v)}
-              className="relative ml-1 text-[#99907c] hover:text-[#f2ca50]"
+              className="relative ml-1 text-muted hover:text-gold-ink"
               aria-label="What drives these picks"
             >
               <Info className="h-4 w-4" />
               {showInfo ? (
-                <span className="absolute left-0 top-6 z-10 w-64 rounded border border-[#4d4635] bg-[#0a0a0a] px-3 py-2 text-xs text-[#d0c5af] shadow-lg">
+                <span className="absolute left-0 top-6 z-10 w-64 rounded border border-line bg-page px-3 py-2 text-xs text-cream shadow-lg">
                   {config.infoText}
                 </span>
               ) : null}
@@ -133,7 +133,7 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
         {config.seeAllTo ? (
           <Link
             to={config.seeAllTo}
-            className="se-label text-[10px] tracking-[0.18em] text-[#d0c5af] hover:text-[#f2ca50] inline-flex items-center gap-2"
+            className="se-label text-[10px] tracking-[0.18em] text-cream hover:text-gold-ink inline-flex items-center gap-2"
           >
             {config.seeAllLabel} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -146,7 +146,7 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
             <div
               key={i}
               className={cn(
-                "bg-[#131313] rounded-[20px] animate-[pulse_1.5s_ease-in-out_infinite]",
+                "bg-panel rounded-[20px] animate-[pulse_1.5s_ease-in-out_infinite]",
                 "w-[170px] h-[320px] md:w-[260px] md:h-[420px] lg:w-[290px] lg:h-[460px]",
                 i === 2 && "hidden md:block",
                 i === 3 && "hidden lg:block"
@@ -167,7 +167,7 @@ const PersonalizedRail = ({ variant = "for-you" }) => {
         <div className="mt-10 flex justify-center md:hidden">
           <Link
             to={config.seeAllTo}
-            className="flex h-[52px] w-full items-center justify-center rounded-[16px] border border-[#f2ca50] bg-transparent px-8 se-body text-sm font-semibold text-[#f2ca50] transition-colors hover:bg-[#f2ca50] hover:text-[#0a0a0a]"
+            className="flex h-[52px] w-full items-center justify-center rounded-[16px] border border-gold-ink bg-transparent px-8 se-body text-sm font-semibold text-gold-ink transition-colors hover:bg-gold hover:text-ongold"
           >
             {config.seeAllLabel}
           </Link>

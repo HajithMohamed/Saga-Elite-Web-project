@@ -28,18 +28,18 @@ const PriceRangeSlider = ({
     "[&::-webkit-slider-thumb]:appearance-none " +
     "[&::-webkit-slider-thumb]:w-4 " +
     "[&::-webkit-slider-thumb]:h-4 " +
-    "[&::-webkit-slider-thumb]:bg-[#f2ca50] " +
+    "[&::-webkit-slider-thumb]:bg-gold " +
     "[&::-webkit-slider-thumb]:border-2 " +
-    "[&::-webkit-slider-thumb]:border-[#0a0a0a] " +
+    "[&::-webkit-slider-thumb]:border-page " +
     "[&::-webkit-slider-thumb]:rounded-full " +
     "[&::-webkit-slider-thumb]:cursor-pointer " +
     "[&::-moz-range-thumb]:pointer-events-auto " +
     "[&::-moz-range-thumb]:appearance-none " +
     "[&::-moz-range-thumb]:w-4 " +
     "[&::-moz-range-thumb]:h-4 " +
-    "[&::-moz-range-thumb]:bg-[#f2ca50] " +
+    "[&::-moz-range-thumb]:bg-gold " +
     "[&::-moz-range-thumb]:border-2 " +
-    "[&::-moz-range-thumb]:border-[#0a0a0a] " +
+    "[&::-moz-range-thumb]:border-page " +
     "[&::-moz-range-thumb]:rounded-full " +
     "[&::-moz-range-thumb]:cursor-pointer";
 
@@ -51,18 +51,18 @@ const PriceRangeSlider = ({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3">
-        <span className="font-mono text-[10px] tracking-[0.22em] text-[#99907c] uppercase">
+        <span className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">
           {fmt(lo)}
         </span>
-        <span className="font-mono text-[10px] tracking-[0.22em] text-[#99907c] uppercase">
+        <span className="font-mono text-[10px] tracking-[0.22em] text-muted uppercase">
           {fmt(hi)}
         </span>
       </div>
       <div className="relative h-6 flex items-center">
         {/* Track + selected fill */}
-        <div className="absolute inset-x-0 h-1 bg-[#1c1b1b]" />
+        <div className="absolute inset-x-0 h-1 bg-card" />
         <div
-          className="absolute h-1 bg-[#f2ca50]"
+          className="absolute h-1 bg-gold"
           style={{ left: `${loPct}%`, right: `${100 - hiPct}%` }}
         />
         {/* Inputs — pointer-events-none on the input itself so the track

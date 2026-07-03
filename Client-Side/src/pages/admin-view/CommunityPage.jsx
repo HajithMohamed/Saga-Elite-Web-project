@@ -107,15 +107,15 @@ const UgcTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#99907c]">
+        <p className="text-xs text-muted">
           Customer & influencer photos shown in the homepage social proof
           section. Images are stored as `social-ugc` system images.
         </p>
         <label
-          className={`flex cursor-pointer items-center gap-2 px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#0a0a0a] ${
+          className={`flex cursor-pointer items-center gap-2 px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-ongold ${
             uploading
-              ? "cursor-not-allowed bg-[#f2ca50]/40"
-              : "bg-[#f2ca50] hover:bg-[#ffe088]"
+              ? "cursor-not-allowed bg-gold/40"
+              : "bg-gold hover:bg-gold-hover"
           }`}
         >
           {uploading ? (
@@ -137,11 +137,11 @@ const UgcTab = () => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
         </div>
       ) : images.length === 0 ? (
-        <div className="border border-dashed border-[#2a2a2a] bg-[#0a0a0a] p-12 text-center text-xs uppercase tracking-widest text-[#888]">
-          <ImageIcon className="mx-auto mb-3 h-10 w-10 text-[#4d4635]" />
+        <div className="border border-dashed border-elevated bg-page p-12 text-center text-xs uppercase tracking-widest text-muted">
+          <ImageIcon className="mx-auto mb-3 h-10 w-10 text-line" />
           No UGC photos uploaded yet.
         </div>
       ) : (
@@ -149,7 +149,7 @@ const UgcTab = () => {
           {images.map((img) => (
             <div
               key={img._id}
-              className="group relative overflow-hidden border border-[#2a2a2a] bg-[#0a0a0a]"
+              className="group relative overflow-hidden border border-elevated bg-page"
             >
               <img
                 src={img.url}
@@ -160,7 +160,7 @@ const UgcTab = () => {
               <button
                 type="button"
                 onClick={() => handleDelete(img)}
-                className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-[#99907c] opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                 title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
@@ -293,13 +293,13 @@ const InfluencersTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#99907c]">
+        <p className="text-xs text-muted">
           Track outreach: prospects, active campaigns, completed collabs.
         </p>
         <button
           type="button"
           onClick={startCreate}
-          className="inline-flex items-center gap-2 bg-[#f2ca50] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088]"
+          className="inline-flex items-center gap-2 bg-gold px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-ongold hover:bg-gold-hover"
         >
           <Plus className="h-4 w-4" /> Add influencer
         </button>
@@ -308,10 +308,10 @@ const InfluencersTab = () => {
       {showForm ? (
         <form
           onSubmit={submit}
-          className="space-y-4 border border-[#f2ca50]/30 bg-[#131313] p-5"
+          className="space-y-4 border border-gold-ink/30 bg-panel p-5"
         >
           <div className="flex items-center justify-between">
-            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
               {editingId ? "Edit influencer" : "Add influencer"}
             </h3>
             <button
@@ -321,7 +321,7 @@ const InfluencersTab = () => {
                 setEditingId(null);
                 setForm(initialInfluencerForm);
               }}
-              className="text-xs uppercase tracking-[0.22em] text-[#99907c] hover:text-[#e5e2e1]"
+              className="text-xs uppercase tracking-[0.22em] text-muted hover:text-ink-2"
             >
               Cancel
             </button>
@@ -332,7 +332,7 @@ const InfluencersTab = () => {
               placeholder="Display name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
               required
             />
             <input
@@ -340,13 +340,13 @@ const InfluencersTab = () => {
               placeholder="@handle"
               value={form.handle}
               onChange={(e) => setForm({ ...form, handle: e.target.value })}
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
               required
             />
             <select
               value={form.platform}
               onChange={(e) => setForm({ ...form, platform: e.target.value })}
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
             >
               {PLATFORMS.map((p) => (
                 <option key={p} value={p}>
@@ -357,7 +357,7 @@ const InfluencersTab = () => {
             <select
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -372,7 +372,7 @@ const InfluencersTab = () => {
               onChange={(e) =>
                 setForm({ ...form, campaignName: e.target.value })
               }
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
             />
             <input
               type="email"
@@ -381,20 +381,20 @@ const InfluencersTab = () => {
               onChange={(e) =>
                 setForm({ ...form, contactEmail: e.target.value })
               }
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
             />
             <textarea
               placeholder="Notes (negotiated rate, deliverables, dates…)"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={3}
-              className="border border-[#2a2a2a] bg-[#0a0a0a] p-3 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none md:col-span-2"
+              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none md:col-span-2"
             />
           </div>
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 bg-[#f2ca50] px-5 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:opacity-60"
+            className="inline-flex items-center gap-2 bg-gold px-5 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-ongold hover:bg-gold-hover disabled:opacity-60"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -408,16 +408,16 @@ const InfluencersTab = () => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
         </div>
       ) : list.length === 0 ? (
-        <div className="border border-dashed border-[#2a2a2a] bg-[#0a0a0a] p-12 text-center text-xs uppercase tracking-widest text-[#888]">
+        <div className="border border-dashed border-elevated bg-page p-12 text-center text-xs uppercase tracking-widest text-muted">
           No influencers tracked yet.
         </div>
       ) : (
-        <div className="overflow-hidden border border-[#2a2a2a] bg-[#131313]">
+        <div className="overflow-hidden border border-elevated bg-panel">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[#2a2a2a] bg-[#1a1a1a] font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+            <thead className="border-b border-elevated bg-card font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Handle</th>
@@ -431,16 +431,16 @@ const InfluencersTab = () => {
               {list.map((item) => (
                 <tr
                   key={item._id}
-                  className="border-b border-[#2a2a2a]/40 hover:bg-[#1a1a1a]"
+                  className="border-b border-elevated/40 hover:bg-card"
                 >
-                  <td className="px-4 py-3 text-[#e5e2e1]">{item.name}</td>
-                  <td className="px-4 py-3 font-mono text-[10px] text-[#d0c5af]">
+                  <td className="px-4 py-3 text-ink-2">{item.name}</td>
+                  <td className="px-4 py-3 font-mono text-[10px] text-cream">
                     @{item.handle}
                   </td>
-                  <td className="px-4 py-3 text-xs text-[#d0c5af]">
+                  <td className="px-4 py-3 text-xs text-cream">
                     {item.platform}
                   </td>
-                  <td className="px-4 py-3 text-xs text-[#d0c5af]">
+                  <td className="px-4 py-3 text-xs text-cream">
                     {item.campaignName || "—"}
                   </td>
                   <td className="px-4 py-3 text-xs">
@@ -449,10 +449,10 @@ const InfluencersTab = () => {
                         item.status === "active"
                           ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
                           : item.status === "completed"
-                            ? "border-[#f2ca50]/40 bg-[#f2ca50]/10 text-[#f2ca50]"
+                            ? "border-gold-ink/40 bg-gold/10 text-gold-ink"
                             : item.status === "paused"
                               ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-                              : "border-white/10 bg-white/5 text-white/60"
+                              : "border-ink/10 bg-ink/5 text-ink/60"
                       }`}
                     >
                       {item.status}
@@ -463,7 +463,7 @@ const InfluencersTab = () => {
                       <button
                         type="button"
                         onClick={() => startEdit(item)}
-                        className="border border-[#4d4635] px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                        className="border border-line px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink"
                       >
                         Edit
                       </button>
@@ -579,14 +579,14 @@ const TestimonialsTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#99907c]">
+        <p className="text-xs text-muted">
           Curated quotes shown on the homepage (separate from product reviews).
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={addItem}
-            className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
+            className="inline-flex items-center gap-2 border border-line px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink"
           >
             <Plus className="h-3 w-3" /> Add testimonial
           </button>
@@ -594,7 +594,7 @@ const TestimonialsTab = () => {
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="inline-flex items-center gap-2 bg-[#f2ca50] px-5 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 bg-gold px-5 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-ongold hover:bg-gold-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -608,10 +608,10 @@ const TestimonialsTab = () => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
         </div>
       ) : items.length === 0 ? (
-        <div className="border border-dashed border-[#2a2a2a] bg-[#0a0a0a] p-12 text-center text-xs uppercase tracking-widest text-[#888]">
+        <div className="border border-dashed border-elevated bg-page p-12 text-center text-xs uppercase tracking-widest text-muted">
           No testimonials yet — add one to get started.
         </div>
       ) : (
@@ -619,7 +619,7 @@ const TestimonialsTab = () => {
           {items.map((item, index) => (
             <div
               key={index}
-              className="border border-[#2a2a2a] bg-[#131313] p-4"
+              className="border border-elevated bg-panel p-4"
             >
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <input
@@ -627,7 +627,7 @@ const TestimonialsTab = () => {
                   value={item.name || ""}
                   onChange={(e) => updateField(index, "name", e.target.value)}
                   placeholder="Customer name"
-                  className="border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+                  className="border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
                 />
                 <input
                   type="text"
@@ -636,7 +636,7 @@ const TestimonialsTab = () => {
                     updateField(index, "productSlug", e.target.value)
                   }
                   placeholder="Product slug (optional)"
-                  className="border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+                  className="border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
                 />
                 <input
                   type="number"
@@ -649,7 +649,7 @@ const TestimonialsTab = () => {
                     )
                   }
                   placeholder="Order"
-                  className="border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+                  className="border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
                 />
               </div>
               <textarea
@@ -657,10 +657,10 @@ const TestimonialsTab = () => {
                 onChange={(e) => updateField(index, "quote", e.target.value)}
                 placeholder="The quote…"
                 rows={2}
-                className="mt-3 w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+                className="mt-3 w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
               />
               <div className="mt-3 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af]">
+                <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-cream">
                   <input
                     type="checkbox"
                     checked={item.isActive !== false}
@@ -673,7 +673,7 @@ const TestimonialsTab = () => {
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="text-[#99907c] hover:text-red-400"
+                  className="text-muted hover:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -698,10 +698,10 @@ const CommunityPage = () => {
       eyebrow="Community & Social"
       title="Community"
       description="Manage UGC photos, influencer outreach, and curated testimonials."
-      actions={<Globe className="h-5 w-5 text-[#f2ca50]" />}
+      actions={<Globe className="h-5 w-5 text-gold-ink" />}
     >
       <div className="mx-auto max-w-6xl pb-20">
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-[#2a2a2a] pb-4">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-elevated pb-4">
           {TABS.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -712,8 +712,8 @@ const CommunityPage = () => {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.2em] transition-colors ${
                   isActive
-                    ? "border-[#f2ca50] bg-[#131313] text-[#f2ca50]"
-                    : "border-[#2a2a2a] text-[#888] hover:text-[#e5e2e1]"
+                    ? "border-gold-ink bg-panel text-gold-ink"
+                    : "border-elevated text-muted hover:text-ink-2"
                 }`}
               >
                 <TabIcon className="h-4 w-4" /> {tab.label}

@@ -29,17 +29,20 @@ import store from "./store/store";
 import { Toaster } from "@/components/ui/toaster";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthDrawerProvider } from "@/components/auth-components/AuthDrawer";
+import { ThemeProvider } from "@/context/theme-context";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 const app = (
   <BrowserRouter>
     <Provider store={store}>
-      <AuthDrawerProvider>
-        <App />
-        {/* toast popup container */}
-        <Toaster />
-      </AuthDrawerProvider>
+      <ThemeProvider>
+        <AuthDrawerProvider>
+          <App />
+          {/* toast popup container */}
+          <Toaster />
+        </AuthDrawerProvider>
+      </ThemeProvider>
     </Provider>
   </BrowserRouter>
 );

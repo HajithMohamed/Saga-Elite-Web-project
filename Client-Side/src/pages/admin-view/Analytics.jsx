@@ -111,29 +111,29 @@ const QUADRANT_META = {
     label: "Flawed",
     hint: "High sales · negative sentiment",
     advice: "SUSPEND & REDESIGN",
-    accent: "border-[#ffb4ab]/40 bg-[#ffb4ab]/10 text-[#ffb4ab]",
+    accent: "border-danger-ink/40 bg-danger-ink/10 text-danger-ink",
   },
   hidden_gem: {
     label: "Hidden Gem",
     hint: "Low sales · positive sentiment",
-    accent: "border-[#f2ca50]/40 bg-[#f2ca50]/10 text-[#f2ca50]",
+    accent: "border-gold-ink/40 bg-gold/10 text-gold-ink",
     advice: "RE-MARKET",
   },
   deadstock: {
     label: "Deadstock",
     hint: "Low sales · negative sentiment",
-    accent: "border-white/10 bg-white/5 text-white/60",
+    accent: "border-ink/10 bg-ink/5 text-ink/60",
     advice: "LIQUIDATE",
   },
 };
 
-const StatCard = ({ label, value, hint, tone = "text-[#f2ca50]" }) => (
-  <div className="border border-[#2a2a2a] bg-[#131313] p-5">
-    <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[#99907c]">
+const StatCard = ({ label, value, hint, tone = "text-gold-ink" }) => (
+  <div className="border border-elevated bg-panel p-5">
+    <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-muted">
       {label}
     </p>
     <p className={`mt-3 text-2xl font-bold ${tone}`}>{value}</p>
-    {hint ? <p className="mt-1 text-xs text-[#666]">{hint}</p> : null}
+    {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
   </div>
 );
 
@@ -162,7 +162,7 @@ const SalesTab = ({ data, range, onRangeChange }) => {
           label="Orders"
           value={formatNumber(summary.totalOrders)}
           hint={`${formatNumber(summary.cancelledOrders)} cancelled`}
-          tone="text-[#e5e2e1]"
+          tone="text-ink-2"
         />
         <StatCard
           label="Delivered Revenue"
@@ -173,13 +173,13 @@ const SalesTab = ({ data, range, onRangeChange }) => {
           label="Refunded"
           value={formatCurrency(summary.totalRefunded)}
           hint={`Coupon -${formatCurrency(summary.couponDiscountTotal)}`}
-          tone="text-[#ffb4ab]"
+          tone="text-danger-ink"
         />
       </div>
 
-      <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+      <div className="border border-elevated bg-panel p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+          <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
             Daily revenue
           </h3>
           <button
@@ -192,34 +192,34 @@ const SalesTab = ({ data, range, onRangeChange }) => {
               )
             }
             disabled={daily.length === 0}
-            className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-40"
+            className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink disabled:opacity-40"
           >
             <Download className="h-3 w-3" /> Export CSV
           </button>
         </div>
         {daily.length === 0 ? (
-          <p className="py-8 text-center font-mono text-xs uppercase tracking-widest text-[#666]">
+          <p className="py-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
             No orders in this range.
           </p>
         ) : (
           <div className="space-y-1.5">
             {daily.map((d) => (
               <div key={d.date} className="flex items-center gap-3 text-xs">
-                <span className="w-20 shrink-0 font-mono text-[10px] text-[#99907c]">
+                <span className="w-20 shrink-0 font-mono text-[10px] text-muted">
                   {formatShortDate(d.date)}
                 </span>
-                <div className="h-1.5 flex-1 overflow-hidden bg-[#1c1b1b]">
+                <div className="h-1.5 flex-1 overflow-hidden bg-card">
                   <div
-                    className="h-full bg-[#f2ca50] transition-all duration-700"
+                    className="h-full bg-gold transition-all duration-700"
                     style={{
                       width: `${Math.max(2, (d.revenue / maxRevenue) * 100)}%`,
                     }}
                   />
                 </div>
-                <span className="w-32 text-right text-[#f2ca50]">
+                <span className="w-32 text-right text-gold-ink">
                   {formatCurrency(d.revenue)}
                 </span>
-                <span className="w-12 text-right font-mono text-[10px] text-[#666]">
+                <span className="w-12 text-right font-mono text-[10px] text-muted">
                   {d.orders}
                 </span>
               </div>
@@ -228,27 +228,27 @@ const SalesTab = ({ data, range, onRangeChange }) => {
         )}
       </div>
 
-      <div className="border border-[#2a2a2a] bg-[#131313] p-6">
-        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+      <div className="border border-elevated bg-panel p-6">
+        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
           Payment methods
         </h3>
         {paymentMethods.length === 0 ? (
-          <p className="text-xs text-[#666]">No payment data.</p>
+          <p className="text-xs text-muted">No payment data.</p>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {paymentMethods.map((p) => (
               <div
                 key={p.method}
-                className="flex items-center justify-between border border-[#2a2a2a] bg-[#0a0a0a] px-4 py-3 text-sm"
+                className="flex items-center justify-between border border-elevated bg-page px-4 py-3 text-sm"
               >
-                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
                   {p.method.replace(/_/g, " ")}
                 </span>
                 <span className="text-right">
-                  <span className="block font-bold text-[#e5e2e1]">
+                  <span className="block font-bold text-ink-2">
                     {formatCurrency(p.revenue)}
                   </span>
-                  <span className="text-[10px] text-[#666]">
+                  <span className="text-[10px] text-muted">
                     {formatNumber(p.count)} orders
                   </span>
                 </span>
@@ -268,7 +268,7 @@ const ProductsTab = ({ data }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#99907c]">
+        <p className="text-xs text-muted">
           Showing {products.length} of {data.total} active products, sorted by
           units sold.
         </p>
@@ -292,15 +292,15 @@ const ProductsTab = ({ data }) => {
             )
           }
           disabled={products.length === 0}
-          className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-40"
+          className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink disabled:opacity-40"
         >
           <Download className="h-3 w-3" /> Export CSV
         </button>
       </div>
 
-      <div className="overflow-x-auto border border-[#2a2a2a] bg-[#131313]">
+      <div className="overflow-x-auto border border-elevated bg-panel">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[#2a2a2a] bg-[#1a1a1a] font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+          <thead className="border-b border-elevated bg-card font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             <tr>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3 text-right">Views</th>
@@ -316,7 +316,7 @@ const ProductsTab = ({ data }) => {
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-12 text-center font-mono text-xs text-[#666]"
+                  className="px-4 py-12 text-center font-mono text-xs text-muted"
                 >
                   No products to analyze.
                 </td>
@@ -325,27 +325,27 @@ const ProductsTab = ({ data }) => {
               products.map((p) => (
                 <tr
                   key={p._id}
-                  className="border-b border-[#2a2a2a]/40 hover:bg-[#1a1a1a]"
+                  className="border-b border-elevated/40 hover:bg-card"
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-[#e5e2e1]">{p.name}</p>
-                    <p className="font-mono text-[10px] text-[#666]">
+                    <p className="font-medium text-ink-2">{p.name}</p>
+                    <p className="font-mono text-[10px] text-muted">
                       {p.artNo} · {p.category}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-right text-[#d0c5af]">
+                  <td className="px-4 py-3 text-right text-cream">
                     {formatNumber(p.views)}
                   </td>
-                  <td className="px-4 py-3 text-right text-[#d0c5af]">
+                  <td className="px-4 py-3 text-right text-cream">
                     {formatNumber(p.cartAdds)}
                   </td>
-                  <td className="px-4 py-3 text-right text-[#d0c5af]">
+                  <td className="px-4 py-3 text-right text-cream">
                     {formatNumber(p.wishCount)}
                   </td>
-                  <td className="px-4 py-3 text-right font-bold text-[#f2ca50]">
+                  <td className="px-4 py-3 text-right font-bold text-gold-ink">
                     {formatNumber(p.sold)}
                   </td>
-                  <td className="px-4 py-3 text-right text-[#d0c5af]">
+                  <td className="px-4 py-3 text-right text-cream">
                     {formatNumber(p.stock)}
                   </td>
                   <td className="px-4 py-3 text-right text-emerald-400">
@@ -388,7 +388,7 @@ const DropsTab = ({ data }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-[#99907c]">
+        <p className="text-xs text-muted">
           {drops.length} drops · median sales: {formatNumber(data.medianSales)} units
           (matrix split point)
         </p>
@@ -402,15 +402,15 @@ const DropsTab = ({ data }) => {
             )
           }
           disabled={csvRows.length === 0}
-          className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-40"
+          className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink disabled:opacity-40"
         >
           <Download className="h-3 w-3" /> Export CSV
         </button>
       </div>
 
       {/* Decision Matrix */}
-      <div className="border border-[#2a2a2a] bg-[#131313] p-6">
-        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+      <div className="border border-elevated bg-panel p-6">
+        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
           Performance Decision Matrix
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -420,21 +420,21 @@ const DropsTab = ({ data }) => {
             return (
               <div
                 key={key}
-                className={`border ${meta.accent} bg-[#0a0a0a] p-4`}
+                className={`border ${meta.accent} bg-page p-4`}
               >
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.22em]">
                       {meta.label}
                     </p>
-                    <p className="text-[10px] text-[#666]">{meta.hint}</p>
+                    <p className="text-[10px] text-muted">{meta.hint}</p>
                   </div>
                   <span className="rounded-full border border-current px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em]">
                     {meta.advice}
                   </span>
                 </div>
                 {items.length === 0 ? (
-                  <p className="py-3 text-center font-mono text-[10px] uppercase tracking-widest text-[#666]">
+                  <p className="py-3 text-center font-mono text-[10px] uppercase tracking-widest text-muted">
                     No drops here.
                   </p>
                 ) : (
@@ -442,10 +442,10 @@ const DropsTab = ({ data }) => {
                     {items.map((d) => (
                       <div
                         key={d.dropId}
-                        className="flex items-center justify-between border border-[#2a2a2a] bg-[#131313] px-3 py-2 text-xs"
+                        className="flex items-center justify-between border border-elevated bg-panel px-3 py-2 text-xs"
                       >
-                        <span className="truncate text-[#e5e2e1]">{d.name}</span>
-                        <span className="font-mono text-[10px] text-[#99907c]">
+                        <span className="truncate text-ink-2">{d.name}</span>
+                        <span className="font-mono text-[10px] text-muted">
                           {formatNumber(d.soldUnits)} sold ·{" "}
                           {(d.sentiment.avgRating || 0).toFixed(1)}★
                         </span>
@@ -460,9 +460,9 @@ const DropsTab = ({ data }) => {
       </div>
 
       {/* Detailed table */}
-      <div className="overflow-x-auto border border-[#2a2a2a] bg-[#131313]">
+      <div className="overflow-x-auto border border-elevated bg-panel">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[#2a2a2a] bg-[#1a1a1a] font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+          <thead className="border-b border-elevated bg-card font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             <tr>
               <th className="px-4 py-3">Drop</th>
               <th className="px-4 py-3 text-right">Products</th>
@@ -477,19 +477,19 @@ const DropsTab = ({ data }) => {
             {drops.map((d) => (
               <tr
                 key={d.dropId}
-                className="border-b border-[#2a2a2a]/40 hover:bg-[#1a1a1a]"
+                className="border-b border-elevated/40 hover:bg-card"
               >
-                <td className="px-4 py-3 text-[#e5e2e1]">{d.name}</td>
-                <td className="px-4 py-3 text-right text-[#d0c5af]">
+                <td className="px-4 py-3 text-ink-2">{d.name}</td>
+                <td className="px-4 py-3 text-right text-cream">
                   {formatNumber(d.productCount)}
                 </td>
-                <td className="px-4 py-3 text-right font-bold text-[#f2ca50]">
+                <td className="px-4 py-3 text-right font-bold text-gold-ink">
                   {formatNumber(d.soldUnits)}
                 </td>
-                <td className="px-4 py-3 text-right text-[#d0c5af]">
+                <td className="px-4 py-3 text-right text-cream">
                   {formatCurrency(d.revenueProxy)}
                 </td>
-                <td className="px-4 py-3 text-right text-[#d0c5af]">
+                <td className="px-4 py-3 text-right text-cream">
                   {formatNumber(d.stockOnHand)}
                 </td>
                 <td className="px-4 py-3 text-right text-emerald-400">
@@ -497,8 +497,8 @@ const DropsTab = ({ data }) => {
                 </td>
                 <td className="px-4 py-3 text-right text-xs">
                   <span className="text-emerald-400">+{d.sentiment.positive}</span>
-                  <span className="mx-1 text-[#666]">/</span>
-                  <span className="text-[#ffb4ab]">-{d.sentiment.negative}</span>
+                  <span className="mx-1 text-muted">/</span>
+                  <span className="text-danger-ink">-{d.sentiment.negative}</span>
                 </td>
               </tr>
             ))}
@@ -523,7 +523,7 @@ const CustomersTab = ({ data, range, onRangeChange }) => {
         <StatCard
           label="Customers"
           value={formatNumber(lifetime.customers)}
-          tone="text-[#e5e2e1]"
+          tone="text-ink-2"
         />
         <StatCard
           label="New in range"
@@ -542,27 +542,27 @@ const CustomersTab = ({ data, range, onRangeChange }) => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
-          <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+        <div className="border border-elevated bg-panel p-6">
+          <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
             Membership tiers
           </h3>
           <div className="space-y-2">
             {tiers.length === 0 ? (
-              <p className="text-xs text-[#666]">No customer data yet.</p>
+              <p className="text-xs text-muted">No customer data yet.</p>
             ) : (
               tiers.map((t) => (
                 <div
                   key={t.tier}
-                  className="flex items-center justify-between border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-xs"
+                  className="flex items-center justify-between border border-elevated bg-page px-3 py-2 text-xs"
                 >
-                  <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#d0c5af]">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-cream">
                     {t.tier}
                   </span>
                   <span className="text-right">
-                    <span className="block font-bold text-[#e5e2e1]">
+                    <span className="block font-bold text-ink-2">
                       {formatNumber(t.count)}
                     </span>
-                    <span className="text-[10px] text-[#666]">
+                    <span className="text-[10px] text-muted">
                       {formatCurrency(t.totalSpent)} spent
                     </span>
                   </span>
@@ -572,9 +572,9 @@ const CustomersTab = ({ data, range, onRangeChange }) => {
           </div>
         </div>
 
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
               Top spenders (lifetime)
             </h3>
             <button
@@ -593,33 +593,33 @@ const CustomersTab = ({ data, range, onRangeChange }) => {
                 )
               }
               disabled={topSpenders.length === 0}
-              className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-40"
+              className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink disabled:opacity-40"
             >
               <Download className="h-3 w-3" /> CSV
             </button>
           </div>
           {topSpenders.length === 0 ? (
-            <p className="text-xs text-[#666]">No spenders yet.</p>
+            <p className="text-xs text-muted">No spenders yet.</p>
           ) : (
             <div className="space-y-2">
               {topSpenders.map((u) => (
                 <div
                   key={u._id}
-                  className="flex items-center justify-between border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-xs"
+                  className="flex items-center justify-between border border-elevated bg-page px-3 py-2 text-xs"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[#e5e2e1]">
+                    <p className="truncate text-ink-2">
                       {u.userName || u.name || u.email}
                     </p>
-                    <p className="truncate font-mono text-[10px] text-[#666]">
+                    <p className="truncate font-mono text-[10px] text-muted">
                       {u.email} · {u.membership || "standard"}
                     </p>
                   </div>
                   <div className="ml-3 text-right">
-                    <p className="font-bold text-[#f2ca50]">
+                    <p className="font-bold text-gold-ink">
                       {formatCurrency(u.totalSpent)}
                     </p>
-                    <p className="text-[10px] text-[#666]">
+                    <p className="text-[10px] text-muted">
                       {formatNumber(u.orderCount)} orders
                     </p>
                   </div>
@@ -658,7 +658,7 @@ const ReviewsTab = ({ data }) => {
         <StatCard
           label="Rejected"
           value={formatNumber(data.statusCounts?.rejected)}
-          tone="text-[#ffb4ab]"
+          tone="text-danger-ink"
         />
         <StatCard
           label="Avg rating"
@@ -666,8 +666,8 @@ const ReviewsTab = ({ data }) => {
         />
       </div>
 
-      <div className="border border-[#2a2a2a] bg-[#131313] p-6">
-        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+      <div className="border border-elevated bg-panel p-6">
+        <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
           Sentiment breakdown
         </h3>
         <div className="flex h-3 overflow-hidden rounded-full">
@@ -680,11 +680,11 @@ const ReviewsTab = ({ data }) => {
             style={{ width: `${(sentiment.neutral / total) * 100}%` }}
           />
           <div
-            className="bg-[#ffb4ab]"
+            className="bg-danger-ink"
             style={{ width: `${(sentiment.negative / total) * 100}%` }}
           />
         </div>
-        <div className="mt-3 flex justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <div className="mt-3 flex justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
           <span>Positive {Math.round((sentiment.positive / total) * 100)}%</span>
           <span>Neutral {Math.round((sentiment.neutral / total) * 100)}%</span>
           <span>Negative {Math.round((sentiment.negative / total) * 100)}%</span>
@@ -692,8 +692,8 @@ const ReviewsTab = ({ data }) => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
-          <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+        <div className="border border-elevated bg-panel p-6">
+          <h3 className="mb-4 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
             Rating distribution
           </h3>
           <div className="space-y-2">
@@ -702,16 +702,16 @@ const ReviewsTab = ({ data }) => {
               const pct = (count / ratingTotal) * 100;
               return (
                 <div key={star} className="flex items-center gap-3 text-xs">
-                  <span className="w-12 font-mono text-[10px] text-[#d0c5af]">
+                  <span className="w-12 font-mono text-[10px] text-cream">
                     {star} ★
                   </span>
-                  <div className="h-1.5 flex-1 overflow-hidden bg-[#1c1b1b]">
+                  <div className="h-1.5 flex-1 overflow-hidden bg-card">
                     <div
-                      className="h-full bg-[#f2ca50]"
+                      className="h-full bg-gold"
                       style={{ width: `${Math.max(2, pct)}%` }}
                     />
                   </div>
-                  <span className="w-12 text-right font-mono text-[10px] text-[#666]">
+                  <span className="w-12 text-right font-mono text-[10px] text-muted">
                     {formatNumber(count)}
                   </span>
                 </div>
@@ -720,9 +720,9 @@ const ReviewsTab = ({ data }) => {
           </div>
         </div>
 
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
               Top keywords
             </h3>
             <button
@@ -735,13 +735,13 @@ const ReviewsTab = ({ data }) => {
                 )
               }
               disabled={keywords.length === 0}
-              className="inline-flex items-center gap-2 border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-40"
+              className="inline-flex items-center gap-2 border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink disabled:opacity-40"
             >
               <Download className="h-3 w-3" /> CSV
             </button>
           </div>
           {keywords.length === 0 ? (
-            <p className="text-xs text-[#666]">
+            <p className="text-xs text-muted">
               Not enough approved review text to extract keywords.
             </p>
           ) : (
@@ -749,10 +749,10 @@ const ReviewsTab = ({ data }) => {
               {keywords.map((k) => (
                 <span
                   key={k.word}
-                  className="border border-[#4d4635] bg-[#0a0a0a] px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[#d0c5af]"
+                  className="border border-line bg-page px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-cream"
                 >
                   {k.word}
-                  <span className="ml-2 text-[#f2ca50]">{k.count}</span>
+                  <span className="ml-2 text-gold-ink">{k.count}</span>
                 </span>
               ))}
             </div>
@@ -776,8 +776,8 @@ const DateRangeControls = ({ range, onChange }) => {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border border-[#2a2a2a] bg-[#131313] p-4">
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+    <div className="flex flex-wrap items-center gap-3 border border-elevated bg-panel p-4">
+      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
         Range
       </span>
       <input
@@ -785,15 +785,15 @@ const DateRangeControls = ({ range, onChange }) => {
         value={isoDateInputValue(range.from)}
         max={isoDateInputValue(range.to)}
         onChange={(e) => onChange({ ...range, from: new Date(e.target.value) })}
-        className="border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-xs text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+        className="border border-elevated bg-page px-3 py-1.5 text-xs text-ink focus:border-gold-ink focus:outline-none"
       />
-      <span className="text-[#666]">→</span>
+      <span className="text-muted">→</span>
       <input
         type="date"
         value={isoDateInputValue(range.to)}
         min={isoDateInputValue(range.from)}
         onChange={(e) => onChange({ ...range, to: new Date(e.target.value) })}
-        className="border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-1.5 text-xs text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+        className="border border-elevated bg-page px-3 py-1.5 text-xs text-ink focus:border-gold-ink focus:outline-none"
       />
       <div className="ml-auto flex gap-2">
         {presets.map((p) => (
@@ -801,7 +801,7 @@ const DateRangeControls = ({ range, onChange }) => {
             key={p.label}
             type="button"
             onClick={() => applyPreset(p.days)}
-            className="border border-[#4d4635] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-[#d0c5af] hover:border-[#f2ca50] hover:text-[#f2ca50]"
+            className="border border-line px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-cream hover:border-gold-ink hover:text-gold-ink"
           >
             {p.label}
           </button>
@@ -825,11 +825,11 @@ const FashionTab = ({ data }) => {
 
   if (products.length === 0) {
     return (
-      <div className="border border-[#2a2a2a] bg-[#131313] p-10 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[#666]">
+      <div className="border border-elevated bg-panel p-10 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-muted">
           No product data yet
         </p>
-        <p className="mt-3 text-sm text-[#99907c]">
+        <p className="mt-3 text-sm text-muted">
           Once products start moving, fashion-specific insights surface here.
         </p>
       </div>
@@ -884,33 +884,33 @@ const FashionTab = ({ data }) => {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <div className="border border-elevated bg-panel p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             Categories live
           </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-white">
+          <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
             {categorySoldData.length}
           </p>
-          <p className="mt-1 text-[10px] text-[#666]">with sales</p>
+          <p className="mt-1 text-[10px] text-muted">with sales</p>
         </div>
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <div className="border border-elevated bg-panel p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             Units sold
           </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-[#f2ca50]">
+          <p className="mt-2 text-2xl font-bold tabular-nums text-gold-ink">
             {totalSold.toLocaleString()}
           </p>
         </div>
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <div className="border border-elevated bg-panel p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             Wishlist demand
           </p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-rose-300">
             {totalWishes.toLocaleString()}
           </p>
         </div>
-        <div className="border border-[#2a2a2a] bg-[#131313] p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <div className="border border-elevated bg-panel p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
             Dead stock units
           </p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-orange-300">
@@ -920,14 +920,14 @@ const FashionTab = ({ data }) => {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-2 flex items-center gap-2">
-            <Shirt className="h-4 w-4 text-[#f2ca50]" />
-            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+            <Shirt className="h-4 w-4 text-gold-ink" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
               Top categories — units sold
             </h3>
           </div>
-          <p className="mb-4 text-[10px] text-[#666]">
+          <p className="mb-4 text-[10px] text-muted">
             Where the volume is concentrated. Use this to pace next drop's mix.
           </p>
           <ResponsiveContainer width="100%" height={260}>
@@ -971,10 +971,10 @@ const FashionTab = ({ data }) => {
                 className="flex items-center justify-between border-l-2 pl-3 text-xs"
                 style={{ borderColor: FASHION_COLORS[i % FASHION_COLORS.length] }}
               >
-                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
                   {c.name}
                 </span>
-                <span className="text-[#e5e2e1]">
+                <span className="text-ink-2">
                   {c.value} units · {c.products} products
                 </span>
               </div>
@@ -982,18 +982,18 @@ const FashionTab = ({ data }) => {
           </div>
         </div>
 
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-2 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-[#f2ca50]" />
-            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+            <Zap className="h-4 w-4 text-gold-ink" />
+            <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
               Fastest selling
             </h3>
           </div>
-          <p className="mb-4 text-[10px] text-[#666]">
+          <p className="mb-4 text-[10px] text-muted">
             Top 8 by total units shipped. Restock candidates.
           </p>
           {fastestSelling.length === 0 ? (
-            <p className="py-12 text-center text-xs text-[#666]">No sales yet.</p>
+            <p className="py-12 text-center text-xs text-muted">No sales yet.</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
@@ -1027,18 +1027,18 @@ const FashionTab = ({ data }) => {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-2 flex items-center gap-2">
             <Heart className="h-4 w-4 text-rose-300" />
             <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-rose-300">
               Most wishlisted
             </h3>
           </div>
-          <p className="mb-4 text-[10px] text-[#666]">
+          <p className="mb-4 text-[10px] text-muted">
             Strong demand signal — promote in next campaign or re-stock if low.
           </p>
           {topWishlisted.length === 0 ? (
-            <p className="py-12 text-center text-xs text-[#666]">No wishlist activity.</p>
+            <p className="py-12 text-center text-xs text-muted">No wishlist activity.</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart
@@ -1070,18 +1070,18 @@ const FashionTab = ({ data }) => {
           )}
         </div>
 
-        <div className="border border-[#2a2a2a] bg-[#131313] p-6">
+        <div className="border border-elevated bg-panel p-6">
           <div className="mb-2 flex items-center gap-2">
             <Skull className="h-4 w-4 text-orange-300" />
             <h3 className="font-mono text-xs uppercase tracking-[0.26em] text-orange-300">
               Dead inventory
             </h3>
           </div>
-          <p className="mb-4 text-[10px] text-[#666]">
+          <p className="mb-4 text-[10px] text-muted">
             Stocked but never sold. Discount, bundle, or pull from listing.
           </p>
           {deadInventory.length === 0 ? (
-            <p className="py-12 text-center text-xs text-[#666]">
+            <p className="py-12 text-center text-xs text-muted">
               All stocked products have moved at least once. Healthy.
             </p>
           ) : (
@@ -1089,11 +1089,11 @@ const FashionTab = ({ data }) => {
               {deadInventory.map((p) => (
                 <li
                   key={p._id || p.slug || p.artNo}
-                  className="flex items-center justify-between border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-sm"
+                  className="flex items-center justify-between border border-elevated bg-page px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[#e5e2e1]">{p.name}</p>
-                    <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-[#666]">
+                    <p className="truncate text-ink-2">{p.name}</p>
+                    <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.22em] text-muted">
                       {p.category || "—"} · {p.artNo || "no art#"}
                     </p>
                   </div>
@@ -1169,13 +1169,13 @@ export default function AdminAnalytics() {
     if (loading && !data) {
       return (
         <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
         </div>
       );
     }
     if (error) {
       return (
-        <div className="flex items-center gap-3 border border-[#ffb4ab]/40 bg-[#ffb4ab]/5 p-4 text-sm text-[#ffb4ab]">
+        <div className="flex items-center gap-3 border border-danger-ink/40 bg-danger-ink/5 p-4 text-sm text-danger-ink">
           <AlertTriangle className="h-4 w-4" /> {error}
         </div>
       );
@@ -1203,7 +1203,7 @@ export default function AdminAnalytics() {
       actions={
         <Link
           to="/admin/dashboard"
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white/10"
+          className="flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-ink/10"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -1211,7 +1211,7 @@ export default function AdminAnalytics() {
       }
     >
       <div className="mx-auto max-w-7xl pb-20">
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-[#2a2a2a] pb-4">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-elevated pb-4">
           {TABS.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -1222,8 +1222,8 @@ export default function AdminAnalytics() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-2 border px-5 py-3 font-mono text-[11px] uppercase tracking-[0.2em] transition-colors ${
                   isActive
-                    ? "border-[#f2ca50] bg-[#131313] text-[#f2ca50]"
-                    : "border-[#2a2a2a] text-[#888] hover:text-[#e5e2e1]"
+                    ? "border-gold-ink bg-panel text-gold-ink"
+                    : "border-elevated text-muted hover:text-ink-2"
                 }`}
               >
                 <TabIcon className="h-4 w-4" /> {tab.label}

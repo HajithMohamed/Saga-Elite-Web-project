@@ -63,15 +63,15 @@ const AdminAccount = () => {
     : "-";
 
   const isPasswordFormIncomplete = !formData.oldPassword || !formData.newPassword || !formData.passwordConfirm;
-  const inputClasses = "bg-transparent border-b border-[#4d4635] text-[#e5e2e1] focus:border-[#f2ca50]";
-  const labelClasses = "text-[#99907c]";
-  const buttonClasses = "bg-[#f2ca50] text-black font-bold uppercase py-3 rounded";
+  const inputClasses = "bg-transparent border-b border-line text-ink-2 focus:border-gold-ink";
+  const labelClasses = "text-muted";
+  const buttonClasses = "bg-gold text-black font-bold uppercase py-3 rounded";
 
   return (
     <div className="mx-auto max-w-4xl p-6 lg:p-10">
       <div className="mb-8">
-        <h1 className="font-sans text-2xl font-bold uppercase tracking-wider text-white">Admin Profile</h1>
-        <p className="mt-1 text-sm text-[#99907c]">Manage your account details and security settings.</p>
+        <h1 className="font-sans text-2xl font-bold uppercase tracking-wider text-ink">Admin Profile</h1>
+        <p className="mt-1 text-sm text-muted">Manage your account details and security settings.</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -79,13 +79,13 @@ const AdminAccount = () => {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="col-span-1 rounded-2xl border border-[#4d4635]/60 bg-[#131313] p-6 text-center"
+          className="col-span-1 rounded-2xl border border-line/60 bg-panel p-6 text-center"
         >
-          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-[#f2ca50]/10 text-3xl font-bold text-[#f2ca50]">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gold/10 text-3xl font-bold text-gold-ink">
             {initials}
           </div>
-          <h2 className="mt-4 text-xl font-bold text-white">{displayName}</h2>
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#f2ca50]/10 px-3 py-1 text-xs font-medium text-[#f2ca50]">
+          <h2 className="mt-4 text-xl font-bold text-ink">{displayName}</h2>
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-xs font-medium text-gold-ink">
             <ShieldCheck className="h-3.5 w-3.5" />
             <span className="uppercase tracking-wider">{user?.role}</span>
           </div>
@@ -97,35 +97,35 @@ const AdminAccount = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-2xl border border-[#4d4635]/60 bg-[#131313] p-6"
+            className="rounded-2xl border border-line/60 bg-panel p-6"
           >
-            <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-[#f2ca50]">Profile Information</h3>
+            <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-gold-ink">Profile Information</h3>
             <div className="space-y-4">
-              <div className="flex items-center gap-4 border-b border-[#4d4635]/30 pb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0a0a0a]">
-                  <Mail className="h-4 w-4 text-[#99907c]" />
+              <div className="flex items-center gap-4 border-b border-line/30 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-page">
+                  <Mail className="h-4 w-4 text-muted" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase text-[#99907c]">Email Address</p>
-                  <p className="text-sm font-medium text-white">{user?.email}</p>
+                  <p className="text-xs uppercase text-muted">Email Address</p>
+                  <p className="text-sm font-medium text-ink">{user?.email}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 border-b border-[#4d4635]/30 pb-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0a0a0a]">
-                  <Phone className="h-4 w-4 text-[#99907c]" />
+              <div className="flex items-center gap-4 border-b border-line/30 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-page">
+                  <Phone className="h-4 w-4 text-muted" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase text-[#99907c]">Phone Number</p>
-                  <p className="text-sm font-medium text-white">{user?.phoneNumber || "Not provided"}</p>
+                  <p className="text-xs uppercase text-muted">Phone Number</p>
+                  <p className="text-sm font-medium text-ink">{user?.phoneNumber || "Not provided"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 pb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0a0a0a]">
-                  <Calendar className="h-4 w-4 text-[#99907c]" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-page">
+                  <Calendar className="h-4 w-4 text-muted" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase text-[#99907c]">Member Since</p>
-                  <p className="text-sm font-medium text-white">{memberSince}</p>
+                  <p className="text-xs uppercase text-muted">Member Since</p>
+                  <p className="text-sm font-medium text-ink">{memberSince}</p>
                 </div>
               </div>
             </div>
@@ -135,16 +135,16 @@ const AdminAccount = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-2xl border border-[#4d4635]/60 bg-[#131313] p-6"
+            className="rounded-2xl border border-line/60 bg-panel p-6"
           >
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-[#f2ca50]">Security</h3>
-                <p className="mt-1 text-xs text-[#99907c]">Update your administrator password.</p>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gold-ink">Security</h3>
+                <p className="mt-1 text-xs text-muted">Update your administrator password.</p>
               </div>
               <button
                 onClick={() => setShowChangePassword(!showChangePassword)}
-                className="inline-flex items-center gap-2 rounded-full border border-[#4d4635] bg-[#0a0a0a] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#e5e2e1] transition-colors hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-page px-4 py-2 text-xs font-bold uppercase tracking-wider text-ink-2 transition-colors hover:border-gold-ink hover:text-gold-ink"
               >
                 <Key className="h-3.5 w-3.5" />
                 {showChangePassword ? "Close" : "Change"}
@@ -159,7 +159,7 @@ const AdminAccount = () => {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 space-y-5 rounded-xl bg-[#0a0a0a] p-5">
+                  <div className="mt-4 space-y-5 rounded-xl bg-page p-5">
                     <CommonForm
                       formControls={changePasswordControls}
                       formData={formData}

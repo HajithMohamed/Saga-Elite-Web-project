@@ -32,16 +32,16 @@ const FAQ_ITEMS = [
 ];
 
 const AccordionItem = ({ item, isOpen, onToggle }) => (
-  <div className="border-b border-white/5 last:border-0">
+  <div className="border-b border-ink/5 last:border-0">
     <button
       type="button"
       onClick={onToggle}
-      className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-[#F2CA50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CA50]"
+      className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-gold-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink"
     >
-      <span className={cn("se-body text-sm font-medium transition-colors", isOpen ? "text-[#F2CA50]" : "text-[#e5e2e1]")}>
+      <span className={cn("se-body text-sm font-medium transition-colors", isOpen ? "text-gold-ink" : "text-ink-2")}>
         {item.question}
       </span>
-      <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#574500] transition-transform duration-300", isOpen && "rotate-180 text-[#F2CA50]")} />
+      <ChevronDown className={cn("h-4 w-4 shrink-0 text-goldshadow transition-transform duration-300", isOpen && "rotate-180 text-gold-ink")} />
     </button>
     <AnimatePresence initial={false}>
       {isOpen && (
@@ -52,7 +52,7 @@ const AccordionItem = ({ item, isOpen, onToggle }) => (
           transition={{ duration: 0.3, ease: MOTION_EASE }}
           className="overflow-hidden"
         >
-          <p className="se-body pb-5 text-sm leading-6 text-[#99907c]">{item.answer}</p>
+          <p className="se-body pb-5 text-sm leading-6 text-muted">{item.answer}</p>
         </motion.div>
       )}
     </AnimatePresence>
@@ -69,9 +69,9 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
   const emailUrl = about?.contact?.email ? `mailto:${about.contact.email}` : "mailto:support@sagaelite.com";
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0a0a0a]">
+    <div className="flex min-h-screen flex-col bg-page">
       {/* Hero Section */}
-      <section className="relative flex w-full flex-col items-center justify-center overflow-hidden bg-[#0E0E0E] px-4 py-12 md:py-0 min-h-[220px] sm:min-h-[260px] md:min-h-[320px]">
+      <section className="relative flex w-full flex-col items-center justify-center overflow-hidden bg-page px-4 py-12 md:py-0 min-h-[220px] sm:min-h-[260px] md:min-h-[320px]">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img
@@ -79,7 +79,7 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
             alt="Saga Elite Editorial"
             className="h-full w-full object-cover object-center opacity-30 blur-[2px]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/80 via-[#0a0a0a]/60 to-[#0a0a0a]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-page/80 via-page/60 to-page" />
         </div>
 
         <motion.div
@@ -89,18 +89,18 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
           className="relative z-10 text-center max-w-2xl mx-auto mt-6"
         >
           {badgeText && (
-            <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full border border-[#F2CA50]/20 bg-[#F2CA50]/5 px-3 py-1.5 backdrop-blur-sm">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#F2CA50]" />
-              <span className="se-label text-[9px] uppercase tracking-[0.25em] text-[#F2CA50]">
+            <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full border border-gold-ink/20 bg-gold/5 px-3 py-1.5 backdrop-blur-sm">
+              <ShieldCheck className="h-3.5 w-3.5 text-gold-ink" />
+              <span className="se-label text-[9px] uppercase tracking-[0.25em] text-gold-ink">
                 {badgeText}
               </span>
             </div>
           )}
-          <h1 className="se-serif text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] text-[#e5e2e1]">
+          <h1 className="se-serif text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] text-ink-2">
             {title}
           </h1>
           {description && (
-            <p className="se-body mx-auto mt-4 max-w-md text-sm sm:text-base leading-relaxed text-[#d0c5af]">
+            <p className="se-body mx-auto mt-4 max-w-md text-sm sm:text-base leading-relaxed text-cream">
               {description}
             </p>
           )}
@@ -115,7 +115,7 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.1 }}
-          className="mx-auto w-full max-w-[520px] rounded-[24px] border border-white/10 bg-[#0d0d0d]/95 backdrop-blur-xl p-6 sm:p-8 md:p-10 shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
+          className="mx-auto w-full max-w-[520px] rounded-[24px] border border-ink/10 bg-page/95 backdrop-blur-xl p-6 sm:p-8 md:p-10 shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
         >
           {children}
         </motion.div>
@@ -135,10 +135,10 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
               { icon: Heart, label: "Wishlist" },
             ].map((feature, idx) => (
               <div key={idx} className="flex flex-col items-center gap-2 text-center opacity-70 transition-opacity hover:opacity-100">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-[#99907c]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-ink/[0.02] text-muted">
                   <feature.icon className="h-4 w-4" />
                 </div>
-                <span className="se-label text-[9px] uppercase tracking-[0.2em] text-[#574500]">
+                <span className="se-label text-[9px] uppercase tracking-[0.2em] text-goldshadow">
                   {feature.label}
                 </span>
               </div>
@@ -151,15 +151,15 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="mx-auto mt-16 max-w-[520px] rounded-[24px] border border-white/5 bg-[#0a0a0a] p-6 sm:p-8"
+          className="mx-auto mt-16 max-w-[520px] rounded-[24px] border border-ink/5 bg-page p-6 sm:p-8"
         >
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#F2CA50]/15 bg-[#F2CA50]/5">
-              <HelpCircle className="h-5 w-5 text-[#F2CA50]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-gold-ink/15 bg-gold/5">
+              <HelpCircle className="h-5 w-5 text-gold-ink" />
             </div>
             <div>
-              <h3 className="se-serif text-[22px] text-[#e5e2e1]">Need Help?</h3>
-              <p className="se-body mt-0.5 text-sm text-[#99907c]">
+              <h3 className="se-serif text-[22px] text-ink-2">Need Help?</h3>
+              <p className="se-body mt-0.5 text-sm text-muted">
                 Contact our concierge team
               </p>
             </div>
@@ -172,13 +172,13 @@ const AuthPageWrapper = ({ children, title, description, badgeText = "Secure Aut
                 <MessageSquareText className="h-4 w-4" /> WhatsApp
               </a>
             )}
-            <a href={emailUrl} className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#F2CA50]/20 bg-[#F2CA50]/10 text-[11px] font-medium uppercase tracking-[0.15em] text-[#F2CA50] transition-colors hover:bg-[#F2CA50]/20">
+            <a href={emailUrl} className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-gold-ink/20 bg-gold/10 text-[11px] font-medium uppercase tracking-[0.15em] text-gold-ink transition-colors hover:bg-gold/20">
               <Mail className="h-4 w-4" /> Email Us
             </a>
           </div>
 
           {/* FAQ Accordion */}
-          <div className="border-t border-white/5 pt-2">
+          <div className="border-t border-ink/5 pt-2">
             {FAQ_ITEMS.map((item, idx) => (
               <AccordionItem
                 key={idx}

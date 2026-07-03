@@ -6,7 +6,7 @@ function Skeleton({ className, ...props }) {
   return (
     <div
       className={cn(
-        "animate-pulse rounded-md bg-[#1a1a1a]/80 backdrop-blur-sm",
+        "animate-pulse rounded-md bg-card/80 backdrop-blur-sm",
         className
       )}
       {...props}
@@ -17,7 +17,7 @@ function Skeleton({ className, ...props }) {
 // Full Page Skeleton for Home
 export function HomeSkeleton() {
   return (
-    <div className="w-full min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="w-full min-h-screen bg-page flex flex-col">
       {/* Hero Skeleton */}
       <Skeleton className="w-full h-[480px] sm:h-[500px] md:h-[560px] lg:h-[620px] xl:h-[680px] rounded-none" />
       
@@ -51,7 +51,7 @@ export function HomeSkeleton() {
 // Drop Details Skeleton
 export function DropDetailsSkeleton() {
   return (
-    <div className="w-full min-h-screen bg-[#0a0a0a] flex flex-col">
+    <div className="w-full min-h-screen bg-page flex flex-col">
       <Skeleton className="w-full h-[50vh] md:h-[65vh] rounded-none" />
       
       <div className="max-w-[1280px] w-full mx-auto px-4 md:px-8 py-16 space-y-12">

@@ -19,35 +19,35 @@ const Settings = () => {
   return (
     <div className="space-y-8 pb-12 font-sans">
       <div>
-         <h1 className="font-sans text-2xl font-bold text-[#fafafa] mb-1">Account Settings</h1>
-         <p className="se-body text-[14px] text-[#99907c]">Manage your preferences, notifications, and language settings.</p>
+         <h1 className="font-sans text-2xl font-bold text-ink mb-1">Account Settings</h1>
+         <p className="se-body text-[14px] text-muted">Manage your preferences, notifications, and language settings.</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
          {/* ── PREFERENCES ── */}
-         <div className="bg-[#1A1A1A] border border-white/5 rounded-[24px] p-6 md:p-8 h-max">
-            <h2 className="font-sans font-bold text-[18px] text-[#fafafa] mb-6 flex items-center gap-3">
-               <Globe className="w-5 h-5 text-[#99907c]" /> Regional Preferences
+         <div className="bg-card border border-ink/5 rounded-[24px] p-6 md:p-8 h-max">
+            <h2 className="font-sans font-bold text-[18px] text-ink mb-6 flex items-center gap-3">
+               <Globe className="w-5 h-5 text-muted" /> Regional Preferences
             </h2>
             
             <div className="space-y-6">
                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-[#99907c]">Language</label>
+                  <label className="text-[10px] uppercase tracking-widest text-muted">Language</label>
                   <select 
                     value={preferences.language}
                     onChange={(e) => setPreferences({...preferences, language: e.target.value})}
-                    className="w-full h-[52px] bg-[#131313] border border-white/10 rounded-[12px] px-4 text-[#fafafa] focus:border-[#F2CA50] focus:outline-none transition-colors appearance-none"
+                    className="w-full h-[52px] bg-panel border border-ink/10 rounded-[12px] px-4 text-ink focus:border-gold-ink focus:outline-none transition-colors appearance-none"
                   >
                     <option value="english">English</option>
                   </select>
                </div>
                
                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-[#99907c]">Currency</label>
+                  <label className="text-[10px] uppercase tracking-widest text-muted">Currency</label>
                   <select 
                     value={preferences.currency}
                     onChange={(e) => setPreferences({...preferences, currency: e.target.value})}
-                    className="w-full h-[52px] bg-[#131313] border border-white/10 rounded-[12px] px-4 text-[#fafafa] focus:border-[#F2CA50] focus:outline-none transition-colors appearance-none"
+                    className="w-full h-[52px] bg-panel border border-ink/10 rounded-[12px] px-4 text-ink focus:border-gold-ink focus:outline-none transition-colors appearance-none"
                   >
                     <option value="lkr">LKR - Sri Lankan Rupee</option>
                   </select>
@@ -56,9 +56,9 @@ const Settings = () => {
          </div>
 
          {/* ── NOTIFICATIONS ── */}
-         <div className="bg-[#1A1A1A] border border-white/5 rounded-[24px] p-6 md:p-8 h-max">
-            <h2 className="font-sans font-bold text-[18px] text-[#fafafa] mb-6 flex items-center gap-3">
-               <BellRing className="w-5 h-5 text-[#99907c]" /> Notification Settings
+         <div className="bg-card border border-ink/5 rounded-[24px] p-6 md:p-8 h-max">
+            <h2 className="font-sans font-bold text-[18px] text-ink mb-6 flex items-center gap-3">
+               <BellRing className="w-5 h-5 text-muted" /> Notification Settings
             </h2>
             
             <div className="space-y-6">
@@ -69,14 +69,14 @@ const Settings = () => {
                ].map((item) => (
                  <div key={item.key} className="flex items-center justify-between gap-4">
                     <div>
-                       <h4 className="text-[14px] font-bold text-[#fafafa] mb-1">{item.label}</h4>
-                       <p className="text-[12px] text-[#99907c]">{item.desc}</p>
+                       <h4 className="text-[14px] font-bold text-ink mb-1">{item.label}</h4>
+                       <p className="text-[12px] text-muted">{item.desc}</p>
                     </div>
                     <button 
                       onClick={() => handleToggle(item.key)}
-                      className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${preferences[item.key] ? 'bg-[#F2CA50]' : 'bg-white/10'}`}
+                      className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${preferences[item.key] ? 'bg-gold' : 'bg-ink/10'}`}
                     >
-                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${preferences[item.key] ? 'translate-x-7 bg-[#0e0e0e]' : 'translate-x-1'}`} />
+                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${preferences[item.key] ? 'translate-x-7 bg-page' : 'translate-x-1'}`} />
                     </button>
                  </div>
                ))}
@@ -88,7 +88,7 @@ const Settings = () => {
             <h2 className="font-sans font-bold text-[18px] text-red-400 mb-2 flex items-center gap-3">
                <AlertTriangle className="w-5 h-5" /> Danger Zone
             </h2>
-            <p className="text-[13px] text-[#99907c] mb-6 max-w-2xl">
+            <p className="text-[13px] text-muted mb-6 max-w-2xl">
                Permanently delete your account and all associated data. This action cannot be undone and you will lose access to your order history and wishlist.
             </p>
             <button 

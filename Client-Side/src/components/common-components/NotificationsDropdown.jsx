@@ -9,7 +9,7 @@ import {
 const typeIcon = (type) => {
   switch (type) {
     case "drop":
-      return <Clock3 className="h-4 w-4 text-[#D4AF37]" />;
+      return <Clock3 className="h-4 w-4 text-gold-ink2" />;
     case "offer":
       return <AlertCircle className="h-4 w-4 text-[#60A5FA]" />;
     case "order":
@@ -63,19 +63,19 @@ const NotificationsDropdown = () => {
       <button
         type="button"
         aria-label="Notifications"
-        className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300"
+        className="relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300"
         onClick={handleToggle}
       >
         <Bell className="w-[18px] h-[18px]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 bg-[#ffb4ab] shadow-[0_0_8px_#ffb4ab] text-[#0e0e0e] text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
+          <span className="absolute -top-2 -right-2 bg-danger-ink shadow-[0_0_8px_#ffb4ab] text-ongold text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-h-[420px] min-w-[24rem] overflow-hidden overflow-y-auto rounded-2xl border border-gray-800 bg-[#0b0b0b] text-white shadow-2xl">
+        <div className="absolute right-0 z-50 mt-2 w-96 max-h-[420px] min-w-[24rem] overflow-hidden overflow-y-auto rounded-2xl border border-gray-800 bg-page text-ink shadow-2xl">
           <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Notifications</p>
@@ -83,7 +83,7 @@ const NotificationsDropdown = () => {
             </div>
             <button
               type="button"
-              className="text-xs uppercase text-[#D4AF37] hover:text-white"
+              className="text-xs uppercase text-gold-ink2 hover:text-ink"
               onClick={() => isAuthenticated && dispatch(fetchNotifications())}
             >
               Refresh
@@ -99,18 +99,18 @@ const NotificationsDropdown = () => {
                 <button
                   key={notification._id}
                   type="button"
-                  className={`w-full text-left px-4 py-4 transition-colors ${notification.isRead ? "bg-[#090909] hover:bg-[#111111]" : "bg-[#111111] hover:bg-[#1f1f1f]"}`}
+                  className={`w-full text-left px-4 py-4 transition-colors ${notification.isRead ? "bg-page hover:bg-panel" : "bg-panel hover:bg-card"}`}
                   onClick={() => handleItemClick(notification)}
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-1">{typeIcon(notification.type)}</span>
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-ink">
                           {notification.title}
                         </span>
                         {!notification.isRead && (
-                          <span className="rounded-full bg-[#D4AF37] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black">
+                          <span className="rounded-full bg-gold-deep px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black">
                             New
                           </span>
                         )}
@@ -133,19 +133,19 @@ const NotificationsDropdown = () => {
 
       {selectedNotification && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-[#0b0b0b] shadow-2xl relative">
+          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-page shadow-2xl relative">
             <button
               onClick={() => setSelectedNotification(null)}
-              className="absolute right-4 top-4 text-gray-400 hover:text-white transition-colors"
+              className="absolute right-4 top-4 text-gray-400 hover:text-ink transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <span className="p-2 bg-[#111111] rounded-full border border-gray-800">
+                <span className="p-2 bg-panel rounded-full border border-gray-800">
                   {typeIcon(selectedNotification.type)}
                 </span>
-                <h3 className="text-lg font-semibold text-white pr-6">
+                <h3 className="text-lg font-semibold text-ink pr-6">
                   {selectedNotification.title}
                 </h3>
               </div>
@@ -156,7 +156,7 @@ const NotificationsDropdown = () => {
                 <span>{new Date(selectedNotification.createdAt).toLocaleString()}</span>
                 <button 
                   onClick={() => setSelectedNotification(null)}
-                  className="px-4 py-2 bg-[#111111] hover:bg-[#1a1a1a] text-white rounded-lg transition-colors border border-gray-800"
+                  className="px-4 py-2 bg-panel hover:bg-card text-ink rounded-lg transition-colors border border-gray-800"
                 >
                   Close
                 </button>

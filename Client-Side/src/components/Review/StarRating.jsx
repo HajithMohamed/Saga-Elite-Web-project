@@ -44,12 +44,12 @@ const StarRating = ({
         className={`relative ${starClass} ${isInteractive ? "cursor-pointer" : "cursor-default"}`}
         disabled={!isInteractive}
       >
-        <Star className={`${starClass} text-white/30`} />
+        <Star className={`${starClass} text-ink/30`} />
         <span
           className="absolute left-0 top-0 overflow-hidden"
           style={{ width: `${fillPercent}%` }}
         >
-          <Star className={`${starClass} text-[#D4AF37]`} fill="currentColor" />
+          <Star className={`${starClass} text-gold-ink2`} fill="currentColor" />
         </span>
       </button>
     );
@@ -61,7 +61,7 @@ const StarRating = ({
         {Array.from({ length: 5 }).map((_, index) => renderStar(index))}
       </div>
       {showValue && (
-        <span className="text-xs font-semibold text-white/70">
+        <span className="text-xs font-semibold text-ink/70">
           {Number(displayValue || 0).toFixed(1)}
         </span>
       )}

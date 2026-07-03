@@ -28,10 +28,10 @@ const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = f
 
   if (logsLoading) {
     return (
-      <div className="mt-6 overflow-x-auto rounded-[20px] border border-white/10">
+      <div className="mt-6 overflow-x-auto rounded-[20px] border border-ink/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+            <tr className="border-b border-line bg-panel text-[9px] uppercase tracking-[0.25em] text-muted se-label">
               <th className="px-4 py-2 text-left">Date</th>
               <th className="px-4 py-2 text-left">Admin Email</th>
               <th className="px-4 py-2 text-left">Action</th>
@@ -68,7 +68,7 @@ const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = f
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Filter by email, action, or route…"
-            className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+            className="w-full rounded-2xl border border-ink/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
           />
         </div>
       )}
@@ -77,10 +77,10 @@ const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = f
         <p className="text-sm text-gray-500">No logs match your search.</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-[20px] border border-white/10">
+      <div className="overflow-x-auto rounded-[20px] border border-ink/10">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+            <tr className="border-b border-line bg-panel text-[9px] uppercase tracking-[0.25em] text-muted se-label">
               <th className="px-4 py-2 text-left">Date</th>
               <th className="px-4 py-2 text-left">Admin Email</th>
               <th className="px-4 py-2 text-left">Action</th>
@@ -88,7 +88,7 @@ const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = f
             </tr>
           </thead>
           <motion.tbody
-            className="bg-[#0b0b0b]"
+            className="bg-page"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -97,18 +97,18 @@ const ActivityLogTable = ({ logs: logsProp, loading: loadingProp, hideSearch = f
               <motion.tr
                 key={log._id}
                 variants={itemVariants}
-                className="border-t border-[#4d4635]/40 transition-colors hover:bg-[#131313]"
+                className="border-t border-line/40 transition-colors hover:bg-panel"
               >
-                <td className="whitespace-nowrap px-4 py-3 text-[#99907c] se-mono text-[10px]">
+                <td className="whitespace-nowrap px-4 py-3 text-muted se-mono text-[10px]">
                   {new Date(log.createdAt).toLocaleString("en-GB")}
                 </td>
-                <td className="px-4 py-3 font-medium text-[#e5e2e1] se-body text-sm">
+                <td className="px-4 py-3 font-medium text-ink-2 se-body text-sm">
                   {log.adminId?.email || "Unknown Admin"}
                 </td>
-                <td className="px-4 py-3 text-[#d0c5af] se-body text-sm">{log.action}</td>
+                <td className="px-4 py-3 text-cream se-body text-sm">{log.action}</td>
                 <td className="px-4 py-3">
                   <MethodBadge method={log.method} />
-                  <span className="ml-2 text-xs se-mono text-[#99907c]">{log.route}</span>
+                  <span className="ml-2 text-xs se-mono text-muted">{log.route}</span>
                 </td>
               </motion.tr>
             ))}

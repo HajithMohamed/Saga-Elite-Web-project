@@ -203,8 +203,8 @@ const CategoriesList = () => {
               style={{ paddingLeft: `${8 + depth * 16}px` }}
               className={`group flex cursor-pointer items-center gap-1.5 rounded-lg py-1.5 pr-2 text-sm transition ${
                 selected
-                  ? "border border-[#D4AF37]/45 bg-[#D4AF37]/[0.12]"
-                  : "border border-transparent hover:bg-white/[0.03]"
+                  ? "border border-gold-ink2/45 bg-gold-deep/[0.12]"
+                  : "border border-transparent hover:bg-ink/[0.03]"
               }`}
             >
               {hasKids ? (
@@ -231,13 +231,13 @@ const CategoriesList = () => {
                 opened ? (
                   <FolderOpen
                     className={`h-4 w-4 shrink-0 ${
-                      depth === 0 ? "text-[#D4AF37]" : "text-gray-500"
+                      depth === 0 ? "text-gold-ink2" : "text-gray-500"
                     }`}
                   />
                 ) : (
                   <Folder
                     className={`h-4 w-4 shrink-0 ${
-                      depth === 0 ? "text-[#D4AF37]" : "text-gray-500"
+                      depth === 0 ? "text-gold-ink2" : "text-gray-500"
                     }`}
                   />
                 )
@@ -248,9 +248,9 @@ const CategoriesList = () => {
               <span
                 className={`min-w-0 flex-1 truncate ${
                   selected
-                    ? "text-[#f2ca50]"
+                    ? "text-gold-ink"
                     : depth === 0
-                      ? "font-medium text-white"
+                      ? "font-medium text-ink"
                       : "text-gray-300"
                 }`}
               >
@@ -258,15 +258,15 @@ const CategoriesList = () => {
               </span>
 
               {depth === 0 ? (
-                <span className="hidden rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500 sm:inline">
+                <span className="hidden rounded-sm border border-ink/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500 sm:inline">
                   Main
                 </span>
               ) : null}
               {c.isFeatured ? (
-                <Star className="h-3.5 w-3.5 text-[#D4AF37]" aria-label="Featured" />
+                <Star className="h-3.5 w-3.5 text-gold-ink2" aria-label="Featured" />
               ) : null}
               {c.isActive === false ? (
-                <span className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500">
+                <span className="rounded-sm border border-ink/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-gray-500">
                   Off
                 </span>
               ) : null}
@@ -284,7 +284,7 @@ const CategoriesList = () => {
                 }}
                 aria-label={`Add subcategory under ${c.name}`}
                 title={`Add subcategory under ${c.name}`}
-                className="grid h-5 w-5 place-items-center rounded text-gray-600 opacity-0 transition hover:text-[#D4AF37] group-hover:opacity-100"
+                className="grid h-5 w-5 place-items-center rounded text-gray-600 opacity-0 transition hover:text-gold-ink2 group-hover:opacity-100"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -314,11 +314,11 @@ const CategoriesList = () => {
       >
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+            <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
           </div>
         ) : categories.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-[#0d0d0d] px-6 py-16 text-center">
-            <FolderTree className="mx-auto mb-3 h-8 w-8 text-[#4d4635]" />
+          <div className="rounded-2xl border border-dashed border-ink/10 bg-page px-6 py-16 text-center">
+            <FolderTree className="mx-auto mb-3 h-8 w-8 text-line" />
             <p className="text-sm text-gray-400">No categories yet.</p>
             <p className="mt-1 text-xs text-gray-600">
               Create your first main category (e.g. Gents) to organize the catalog.
@@ -334,14 +334,14 @@ const CategoriesList = () => {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[340px,1fr]">
             {/* Tree */}
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0d]">
-              <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5">
+            <div className="overflow-hidden rounded-2xl border border-ink/10 bg-page">
+              <div className="flex items-center gap-2 border-b border-ink/10 px-3 py-2.5">
                 <Search className="h-4 w-4 text-gray-500" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search categories…"
-                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                  className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-gray-600"
                 />
               </div>
               <div className="max-h-[72vh] overflow-y-auto p-2">
@@ -353,7 +353,7 @@ const CategoriesList = () => {
                   renderNodes("root", 0)
                 )}
               </div>
-              <div className="border-t border-white/10 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
+              <div className="border-t border-ink/10 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
                 Hover a category and click{" "}
                 <Plus className="inline h-3 w-3 -translate-y-px text-gray-400" /> to
                 nest a subcategory beneath it.
@@ -361,7 +361,7 @@ const CategoriesList = () => {
             </div>
 
             {/* Editor / detail */}
-            <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-5 sm:p-6">
+            <div className="rounded-2xl border border-ink/10 bg-page p-5 sm:p-6">
               {creating ? (
                 <CategoryEditorPanel
                   key={`new:${createParentId}`}
@@ -384,7 +384,7 @@ const CategoriesList = () => {
                 />
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
-                  <FolderTree className="mb-3 h-9 w-9 text-[#4d4635]" />
+                  <FolderTree className="mb-3 h-9 w-9 text-line" />
                   <p className="text-sm text-gray-400">
                     Select a category from the tree to edit it.
                   </p>

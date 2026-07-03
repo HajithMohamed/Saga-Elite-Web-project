@@ -131,7 +131,7 @@ const quickLinks = [
 ];
 
 const Card = ({ children, className = "" }) => (
-  <div className={`rounded-2xl border border-white/10 bg-[#101010] p-6 ${className}`}>
+  <div className={`rounded-2xl border border-ink/10 bg-panel p-6 ${className}`}>
     {children}
   </div>
 );
@@ -139,30 +139,30 @@ const Card = ({ children, className = "" }) => (
 const SectionTitle = ({ eyebrow, title, action }) => (
   <div className="mb-4 flex items-start justify-between gap-4">
     <div>
-      <p className="text-xs font-medium text-[#D4AF37]">{eyebrow}</p>
-      <h2 className="mt-1 text-xl font-semibold text-white">{title}</h2>
+      <p className="text-xs font-medium text-gold-ink2">{eyebrow}</p>
+      <h2 className="mt-1 text-xl font-semibold text-ink">{title}</h2>
     </div>
     {action}
   </div>
 );
 
-const KpiTile = ({ label, value, formatter, hint, icon, tone = "text-[#D4AF37]" }) => {
+const KpiTile = ({ label, value, formatter, hint, icon, tone = "text-gold-ink2" }) => {
   const Icon = icon;
 
   return (
     <motion.div
       variants={itemVariants}
-      className="rounded-2xl border border-white/10 bg-[#101010] p-6 flex flex-col justify-center"
+      className="rounded-2xl border border-ink/10 bg-panel p-6 flex flex-col justify-center"
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <div className="rounded-md bg-white/[0.04] p-1.5">
+          <div className="rounded-md bg-ink/[0.04] p-1.5">
             <Icon className={`h-4 w-4 ${tone}`} />
           </div>
           <p className="text-sm font-medium text-gray-400">{label}</p>
         </div>
         <div>
-          <p className="truncate text-3xl font-semibold text-white">
+          <p className="truncate text-3xl font-semibold text-ink">
             {typeof value === "number" && formatter ? (
               <AnimatedNumber value={value} formatter={formatter} />
             ) : (
@@ -177,14 +177,14 @@ const KpiTile = ({ label, value, formatter, hint, icon, tone = "text-[#D4AF37]" 
 };
 
 const OrderStatusPill = ({ label, value }) => (
-  <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2">
+  <div className="rounded-xl border border-ink/10 bg-black/30 px-3 py-2">
     <p className="text-[11px] text-gray-500">{label}</p>
-    <p className="mt-1 text-lg font-semibold text-white">{formatNumber(value)}</p>
+    <p className="mt-1 text-lg font-semibold text-ink">{formatNumber(value)}</p>
   </div>
 );
 
 const EmptyBlock = ({ children }) => (
-  <div className="rounded-xl border border-white/10 bg-black/25 px-6 py-6 text-sm text-gray-400">
+  <div className="rounded-xl border border-ink/10 bg-black/25 px-6 py-6 text-sm text-gray-400">
     {children}
   </div>
 );
@@ -284,7 +284,7 @@ const Dashboard = () => {
         formatter: (value) => currencyFormatter.format(Math.round(value)),
         hint: `${formatCurrency(overview.completedRevenue)} delivered`,
         icon: DollarSign,
-        tone: "text-[#D4AF37]",
+        tone: "text-gold-ink2",
       },
       {
         label: "Orders",
@@ -359,7 +359,7 @@ const Dashboard = () => {
               action={
                 <Link
                   to="/admin/order"
-                  className="inline-flex items-center gap-2 justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
+                  className="inline-flex items-center gap-2 justify-center rounded-md border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/20 hover:text-ink"
                 >
                   Open orders
                   <ArrowRight className="h-4 w-4" />
@@ -374,12 +374,12 @@ const Dashboard = () => {
                   <Link
                     key={order._id}
                     to="/admin/order"
-                    className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 px-4 py-3 transition hover:border-[#D4AF37]/30 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 rounded-xl border border-ink/10 bg-black/25 px-4 py-3 transition hover:border-gold-ink2/30 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <Activity className="h-4 w-4 text-emerald-300" />
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-sm font-semibold text-ink">
                           {order.customerEmail}
                         </p>
                       </div>
@@ -390,12 +390,12 @@ const Dashboard = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full border px-3 py-1 text-xs ${
-                          statusToneMap[order.status] || "border-white/10 bg-white/5 text-gray-300"
+                          statusToneMap[order.status] || "border-ink/10 bg-ink/5 text-gray-300"
                         }`}
                       >
                         {formatLabel(order.status)}
                       </span>
-                      <span className="text-sm font-semibold text-white">
+                      <span className="text-sm font-semibold text-ink">
                         {formatCurrency(order.totalAmount)}
                       </span>
                     </div>
@@ -411,30 +411,30 @@ const Dashboard = () => {
                 eyebrow="Drop Status"
                 title={activeDrop ? activeDrop.name : "No active drop"}
                 action={
-                  <Link to="/admin/drop" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
+                  <Link to="/admin/drop" className="inline-flex items-center justify-center rounded-md border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/20 hover:text-ink">
                     Manage
                   </Link>
                 }
               />
               {activeDrop ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-4">
-                    <div className="flex items-center gap-2 text-[#D4AF37]">
+                  <div className="rounded-xl border border-gold-ink2/20 bg-gold-deep/10 p-4">
+                    <div className="flex items-center gap-2 text-gold-ink2">
                       <Timer className="h-4 w-4" />
                       <p className="text-sm font-medium">{dropCd?.phase || "Live now"}</p>
                     </div>
-                    <p className="mt-2 font-mono text-3xl font-semibold text-white">
+                    <p className="mt-2 font-mono text-3xl font-semibold text-ink">
                       {formatDuration(dropCd?.remaining)}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                    <div className="rounded-xl border border-ink/10 bg-black/25 p-3">
                       <p className="text-xs text-gray-500">Release</p>
                       <p className="mt-1 truncate text-gray-200">
                         {formatDate(activeDrop.releaseDate)}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+                    <div className="rounded-xl border border-ink/10 bg-black/25 p-3">
                       <p className="text-xs text-gray-500">Ends</p>
                       <p className="mt-1 truncate text-gray-200">
                         {activeDrop.endDate ? formatDate(activeDrop.endDate) : "Open"}
@@ -454,7 +454,7 @@ const Dashboard = () => {
                 action={
                   <Link
                     to="/admin/payments/pending"
-                    className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white"
+                    className="inline-flex items-center justify-center rounded-md border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/20 hover:text-ink"
                   >
                     Verify
                   </Link>
@@ -480,9 +480,9 @@ const Dashboard = () => {
               ) : (
                 salesTrend.map((entry, index) => (
                   <div key={entry.monthKey} className="flex flex-col items-center gap-3">
-                    <div className="flex h-44 w-full items-end rounded-xl border border-white/10 bg-black/25 p-2">
+                    <div className="flex h-44 w-full items-end rounded-xl border border-ink/10 bg-black/25 p-2">
                       <motion.div
-                        className="w-full rounded-lg bg-[#D4AF37]"
+                        className="w-full rounded-lg bg-gold-deep"
                         style={{
                           height: `${Math.max(10, Math.round((entry.revenue / maxRevenue) * 100))}%`,
                         }}
@@ -493,7 +493,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-gray-500">{entry.label}</p>
-                      <p className="mt-1 text-sm font-semibold text-white">
+                      <p className="mt-1 text-sm font-semibold text-ink">
                         {formatCurrency(entry.revenue)}
                       </p>
                       <p className="text-xs text-gray-500">{formatNumber(entry.orders)} orders</p>
@@ -523,24 +523,24 @@ const Dashboard = () => {
                 latestOrders.map((order) => (
                   <div
                     key={order._id}
-                    className="rounded-xl border border-white/10 bg-black/25 px-4 py-3"
+                    className="rounded-xl border border-ink/10 bg-black/25 px-4 py-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">{order.customerEmail}</p>
+                        <p className="truncate text-sm font-semibold text-ink">{order.customerEmail}</p>
                         <p className="mt-1 text-xs text-gray-500">{formatDate(order.createdAt)}</p>
                       </div>
-                      <p className="text-sm font-semibold text-white">{formatCurrency(order.totalAmount)}</p>
+                      <p className="text-sm font-semibold text-ink">{formatCurrency(order.totalAmount)}</p>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full border px-3 py-1 text-xs ${
-                          statusToneMap[order.status] || "border-white/10 bg-white/5 text-gray-300"
+                          statusToneMap[order.status] || "border-ink/10 bg-ink/5 text-gray-300"
                         }`}
                       >
                         {formatLabel(order.status)}
                       </span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-gray-300">
+                      <span className="rounded-full border border-ink/10 bg-ink/[0.04] px-3 py-1 text-xs text-gray-300">
                         {formatLabel(order.paymentMethod)}
                       </span>
                     </div>
@@ -556,18 +556,18 @@ const Dashboard = () => {
             eyebrow="Product Health"
             title="Best seller, stock risk, and top drop"
             action={
-              <Link to="/admin/product" className="inline-flex items-center justify-center rounded-md border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#D4AF37] transition hover:bg-[#D4AF37]/20 hover:text-white">
+              <Link to="/admin/product" className="inline-flex items-center justify-center rounded-md border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/20 hover:text-ink">
                 Manage catalog
               </Link>
             }
           />
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-ink/10 bg-black/25 p-4">
               <div className="mb-3 flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4 text-[#D4AF37]" />
+                <ShoppingBag className="h-4 w-4 text-gold-ink2" />
                 <p className="text-sm font-medium text-gray-300">Best Seller</p>
               </div>
-              <p className="line-clamp-1 text-lg font-semibold text-white">
+              <p className="line-clamp-1 text-lg font-semibold text-ink">
                 {bestSeller?.name || "No sales yet"}
               </p>
               <p className="mt-2 text-sm text-gray-500">
@@ -577,12 +577,12 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-ink/10 bg-black/25 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-300" />
                 <p className="text-sm font-medium text-gray-300">Low Stock</p>
               </div>
-              <p className="line-clamp-1 text-lg font-semibold text-white">
+              <p className="line-clamp-1 text-lg font-semibold text-ink">
                 {lowStockLead?.name || "No low-stock products"}
               </p>
               <p className="mt-2 text-sm text-gray-500">
@@ -592,12 +592,12 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-ink/10 bg-black/25 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Layers3 className="h-4 w-4 text-pink-300" />
                 <p className="text-sm font-medium text-gray-300">Top Drop</p>
               </div>
-              <p className="line-clamp-1 text-lg font-semibold text-white">
+              <p className="line-clamp-1 text-lg font-semibold text-ink">
                 {topDrop?.name || "No drop data yet"}
               </p>
               <p className="mt-2 text-sm text-gray-500">
@@ -625,15 +625,15 @@ const Dashboard = () => {
               <motion.div key={item.title} variants={itemVariants}>
                 <Link
                   to={item.to}
-                  className="group block rounded-2xl border border-white/10 bg-[#101010] p-4 transition hover:border-[#D4AF37]/30"
+                  className="group block rounded-2xl border border-ink/10 bg-panel p-4 transition hover:border-gold-ink2/30"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="rounded-xl bg-white/[0.04] p-3">
-                      <Icon className="h-5 w-5 text-[#D4AF37]" />
+                    <div className="rounded-xl bg-ink/[0.04] p-3">
+                      <Icon className="h-5 w-5 text-gold-ink2" />
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:text-white" />
+                    <ArrowRight className="h-5 w-5 text-gray-500 transition group-hover:text-ink" />
                   </div>
-                  <h3 className="mt-4 text-base font-semibold text-white">{item.title}</h3>
+                  <h3 className="mt-4 text-base font-semibold text-ink">{item.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-gray-500">{item.description}</p>
                 </Link>
               </motion.div>

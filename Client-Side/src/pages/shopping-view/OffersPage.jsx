@@ -50,7 +50,7 @@ const CountdownDisplay = ({ target, label }) => {
   return (
     <div>
       {label && (
-        <p className="se-label text-[10px] uppercase tracking-widest text-[#F2CA50] mb-2">
+        <p className="se-label text-[10px] uppercase tracking-widest text-gold-ink mb-2">
           {label}
         </p>
       )}
@@ -58,12 +58,12 @@ const CountdownDisplay = ({ target, label }) => {
         {units.map((u) => (
           <div
             key={u.l}
-            className="w-[48px] h-[48px] bg-[#131313] border border-white/10 rounded-[12px] flex flex-col items-center justify-center"
+            className="w-[48px] h-[48px] bg-panel border border-ink/10 rounded-[12px] flex flex-col items-center justify-center"
           >
-            <span className="font-sans font-bold text-[16px] text-[#fafafa] leading-none">
+            <span className="font-sans font-bold text-[16px] text-ink leading-none">
               {String(u.v).padStart(2, "0")}
             </span>
-            <span className="text-[7px] uppercase tracking-wider text-[#99907c] mt-0.5">
+            <span className="text-[7px] uppercase tracking-wider text-muted mt-0.5">
               {u.l}
             </span>
           </div>
@@ -117,25 +117,25 @@ const OffersPage = () => {
   const heroImage = offers[0]?.image || "/LOGO.png"; // Use first offer image or fallback
 
   return (
-    <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
+    <div className="bg-page text-ink-2 min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
 
       {/* ── HERO ── */}
       <section className="relative h-[240px] md:h-[320px] lg:h-[420px] overflow-hidden flex items-end justify-center w-full">
         <div className="absolute inset-0">
           <img src={heroImage} alt="Special Offers" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-[#0e0e0e]/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent" />
+          <div className="absolute inset-0 bg-page/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-page via-page/50 to-transparent" />
         </div>
         <div className="relative z-10 w-full max-w-7xl px-4 md:px-8 pb-10">
-          <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
-            <Link to="/" className="hover:text-[#F2CA50] transition-colors">Home</Link>
+          <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-4">
+            <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-[#fafafa] font-bold">Special Offers</span>
+            <span className="text-ink font-bold">Special Offers</span>
           </nav>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-4xl md:text-5xl lg:text-[56px] mb-3">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-ink text-4xl md:text-5xl lg:text-[56px] mb-3">
             Special Offers
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-[#99907c] text-base md:text-lg max-w-2xl mb-6">
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-muted text-base md:text-lg max-w-2xl mb-6">
             Save more with our latest discounts and limited-time promotions. Treat yourself to luxury for less.
           </motion.p>
         </div>
@@ -150,13 +150,13 @@ const OffersPage = () => {
             { icon: Timer, label: "Limited Time", value: limitedTimeOffers },
           ].map((card, i) => (
             <Reveal key={i} delay={i * 0.1}>
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-[20px] p-5 md:p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#F2CA50]/10 flex items-center justify-center shrink-0">
-                  <card.icon className="w-6 h-6 text-[#F2CA50]" strokeWidth={1.5} />
+              <div className="bg-card border border-ink/5 rounded-[20px] p-5 md:p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
+                  <card.icon className="w-6 h-6 text-gold-ink" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <div className="font-serif text-[28px] md:text-[32px] text-[#F2CA50] leading-none">{card.value}</div>
-                  <div className="se-label text-[10px] md:text-[11px] text-[#99907c] uppercase tracking-wider mt-1">{card.label}</div>
+                  <div className="font-serif text-[28px] md:text-[32px] text-gold-ink leading-none">{card.value}</div>
+                  <div className="se-label text-[10px] md:text-[11px] text-muted uppercase tracking-wider mt-1">{card.label}</div>
                 </div>
               </div>
             </Reveal>
@@ -167,8 +167,8 @@ const OffersPage = () => {
       {/* ── LOADING / ERROR ── */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-32">
-          <motion.div className="w-8 h-8 border-[3px] border-[#4d4635] border-t-[#f2ca50] rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, ease: "linear", repeat: Infinity }} />
-          <span className="se-label mt-6 text-[#99907c] tracking-widest text-[10px] uppercase">Loading Offers</span>
+          <motion.div className="w-8 h-8 border-[3px] border-line border-t-gold-ink rounded-full" animate={{ rotate: 360 }} transition={{ duration: 1, ease: "linear", repeat: Infinity }} />
+          <span className="se-label mt-6 text-muted tracking-widest text-[10px] uppercase">Loading Offers</span>
         </div>
       )}
 
@@ -182,13 +182,13 @@ const OffersPage = () => {
       {!isLoading && !error && offers.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24">
           <Reveal className="mb-10">
-            <h2 className="se-serif text-[32px] text-[#fafafa] mb-2">Current Promotions</h2>
-            <p className="se-body text-[#99907c]">Explore active discounts and shop the collections.</p>
+            <h2 className="se-serif text-[32px] text-ink mb-2">Current Promotions</h2>
+            <p className="se-body text-muted">Explore active discounts and shop the collections.</p>
           </Reveal>
           <div className="space-y-12">
             {offers.map((offer, i) => (
               <Reveal key={offer._id || i}>
-                <div className="bg-[#1A1A1A] rounded-[24px] border border-white/5 overflow-hidden flex flex-col md:flex-row group">
+                <div className="bg-card rounded-[24px] border border-ink/5 overflow-hidden flex flex-col md:flex-row group">
                   {/* Banner Image */}
                   <div className="w-full md:w-1/2 lg:w-3/5 relative overflow-hidden">
                      {/* Aspect Ratio 16:5 approximation on desktop, but letting flex handle it nicely */}
@@ -201,22 +201,22 @@ const OffersPage = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
                     </div>
-                     <div className="absolute top-4 left-4 px-4 py-2 bg-[#F2CA50] text-[#0e0e0e] font-sans font-bold text-[12px] uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-lg">
+                     <div className="absolute top-4 left-4 px-4 py-2 bg-gold text-ongold font-sans font-bold text-[12px] uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-lg">
                         <Percent className="w-4 h-4" /> {offer.discountPercent}% OFF
                       </div>
                   </div>
                   
                   {/* Info */}
-                  <div className="w-full md:w-1/2 lg:w-2/5 p-6 md:p-8 flex flex-col justify-center bg-[#131313] relative z-10 border-l border-white/5">
-                    <h3 className="se-serif text-[28px] md:text-[32px] text-[#fafafa] mb-3">{offer.name}</h3>
-                    <p className="se-body text-[15px] text-[#99907c] leading-relaxed mb-6 line-clamp-3">
+                  <div className="w-full md:w-1/2 lg:w-2/5 p-6 md:p-8 flex flex-col justify-center bg-panel relative z-10 border-l border-ink/5">
+                    <h3 className="se-serif text-[28px] md:text-[32px] text-ink mb-3">{offer.name}</h3>
+                    <p className="se-body text-[15px] text-muted leading-relaxed mb-6 line-clamp-3">
                       {offer.description || "Take advantage of this special promotion on selected premium items."}
                     </p>
                     
                     {offer.applicableCategories && offer.applicableCategories.length > 0 && (
                         <div className="mb-6 flex flex-wrap gap-2">
                            {offer.applicableCategories.map((cat, idx) => (
-                               <span key={idx} className="px-3 py-1 bg-white/5 rounded-full text-[10px] uppercase tracking-widest text-[#d0c5af]">
+                               <span key={idx} className="px-3 py-1 bg-ink/5 rounded-full text-[10px] uppercase tracking-widest text-cream">
                                   {typeof cat === 'object' ? cat.name : cat}
                                </span>
                            ))}
@@ -231,7 +231,7 @@ const OffersPage = () => {
                     
                     <div className="mt-auto">
                       <Link to={`/shopping/product-list?filter=offers&offerId=${offer._id}`}>
-                        <button className="h-[52px] w-full px-8 bg-transparent border border-[#F2CA50] text-[#F2CA50] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors flex items-center justify-center gap-2">
+                        <button className="h-[52px] w-full px-8 bg-transparent border border-gold-ink text-gold-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:bg-gold hover:text-ongold transition-colors flex items-center justify-center gap-2">
                           Shop Offer <ArrowRight className="w-4 h-4" />
                         </button>
                       </Link>
@@ -247,17 +247,17 @@ const OffersPage = () => {
       {/* ── EMPTY STATE ── */}
       {!isLoading && !error && offers.length === 0 && (
         <section className="max-w-2xl mx-auto px-4 py-32 text-center">
-          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-[#1A1A1A] border border-white/5 flex items-center justify-center">
-            <Tag className="w-10 h-10 text-[#F2CA50]" />
+          <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-card border border-ink/5 flex items-center justify-center">
+            <Tag className="w-10 h-10 text-gold-ink" />
           </div>
-          <h3 className="se-serif text-[28px] text-[#fafafa] mb-3">No Active Offers</h3>
-          <p className="se-body text-[#99907c] mb-8">We don't have any special promotions running right now. Check back later or browse our collection.</p>
+          <h3 className="se-serif text-[28px] text-ink mb-3">No Active Offers</h3>
+          <p className="se-body text-muted mb-8">We don't have any special promotions running right now. Check back later or browse our collection.</p>
           <div className="flex justify-center gap-4">
             <Link to="/shopping/product-list">
-              <button className="h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px]">Browse Products</button>
+              <button className="h-[56px] px-8 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px]">Browse Products</button>
             </Link>
             <Link to="/">
-              <button className="h-[56px] px-8 border border-white/10 text-[#fafafa] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-[#F2CA50] hover:text-[#F2CA50] transition-colors">Return Home</button>
+              <button className="h-[56px] px-8 border border-ink/10 text-ink rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] hover:border-gold-ink hover:text-gold-ink transition-colors">Return Home</button>
             </Link>
           </div>
         </section>

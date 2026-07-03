@@ -191,7 +191,7 @@ const ContactPageManager = () => {
     return (
       <AdminPage eyebrow="Content" title="Contact & FAQ">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
         </div>
       </AdminPage>
     );
@@ -209,12 +209,12 @@ const ContactPageManager = () => {
         {INFO_KEYS.map((row) => (
           <div
             key={row.key}
-            className="rounded-lg border border-white/10 bg-black/40 p-3"
+            className="rounded-lg border border-ink/10 bg-black/40 p-3"
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-gray-500">
               {row.label}
             </p>
-            <p className="mt-1 text-sm text-white">
+            <p className="mt-1 text-sm text-ink">
               {info[row.key] ? (
                 <span className="break-all">{info[row.key]}</span>
               ) : (
@@ -226,7 +226,7 @@ const ContactPageManager = () => {
       </div>
       <Link
         to="/admin/about-content"
-        className="inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+        className="inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20"
       >
         <ExternalLink className="h-3.5 w-3.5" /> Edit in Brand & About
       </Link>
@@ -240,14 +240,14 @@ const ContactPageManager = () => {
         sub-questions, lists for steps, links for references.
       </p>
       {(values.faq_items || []).length === 0 ? (
-        <p className="rounded-lg border border-dashed border-white/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
+        <p className="rounded-lg border border-dashed border-ink/10 bg-black/30 px-4 py-6 text-center text-xs text-gray-500">
           No FAQs yet. Add one to get started.
         </p>
       ) : null}
       {(values.faq_items || []).map((row, idx) => (
         <div
           key={idx}
-          className="rounded-lg border border-white/10 bg-black/30 p-4"
+          className="rounded-lg border border-ink/10 bg-black/30 p-4"
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-gray-500">
@@ -256,7 +256,7 @@ const ContactPageManager = () => {
             <button
               type="button"
               onClick={() => removeFaq(idx)}
-              className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
+              className="inline-flex items-center gap-1 rounded-md border border-ink/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-400/10"
             >
               <Trash2 className="h-3 w-3" /> Remove
             </button>
@@ -265,7 +265,7 @@ const ContactPageManager = () => {
             value={row.question || ""}
             onChange={(e) => updateFaq(idx, { question: e.target.value })}
             placeholder="Question"
-            className="mb-3 w-full rounded-md border border-white/10 bg-black/50 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+            className="mb-3 w-full rounded-md border border-ink/10 bg-black/50 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
           />
           <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-gray-400">
             Answer
@@ -279,7 +279,7 @@ const ContactPageManager = () => {
       <button
         type="button"
         onClick={addFaq}
-        className="inline-flex items-center gap-2 rounded-md border border-[#D4AF37]/40 bg-[#D4AF37]/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[#D4AF37] transition hover:bg-[#D4AF37]/20"
+        className="inline-flex items-center gap-2 rounded-md border border-gold-ink2/40 bg-gold-deep/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-gold-ink2 transition hover:bg-gold-deep/20"
       >
         <Plus className="h-3.5 w-3.5" /> Add question
       </button>
@@ -288,7 +288,7 @@ const ContactPageManager = () => {
 
   const FormTab = (
     <div className="grid gap-5">
-      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-white">
+      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           checked={!!values.contact_form_settings.enabled}
@@ -298,7 +298,7 @@ const ContactPageManager = () => {
               enabled: e.target.checked,
             })
           }
-          className="h-4 w-4 accent-[#D4AF37]"
+          className="h-4 w-4 accent-gold-deep"
         />
         Enable contact form on the public site
       </label>
@@ -316,7 +316,7 @@ const ContactPageManager = () => {
             })
           }
           placeholder="hello@sagaelite.com"
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+          className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
         />
       </div>
       <div>
@@ -332,7 +332,7 @@ const ContactPageManager = () => {
               autoResponseSubject: e.target.value,
             })
           }
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+          className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
         />
       </div>
       <div>
@@ -348,7 +348,7 @@ const ContactPageManager = () => {
               autoResponseBody: e.target.value,
             })
           }
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+          className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
         />
       </div>
     </div>
@@ -356,7 +356,7 @@ const ContactPageManager = () => {
 
   const WhatsappTab = (
     <div className="grid gap-5">
-      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-white">
+      <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           checked={!!values.whatsapp_cta.enabled}
@@ -366,7 +366,7 @@ const ContactPageManager = () => {
               enabled: e.target.checked,
             })
           }
-          className="h-4 w-4 accent-[#D4AF37]"
+          className="h-4 w-4 accent-gold-deep"
         />
         Enable WhatsApp CTA on the contact page
       </label>
@@ -384,7 +384,7 @@ const ContactPageManager = () => {
             })
           }
           placeholder="Hi! I have a question about Saga Elite."
-          className="w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40"
+          className="w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40"
         />
       </div>
       <div>
@@ -409,8 +409,8 @@ const ContactPageManager = () => {
                 }
                 className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
                   active
-                    ? "bg-[#D4AF37] text-black"
-                    : "border border-white/10 text-gray-300 hover:border-[#D4AF37]/40 hover:text-white"
+                    ? "bg-gold-deep text-black"
+                    : "border border-ink/10 text-gray-300 hover:border-gold-ink2/40 hover:text-ink"
                 }`}
               >
                 {opt.label}
@@ -469,7 +469,7 @@ const ContactPageManager = () => {
           ) : null
         }
       >
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-3">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-ink/10 pb-3">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -481,8 +481,8 @@ const ContactPageManager = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
                   active
-                    ? "bg-[#D4AF37] text-black"
-                    : "border border-white/10 text-gray-300 hover:border-[#D4AF37]/40 hover:text-white"
+                    ? "bg-gold-deep text-black"
+                    : "border border-ink/10 text-gray-300 hover:border-gold-ink2/40 hover:text-ink"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -498,7 +498,7 @@ const ContactPageManager = () => {
           })}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+        <div className="rounded-2xl border border-ink/10 bg-page p-6">
           {tabContent[activeTab]}
         </div>
 

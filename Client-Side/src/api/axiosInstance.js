@@ -28,8 +28,24 @@ axiosInstance.interceptors.request.use(
 /**
  * Response interceptor: handle 401 (token expired/invalid).
  * Extract and store token from response if present.
- * Clear token if 401 received.
+ *
+ * IMPORTANT: only clear the stored token when the 401 means the SESSION
+ * itself is invalid (token missing/expired/rejected by auth-middleware).
+ * Business 401s — "current password is incorrect", "invalid OTP",
+ * "please sign in to use this reward" — must NOT wipe an authenticated
+ * user's token, otherwise one bad form submission silently logs them out
+ * and every following request arrives with no token ("User not
+ * authenticated"). This was the intermittent admin logout.
  */
+const SESSION_INVALID_401 = [
+  'not authenticated',
+  'session',
+  'no longer exists',
+  'invalid or expired',
+  'log in',
+  'login first',
+];
+
 axiosInstance.interceptors.response.use(
   (response) => {
     if (response.data?.token) {
@@ -39,7 +55,11 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
+      const message = String(error.response?.data?.message || '').toLowerCase();
+      const isSessionInvalid = SESSION_INVALID_401.some((s) => message.includes(s));
+      if (isSessionInvalid) {
+        localStorage.removeItem('authToken');
+      }
     }
     return Promise.reject(error);
   }

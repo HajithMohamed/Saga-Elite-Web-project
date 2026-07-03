@@ -40,21 +40,21 @@ const formatCurrency = (value) =>
   Number(value || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 });
 
 const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
-  <div className="border border-[#2a2a2a] bg-[#131313] p-5">
+  <div className="border border-elevated bg-panel p-5">
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <div className="md:col-span-1">
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
           Zone name
         </label>
         <input
           type="text"
           value={zone.name}
           onChange={(e) => onChange({ ...zone, name: e.target.value })}
-          className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+          className="w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
           Delivery fee (LKR)
         </label>
         <input
@@ -64,11 +64,11 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
           onChange={(e) =>
             onChange({ ...zone, deliveryFee: Number(e.target.value) })
           }
-          className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+          className="w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
           Free above (0 = never)
         </label>
         <input
@@ -78,11 +78,11 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
           onChange={(e) =>
             onChange({ ...zone, freeAbove: Number(e.target.value) })
           }
-          className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+          className="w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
           Estimated delivery
         </label>
         <input
@@ -91,11 +91,11 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
           onChange={(e) =>
             onChange({ ...zone, estimatedDays: e.target.value })
           }
-          className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+          className="w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
         />
       </div>
       <div>
-        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
           Display order
         </label>
         <input
@@ -104,11 +104,11 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
           onChange={(e) =>
             onChange({ ...zone, displayOrder: Number(e.target.value) })
           }
-          className="w-full border border-[#2a2a2a] bg-[#0a0a0a] p-2.5 text-sm text-[#FAF7F2] focus:border-[#f2ca50] focus:outline-none"
+          className="w-full border border-elevated bg-page p-2.5 text-sm text-ink focus:border-gold-ink focus:outline-none"
         />
       </div>
       <div className="flex items-end">
-        <label className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[#d0c5af]">
+        <label className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-cream">
           <input
             type="checkbox"
             checked={!!zone.isActive}
@@ -122,7 +122,7 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
     </div>
 
     <div className="mt-4">
-      <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+      <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-muted">
         Applicable provinces
       </label>
       <div className="flex flex-wrap gap-2">
@@ -135,8 +135,8 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
               onClick={() => onToggleProvince(zone, p)}
               className={`px-3 py-1 text-[10px] uppercase tracking-[0.18em] border ${
                 active
-                  ? "border-[#f2ca50] bg-[#f2ca50]/10 text-[#f2ca50]"
-                  : "border-[#4d4635] text-[#99907c] hover:border-[#d0c5af]"
+                  ? "border-gold-ink bg-gold/10 text-gold-ink"
+                  : "border-line text-muted hover:border-cream"
               }`}
             >
               {p}
@@ -147,9 +147,9 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
     </div>
 
     <div className="mt-4 flex items-center justify-between">
-      <p className="text-xs text-[#666]">
+      <p className="text-xs text-muted">
         Customers see:{" "}
-        <span className="text-[#d0c5af]">
+        <span className="text-cream">
           {zone.deliveryFee === 0
             ? "Free delivery"
             : `LKR ${formatCurrency(zone.deliveryFee)}`}
@@ -157,19 +157,19 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
         {zone.freeAbove > 0 ? (
           <>
             <span className="mx-1">·</span>
-            <span className="text-[#d0c5af]">
+            <span className="text-cream">
               free above LKR {formatCurrency(zone.freeAbove)}
             </span>
           </>
         ) : null}
         <span className="mx-1">·</span>
-        <span className="text-[#d0c5af]">{zone.estimatedDays}</span>
+        <span className="text-cream">{zone.estimatedDays}</span>
       </p>
       <button
         type="button"
         onClick={() => onSave(zone)}
         disabled={saving === zone._id}
-        className="inline-flex items-center gap-2 bg-[#f2ca50] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:opacity-60"
+        className="inline-flex items-center gap-2 bg-gold px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-ongold hover:bg-gold-hover disabled:opacity-60"
       >
         {saving === zone._id ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -183,13 +183,13 @@ const ZoneRow = ({ zone, onToggleProvince, onChange, onSave, saving }) => (
 );
 
 const ZoneCard = ({ zone, onEdit }) => (
-  <div className="flex flex-col border border-[#2a2a2a] bg-[#131313] p-5 transition-colors hover:border-[#4d4635]">
+  <div className="flex flex-col border border-elevated bg-panel p-5 transition-colors hover:border-line">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <h3 className="text-sm font-semibold tracking-wide text-[#FAF7F2]">
+        <h3 className="text-sm font-semibold tracking-wide text-ink">
           {zone.name}
         </h3>
-        <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-[#99907c]">
+        <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-muted">
           {zone.estimatedDays}
         </p>
       </div>
@@ -197,7 +197,7 @@ const ZoneCard = ({ zone, onEdit }) => (
         className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.2em] ${
           zone.isActive
             ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
-            : "border-[#4d4635] bg-[#0a0a0a] text-[#99907c]"
+            : "border-line bg-page text-muted"
         }`}
       >
         {zone.isActive ? "Active" : "Inactive"}
@@ -205,21 +205,21 @@ const ZoneCard = ({ zone, onEdit }) => (
     </div>
 
     <div className="mt-4 grid grid-cols-2 gap-3">
-      <div className="border border-[#2a2a2a] bg-[#0a0a0a] p-3">
-        <p className="text-[9px] uppercase tracking-[0.22em] text-[#99907c]">
+      <div className="border border-elevated bg-page p-3">
+        <p className="text-[9px] uppercase tracking-[0.22em] text-muted">
           Delivery fee
         </p>
-        <p className="mt-1 text-sm font-semibold text-[#f2ca50]">
+        <p className="mt-1 text-sm font-semibold text-gold-ink">
           {Number(zone.deliveryFee) === 0
             ? "Free delivery"
             : `LKR ${formatCurrency(zone.deliveryFee)}`}
         </p>
       </div>
-      <div className="border border-[#2a2a2a] bg-[#0a0a0a] p-3">
-        <p className="text-[9px] uppercase tracking-[0.22em] text-[#99907c]">
+      <div className="border border-elevated bg-page p-3">
+        <p className="text-[9px] uppercase tracking-[0.22em] text-muted">
           Free above
         </p>
-        <p className="mt-1 text-sm font-semibold text-[#d0c5af]">
+        <p className="mt-1 text-sm font-semibold text-cream">
           {Number(zone.freeAbove) > 0
             ? `LKR ${formatCurrency(zone.freeAbove)}`
             : "—"}
@@ -228,19 +228,19 @@ const ZoneCard = ({ zone, onEdit }) => (
     </div>
 
     <div className="mt-4 flex-1">
-      <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.22em] text-[#99907c]">
+      <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.22em] text-muted">
         <MapPin className="h-3 w-3" /> Provinces
       </p>
       <div className="flex flex-wrap gap-1.5">
         {(zone.provinces || []).length === 0 ? (
-          <span className="text-[10px] italic text-[#666]">
+          <span className="text-[10px] italic text-muted">
             No provinces assigned
           </span>
         ) : (
           (zone.provinces || []).map((p) => (
             <span
               key={p}
-              className="border border-[#4d4635] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-[#d0c5af]"
+              className="border border-line px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-cream"
             >
               {p}
             </span>
@@ -249,11 +249,11 @@ const ZoneCard = ({ zone, onEdit }) => (
       </div>
     </div>
 
-    <div className="mt-4 flex justify-end border-t border-[#2a2a2a] pt-3">
+    <div className="mt-4 flex justify-end border-t border-elevated pt-3">
       <button
         type="button"
         onClick={() => onEdit(zone)}
-        className="inline-flex items-center gap-2 border border-[#4d4635] px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-[#d0c5af] transition-colors hover:border-[#f2ca50] hover:text-[#f2ca50]"
+        className="inline-flex items-center gap-2 border border-line px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-cream transition-colors hover:border-gold-ink hover:text-gold-ink"
       >
         <Pencil className="h-3 w-3" /> Edit zone
       </button>
@@ -387,22 +387,22 @@ const ShippingPage = () => {
       eyebrow="Operations"
       title="Shipping Zones"
       description="Delivery fees, regions, and free-shipping thresholds. Customers see the matching zone at checkout."
-      actions={<Truck className="h-5 w-5 text-[#f2ca50]" />}
+      actions={<Truck className="h-5 w-5 text-gold-ink" />}
     >
       <div className="mx-auto max-w-6xl space-y-6 pb-20">
-        <p className="rounded-md border border-[#4d4635]/40 bg-[#131313] p-3 text-xs text-[#99907c]">
+        <p className="rounded-md border border-line/40 bg-panel p-3 text-xs text-muted">
           Zones are deactivated, never deleted, so historical orders keep their
           fee context. Use the toggle to take a zone offline.
         </p>
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+            <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
           </div>
         ) : (
           <>
             {zones.length === 0 ? (
-              <div className="border border-dashed border-[#2a2a2a] bg-[#0a0a0a] p-12 text-center text-xs uppercase tracking-widest text-[#888]">
+              <div className="border border-dashed border-elevated bg-page p-12 text-center text-xs uppercase tracking-widest text-muted">
                 No shipping zones configured yet. Add your first below.
               </div>
             ) : (
@@ -411,16 +411,16 @@ const ShippingPage = () => {
                   editingId === zone._id && draftZone ? (
                     <div
                       key={zone._id}
-                      className="md:col-span-2 border border-[#f2ca50]/40 bg-[#0f0f0f]"
+                      className="md:col-span-2 border border-gold-ink/40 bg-panel"
                     >
-                      <div className="flex items-center justify-between border-b border-[#2a2a2a] px-5 py-3">
-                        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[#f2ca50]">
+                      <div className="flex items-center justify-between border-b border-elevated px-5 py-3">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-gold-ink">
                           Editing — {zone.name}
                         </p>
                         <button
                           type="button"
                           onClick={cancelEditZone}
-                          className="inline-flex items-center gap-1.5 border border-[#4d4635] px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-[#99907c] transition-colors hover:border-[#d0c5af] hover:text-[#d0c5af]"
+                          className="inline-flex items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-cream hover:text-cream"
                         >
                           <X className="h-3 w-3" /> Cancel
                         </button>
@@ -443,10 +443,10 @@ const ShippingPage = () => {
             {showCreate ? (
               <form
                 onSubmit={handleCreate}
-                className="border border-[#f2ca50]/30 bg-[#131313] p-5"
+                className="border border-gold-ink/30 bg-panel p-5"
               >
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.26em] text-[#f2ca50]">
+                  <h3 className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.26em] text-gold-ink">
                     <Plus className="h-4 w-4" /> Add new zone
                   </h3>
                   <button
@@ -455,7 +455,7 @@ const ShippingPage = () => {
                       setShowCreate(false);
                       setNewZone(initialZone);
                     }}
-                    className="inline-flex items-center gap-1.5 border border-[#4d4635] px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-[#99907c] transition-colors hover:border-[#d0c5af] hover:text-[#d0c5af]"
+                    className="inline-flex items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:border-cream hover:text-cream"
                   >
                     <X className="h-3 w-3" /> Cancel
                   </button>
@@ -473,7 +473,7 @@ const ShippingPage = () => {
                   <button
                     type="submit"
                     disabled={creating}
-                    className="inline-flex items-center gap-2 bg-[#f2ca50] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#0a0a0a] hover:bg-[#ffe088] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center gap-2 bg-gold px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-ongold hover:bg-gold-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {creating ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -488,17 +488,17 @@ const ShippingPage = () => {
               <button
                 type="button"
                 onClick={() => setShowCreate(true)}
-                className="inline-flex items-center gap-2 border border-[#f2ca50]/40 bg-[#131313] px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-[#f2ca50] transition-colors hover:bg-[#f2ca50]/10"
+                className="inline-flex items-center gap-2 border border-gold-ink/40 bg-panel px-5 py-3 font-mono text-[11px] font-bold uppercase tracking-widest text-gold-ink transition-colors hover:bg-gold/10"
               >
                 <Plus className="h-4 w-4" /> Add new zone
               </button>
             )}
 
-            <div className="border border-[#2a2a2a] bg-[#131313] p-5 text-xs">
-              <p className="mb-2 font-mono uppercase tracking-[0.26em] text-[#99907c]">
+            <div className="border border-elevated bg-panel p-5 text-xs">
+              <p className="mb-2 font-mono uppercase tracking-[0.26em] text-muted">
                 Storefront integration status
               </p>
-              <p className="flex items-center gap-2 text-[#d0c5af]">
+              <p className="flex items-center gap-2 text-cream">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                 Public list:{" "}
                 <span className="font-mono text-[10px]">
@@ -506,8 +506,8 @@ const ShippingPage = () => {
                 </span>{" "}
                 live
               </p>
-              <p className="mt-1 flex items-center gap-2 text-[#d0c5af]">
-                <XCircle className="h-4 w-4 text-[#ffb4ab]" />
+              <p className="mt-1 flex items-center gap-2 text-cream">
+                <XCircle className="h-4 w-4 text-danger-ink" />
                 Checkout integration: pending — customer-facing zone selector +
                 cart-total fee will land in a follow-up PR.
               </p>

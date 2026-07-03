@@ -72,29 +72,29 @@ export const COLLECTION_HEROES = {
 // Tone-specific overlays + accent colors. Tailwind classes only (no runtime).
 export const COLLECTION_TONES = {
   neutral: {
-    overlay: "bg-gradient-to-b from-[#0a0a0a]/40 via-[#0a0a0a]/60 to-[#0a0a0a]",
-    accent: "text-[#f2ca50]",
-    accentDot: "bg-[#f2ca50]",
+    overlay: "bg-gradient-to-b from-page/40 via-page/60 to-page",
+    accent: "text-gold-ink",
+    accentDot: "bg-gold",
   },
   warm: {
-    overlay: "bg-gradient-to-b from-[#3a1a0e]/40 via-[#0a0a0a]/70 to-[#0a0a0a]",
-    accent: "text-[#f2ca50]",
-    accentDot: "bg-[#f2ca50]",
+    overlay: "bg-gradient-to-b from-[#3a1a0e]/40 via-page/70 to-page",
+    accent: "text-gold-ink",
+    accentDot: "bg-gold",
   },
   dark: {
-    overlay: "bg-gradient-to-b from-[#0a0a0a]/60 via-[#0a0a0a]/80 to-[#0a0a0a]",
-    accent: "text-[#f2ca50]",
-    accentDot: "bg-[#f2ca50]",
+    overlay: "bg-gradient-to-b from-page/60 via-page/80 to-page",
+    accent: "text-gold-ink",
+    accentDot: "bg-gold",
   },
   gold: {
-    overlay: "bg-gradient-to-b from-[#2a1f00]/50 via-[#0a0a0a]/70 to-[#0a0a0a]",
-    accent: "text-[#f2ca50]",
-    accentDot: "bg-[#f2ca50]",
+    overlay: "bg-gradient-to-b from-[#2a1f00]/50 via-page/70 to-page",
+    accent: "text-gold-ink",
+    accentDot: "bg-gold",
   },
   muted: {
-    overlay: "bg-gradient-to-b from-[#0a0a0a]/60 via-[#0a0a0a]/85 to-[#0a0a0a]",
-    accent: "text-[#99907c]",
-    accentDot: "bg-[#99907c]",
+    overlay: "bg-gradient-to-b from-page/60 via-page/85 to-page",
+    accent: "text-muted",
+    accentDot: "bg-muted",
   },
 };
 

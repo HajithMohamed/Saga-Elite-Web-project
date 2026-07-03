@@ -81,7 +81,7 @@ const OtpInputComponent = ({ value, onChange, length = 4 }) => {
           onChange={(e) => handleChange(index, e)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={handlePaste}
-          className="w-14 h-14 text-center text-3xl font-bold bg-transparent border border-gray-700 rounded text-white focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] focus:outline-none transition-all placeholder-gray-600"
+          className="w-14 h-14 text-center text-3xl font-bold bg-transparent border border-gray-700 rounded text-ink focus:border-gold-ink2 focus:ring-1 focus:ring-gold-ink2 focus:outline-none transition-all placeholder-gray-600"
           placeholder="-"
         />
       ))}
@@ -142,7 +142,7 @@ const CommonForm = ({
             {isPassword && (
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none bg-transparent border-none p-0 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-ink focus:outline-none bg-transparent border-none p-0 cursor-pointer"
                 onClick={() => togglePasswordVisibility(getControlItem.name)}
               >
                 {showPassword[getControlItem.name] ? (
@@ -251,7 +251,7 @@ const CommonForm = ({
             {isPassword && (
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none bg-transparent border-none p-0 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-ink focus:outline-none bg-transparent border-none p-0 cursor-pointer"
                 onClick={() => togglePasswordVisibility(getControlItem.name)}
               >
                 {showPassword[getControlItem.name] ? (

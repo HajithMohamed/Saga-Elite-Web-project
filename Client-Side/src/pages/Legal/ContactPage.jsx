@@ -123,36 +123,36 @@ const ContactPage = () => {
 
   if (loading && !about) {
     return (
-      <div className="bg-[#0e0e0e] min-h-screen flex items-center justify-center">
-        <div className="animate-pulse se-body text-[#F2CA50]">Loading contact details…</div>
+      <div className="bg-page min-h-screen flex items-center justify-center">
+        <div className="animate-pulse se-body text-gold-ink">Loading contact details…</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0e0e0e] text-[#e5e2e1] min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
+    <div className="bg-page text-ink-2 min-h-screen overflow-x-hidden pt-[64px] md:pt-[72px]">
       
       {/* HERO BANNER */}
       <section className="relative h-[220px] md:h-[260px] lg:h-[320px] overflow-hidden flex items-center justify-center w-full">
         <div className="absolute inset-0">
           <img src={HERO_BG} alt="Contact Us" className="w-full h-full object-cover object-center" />
-          <div className="absolute inset-0 bg-[#0e0e0e]/80" />
+          <div className="absolute inset-0 bg-page/80" />
         </div>
         <div className="relative z-10 text-center px-4">
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-[#fafafa] text-4xl md:text-[48px] mb-4">Contact Us</motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-[#99907c] text-lg max-w-xl mx-auto">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="se-serif text-ink text-4xl md:text-[48px] mb-4">Contact Us</motion.h1>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="se-body text-muted text-lg max-w-xl mx-auto">
             We're here to help you with your orders, products, payments, and support.
           </motion.p>
         </div>
       </section>
 
       {/* QUICK ACTIONS CTA */}
-      <div className="bg-[#F2CA50] w-full">
+      <div className="bg-gold w-full">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="font-sans font-bold text-[#0e0e0e] uppercase tracking-wider text-[14px]">Need immediate assistance?</span>
+          <span className="font-sans font-bold text-ongold uppercase tracking-wider text-[14px]">Need immediate assistance?</span>
           <div className="flex gap-4">
-            <a href={`https://wa.me/${whatsappDigits}`} className="px-6 py-2 bg-[#0e0e0e] text-[#F2CA50] rounded-full text-xs uppercase tracking-wider font-bold hover:bg-[#1a1a1a] transition-colors">WhatsApp</a>
-            <a href={`tel:${CONTACT_INFO.phone}`} className="px-6 py-2 bg-transparent border border-[#0e0e0e] text-[#0e0e0e] rounded-full text-xs uppercase tracking-wider font-bold hover:bg-[#0e0e0e] hover:text-[#F2CA50] transition-colors">Call Now</a>
+            <a href={`https://wa.me/${whatsappDigits}`} className="px-6 py-2 bg-page text-gold-ink rounded-full text-xs uppercase tracking-wider font-bold hover:bg-card transition-colors">WhatsApp</a>
+            <a href={`tel:${CONTACT_INFO.phone}`} className="px-6 py-2 bg-transparent border border-page text-ongold rounded-full text-xs uppercase tracking-wider font-bold hover:bg-page hover:text-gold-ink transition-colors">Call Now</a>
           </div>
         </div>
       </div>
@@ -162,20 +162,20 @@ const ContactPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {supportCards.map((card, i) => (
             <Reveal key={i} delay={i * 0.1}>
-              <div className="bg-[#1A1A1A] p-8 rounded-[20px] border border-white/5 h-full flex flex-col justify-between group hover:border-[#F2CA50]/50 transition-colors">
+              <div className="bg-card p-8 rounded-[20px] border border-ink/5 h-full flex flex-col justify-between group hover:border-gold-ink/50 transition-colors">
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-[#F2CA50]/10 flex items-center justify-center mb-6">
-                    <card.icon className="w-6 h-6 text-[#F2CA50]" />
+                  <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-6">
+                    <card.icon className="w-6 h-6 text-gold-ink" />
                   </div>
-                  <h3 className="font-sans font-semibold text-[18px] text-[#fafafa] mb-2">{card.title}</h3>
-                  <p className="se-body text-[14px] text-[#99907c] mb-6 leading-relaxed">{card.desc}</p>
+                  <h3 className="font-sans font-semibold text-[18px] text-ink mb-2">{card.title}</h3>
+                  <p className="se-body text-[14px] text-muted mb-6 leading-relaxed">{card.desc}</p>
                 </div>
                 {card.link.startsWith('mailto') || card.link.startsWith('http') ? (
-                  <a href={card.link} target={card.link.startsWith('http') && !card.link.includes('mailto') ? "_blank" : "_self"} rel="noreferrer" className="text-[12px] uppercase tracking-widest text-[#F2CA50] font-bold hover:text-[#ffd86a]">
+                  <a href={card.link} target={card.link.startsWith('http') && !card.link.includes('mailto') ? "_blank" : "_self"} rel="noreferrer" className="text-[12px] uppercase tracking-widest text-gold-ink font-bold hover:text-gold-ink">
                     {card.action} &rarr;
                   </a>
                 ) : (
-                  <a href={card.link} className="text-[12px] uppercase tracking-widest text-[#F2CA50] font-bold hover:text-[#ffd86a]">
+                  <a href={card.link} className="text-[12px] uppercase tracking-widest text-gold-ink font-bold hover:text-gold-ink">
                     {card.action} &rarr;
                   </a>
                 )}
@@ -190,18 +190,18 @@ const ContactPage = () => {
         
         {/* CONTACT FORM */}
         <Reveal>
-          <div className="bg-[#1A1A1A] p-6 md:p-10 rounded-[24px] border border-white/5">
-            <h2 className="se-serif text-[32px] text-[#fafafa] mb-2">Send a Message</h2>
-            <p className="se-body text-[#99907c] mb-8">We usually reply within 24 hours.</p>
+          <div className="bg-card p-6 md:p-10 rounded-[24px] border border-ink/5">
+            <h2 className="se-serif text-[32px] text-ink mb-2">Send a Message</h2>
+            <p className="se-body text-muted mb-8">We usually reply within 24 hours.</p>
 
             {isSuccess ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-[#34C759]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-8 h-8 text-[#34C759]" />
+                <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
                 </div>
                 <h3 className="font-sans text-xl font-semibold mb-2">Message Received</h3>
-                <p className="se-body text-[#99907c] mb-8">Thank you for contacting us. Your reference number has been sent to your email.</p>
-                <button onClick={() => { setIsSuccess(false); setForm({ name: "", email: "", phone: "", orderNumber: "", subject: "", message: "" }); setTouched({}); }} className="text-[#F2CA50] uppercase tracking-wider text-xs font-bold hover:underline">
+                <p className="se-body text-muted mb-8">Thank you for contacting us. Your reference number has been sent to your email.</p>
+                <button onClick={() => { setIsSuccess(false); setForm({ name: "", email: "", phone: "", orderNumber: "", subject: "", message: "" }); setTouched({}); }} className="text-gold-ink uppercase tracking-wider text-xs font-bold hover:underline">
                   Send Another Message
                 </button>
               </div>
@@ -220,13 +220,13 @@ const ContactPage = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 relative">
-                  <label htmlFor="message" className="se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c] ml-1">Message</label>
+                  <label htmlFor="message" className="se-label text-[10px] uppercase tracking-[0.2em] text-muted ml-1">Message</label>
                   <textarea
                     id="message"
                     value={form.message}
                     onChange={(e) => { setForm(p => ({ ...p, message: e.target.value })); setTouched(p => ({ ...p, message: true })); }}
-                    className={`h-[160px] w-full rounded-[16px] border bg-[#0a0a0a] px-4 py-4 text-[14px] text-[#e5e2e1] outline-none transition-all duration-300 resize-none ${
-                      touched.message && errors.message ? "border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30" : "border-white/10 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50]/30"
+                    className={`h-[160px] w-full rounded-[16px] border bg-page px-4 py-4 text-[14px] text-ink-2 outline-none transition-all duration-300 resize-none ${
+                      touched.message && errors.message ? "border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30" : "border-ink/10 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink/30"
                     }`}
                     placeholder="How can we help you?"
                   />
@@ -236,7 +236,7 @@ const ContactPage = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full h-[56px] mt-4 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] flex items-center justify-center gap-2 hover:bg-[#ffd86a] transition-colors disabled:opacity-50"
+                  className="w-full h-[56px] mt-4 bg-gold text-ongold rounded-[16px] font-sans font-bold uppercase tracking-wider text-[12px] flex items-center justify-center gap-2 hover:bg-gold-hover transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><Send className="w-4 h-4" /> Send Message</>}
                 </button>
@@ -249,48 +249,48 @@ const ContactPage = () => {
         <Reveal delay={0.2} className="flex flex-col gap-8">
           
           {/* Business Hours */}
-          <div className="bg-[#1A1A1A] p-8 rounded-[24px] border border-white/5 relative overflow-hidden">
-            <div className={`absolute top-0 left-0 w-1 h-full ${isOpen ? 'bg-[#34C759]' : 'bg-rose-500'}`} />
+          <div className="bg-card p-8 rounded-[24px] border border-ink/5 relative overflow-hidden">
+            <div className={`absolute top-0 left-0 w-1 h-full ${isOpen ? 'bg-success' : 'bg-rose-500'}`} />
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-sans font-semibold text-[20px] text-[#fafafa]">Business Hours</h3>
-              <span className={`px-3 py-1 text-[10px] uppercase tracking-wider font-bold rounded-full ${isOpen ? 'bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
+              <h3 className="font-sans font-semibold text-[20px] text-ink">Business Hours</h3>
+              <span className={`px-3 py-1 text-[10px] uppercase tracking-wider font-bold rounded-full ${isOpen ? 'bg-success/10 text-success border border-success/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
                 {isOpen ? 'Open Now' : 'Closed Now'}
               </span>
             </div>
             <div className="space-y-3">
               {CONTACT_INFO.hoursRows.map((row, i) => (
                 <div key={i} className="flex justify-between items-center text-[14px]">
-                  <span className="text-[#99907c]">{row.day}</span>
-                  <span className="text-[#e5e2e1] font-mono">{row.hours}</span>
+                  <span className="text-muted">{row.day}</span>
+                  <span className="text-ink-2 font-mono">{row.hours}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Contact Details */}
-          <div className="bg-[#1A1A1A] p-8 rounded-[24px] border border-white/5">
-            <h3 className="font-sans font-semibold text-[20px] text-[#fafafa] mb-6">Contact Details</h3>
+          <div className="bg-card p-8 rounded-[24px] border border-ink/5">
+            <h3 className="font-sans font-semibold text-[20px] text-ink mb-6">Contact Details</h3>
             <div className="space-y-6">
               <div className="flex items-start gap-4">
-                <MapPin className="w-5 h-5 text-[#F2CA50] mt-0.5" />
+                <MapPin className="w-5 h-5 text-gold-ink mt-0.5" />
                 <div>
-                  <p className="se-body text-[14px] text-[#e5e2e1]">{CONTACT_INFO.shopName}</p>
-                  <p className="se-body text-[14px] text-[#99907c] leading-relaxed">{fullAddress}</p>
+                  <p className="se-body text-[14px] text-ink-2">{CONTACT_INFO.shopName}</p>
+                  <p className="se-body text-[14px] text-muted leading-relaxed">{fullAddress}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <Phone className="w-5 h-5 text-[#F2CA50]" />
-                <p className="se-body text-[14px] text-[#e5e2e1]">{CONTACT_INFO.phone}</p>
+                <Phone className="w-5 h-5 text-gold-ink" />
+                <p className="se-body text-[14px] text-ink-2">{CONTACT_INFO.phone}</p>
               </div>
               <div className="flex items-center gap-4">
-                <Mail className="w-5 h-5 text-[#F2CA50]" />
-                <p className="se-body text-[14px] text-[#e5e2e1]">{CONTACT_INFO.email}</p>
+                <Mail className="w-5 h-5 text-gold-ink" />
+                <p className="se-body text-[14px] text-ink-2">{CONTACT_INFO.email}</p>
               </div>
             </div>
           </div>
 
           {/* Map Embed */}
-          <div className="h-[260px] md:h-[320px] rounded-[24px] overflow-hidden border border-white/5 relative">
+          <div className="h-[260px] md:h-[320px] rounded-[24px] overflow-hidden border border-ink/5 relative">
             <iframe
               title="Location"
               src={mapEmbedUrl}
@@ -298,7 +298,7 @@ const ContactPage = () => {
               style={{ filter: "invert(0.9) hue-rotate(180deg) saturate(0.5) contrast(1.2)" }}
             />
             <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
-               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`} target="_blank" rel="noreferrer" className="w-full py-3 bg-[#0e0e0e]/80 backdrop-blur-md border border-white/10 text-[#fafafa] font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center pointer-events-auto hover:bg-[#F2CA50] hover:text-[#0e0e0e] transition-colors">
+               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`} target="_blank" rel="noreferrer" className="w-full py-3 bg-page/80 backdrop-blur-md border border-ink/10 text-ink font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center pointer-events-auto hover:bg-gold hover:text-ongold transition-colors">
                   Get Directions
                </a>
             </div>

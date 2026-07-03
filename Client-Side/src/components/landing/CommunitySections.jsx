@@ -51,13 +51,13 @@ export function CommunityGallery() {
   if (!loaded) return null;
 
   return (
-    <section className={cn(SECTION_CONTAINER, "bg-[#050505] border-y border-[#1a1a1a]")}>
+    <section className={cn(SECTION_CONTAINER, "bg-page border-y border-card")}>
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
         <div>
-          <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+          <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
             Join the Saga Elite Community
           </h2>
-          <p className="se-body text-base md:text-[18px] text-[#99907c] max-w-xl">
+          <p className="se-body text-base md:text-[18px] text-muted max-w-xl">
             See how our customers style their favourite Saga Elite pieces across Sri Lanka.
           </p>
         </div>
@@ -66,7 +66,7 @@ export function CommunityGallery() {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 border border-[#f2ca50] text-[#f2ca50] hover:bg-[#f2ca50] hover:text-[#0a0a0a] px-6 py-3 rounded-[14px] font-sans font-semibold text-[14px] transition-colors shrink-0"
+            className="inline-flex items-center gap-2 border border-gold-ink text-gold-ink hover:bg-gold hover:text-ongold px-6 py-3 rounded-[14px] font-sans font-semibold text-[14px] transition-colors shrink-0"
           >
             <Instagram className="w-4 h-4" />
             Follow Us
@@ -77,7 +77,7 @@ export function CommunityGallery() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-[24px]">
         {images.map((img, i) => {
           const tile = (
-            <div className="group relative w-full aspect-square rounded-[20px] overflow-hidden bg-[#131313]">
+            <div className="group relative w-full aspect-square rounded-[20px] overflow-hidden bg-panel">
               <img
                 src={img.url}
                 alt={img.label || "Saga Elite community"}
@@ -85,8 +85,8 @@ export function CommunityGallery() {
                 className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
               />
               {img.label && (
-                <div className="absolute inset-0 bg-[#0a0a0a]/40 flex flex-col justify-end p-4 md:p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-250">
-                  <p className="font-sans font-semibold text-[14px] md:text-[16px] text-[#e5e2e1]">
+                <div className="absolute inset-0 bg-page/40 flex flex-col justify-end p-4 md:p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-250">
+                  <p className="font-sans font-semibold text-[14px] md:text-[16px] text-ink-2">
                     {img.label}
                   </p>
                 </div>
@@ -146,21 +146,21 @@ export function Newsletter() {
 
   return (
     <section className={SECTION_CONTAINER}>
-      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-[#f2ca50]/20 p-8 md:p-12 lg:p-16 min-h-[260px] md:min-h-[300px] lg:min-h-[340px] flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-16">
+      <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-card to-page border border-gold-ink/20 p-8 md:p-12 lg:p-16 min-h-[260px] md:min-h-[300px] lg:min-h-[340px] flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-16">
         {/* Glow Accent */}
-        <div className="absolute -left-32 -bottom-32 w-96 h-96 bg-[#f2ca50]/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute -left-32 -bottom-32 w-96 h-96 bg-gold/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 flex-1">
-          <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-[#e5e2e1] mb-4 leading-tight">
+          <h2 className="se-serif text-[28px] md:text-[36px] lg:text-[40px] text-ink-2 mb-4 leading-tight">
             Stay Ahead of Every Drop
           </h2>
-          <p className="se-body text-[16px] md:text-[18px] text-[#99907c] mb-6 max-w-md">
+          <p className="se-body text-[16px] md:text-[18px] text-muted mb-6 max-w-md">
             Be the first to know about exclusive collections, premium offers, and limited-edition releases.
           </p>
           <div className="flex flex-wrap gap-4">
             {NEWSLETTER_BENEFITS.map((b, i) => (
-              <div key={i} className="flex items-center gap-2 text-[#d0c5af]">
-                <Check className="w-4 h-4 text-[#f2ca50]" />
+              <div key={i} className="flex items-center gap-2 text-cream">
+                <Check className="w-4 h-4 text-gold-ink" />
                 <span className="se-body text-[14px]">{b}</span>
               </div>
             ))}
@@ -169,14 +169,14 @@ export function Newsletter() {
 
         <div className="relative z-10 w-full lg:w-[480px]">
           {status === "success" ? (
-            <div className="h-[56px] w-full rounded-[16px] border border-[#f2ca50] bg-[#f2ca50]/10 flex items-center justify-center gap-3 text-[#f2ca50] font-sans font-semibold transition-all">
+            <div className="h-[56px] w-full rounded-[16px] border border-gold-ink bg-gold/10 flex items-center justify-center gap-3 text-gold-ink font-sans font-semibold transition-all">
               <Check className="w-5 h-5" />
               You&rsquo;re on the list.
             </div>
           ) : (
             <form onSubmit={onSubmit} className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#99907c]" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
                 <input
                   type="email"
                   required
@@ -186,7 +186,7 @@ export function Newsletter() {
                     setEmail(e.target.value);
                     if (status === "error") setStatus("idle");
                   }}
-                  className="w-full h-[56px] bg-[#131313] border border-white/10 rounded-[16px] pl-12 pr-4 text-[#e5e2e1] se-body text-[16px] placeholder:text-[#99907c] focus:outline-none focus:border-[#f2ca50] transition-colors"
+                  className="w-full h-[56px] bg-panel border border-ink/10 rounded-[16px] pl-12 pr-4 text-ink-2 se-body text-[16px] placeholder:text-muted focus:outline-none focus:border-gold-ink transition-colors"
                   onInvalid={(e) => e.target.setCustomValidity("Please enter a valid email address.")}
                   onInput={(e) => e.target.setCustomValidity("")}
                 />
@@ -194,7 +194,7 @@ export function Newsletter() {
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="h-[56px] min-w-[180px] bg-[#f2ca50] text-[#0a0a0a] rounded-[16px] font-sans font-bold text-[15px] transition-transform duration-250 hover:-translate-y-[2px] disabled:opacity-70 disabled:hover:translate-y-0"
+                className="h-[56px] min-w-[180px] bg-gold text-ongold rounded-[16px] font-sans font-bold text-[15px] transition-transform duration-250 hover:-translate-y-[2px] disabled:opacity-70 disabled:hover:translate-y-0"
               >
                 {status === "loading" ? "Joining..." : "Subscribe"}
               </button>
@@ -268,10 +268,10 @@ export function InstagramSection() {
         {/* Left: Social Media */}
         {socialLinks.length > 0 && (
           <div className="min-w-0">
-            <h2 className="se-serif text-[32px] md:text-[40px] text-[#e5e2e1] mb-4">
+            <h2 className="se-serif text-[32px] md:text-[40px] text-ink-2 mb-4">
               Follow Saga Elite
             </h2>
-            <p className="se-body text-[16px] md:text-[18px] text-[#99907c] mb-10 max-w-md">
+            <p className="se-body text-[16px] md:text-[18px] text-muted mb-10 max-w-md">
               Discover daily fashion inspiration, exclusive drops, and behind-the-scenes content.
             </p>
 
@@ -282,14 +282,14 @@ export function InstagramSection() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center gap-4 p-2 lg:p-4 rounded-full lg:rounded-[16px] bg-[#131313] border border-white/5 transition-all duration-250 hover:border-[#f2ca50]/50 shrink-0 lg:w-auto"
+                  className="group flex items-center gap-4 p-2 lg:p-4 rounded-full lg:rounded-[16px] bg-panel border border-ink/5 transition-all duration-250 hover:border-gold-ink/50 shrink-0 lg:w-auto"
                 >
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#1A1A1A] text-[#e5e2e1] transition-all duration-250 group-hover:bg-[#f2ca50] group-hover:text-[#0a0a0a]">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-card text-ink-2 transition-all duration-250 group-hover:bg-gold group-hover:text-ongold">
                     <link.icon className="w-5 h-5" />
                   </div>
                   <div className="hidden lg:block min-w-0">
-                    <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] group-hover:text-[#f2ca50] transition-colors">{link.name}</h4>
-                    <p className="text-[12px] text-[#99907c] truncate">{link.desc}</p>
+                    <h4 className="font-sans font-semibold text-[15px] text-ink-2 group-hover:text-gold-ink transition-colors">{link.name}</h4>
+                    <p className="text-[12px] text-muted truncate">{link.desc}</p>
                   </div>
                 </a>
               ))}
@@ -302,9 +302,9 @@ export function InstagramSection() {
           <div className="grid min-w-0 grid-cols-2 gap-4 md:gap-6">
             {statCards.map((stat, i) => (
               <Reveal key={i} delay={i * 0.1}>
-                <div className="flex flex-col items-center justify-center text-center p-8 bg-[#131313] rounded-[20px] border border-white/5 h-[160px] md:h-[200px]">
-                  <div className="font-serif text-[32px] md:text-[48px] text-[#f2ca50] mb-2">{stat.value}</div>
-                  <div className="se-label text-[12px] md:text-[14px] text-[#99907c] uppercase tracking-wider">{stat.label}</div>
+                <div className="flex flex-col items-center justify-center text-center p-8 bg-panel rounded-[20px] border border-ink/5 h-[160px] md:h-[200px]">
+                  <div className="font-serif text-[32px] md:text-[48px] text-gold-ink mb-2">{stat.value}</div>
+                  <div className="se-label text-[12px] md:text-[14px] text-muted uppercase tracking-wider">{stat.label}</div>
                 </div>
               </Reveal>
             ))}

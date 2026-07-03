@@ -590,7 +590,9 @@ const changePassword = catchAsync(async (req, res, next) => {
 
         const isCorrect = await user.correctPassword(oldPassword, user.password);
         if (!isCorrect) {
-            return next(new AppError("Current password is incorrect", 401));
+            // 400 (validation), not 401: the user IS authenticated — a wrong
+            // current password must not be treated as a session failure.
+            return next(new AppError("Current password is incorrect", 400));
         }
     }
 

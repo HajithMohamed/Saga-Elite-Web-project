@@ -32,8 +32,8 @@ const ToolbarButton = ({ active, disabled, onClick, title, children }) => (
     title={title}
     className={`flex h-8 w-8 items-center justify-center rounded-md border transition ${
       active
-        ? "border-[#D4AF37] bg-[#D4AF37]/15 text-[#D4AF37]"
-        : "border-white/10 bg-black/40 text-gray-300 hover:border-[#D4AF37]/40 hover:text-white"
+        ? "border-gold-ink2 bg-gold-deep/15 text-gold-ink2"
+        : "border-ink/10 bg-black/40 text-gray-300 hover:border-gold-ink2/40 hover:text-ink"
     } disabled:cursor-not-allowed disabled:opacity-40`}
   >
     {children}
@@ -41,7 +41,7 @@ const ToolbarButton = ({ active, disabled, onClick, title, children }) => (
 );
 
 const ToolbarDivider = () => (
-  <span className="mx-1 inline-block h-5 w-px bg-white/10" aria-hidden />
+  <span className="mx-1 inline-block h-5 w-px bg-ink/10" aria-hidden />
 );
 
 const RichTextEditor = ({ value = "", onChange, placeholder }) => {
@@ -55,7 +55,7 @@ const RichTextEditor = ({ value = "", onChange, placeholder }) => {
         openOnClick: false,
         autolink: true,
         HTMLAttributes: {
-          class: "text-[#D4AF37] underline underline-offset-4",
+          class: "text-gold-ink2 underline underline-offset-4",
         },
       }),
       Table.configure({ resizable: false }),
@@ -67,7 +67,7 @@ const RichTextEditor = ({ value = "", onChange, placeholder }) => {
     editorProps: {
       attributes: {
         class:
-          "tiptap-editor min-h-[260px] max-h-[520px] overflow-y-auto rounded-b-lg border border-t-0 border-white/10 bg-black/60 px-4 py-3 text-sm text-white outline-none focus:border-[#D4AF37]/40",
+          "tiptap-editor min-h-[260px] max-h-[520px] overflow-y-auto rounded-b-lg border border-t-0 border-ink/10 bg-black/60 px-4 py-3 text-sm text-ink outline-none focus:border-gold-ink2/40",
         ...(placeholder ? { "data-placeholder": placeholder } : {}),
       },
     },
@@ -88,7 +88,7 @@ const RichTextEditor = ({ value = "", onChange, placeholder }) => {
 
   if (!editor) {
     return (
-      <div className="min-h-[260px] rounded-lg border border-white/10 bg-black/60 px-4 py-3 text-sm text-gray-500">
+      <div className="min-h-[260px] rounded-lg border border-ink/10 bg-black/60 px-4 py-3 text-sm text-gray-500">
         Loading editor…
       </div>
     );
@@ -121,7 +121,7 @@ const RichTextEditor = ({ value = "", onChange, placeholder }) => {
 
   return (
     <div className="rounded-lg">
-      <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-white/10 bg-[#0d0d0d] px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-ink/10 bg-page px-2 py-1.5">
         <ToolbarButton
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}

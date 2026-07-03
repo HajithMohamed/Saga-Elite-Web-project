@@ -6,6 +6,7 @@ const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const Customer = require("../Models/Customer");
 const { ensureCustomerRecord } = require("../Services/migration-service");
+const { isAdminRole } = require("../Utils/admin-roles");
 const logger = require("../Utils/logger");
 
 // Mirror of google-auth-controller. Two Facebook-specific differences:
@@ -96,8 +97,10 @@ const facebookAuth = catchAsync(async (req, res, next) => {
   let user = await User.findOne({ email });
 
   if (user) {
-    // Same admin guard as Google — admins must use email/password.
-    if (user.role === "admin" || user.role === "superadmin") {
+    // Same admin guard as Google — admins (all roles) must use
+    // email/password so the 2FA gate applies. isAdminRole covers
+    // admin, super_admin and sub_admin.
+    if (isAdminRole(user.role)) {
       return next(
         new AppError("Admin accounts cannot use Facebook sign-in", 403)
       );

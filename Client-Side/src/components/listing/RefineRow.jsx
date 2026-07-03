@@ -38,9 +38,9 @@ const RefineRow = ({
         animate={{ height: "auto", opacity: 1 }}
         exit={{ height: 0, opacity: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="overflow-hidden border-t border-[#4d4635]/30"
+        className="overflow-hidden border-t border-line/30"
       >
-        <div className="bg-[#0e0e0e]/80 backdrop-blur-md px-5 md:px-12 max-w-7xl mx-auto py-6">
+        <div className="bg-page/80 backdrop-blur-md px-5 md:px-12 max-w-7xl mx-auto py-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             {/* Color */}
             <div>
@@ -101,7 +101,7 @@ const RefineRow = ({
               <button
                 type="button"
                 onClick={onClearAll}
-                className="font-mono text-[10px] tracking-[0.22em] uppercase text-[#99907c] hover:text-[#f2ca50] transition-colors"
+                className="font-mono text-[10px] tracking-[0.22em] uppercase text-muted hover:text-gold-ink transition-colors"
               >
                 Clear refinements
               </button>

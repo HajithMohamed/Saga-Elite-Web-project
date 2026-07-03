@@ -13,10 +13,10 @@ import React from "react";
  */
 
 const baseInput =
-  "w-full bg-[#111] text-white placeholder:text-white/30 " +
-  "border border-[#2a2a2a] rounded-xl px-4 py-3 text-sm " +
+  "w-full bg-panel text-ink placeholder:text-ink/30 " +
+  "border border-elevated rounded-xl px-4 py-3 text-sm " +
   "transition-colors duration-200 outline-none " +
-  "focus:border-[#D4AF37] focus:shadow-[0_0_0_3px_rgba(212,175,55,0.15)] " +
+  "focus:border-gold-ink2 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.15)] " +
   "disabled:opacity-50 disabled:cursor-not-allowed";
 
 const errorInput =
@@ -62,7 +62,7 @@ export const LuxurySelect = React.forwardRef(function LuxurySelect(
       >
         {children}
       </select>
-      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/40">
+      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink/40">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path
             d="M2 4l4 4 4-4"

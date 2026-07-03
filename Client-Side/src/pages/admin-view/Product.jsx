@@ -779,7 +779,7 @@ const Product = () => {
           <>
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+              className="flex items-center gap-2 rounded-lg border border-ink/10 bg-black/40 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-ink/5"
             >
               <Download className="h-4 w-4" /> Export
             </button>
@@ -865,7 +865,7 @@ const Product = () => {
                       <button
                         type="button"
                         onClick={handleResetFilters}
-                        className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline decoration-dotted underline-offset-4"
+                        className="text-xs font-semibold text-ink/50 hover:text-ink transition-colors underline decoration-dotted underline-offset-4"
                       >
                         Reset Filters
                       </button>
@@ -885,10 +885,10 @@ const Product = () => {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-saga-primary/30 bg-saga-primary/[0.03] px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white" data-testid="admin-bulk-count">
+                          <span className="text-sm font-bold text-ink" data-testid="admin-bulk-count">
                             {bulk.count}
                           </span>
-                          <span className="text-[10px] uppercase tracking-widest text-[#D4AF37]">selected</span>
+                          <span className="text-[10px] uppercase tracking-widest text-gold-ink2">selected</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                           {bulkActions.map((action) => (
@@ -900,7 +900,7 @@ const Product = () => {
                               data-testid={`admin-bulk-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
                               className={`rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 ${action.variant === "destructive"
                                   ? "border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
-                                  : "border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20"
+                                  : "border border-gold-ink2/30 bg-gold-deep/10 text-gold-ink2 hover:bg-gold-deep/20"
                                 }`}
                             >
                               {bulkPending ? (
@@ -914,7 +914,7 @@ const Product = () => {
                             type="button"
                             onClick={bulk.clear}
                             disabled={bulkPending}
-                            className="rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60 transition hover:border-white/20 hover:text-white"
+                            className="rounded-full border border-ink/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-ink/60 transition hover:border-ink/20 hover:text-ink"
                           >
                             Cancel
                           </button>
@@ -925,10 +925,10 @@ const Product = () => {
                 </AnimatePresence>
 
                 {/* Native Data Table Layout */}
-                <div className="w-full max-w-full overflow-visible rounded-3xl border border-[#D4AF37]/10 bg-[#0B0B0B]/80 backdrop-blur-xl">
+                <div className="w-full max-w-full overflow-visible rounded-3xl border border-gold-ink2/10 bg-page/80 backdrop-blur-xl">
                   <table className="min-w-full border-collapse text-left">
-                    <thead className="sticky top-0 z-10 bg-[#050505]/95 backdrop-blur-md rounded-t-3xl">
-                      <tr className="border-b border-white/5 text-[11px] uppercase tracking-[0.15em] text-[#A8A8A8] font-bold">
+                    <thead className="sticky top-0 z-10 bg-page/95 backdrop-blur-md rounded-t-3xl">
+                      <tr className="border-b border-ink/5 text-[11px] uppercase tracking-[0.15em] text-muted font-bold">
                         <th className="py-5 pl-6 pr-3 w-12 rounded-tl-3xl">
                           <input
                             type="checkbox"
@@ -938,7 +938,7 @@ const Product = () => {
                               if (el) el.indeterminate = bulk.isSomeSelected;
                             }}
                             onChange={bulk.toggleAll}
-                            className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-60 transition hover:opacity-100"
+                            className="h-4 w-4 cursor-pointer accent-gold-deep opacity-60 transition hover:opacity-100"
                             data-testid="admin-bulk-select-all"
                           />
                         </th>
@@ -953,7 +953,7 @@ const Product = () => {
                       variants={containerVariants}
                       initial="hidden"
                       animate="visible"
-                      className="divide-y divide-white/5"
+                      className="divide-y divide-ink/5"
                     >
                       {productList.map((product) => {
                         const meta = getProductLedgerMeta(product);
@@ -968,8 +968,8 @@ const Product = () => {
                           <Fragment key={product._id}>
                             <motion.tr
                               variants={itemVariants}
-                              className={`group transition-all duration-300 hover:bg-[#101010] ${
-                                isSelected ? "bg-[#D4AF37]/[0.04]" : "bg-transparent"
+                              className={`group transition-all duration-300 hover:bg-panel ${
+                                isSelected ? "bg-gold-deep/[0.04]" : "bg-transparent"
                               }`}
                             >
                               <td className="py-5 pl-6 pr-3 align-middle">
@@ -978,52 +978,52 @@ const Product = () => {
                                   aria-label={`Select ${product.name}`}
                                   checked={isSelected}
                                   onChange={() => bulk.toggle(product._id)}
-                                  className="h-4 w-4 cursor-pointer accent-[#D4AF37] opacity-30 transition group-hover:opacity-100 checked:opacity-100"
+                                  className="h-4 w-4 cursor-pointer accent-gold-deep opacity-30 transition group-hover:opacity-100 checked:opacity-100"
                                   data-testid="admin-bulk-row-select"
                                 />
                               </td>
                               <td className="py-5 px-4 align-middle">
                                 <div className="flex items-center gap-5">
-                                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[14px] border border-white/10 bg-[#151515] flex items-center justify-center shadow-lg">
+                                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[14px] border border-ink/10 bg-panel flex items-center justify-center shadow-lg">
                                     {product.images && product.images.length > 0 ? (
                                       <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.images[0].url} alt={product.name} />
                                     ) : (
-                                      <Package className="h-6 w-6 text-white/20" />
+                                      <Package className="h-6 w-6 text-ink/20" />
                                     )}
                                   </div>
                                   <div className="flex min-w-0 flex-col justify-center">
                                     <span
                                       onClick={() => beginEdit(product)}
-                                      className="block truncate text-[15px] font-semibold tracking-tight text-white transition-colors hover:text-[#D4AF37] cursor-pointer"
+                                      className="block truncate text-[15px] font-semibold tracking-tight text-ink transition-colors hover:text-gold-ink2 cursor-pointer"
                                     >
                                       {product.name}
                                     </span>
                                     <div className="mt-1 flex items-center gap-2">
-                                      <span className="text-[11px] font-medium tracking-wider text-[#A8A8A8]">
+                                      <span className="text-[11px] font-medium tracking-wider text-muted">
                                         SKU: {product.artNo || 'N/A'}
                                       </span>
                                     </div>
-                                    <span className="mt-1 truncate text-[12px] text-[#707070]">
+                                    <span className="mt-1 truncate text-[12px] text-muted">
                                       {formatCategoryPathDisplay(product.categoryPath) || [product.category, product.subCategory].filter(Boolean).join(" > ") || 'Uncategorized'}
                                     </span>
                                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                       {meta.variantCount > 0 && (
-                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                        <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] text-ink/60">
                                           {meta.variantCount} variant{meta.variantCount === 1 ? '' : 's'}
                                         </span>
                                       )}
                                       {meta.colors.length > 0 && (
-                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                        <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] text-ink/60">
                                           {meta.colors.join(', ')}{meta.uniqueColors > meta.colors.length ? '…' : ''}
                                         </span>
                                       )}
                                       {meta.sizes.length > 0 && (
-                                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/60">
+                                        <span className="rounded-full border border-ink/10 bg-ink/5 px-2 py-0.5 text-[10px] text-ink/60">
                                           {meta.sizes.join(', ')}{meta.uniqueSizes > meta.sizes.length ? '…' : ''}
                                         </span>
                                       )}
                                       {product.isFeatured && (
-                                        <span className="rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#D4AF37]">
+                                        <span className="rounded-full border border-gold-ink2/30 bg-gold-deep/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-ink2">
                                           Featured
                                         </span>
                                       )}
@@ -1049,20 +1049,20 @@ const Product = () => {
                               <td className="py-5 px-4 align-middle">
                                 <div className="flex w-full max-w-[120px] flex-col gap-1.5">
                                   <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider">
-                                    <span className="text-[#A8A8A8]">Stock</span>
-                                    <span className={isHealthy ? "text-[#3D8B5C]" : isLowStock ? "text-[#D4AF37]" : "text-[#C85C5C]"}>
+                                    <span className="text-muted">Stock</span>
+                                    <span className={isHealthy ? "text-[#3D8B5C]" : isLowStock ? "text-gold-ink2" : "text-danger-ink"}>
                                       {stock}
                                     </span>
                                   </div>
-                                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-ink/5">
                                     <div
                                       className={`h-full rounded-full transition-all duration-700 ${
-                                        isHealthy ? "bg-[#3D8B5C]" : isLowStock ? "bg-[#D4AF37]" : "bg-[#C85C5C]"
+                                        isHealthy ? "bg-[#3D8B5C]" : isLowStock ? "bg-gold-deep" : "bg-danger-ink"
                                       }`}
                                       style={{ width: `${Math.min(100, (stock / 50) * 100)}%` }}
                                     />
                                   </div>
-                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                  <span className="mt-0.5 text-[11px] text-muted">
                                     {isHealthy ? "Healthy" : isLowStock ? "Low Stock" : "Critical"}
                                   </span>
                                 </div>
@@ -1070,51 +1070,51 @@ const Product = () => {
                               <td className="py-5 px-4 align-middle">
                                 <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${
                                   product.isActive
-                                    ? 'border-[#D4AF37]/20 bg-[#D4AF37]/[0.12] text-[#D4AF37]'
-                                    : 'border-white/10 bg-white/5 text-[#707070]'
+                                    ? 'border-gold-ink2/20 bg-gold-deep/[0.12] text-gold-ink2'
+                                    : 'border-ink/10 bg-ink/5 text-muted'
                                 }`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${product.isActive ? 'bg-[#D4AF37] shadow-[#D4AF37]/50' : 'bg-[#707070]'}`} />
+                                  <span className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${product.isActive ? 'bg-gold-deep shadow-[#D4AF37]/50' : 'bg-muted'}`} />
                                   {product.isActive ? 'Published' : 'Draft'}
                                 </span>
                               </td>
                               <td className="py-5 px-4 align-middle">
                                 <div className="flex flex-col">
-                                  <span className="text-[13px] text-white/90">
+                                  <span className="text-[13px] text-ink/90">
                                     {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                   </span>
-                                  <span className="mt-0.5 text-[11px] text-[#707070]">
+                                  <span className="mt-0.5 text-[11px] text-muted">
                                     {product.updatedAt ? new Date(product.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
                                   </span>
                                 </div>
                               </td>
                               <td className="py-5 pr-6 pl-4 align-middle text-right">
                                 <div className="relative inline-block text-left group/menu z-10">
-                                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/5 hover:text-white">
+                                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink">
                                     <MoreVertical className="h-5 w-5" />
                                   </button>
-                                  <div className="invisible absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl border border-white/10 bg-[#151515] p-1.5 opacity-0 shadow-2xl transition-all duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:mt-1">
+                                  <div className="invisible absolute right-0 top-full mt-2 w-48 origin-top-right rounded-xl border border-ink/10 bg-panel p-1.5 opacity-0 shadow-2xl transition-all duration-200 group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:mt-1">
                                     <button
                                       onClick={() => openProductGallery(product)}
-                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-ink/5 hover:text-ink"
                                     >
                                       <Eye className="h-4 w-4" /> View Images
                                     </button>
                                     <button
                                       onClick={() => beginEdit(product)}
-                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/10"
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gold-ink2 transition-colors hover:bg-gold-deep/10"
                                     >
                                       <Edit2 className="h-4 w-4" /> Edit Product
                                     </button>
                                     <button
                                       onClick={() => beginDuplicate(product)}
-                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#A8A8A8] transition-colors hover:bg-white/5 hover:text-white"
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition-colors hover:bg-ink/5 hover:text-ink"
                                     >
                                       <Copy className="h-4 w-4" /> Duplicate
                                     </button>
-                                    <div className="my-1 mx-2 h-px bg-white/5" />
+                                    <div className="my-1 mx-2 h-px bg-ink/5" />
                                     <button
                                       onClick={() => setDeleteConfirmSlug((s) => (s === product.slug ? null : product.slug))}
-                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[#C85C5C] transition-colors hover:bg-[#C85C5C]/10 hover:text-red-400"
+                                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-danger-ink transition-colors hover:bg-danger-ink/10 hover:text-red-400"
                                     >
                                       <Trash2 className="h-4 w-4" /> Delete
                                     </button>
@@ -1123,7 +1123,7 @@ const Product = () => {
                               </td>
                             </motion.tr>
                             {deleteConfirmSlug === product.slug && (
-                              <tr className="border-b border-white/5 bg-rose-500/[0.02]">
+                              <tr className="border-b border-ink/5 bg-rose-500/[0.02]">
                                 <td colSpan={6} className="px-6 py-4">
                                   <ConfirmInline
                                     show={true}
@@ -1145,7 +1145,7 @@ const Product = () => {
                   </table>
 
                   {productList.length === 0 && (
-                    <div className="py-20 text-center border-t border-white/10 text-white/40 font-sans">
+                    <div className="py-20 text-center border-t border-ink/10 text-ink/40 font-sans">
                       <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
                       <p>No products found in the ledger.</p>
                     </div>
@@ -1154,15 +1154,15 @@ const Product = () => {
 
                 {/* Boxed Style Pagination */}
                 {productList.length > 0 && pagination.totalPages > 1 && (
-                  <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-white/10 bg-black/40 rounded-2xl p-4 gap-4">
-                    <span className="text-xs uppercase tracking-widest text-white/40 font-semibold">
+                  <div className="mt-8 flex flex-col sm:flex-row justify-between items-center border border-ink/10 bg-black/40 rounded-2xl p-4 gap-4">
+                    <span className="text-xs uppercase tracking-widest text-ink/40 font-semibold">
                       Showing {productList.length} products
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-ink/10 bg-transparent text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
@@ -1176,7 +1176,7 @@ const Product = () => {
                             onClick={() => setCurrentPage(pageNum)}
                             className={`w-9 h-9 flex items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${isCurrent
                                 ? 'bg-white text-black border-transparent font-bold'
-                                : 'border-white/10 bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
+                                : 'border-ink/10 bg-transparent text-ink/60 hover:bg-ink/5 hover:text-ink'
                               }`}
                           >
                             {pageNum}
@@ -1187,7 +1187,7 @@ const Product = () => {
                       <button
                         disabled={currentPage === pagination.totalPages}
                         onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-transparent text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-ink/10 bg-transparent text-ink hover:bg-ink/5 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -1241,7 +1241,7 @@ const Product = () => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-black p-6 shadow-2xl"
+              className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-page p-6 shadow-2xl"
               role="dialog"
               aria-modal="true"
             >
@@ -1250,7 +1250,7 @@ const Product = () => {
                   <AlertCircle className="h-5 w-5 text-rose-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-ink">
                     {bulkPendingAction.confirm.title}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-gray-400">

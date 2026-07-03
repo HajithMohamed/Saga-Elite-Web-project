@@ -58,8 +58,8 @@ const PremiumLoader = () => {
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center">
       <div className="relative mb-8 flex h-16 w-16 items-center justify-center">
-        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/5 border-t-[#f2ca50]" />
-        <div className="h-2 w-2 rounded-full bg-[#f2ca50] shadow-[0_0_15px_rgba(242,202,80,0.8)]" />
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-ink/5 border-t-gold-ink" />
+        <div className="h-2 w-2 rounded-full bg-gold shadow-[0_0_15px_rgba(242,202,80,0.8)]" />
       </div>
       <AnimatePresence mode="wait">
         <motion.p
@@ -68,7 +68,7 @@ const PremiumLoader = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -5 }}
           transition={{ duration: 0.5 }}
-          className="se-label text-[10px] uppercase tracking-[0.32em] text-[#f2ca50]"
+          className="se-label text-[10px] uppercase tracking-[0.32em] text-gold-ink"
         >
           {stages[stage]}
         </motion.p>
@@ -90,9 +90,9 @@ const CinematicSuccess = ({ orderId }) => (
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.8, ease: MOTION_EASE, delay: 0.2 }}
-      className="relative z-10 mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-[#f2ca50]/20 to-[#ffe088]/5 shadow-[0_0_60px_rgba(242,202,80,0.2)] border border-[#f2ca50]/30"
+      className="relative z-10 mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-gold/20 to-gold-hover/5 shadow-[0_0_60px_rgba(242,202,80,0.2)] border border-gold-ink/30"
     >
-      <Check className="h-10 w-10 text-[#f2ca50]" strokeWidth={2.5} />
+      <Check className="h-10 w-10 text-gold-ink" strokeWidth={2.5} />
     </motion.div>
 
     <motion.div
@@ -101,8 +101,8 @@ const CinematicSuccess = ({ orderId }) => (
       transition={{ duration: 0.8, ease: MOTION_EASE, delay: 0.4 }}
       className="relative z-10"
     >
-      <h1 className="se-serif text-4xl text-[#e5e2e1] sm:text-5xl">Payment verification complete</h1>
-      <p className="se-body mt-4 max-w-md mx-auto text-sm leading-6 text-[#d0c5af]">
+      <h1 className="se-serif text-4xl text-ink-2 sm:text-5xl">Payment verification complete</h1>
+      <p className="se-body mt-4 max-w-md mx-auto text-sm leading-6 text-cream">
         Your payment has been successfully submitted. Our atelier will begin preparation shortly. We've sent the receipt to your email.
       </p>
 
@@ -110,14 +110,14 @@ const CinematicSuccess = ({ orderId }) => (
         {orderId && (
           <Link
             to={`/shopping/order-tracking?orderId=${orderId}`}
-            className="se-label flex h-[56px] min-w-[200px] items-center justify-center gap-2 rounded-[16px] bg-[#f2ca50] px-8 text-[10px] uppercase tracking-[0.28em] text-[#0a0a0a] transition hover:bg-[#ffe088] shadow-[0_0_20px_rgba(242,202,80,0.3)] hover:shadow-[0_0_30px_rgba(242,202,80,0.5)]"
+            className="se-label flex h-[56px] min-w-[200px] items-center justify-center gap-2 rounded-[16px] bg-gold px-8 text-[10px] uppercase tracking-[0.28em] text-ongold transition hover:bg-gold-hover shadow-[0_0_20px_rgba(242,202,80,0.3)] hover:shadow-[0_0_30px_rgba(242,202,80,0.5)]"
           >
             Track Order <ArrowRight className="h-4 w-4" />
           </Link>
         )}
         <Link
           to="/shopping/home"
-          className="se-label flex h-[56px] min-w-[200px] items-center justify-center gap-2 rounded-[16px] border border-white/20 px-8 text-[10px] uppercase tracking-[0.28em] text-[#e5e2e1] transition hover:border-[#f2ca50]/40 hover:text-[#f2ca50]"
+          className="se-label flex h-[56px] min-w-[200px] items-center justify-center gap-2 rounded-[16px] border border-ink/20 px-8 text-[10px] uppercase tracking-[0.28em] text-ink-2 transition hover:border-gold-ink/40 hover:text-gold-ink"
         >
           Return to Shop
         </Link>
@@ -142,19 +142,19 @@ const EmailGate = ({ defaultEmail = "", onSubmit, isSubmitting }) => {
   };
 
   return (
-    <div className="mx-auto max-w-xl rounded-[2rem] border border-white/5 bg-[#0d0d0d] p-8 shadow-2xl">
+    <div className="mx-auto max-w-xl rounded-[2rem] border border-ink/5 bg-page p-8 shadow-2xl">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f2ca50]/40 bg-[#f2ca50]/10 text-[#f2ca50]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gold-ink/40 bg-gold/10 text-gold-ink">
           <Mail className="h-4 w-4" />
         </div>
         <div>
-          <p className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+          <p className="se-label text-[10px] tracking-[0.32em] text-gold-ink">
             Verify Identity
           </p>
-          <h1 className="se-serif text-2xl text-[#e5e2e1]">Confirm your email</h1>
+          <h1 className="se-serif text-2xl text-ink-2">Confirm your email</h1>
         </div>
       </div>
-      <p className="se-body mt-4 text-sm leading-6 text-[#99907c]">
+      <p className="se-body mt-4 text-sm leading-6 text-muted">
         Enter the email used during checkout to access your private concierge payment portal.
       </p>
       <form onSubmit={submit} className="mt-5 space-y-3">
@@ -165,7 +165,7 @@ const EmailGate = ({ defaultEmail = "", onSubmit, isSubmitting }) => {
           placeholder="your@email.com"
           autoComplete="email"
           autoFocus
-          className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3 text-sm text-[#e5e2e1] placeholder-[#574500] outline-none transition focus:border-[#f2ca50] focus:ring-1 focus:ring-[#f2ca50]/50"
+          className="w-full rounded-2xl border border-ink/10 bg-page px-4 py-3 text-sm text-ink-2 placeholder-goldshadow outline-none transition focus:border-gold-ink focus:ring-1 focus:ring-gold-ink/50"
         />
         {error ? (
           <p className="text-xs text-rose-300">{error}</p>
@@ -173,7 +173,7 @@ const EmailGate = ({ defaultEmail = "", onSubmit, isSubmitting }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="se-label inline-flex w-full h-[56px] items-center justify-center gap-2 rounded-[16px] bg-[#f2ca50] px-5 text-[10px] uppercase tracking-[0.28em] text-[#0a0a0a] transition hover:bg-[#ffe088] disabled:opacity-60"
+          className="se-label inline-flex w-full h-[56px] items-center justify-center gap-2 rounded-[16px] bg-gold px-5 text-[10px] uppercase tracking-[0.28em] text-ongold transition hover:bg-gold-hover disabled:opacity-60"
         >
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -183,8 +183,8 @@ const EmailGate = ({ defaultEmail = "", onSubmit, isSubmitting }) => {
           Enter Portal
         </button>
       </form>
-      <p className="mt-4 text-center text-xs text-[#574500]">
-        Lost the link? <Link to="/shopping/find-payment" className="text-[#f2ca50] hover:underline">Find payment</Link>
+      <p className="mt-4 text-center text-xs text-goldshadow">
+        Lost the link? <Link to="/shopping/find-payment" className="text-gold-ink hover:underline">Find payment</Link>
       </p>
     </div>
   );
@@ -540,20 +540,20 @@ const ManualPaymentPage = () => {
   ) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center px-6">
-        <div className="max-w-xl w-full rounded-[2rem] border border-white/5 bg-[#0d0d0d] p-8 text-center shadow-2xl">
-          <p className="se-label text-[10px] tracking-[0.32em] text-[#f2ca50]">
+        <div className="max-w-xl w-full rounded-[2rem] border border-ink/5 bg-page p-8 text-center shadow-2xl">
+          <p className="se-label text-[10px] tracking-[0.32em] text-gold-ink">
             Concierge Portal
           </p>
-          <h1 className="se-serif mt-4 text-3xl text-[#e5e2e1]">
+          <h1 className="se-serif mt-4 text-3xl text-ink-2">
             Order context missing
           </h1>
-          <p className="se-body mt-3 text-sm leading-6 text-[#99907c]">
+          <p className="se-body mt-3 text-sm leading-6 text-muted">
             Please open this page directly from your order confirmation email.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Link
               to="/shopping/find-payment"
-              className="se-label flex h-[56px] items-center justify-center gap-2 rounded-[16px] bg-[#f2ca50] px-6 text-[10px] uppercase tracking-[0.28em] text-[#0a0a0a] transition hover:bg-[#ffe088]"
+              className="se-label flex h-[56px] items-center justify-center gap-2 rounded-[16px] bg-gold px-6 text-[10px] uppercase tracking-[0.28em] text-ongold transition hover:bg-gold-hover"
             >
               Find Payment
             </Link>
@@ -598,14 +598,14 @@ const ManualPaymentPage = () => {
   return (
     <div className="relative mx-auto w-full max-w-[1280px] px-4 pb-32 pt-8 md:px-8">
       {/* Breadcrumb */}
-      <nav className="mb-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[#574500]">
-        <Link to="/" className="transition-colors hover:text-[#d0c5af]">Home</Link>
+      <nav className="mb-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-goldshadow">
+        <Link to="/" className="transition-colors hover:text-cream">Home</Link>
         <span>&gt;</span>
-        <Link to="/shopping/orders" className="transition-colors hover:text-[#d0c5af]">My Orders</Link>
+        <Link to="/shopping/orders" className="transition-colors hover:text-cream">My Orders</Link>
         <span>&gt;</span>
         <span>Order Details</span>
         <span>&gt;</span>
-        <span className="font-semibold text-[#F2CA50]">Manual Payment Verification</span>
+        <span className="font-semibold text-gold-ink">Manual Payment Verification</span>
       </nav>
 
       {/* Hero Section */}

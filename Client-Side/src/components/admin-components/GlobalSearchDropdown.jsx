@@ -120,7 +120,7 @@ const GlobalSearchDropdown = () => {
   return (
     <div ref={containerRef} className="relative max-w-md w-full">
       <div className="relative group">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#D4AF37] transition-colors" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-gold-ink2 transition-colors" />
         <input
           ref={inputRef}
           type="text"
@@ -137,10 +137,10 @@ const GlobalSearchDropdown = () => {
           aria-expanded={showDropdown}
           aria-controls="admin-search-results"
           data-testid="admin-global-search-input"
-          className="h-10 w-full rounded-full border border-gray-800 bg-gray-900 pl-10 pr-10 text-xs font-medium text-white placeholder-gray-500 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]/20 outline-none transition-all"
+          className="h-10 w-full rounded-full border border-gray-800 bg-gray-900 pl-10 pr-10 text-xs font-medium text-ink placeholder-gray-500 focus:border-gold-ink2 focus:ring-1 focus:ring-gold-ink2/20 outline-none transition-all"
         />
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-[#D4AF37]" />
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gold-ink2" />
         )}
       </div>
 
@@ -168,7 +168,7 @@ const GlobalSearchDropdown = () => {
               return (
                 <div
                   key={`h-${entry.bucket}-${idx}`}
-                  className="flex items-center gap-2 border-b border-gray-800 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]"
+                  className="flex items-center gap-2 border-b border-gray-800 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gold-ink2"
                 >
                   <Icon className="h-3 w-3" />
                   {meta.label}
@@ -189,10 +189,10 @@ const GlobalSearchDropdown = () => {
                 onClick={() => handleSelect(item)}
                 data-testid={`admin-search-result-${entry.bucket}`}
                 className={`flex w-full flex-col items-start gap-0.5 border-b border-gray-900 px-4 py-2 text-left transition-colors ${
-                  isActive ? "bg-[#D4AF37]/10" : "hover:bg-gray-900/50"
+                  isActive ? "bg-gold-deep/10" : "hover:bg-gray-900/50"
                 }`}
               >
-                <span className="text-xs font-semibold text-white">
+                <span className="text-xs font-semibold text-ink">
                   {item.label}
                 </span>
                 {item.sublabel && (

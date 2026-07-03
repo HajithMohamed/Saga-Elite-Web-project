@@ -31,7 +31,7 @@ export function ConfirmInline({
               whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
               onClick={onCancel}
-              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-medium text-white"
+              className="rounded-full border border-ink/20 bg-ink/5 px-4 py-2 text-xs font-medium text-ink"
             >
               {cancelLabel}
             </motion.button>

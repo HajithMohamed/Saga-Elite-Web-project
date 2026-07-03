@@ -66,7 +66,7 @@ export function FieldError({ children, className = "" }) {
           role="alert"
           aria-live="polite"
         >
-          <div className="mt-2 flex items-start gap-2 se-body text-xs text-[#ffb4ab] leading-relaxed">
+          <div className="mt-2 flex items-start gap-2 se-body text-xs text-danger-ink leading-relaxed">
             <AlertCircle
               size={12}
               strokeWidth={1.75}
@@ -105,10 +105,10 @@ export function Reveal({ children, delay = 0, y = 24, className = "", as = "div"
 // ─────────────────────────────────────────────────────────────────────────────
 export function Eyebrow({ children, tone = "gold", className = "", size = "sm" }) {
   const color =
-    tone === "gold" ? "text-[#f2ca50]"
-    : tone === "muted" ? "text-[#99907c]"
-    : tone === "invert" ? "text-[#1b1c1c]"
-    : "text-[#d0c5af]";
+    tone === "gold" ? "text-gold-ink"
+    : tone === "muted" ? "text-muted"
+    : tone === "invert" ? "text-ongold"
+    : "text-cream";
   const sz =
     size === "xs" ? "text-[10px] tracking-[0.3em]"
     : size === "sm" ? "text-[11px] tracking-[0.28em]"
@@ -121,9 +121,9 @@ export function Eyebrow({ children, tone = "gold", className = "", size = "sm" }
 // ─────────────────────────────────────────────────────────────────────────────
 export function Hairline({ tone = "variant", className = "" }) {
   const bg =
-    tone === "soft" ? "bg-white/10"
-    : tone === "strong" ? "bg-[#99907c]"
-    : "bg-[#4d4635]";
+    tone === "soft" ? "bg-ink/10"
+    : tone === "strong" ? "bg-muted"
+    : "bg-line";
   return <div className={cn("h-px w-full", bg, className)} />;
 }
 
@@ -133,9 +133,9 @@ export function Hairline({ tone = "variant", className = "" }) {
 export function Marquee({ items, speed = 28, className = "", tone = "dark", sep = "·" }) {
   const track = items.concat(items);
   const bg =
-    tone === "gold" ? "bg-[#f2ca50] text-[#1b1c1c]"
-    : tone === "invert" ? "bg-[#e5e2e1] text-[#131313]"
-    : "bg-[#0e0e0e] text-[#d0c5af]";
+    tone === "gold" ? "bg-gold text-ongold"
+    : tone === "invert" ? "bg-ivory text-ongold"
+    : "bg-page text-cream";
   return (
     <div className={cn("relative overflow-hidden", bg, className)}>
       <div className="flex whitespace-nowrap homepage-marquee-track" style={{ animationDuration: `${speed}s` }}>
@@ -177,19 +177,19 @@ export function Countdown({ target, variant = "editorial", showSeconds = true, e
 
   if (c.expired) {
     return (
-      <span className="se-instrument text-base text-[#99907c]">The chapter has passed.</span>
+      <span className="se-instrument text-base text-muted">The chapter has passed.</span>
     );
   }
 
   if (variant === "compact") {
     return (
-      <div className="flex items-center gap-3 se-mono text-sm text-[#e5e2e1]">
+      <div className="flex items-center gap-3 se-mono text-sm text-ink-2">
         {baseUnits.flatMap(([lbl, v], i) => {
           const out = [];
-          if (i > 0) out.push(<span key={`${lbl}-sep`} className="text-[#4d4635]">:</span>);
+          if (i > 0) out.push(<span key={`${lbl}-sep`} className="text-line">:</span>);
           out.push(<span key={`${lbl}-v`} className="tabular-nums">{pad2(v)}</span>);
           out.push(
-            <span key={`${lbl}-l`} className="se-label text-[9px] text-[#99907c] tracking-[0.3em]">
+            <span key={`${lbl}-l`} className="se-label text-[9px] text-muted tracking-[0.3em]">
               {lbl}
             </span>
           );
@@ -206,13 +206,13 @@ export function Countdown({ target, variant = "editorial", showSeconds = true, e
         {baseUnits.flatMap(([lbl, v], i) => {
           const out = [];
           if (i > 0)
-            out.push(<div key={`${lbl}-sep`} className="w-px self-stretch bg-[#4d4635] mx-3 sm:mx-5" />);
+            out.push(<div key={`${lbl}-sep`} className="w-px self-stretch bg-line mx-3 sm:mx-5" />);
           out.push(
             <div key={`${lbl}-cell`} className="flex flex-col items-start">
-              <span className="se-serif text-4xl sm:text-5xl leading-none tabular-nums text-[#e5e2e1]">
+              <span className="se-serif text-4xl sm:text-5xl leading-none tabular-nums text-ink-2">
                 {pad2(v)}
               </span>
-              <span className="se-label text-[10px] tracking-[0.3em] text-[#99907c] mt-2">{lbl}</span>
+              <span className="se-label text-[10px] tracking-[0.3em] text-muted mt-2">{lbl}</span>
             </div>
           );
           return out;
@@ -281,13 +281,13 @@ export function Btn({
     icon: "h-11 w-11 p-0 text-[11px]",
   };
   const variants = {
-    default: "bg-[#f2ca50] text-[#3c2f00] hover:bg-[#ffe088] border border-[#e9c349]",
-    outline: "bg-transparent text-[#e5e2e1] border border-[#4d4635] hover:bg-[#1c1b1b] hover:border-[#99907c]",
-    ghost: "bg-transparent text-[#d0c5af] hover:bg-[#1c1b1b] hover:text-[#e5e2e1] border border-transparent",
-    secondary: "bg-[#2a2a2a] text-[#e5e2e1] border border-[#353534] hover:bg-[#353534]",
-    destructive: "bg-[#93000a] text-[#ffdad6] border border-[#93000a] hover:bg-[#690005]",
-    link: "bg-transparent text-[#f2ca50] border-b border-[#4d4635] hover:border-[#f2ca50] rounded-none px-0",
-    invert: "bg-[#e5e2e1] text-[#131313] border border-[#e5e2e1] hover:bg-white",
+    default: "bg-gold text-[#3c2f00] hover:bg-gold-hover border border-[#e9c349]",
+    outline: "bg-transparent text-ink-2 border border-line hover:bg-card hover:border-muted",
+    ghost: "bg-transparent text-cream hover:bg-card hover:text-ink-2 border border-transparent",
+    secondary: "bg-elevated text-ink-2 border border-[#353534] hover:bg-[#353534]",
+    destructive: "bg-danger-deep text-[#ffdad6] border border-danger-deep hover:bg-[#690005]",
+    link: "bg-transparent text-gold-ink border-b border-line hover:border-gold-ink rounded-none px-0",
+    invert: "bg-ivory text-ongold border border-ink-2 hover:bg-white",
   };
   const cls = cn(
     base,
@@ -324,7 +324,7 @@ export function Img({
         whileHover="hover"
         className={cn(
           "relative w-full overflow-hidden",
-          frame && "border border-[#4d4635]"
+          frame && "border border-line"
         )}
         style={{ aspectRatio: ratio }}
       >
@@ -348,7 +348,7 @@ export function Img({
         )}
       </motion.div>
       {caption && (
-        <figcaption className="mt-2 se-label text-[10px] tracking-[0.3em] text-[#d0c5af]">
+        <figcaption className="mt-2 se-label text-[10px] tracking-[0.3em] text-cream">
           {caption}
         </figcaption>
       )}
@@ -363,7 +363,7 @@ export function PullQuote({ children, attribution, className = "" }) {
   return (
     <div className={cn("py-10", className)}>
       <Hairline tone="strong" />
-      <blockquote className="se-serif text-2xl sm:text-3xl md:text-4xl leading-snug text-[#e5e2e1] py-8 max-w-3xl">
+      <blockquote className="se-serif text-2xl sm:text-3xl md:text-4xl leading-snug text-ink-2 py-8 max-w-3xl">
         “{children}”
       </blockquote>
       {attribution && <Eyebrow tone="muted" size="xs">— {attribution}</Eyebrow>}
@@ -442,7 +442,7 @@ function PlanetWithMoon({ planetSize = 6, moonOrbit = 13 }) {
         transition={{ duration: 4.5, ease: "linear", repeat: Infinity }}
       >
         <span
-          className="block rounded-full bg-white/85 absolute"
+          className="block rounded-full bg-ink/85 absolute"
           style={{
             width: 2,
             height: 2,
@@ -679,7 +679,7 @@ export function AnimatedLogo({
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
         >
-          <span className="se-label text-[10px] tracking-[0.32em] text-[#99907c]">
+          <span className="se-label text-[10px] tracking-[0.32em] text-muted">
             {caption}
           </span>
         </motion.div>
@@ -693,7 +693,7 @@ export function AnimatedLogo({
 // ─────────────────────────────────────────────────────────────────────────────
 export function Wordmark({ size = "md", tone = "light", tagline = false, className = "" }) {
   const t = size === "sm" ? "text-[15px]" : size === "lg" ? "text-[28px]" : "text-[19px]";
-  const c = tone === "dark" ? "text-[#131313]" : "text-[#e5e2e1]";
+  const c = tone === "dark" ? "text-ongold" : "text-ink-2";
   return (
     <div className={cn("flex flex-col items-start leading-none", className)}>
       <span className={cn("se-wordmark", t, c)}>Saga Elite</span>
@@ -701,7 +701,7 @@ export function Wordmark({ size = "md", tone = "light", tagline = false, classNa
         <span
           className={cn(
             "se-label text-[10px] mt-1.5",
-            tone === "dark" ? "text-[#574500]" : "text-[#99907c]"
+            tone === "dark" ? "text-goldshadow" : "text-muted"
           )}
           style={{ letterSpacing: "0.18em" }}
         >
@@ -751,8 +751,8 @@ export function ColorSwatch({
         className={cn(
           "relative flex items-center justify-center rounded-full border transition-all",
           selected
-            ? "border-[#f2ca50] ring-2 ring-[#f2ca50] ring-offset-2 ring-offset-[#0a0a0a]"
-            : "border-[#4d4635] group-hover:border-[#99907c]",
+            ? "border-gold-ink ring-2 ring-gold-ink ring-offset-2 ring-offset-page"
+            : "border-line group-hover:border-muted",
           disabled && !selected && "opacity-35"
         )}
         style={{ width: size, height: size }}
@@ -774,7 +774,7 @@ export function ColorSwatch({
             <Check
               size={Math.max(10, Math.floor(size * 0.42))}
               strokeWidth={2.25}
-              className="text-[#0a0a0a] mix-blend-difference"
+              className="text-ongold mix-blend-difference"
               style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.6))" }}
             />
           </span>
@@ -816,10 +816,10 @@ export function SizeChip({
         "min-w-12 h-12 px-4 se-mono text-sm border transition-colors se-focus",
         "disabled:cursor-not-allowed",
         selected
-          ? "bg-[#e5e2e1] text-[#131313] border-[#e5e2e1]"
+          ? "bg-ivory text-ongold border-ink-2"
           : disabled
-            ? "bg-transparent text-[#99907c] border-[#4d4635] line-through"
-            : "bg-transparent text-[#d0c5af] border-[#4d4635] hover:bg-[#1c1b1b] hover:border-[#99907c] hover:text-[#e5e2e1]",
+            ? "bg-transparent text-muted border-line line-through"
+            : "bg-transparent text-cream border-line hover:bg-card hover:border-muted hover:text-ink-2",
         className
       )}
     >
@@ -913,17 +913,17 @@ export function SortDropdown({
         onKeyDown={onTriggerKey}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="h-10 px-4 inline-flex items-center gap-3 border border-[#4d4635] hover:border-[#99907c] bg-transparent se-label text-[10px] tracking-[0.18em] text-[#e5e2e1] transition-colors se-focus"
+        className="h-10 px-4 inline-flex items-center gap-3 border border-line hover:border-muted bg-transparent se-label text-[10px] tracking-[0.18em] text-ink-2 transition-colors se-focus"
       >
-        <span className="se-label text-[9px] tracking-[0.28em] text-[#99907c]">
+        <span className="se-label text-[9px] tracking-[0.28em] text-muted">
           {label}
         </span>
-        <span className="text-[#e5e2e1]">{selected?.label || "—"}</span>
+        <span className="text-ink-2">{selected?.label || "—"}</span>
         <ChevronDown
           size={12}
           strokeWidth={1.5}
           className={cn(
-            "text-[#99907c] transition-transform",
+            "text-muted transition-transform",
             open && "rotate-180"
           )}
         />
@@ -940,7 +940,7 @@ export function SortDropdown({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute top-full right-0 mt-2 min-w-[200px] z-50 bg-[#0e0e0e] border border-[#4d4635] shadow-lg"
+            className="absolute top-full right-0 mt-2 min-w-[200px] z-50 bg-page border border-line shadow-lg"
           >
             {options.map((opt, i) => {
               const isSelected = opt.value === value;
@@ -960,13 +960,13 @@ export function SortDropdown({
                   className={cn(
                     "w-full h-10 px-4 flex items-center justify-between gap-4 text-left transition-colors",
                     "se-label text-[10px] tracking-[0.18em]",
-                    isHover ? "bg-[#1c1b1b]" : "bg-[#0e0e0e]",
-                    isSelected ? "text-[#f2ca50]" : "text-[#d0c5af]"
+                    isHover ? "bg-card" : "bg-page",
+                    isSelected ? "text-gold-ink" : "text-cream"
                   )}
                 >
                   <span>{opt.label}</span>
                   {isSelected && (
-                    <Check size={12} strokeWidth={1.75} className="text-[#f2ca50]" />
+                    <Check size={12} strokeWidth={1.75} className="text-gold-ink" />
                   )}
                 </button>
               );
@@ -991,7 +991,7 @@ export function FilterPills({
   return (
     <div
       className={cn(
-        "inline-flex flex-wrap items-stretch gap-px bg-[#4d4635]/40 p-px",
+        "inline-flex flex-wrap items-stretch gap-px bg-line/40 p-px",
         className
       )}
       role="tablist"
@@ -1008,14 +1008,14 @@ export function FilterPills({
             className={cn(
               "relative h-10 px-5 se-label text-[10px] tracking-[0.18em] transition-colors se-focus",
               active
-                ? "bg-[#f2ca50] text-[#3c2f00]"
-                : "bg-[#1c1b1b] text-[#d0c5af] hover:text-[#e5e2e1] hover:bg-[#2a2a2a]"
+                ? "bg-gold text-[#3c2f00]"
+                : "bg-card text-cream hover:text-ink-2 hover:bg-elevated"
             )}
           >
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute -bottom-px left-2 right-2 h-px bg-[#1b1c1c]"
+                className="absolute -bottom-px left-2 right-2 h-px bg-card"
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
               />
             )}
@@ -1040,7 +1040,7 @@ export function Disclosure({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div
-      className={cn("border-t border-[#4d4635]/60 last:border-b last:border-[#4d4635]/60", className)}
+      className={cn("border-t border-line/60 last:border-b last:border-line/60", className)}
     >
       <button
         type="button"
@@ -1050,7 +1050,7 @@ export function Disclosure({
       >
         <div className="flex flex-col gap-1">
           {eyebrow && <Eyebrow tone="muted" size="xs">{eyebrow}</Eyebrow>}
-          <span className="se-headline text-[#e5e2e1] text-base md:text-lg">
+          <span className="se-headline text-ink-2 text-base md:text-lg">
             {title}
           </span>
         </div>
@@ -1058,7 +1058,7 @@ export function Disclosure({
           size={16}
           strokeWidth={1.5}
           className={cn(
-            "text-[#99907c] transition-transform group-hover:text-[#f2ca50]",
+            "text-muted transition-transform group-hover:text-gold-ink",
             open && "rotate-180"
           )}
         />
@@ -1072,7 +1072,7 @@ export function Disclosure({
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="pb-6 se-body text-sm md:text-base text-[#d0c5af] leading-relaxed">
+            <div className="pb-6 se-body text-sm md:text-base text-cream leading-relaxed">
               {children}
             </div>
           </motion.div>
@@ -1089,8 +1089,8 @@ export function Input({ className = "", error, ...props }) {
   return (
     <input
       className={cn(
-        "bg-transparent border-b border-[#4d4635] text-[#e5e2e1] placeholder:text-[#99907c] focus:border-[#f2ca50] focus:ring-0 w-full outline-none py-2 se-body transition-colors",
-        error && "border-b border-[#ffb4ab] text-[#ffb4ab]",
+        "bg-transparent border-b border-line text-ink-2 placeholder:text-muted focus:border-gold-ink focus:ring-0 w-full outline-none py-2 se-body transition-colors",
+        error && "border-b border-danger-ink text-danger-ink",
         className
       )}
       {...props}
@@ -1119,7 +1119,7 @@ export function SeFade({ children, y = 20, className = "" }) {
 // SeDivider — Specific layout divider
 // ─────────────────────────────────────────────────────────────────────────────
 export function SeDivider({ className = "" }) {
-  return <div className={cn("h-px w-full bg-[#4d4635]", className)} />;
+  return <div className={cn("h-px w-full bg-line", className)} />;
 }
 
 // Aliases for redesign brief compatibility
@@ -1128,7 +1128,7 @@ export const SeMarquee = Marquee;
 
 // Standardized auth styles (used by auth pages)
 export const AUTH_INPUT =
-  "w-full bg-transparent border-b border-[#4d4635] focus:border-[#f2ca50] py-3 text-[#e5e2e1] placeholder:text-[#574500] outline-none se-body text-base transition-colors duration-200";
+  "w-full bg-transparent border-b border-line focus:border-gold-ink py-3 text-ink-2 placeholder:text-goldshadow outline-none se-body text-base transition-colors duration-200";
 
 export const AUTH_PRIMARY_BTN =
-  "w-full h-12 bg-[#f2ca50] hover:bg-[#ffe088] text-[#1b1c1c] se-label text-[11px] tracking-[0.28em] transition-colors disabled:opacity-50 disabled:pointer-events-none";
+  "w-full h-12 bg-gold hover:bg-gold-hover text-ongold se-label text-[11px] tracking-[0.28em] transition-colors disabled:opacity-50 disabled:pointer-events-none";

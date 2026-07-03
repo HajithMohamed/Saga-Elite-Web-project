@@ -138,10 +138,10 @@ const ContactInquiriesPage = () => {
               variants={itemVariants}
               whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
               transition={{ duration: 0.2 }}
-              className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5"
+              className="rounded-[28px] border border-ink/10 bg-ink/[0.03] p-5"
             >
               <p className="text-[11px] uppercase tracking-[0.28em] text-gray-500">{card.label}</p>
-              <p className="mt-2 text-3xl font-semibold text-white">
+              <p className="mt-2 text-3xl font-semibold text-ink">
                 <AnimatedNumber value={card.value} />
               </p>
               <p className="mt-1 text-xs text-gray-500">{card.hint}</p>
@@ -162,7 +162,7 @@ const ContactInquiriesPage = () => {
                   setPage(1);
                 }}
                 placeholder="Search by name, email, or subject…"
-                className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+                className="w-full rounded-2xl border border-ink/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
               />
             </div>
             <div className="flex gap-2">
@@ -176,8 +176,8 @@ const ContactInquiriesPage = () => {
                   }}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
                     statusFilter === opt
-                      ? "border-[#D4AF37]/40 bg-[#D4AF37]/15 text-white"
-                      : "border-white/10 text-gray-500 hover:text-gray-300"
+                      ? "border-gold-ink2/40 bg-gold-deep/15 text-ink"
+                      : "border-ink/10 text-gray-500 hover:text-gray-300"
                   }`}
                 >
                   {opt === "all" ? "All" : formatLabel(opt)}
@@ -196,7 +196,7 @@ const ContactInquiriesPage = () => {
               {error}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="mt-6 rounded-[24px] border border-white/10 bg-black/30 px-5 py-10 text-center text-sm text-gray-400">
+            <div className="mt-6 rounded-[24px] border border-ink/10 bg-black/30 px-5 py-10 text-center text-sm text-gray-400">
               {search || statusFilter !== "all"
                 ? "No inquiries match your filters."
                 : "No contact inquiries yet."}
@@ -212,7 +212,7 @@ const ContactInquiriesPage = () => {
                   <motion.div
                     key={inquiry._id}
                     layout
-                    className="rounded-[24px] border border-white/10 bg-black/30 transition hover:border-white/20"
+                    className="rounded-[24px] border border-ink/10 bg-black/30 transition hover:border-ink/20"
                   >
                     {/* Header row */}
                     <button
@@ -221,11 +221,11 @@ const ContactInquiriesPage = () => {
                       className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                          <MessageSquare className="h-5 w-5 text-[#D4AF37]" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-ink/10 bg-ink/[0.04]">
+                          <MessageSquare className="h-5 w-5 text-gold-ink2" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-ink">
                             {inquiry.name || "Anonymous"}
                             <span className="ml-2 text-xs font-normal text-gray-500">
                               {inquiry.email}
@@ -254,10 +254,10 @@ const ContactInquiriesPage = () => {
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="border-t border-white/10 px-5 py-5"
+                        className="border-t border-ink/10 px-5 py-5"
                       >
                         {/* Message */}
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                        <div className="rounded-2xl border border-ink/10 bg-ink/[0.02] p-4">
                           <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Message</p>
                           <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-gray-300">
                             {inquiry.message || "No message provided."}
@@ -266,9 +266,9 @@ const ContactInquiriesPage = () => {
 
                         {/* Phone number if present */}
                         {inquiry.phone ? (
-                          <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                          <div className="mt-3 rounded-2xl border border-ink/10 bg-ink/[0.02] px-4 py-3">
                             <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">Phone</p>
-                            <p className="mt-1 text-sm text-white">{inquiry.phone}</p>
+                            <p className="mt-1 text-sm text-ink">{inquiry.phone}</p>
                           </div>
                         ) : null}
 
@@ -293,7 +293,7 @@ const ContactInquiriesPage = () => {
                                 setAdminNotes((prev) => ({ ...prev, [inquiry._id]: e.target.value }))
                               }
                               placeholder="Add a note (optional)…"
-                              className="mt-1 w-full resize-none rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+                              className="mt-1 w-full resize-none rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
                             />
                           </div>
                           <div className="flex flex-wrap gap-2">

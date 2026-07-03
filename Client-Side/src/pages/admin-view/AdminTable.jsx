@@ -54,10 +54,10 @@ const AdminTable = ({ admins = [], currentUserId, onEdit, onDelete }) => {
   }
 
   return (
-    <div className="overflow-x-auto rounded-[20px] border border-white/10">
+    <div className="overflow-x-auto rounded-[20px] border border-ink/10">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-[#111]/95 backdrop-blur-md">
-          <tr className="border-b border-[#4d4635] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+        <thead className="sticky top-0 z-10 bg-panel/95 backdrop-blur-md">
+          <tr className="border-b border-line text-[9px] uppercase tracking-[0.25em] text-muted se-label">
             <th className="px-4 py-3 text-left">
               Admin
             </th>
@@ -93,21 +93,21 @@ const AdminTable = ({ admins = [], currentUserId, onEdit, onDelete }) => {
               <motion.tr
                 key={admin._id}
                 variants={itemVariants}
-                className="border-t border-[#4d4635]/40 transition-all duration-300 hover:bg-[#1c1b1b] hover:shadow-[inset_4px_0_0_0_#D4AF37]"
+                className="border-t border-line/40 transition-all duration-300 hover:bg-card hover:shadow-[inset_4px_0_0_0_#D4AF37]"
               >
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f2ca50] to-[#9a7a1e] text-xs font-semibold text-[#0a0a0a]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold to-[#9a7a1e] text-xs font-semibold text-ongold">
                       {getInitials(admin.name || admin.email)}
                     </div>
                     <div>
-                      <p className="font-medium leading-tight text-[#e5e2e1] se-body">
+                      <p className="font-medium leading-tight text-ink-2 se-body">
                         {admin.name || "N/A"}
                         {isSelf ? (
-                          <span className="ml-2 text-[10px] font-normal text-[#99907c] se-label tracking-widest">(you)</span>
+                          <span className="ml-2 text-[10px] font-normal text-muted se-label tracking-widest">(you)</span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-[#99907c] se-mono">{admin.email}</p>
+                      <p className="mt-0.5 text-[10px] text-muted se-mono">{admin.email}</p>
                     </div>
                   </div>
                 </td>
@@ -116,33 +116,33 @@ const AdminTable = ({ admins = [], currentUserId, onEdit, onDelete }) => {
                   <span
                     className={`inline-flex rounded-sm px-2 py-1 text-[9px] se-label tracking-widest ${
                       isSuperAdmin
-                        ? "bg-[#f2ca50] text-[#0a0a0a]"
-                        : "bg-[#4d4635] text-[#e5e2e1]"
+                        ? "bg-gold text-ongold"
+                        : "bg-line text-ink-2"
                     }`}
                   >
                     {getRoleLabel(admin)}
                   </span>
                 </td>
 
-                <td className="px-4 py-4 text-[#99907c] se-mono text-[10px]">{formatDate(admin.createdAt)}</td>
+                <td className="px-4 py-4 text-muted se-mono text-[10px]">{formatDate(admin.createdAt)}</td>
 
-                <td className="px-4 py-4 text-[#99907c] se-mono text-[10px]">
+                <td className="px-4 py-4 text-muted se-mono text-[10px]">
                   {admin.lastActiveAt ? formatDate(admin.lastActiveAt) : "Never"}
                 </td>
 
                 <td className="px-4 py-4 text-right">
                   <div className="flex items-center justify-end gap-3">
                     <span>
-                      <span className="font-medium text-[#e5e2e1] se-mono">{admin.actionCount ?? 0}</span>
-                      <span className="ml-1 text-[9px] text-[#99907c] se-label tracking-widest">actions</span>
+                      <span className="font-medium text-ink-2 se-mono">{admin.actionCount ?? 0}</span>
+                      <span className="ml-1 text-[9px] text-muted se-label tracking-widest">actions</span>
                     </span>
                     {!(isSelf || isSuperAdmin) ? (
-                      <span className="flex items-center gap-1.5 border-l border-[#4d4635]/60 pl-3">
+                      <span className="flex items-center gap-1.5 border-l border-line/60 pl-3">
                         <button
                           type="button"
                           onClick={() => onEdit?.(admin)}
                           title="Edit admin"
-                          className="rounded-md border border-white/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                          className="rounded-md border border-ink/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-gold-ink2/40 hover:text-gold-ink2"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -151,7 +151,7 @@ const AdminTable = ({ admins = [], currentUserId, onEdit, onDelete }) => {
                           onClick={() => onDelete?.(admin)}
                           title="Delete admin"
                           disabled={deleteLoading === admin._id}
-                          className="rounded-md border border-white/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-rose-400/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-md border border-ink/10 bg-black/40 p-1.5 text-gray-300 transition hover:border-rose-400/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {deleteLoading === admin._id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
