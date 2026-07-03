@@ -221,14 +221,14 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
             animate="visible"
             exit="exit"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0b0b0b] shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
+            className="w-full max-w-2xl overflow-hidden rounded-[1.75rem] border border-ink/10 bg-page shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+            <header className="flex items-start justify-between gap-4 border-b border-ink/10 px-6 py-5">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-[#D4AF37]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-gold-ink2">
                   Edit admin
                 </p>
-                <h2 className="mt-1 text-xl font-bold text-white">{admin.name || admin.email}</h2>
+                <h2 className="mt-1 text-xl font-bold text-ink">{admin.name || admin.email}</h2>
                 <p className="mt-0.5 break-all font-mono text-[11px] text-gray-500">
                   {admin.email}
                 </p>
@@ -236,7 +236,7 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-white/10 p-2 text-gray-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37]"
+                className="rounded-full border border-ink/10 p-2 text-gray-300 transition hover:border-gold-ink2/40 hover:text-gold-ink2"
                 aria-label="Close edit modal"
               >
                 <X className="h-4 w-4" />
@@ -265,8 +265,8 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
                         }}
                         className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                           active
-                            ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37]"
-                            : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                            ? "border-gold-ink2/50 bg-gold-deep/10 text-gold-ink2"
+                            : "border-ink/10 bg-black/40 text-gray-300 hover:border-ink/20"
                         }`}
                       >
                         {r.label}
@@ -292,13 +292,13 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
                           onClick={() => applySubRolePreset(sr.value)}
                           className={`rounded-xl border p-3 text-left transition ${
                             active
-                              ? "border-[#D4AF37]/50 bg-[#D4AF37]/10"
-                              : "border-white/10 bg-black/40 hover:border-white/20"
+                              ? "border-gold-ink2/50 bg-gold-deep/10"
+                              : "border-ink/10 bg-black/40 hover:border-ink/20"
                           }`}
                         >
                           <p
                             className={`text-sm font-semibold ${
-                              active ? "text-[#D4AF37]" : "text-white"
+                              active ? "text-gold-ink2" : "text-ink"
                             }`}
                           >
                             {sr.label}
@@ -335,7 +335,7 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
                         className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
                           active
                             ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
-                            : "border-white/10 bg-black/40 text-gray-300 hover:border-white/20"
+                            : "border-ink/10 bg-black/40 text-gray-300 hover:border-ink/20"
                         }`}
                       >
                         <span className="font-medium">{perm.label}</span>
@@ -343,7 +343,7 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
                           className={`flex h-4 w-4 items-center justify-center rounded border ${
                             active
                               ? "border-emerald-300 bg-emerald-300/20"
-                              : "border-white/20 bg-black/40"
+                              : "border-ink/20 bg-black/40"
                           }`}
                         >
                           {active ? <Check className="h-3 w-3 text-emerald-200" /> : null}
@@ -401,7 +401,7 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
                         type="button"
                         onClick={() => setResetConfirmOpen(false)}
                         disabled={isResettingThisAdmin}
-                        className="rounded-full border border-white/20 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-300 hover:border-white/40"
+                        className="rounded-full border border-ink/20 px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-300 hover:border-ink/40"
                       >
                         Cancel
                       </button>
@@ -436,7 +436,7 @@ const EditAdminModal = ({ admin, isOpen, onClose }) => {
               </div>
             </div>
 
-            <footer className="flex items-center justify-end gap-3 border-t border-white/10 px-6 py-4">
+            <footer className="flex items-center justify-end gap-3 border-t border-ink/10 px-6 py-4">
               <SecondaryButton type="button" onClick={onClose} disabled={editLoading}>
                 Close
               </SecondaryButton>

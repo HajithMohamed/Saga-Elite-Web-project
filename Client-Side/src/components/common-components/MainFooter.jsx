@@ -102,27 +102,27 @@ function PaymentChip({ method }) {
   }
   if (key.includes("cash") || key === "cod") {
     return (
-      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
-        <Banknote className="w-4 h-4 text-[#f2ca50]" /> Cash on Delivery
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-panel border border-ink/5 px-3 text-[12px] text-ink-2", PAY_CHIP)}>
+        <Banknote className="w-4 h-4 text-gold-ink" /> Cash on Delivery
       </div>
     );
   }
   if (key.includes("bank")) {
     return (
-      <div className={cn("flex items-center gap-2 rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] text-[#e5e2e1]", PAY_CHIP)}>
-        <Landmark className="w-4 h-4 text-[#f2ca50]" /> Bank Transfer
+      <div className={cn("flex items-center gap-2 rounded-[8px] bg-panel border border-ink/5 px-3 text-[12px] text-ink-2", PAY_CHIP)}>
+        <Landmark className="w-4 h-4 text-gold-ink" /> Bank Transfer
       </div>
     );
   }
   return (
-    <div className={cn("flex items-center justify-center rounded-[8px] bg-[#131313] border border-white/5 px-3 text-[12px] font-semibold text-[#e5e2e1]", PAY_CHIP)}>
+    <div className={cn("flex items-center justify-center rounded-[8px] bg-panel border border-ink/5 px-3 text-[12px] font-semibold text-ink-2", PAY_CHIP)}>
       {name}
     </div>
   );
 }
 
 const linkClass =
-  "text-[14px] text-[#99907c] hover:text-[#f2ca50] transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#f2ca50] hover:after:w-full after:transition-all after:duration-200";
+  "text-[14px] text-muted hover:text-gold-ink transition-colors inline-block relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-gold hover:after:w-full after:transition-all after:duration-200";
 
 // Internal routes use <Link>; external (http/https) use <a>.
 function FooterLink({ link }) {
@@ -174,10 +174,10 @@ export default function MainFooter() {
   const renderAccordion = (title, links, index) => {
     const isOpen = activeAccordion === index;
     return (
-      <div className="md:hidden border-b border-white/10">
+      <div className="md:hidden border-b border-ink/10">
         <button
           onClick={() => toggleAccordion(index)}
-          className="w-full h-[60px] flex items-center justify-between text-[#e5e2e1] font-sans font-semibold text-[15px]"
+          className="w-full h-[60px] flex items-center justify-between text-ink-2 font-sans font-semibold text-[15px]"
         >
           {title}
           <ChevronDown className={cn("w-5 h-5 transition-transform duration-250", isOpen && "rotate-180")} />
@@ -196,7 +196,7 @@ export default function MainFooter() {
   };
 
   return (
-    <footer className="bg-[#0E0E0E] border-t border-white/5 relative">
+    <footer className="bg-page border-t border-ink/5 relative">
       <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-[64px] md:py-[80px] lg:py-[96px]">
 
         {/* Desktop Layout: 5 Columns */}
@@ -204,15 +204,15 @@ export default function MainFooter() {
 
           {/* Column 1: Brand */}
           <div className="lg:col-span-1">
-            <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-6">
+            <Link to="/" className="inline-block se-serif text-[24px] text-ink-2 mb-6">
               {settings?.brandName || "SAGA ELITE"}
             </Link>
-            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
+            <p className="se-body text-[14px] leading-relaxed text-muted">{brandDesc}</p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div>
-            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Quick Links</h4>
+            <h4 className="font-sans font-semibold text-[15px] text-ink-2 mb-6">Quick Links</h4>
             <ul className="flex flex-col gap-4">
               {quickLinks.map((link, i) => (
                 <li key={i}><FooterLink link={link} /></li>
@@ -222,7 +222,7 @@ export default function MainFooter() {
 
           {/* Column 3: Customer Support */}
           <div>
-            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Customer Support</h4>
+            <h4 className="font-sans font-semibold text-[15px] text-ink-2 mb-6">Customer Support</h4>
             <ul className="flex flex-col gap-4">
               {supportLinks.map((link, i) => (
                 <li key={i}><FooterLink link={link} /></li>
@@ -232,7 +232,7 @@ export default function MainFooter() {
 
           {/* Column 4: Company */}
           <div>
-            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Company</h4>
+            <h4 className="font-sans font-semibold text-[15px] text-ink-2 mb-6">Company</h4>
             <ul className="flex flex-col gap-4">
               {companyLinks.map((link, i) => (
                 <li key={i}><FooterLink link={link} /></li>
@@ -242,25 +242,25 @@ export default function MainFooter() {
 
           {/* Column 5: Contact (only fields that exist) */}
           <div>
-            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-6">Contact</h4>
-            <ul className="flex flex-col gap-4 text-[14px] text-[#99907c]">
+            <h4 className="font-sans font-semibold text-[15px] text-ink-2 mb-6">Contact</h4>
+            <ul className="flex flex-col gap-4 text-[14px] text-muted">
               {settings?.phone && (
-                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-gold-ink" />{settings.phone}</li>
               )}
               {settings?.whatsapp && (
-                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />{settings.whatsapp}</li>
+                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-gold-ink" />{settings.whatsapp}</li>
               )}
               {settings?.email && (
-                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-gold-ink" />{settings.email}</li>
               )}
               {settings?.address && (
-                <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-[#f2ca50] shrink-0 mt-1" /><span>{settings.address}</span></li>
+                <li className="flex items-start gap-3"><MapPin className="w-4 h-4 text-gold-ink shrink-0 mt-1" /><span>{settings.address}</span></li>
               )}
             </ul>
             {socials.length > 0 && (
               <div className="flex gap-4 mt-6">
                 {socials.map((social, i) => (
-                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-muted hover:text-gold-ink transition-colors">
                     <social.Icon className="w-5 h-5" />
                   </a>
                 ))}
@@ -273,33 +273,33 @@ export default function MainFooter() {
         {/* Mobile Layout: Accordions */}
         <div className="md:hidden mb-12">
           <div className="mb-8">
-            <Link to="/" className="inline-block se-serif text-[24px] text-[#e5e2e1] mb-4">
+            <Link to="/" className="inline-block se-serif text-[24px] text-ink-2 mb-4">
               {settings?.brandName || "SAGA ELITE"}
             </Link>
-            <p className="se-body text-[14px] leading-relaxed text-[#99907c]">{brandDesc}</p>
+            <p className="se-body text-[14px] leading-relaxed text-muted">{brandDesc}</p>
           </div>
 
           {renderAccordion("Quick Links", quickLinks, 1)}
           {renderAccordion("Support", supportLinks, 2)}
           {renderAccordion("Company", companyLinks, 3)}
 
-          <div className="border-b border-white/10 py-6">
-            <h4 className="font-sans font-semibold text-[15px] text-[#e5e2e1] mb-4">Contact</h4>
-            <ul className="flex flex-col gap-3 text-[14px] text-[#99907c] mb-6">
+          <div className="border-b border-ink/10 py-6">
+            <h4 className="font-sans font-semibold text-[15px] text-ink-2 mb-4">Contact</h4>
+            <ul className="flex flex-col gap-3 text-[14px] text-muted mb-6">
               {settings?.phone && (
-                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-[#f2ca50]" />{settings.phone}</li>
+                <li className="flex items-center gap-3"><Phone className="w-4 h-4 text-gold-ink" />{settings.phone}</li>
               )}
               {settings?.whatsapp && (
-                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-[#f2ca50]" />{settings.whatsapp}</li>
+                <li className="flex items-center gap-3"><WhatsAppIcon className="w-4 h-4 text-gold-ink" />{settings.whatsapp}</li>
               )}
               {settings?.email && (
-                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-[#f2ca50]" />{settings.email}</li>
+                <li className="flex items-center gap-3"><Mail className="w-4 h-4 text-gold-ink" />{settings.email}</li>
               )}
             </ul>
             {socials.length > 0 && (
               <div className="flex gap-4">
                 {socials.map((social, i) => (
-                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                  <a key={i} href={social.url} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="text-muted hover:text-gold-ink transition-colors">
                     <social.Icon className="w-5 h-5" />
                   </a>
                 ))}
@@ -309,9 +309,9 @@ export default function MainFooter() {
         </div>
 
         {/* Payment & Security Row */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 py-8 border-y border-white/10 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 py-8 border-y border-ink/10 mb-8">
           <div>
-            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4">Payment Methods</div>
+            <div className="text-[12px] text-muted uppercase tracking-wider mb-4">Payment Methods</div>
             <div className="flex flex-wrap items-center gap-3">
               {payments.map((method, i) => (
                 <PaymentChip key={i} method={method} />
@@ -320,10 +320,10 @@ export default function MainFooter() {
           </div>
 
           <div>
-            <div className="text-[12px] text-[#99907c] uppercase tracking-wider mb-4 lg:text-right">Security &amp; Trust</div>
+            <div className="text-[12px] text-muted uppercase tracking-wider mb-4 lg:text-right">Security &amp; Trust</div>
             <div className="flex flex-wrap gap-4 lg:justify-end">
               {SECURITY_BADGES.map((badge, i) => (
-                <div key={i} className="flex items-center gap-2 text-[#99907c]">
+                <div key={i} className="flex items-center gap-2 text-muted">
                   <badge.icon className="w-4 h-4" />
                   <span className="text-[12px]">{badge.label}</span>
                 </div>
@@ -333,12 +333,12 @@ export default function MainFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-[#99907c]">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-[12px] text-muted">
           <p>{copyright}</p>
           <div className="flex items-center gap-6">
-            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Privacy Policy</Link>
-            <Link to="/legal/terms-and-conditions" className="hover:text-[#f2ca50] transition-colors">Terms</Link>
-            <Link to="/legal/privacy-policy" className="hover:text-[#f2ca50] transition-colors">Cookies</Link>
+            <Link to="/legal/privacy-policy" className="hover:text-gold-ink transition-colors">Privacy Policy</Link>
+            <Link to="/legal/terms-and-conditions" className="hover:text-gold-ink transition-colors">Terms</Link>
+            <Link to="/legal/privacy-policy" className="hover:text-gold-ink transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

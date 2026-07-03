@@ -6,6 +6,7 @@ const sendMail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const Customer = require("../Models/Customer");
 const { ensureCustomerRecord } = require("../Services/migration-service");
+const { isAdminRole } = require("../Utils/admin-roles");
 const logger = require("../Utils/logger");
 
 // ── shared helper: exchange Google access token for profile ──
@@ -42,8 +43,9 @@ const googleAuth = catchAsync(async (req, res, next) => {
     let user = await User.findOne({ email });
 
     if (user) {
-        // Block admin / superadmin from using Google sign-in
-        if (user.role === "admin" || user.role === "superadmin") {
+        // Block ALL admin roles (admin, super_admin, sub_admin) from Google
+        // sign-in — admins must use email/password so the 2FA gate applies.
+        if (isAdminRole(user.role)) {
             return next(new AppError("Admin accounts cannot use Google sign-in", 403));
         }
         

@@ -3,32 +3,60 @@
 @tailwind utilities;
 
 /* ── Design Tokens (CSS variables) ─────────────────────────────
-   Canonical Saga Elite tokens, mirroring tailwind.config.js + DESIGN_SPEC.md.
-   Exposed as CSS custom properties so they can be consumed outside Tailwind
-   (inline styles, third-party widgets, future theming). Tailwind classes
-   remain the primary API — keep these in sync with the config. */
+   Theme-aware Saga Elite tokens. The default (:root) palette is the
+   original Saga Gold DARK theme; `html.light` swaps every variable for
+   the light theme. Tailwind consumes the `--th-*` channel triplets via
+   tailwind.config.js (`rgb(var(--th-x) / <alpha-value>)`), while the
+   legacy `--se-*` variables remain for inline styles / JS consumers. */
 :root {
+  color-scheme: dark;
+
+  /* Channel triplets (r g b) — consumed by Tailwind tokens */
+  --th-page: 10 10 10;          /* #0a0a0a */
+  --th-panel: 19 19 19;         /* #131313 */
+  --th-card: 26 26 26;          /* #1a1a1a */
+  --th-elevated: 42 42 42;      /* #2a2a2a */
+  --th-ink: 250 250 250;        /* #fafafa */
+  --th-ink2: 229 226 225;       /* #e5e2e1 */
+  --th-cream: 208 197 175;      /* #d0c5af */
+  --th-muted: 153 144 124;      /* #99907c */
+  --th-line: 77 70 53;          /* #4d4635 */
+  --th-gold-ink: 242 202 80;    /* #f2ca50 (gold as text, dark bg) */
+  --th-gold-ink2: 212 175 55;   /* #d4af37 */
+  --th-danger: 255 69 58;       /* #ff453a */
+  --th-danger-ink: 255 180 171; /* #ffb4ab */
+  --th-success: 52 199 89;      /* #34c759 */
+  --th-success-ink: 168 216 182;/* #a8d8b6 */
+  --th-info: 56 189 248;        /* #38bdf8 */
+  --th-info-ink: 164 210 226;   /* #a4d2e2 */
+  --th-warning: 255 204 0;      /* #ffcc00 */
+  --th-urgent: 255 107 53;      /* #ff6b35 */
+  --th-vip: 168 85 247;         /* #a855f7 */
+  --th-divider: rgba(255, 255, 255, 0.08);
+
   /* Core / surfaces */
-  --se-bg: #121212;
-  --se-fg: #FFFFFF;
+  --se-bg: #0a0a0a;
+  --se-fg: #fafafa;
   --se-surface: #1A1A1A;
-  --se-surface-1: #202020;
+  --se-surface-1: #131313;
   --se-surface-2: #2a2a2a;
   --se-surface-3: #393939;
-  --se-page: #121212;
+  --se-page: #0a0a0a;
 
   /* Brand / accent */
   --se-gold: #F2CA50;
-  --se-gold-deep: #FFD86A;
+  --se-gold-deep: #D4AF37;
   --se-gold-light: #FFD86A;
+  --se-gold-ink: #F2CA50;
   --se-on-gold: #0E0E0E;
   --se-on-gold-editorial: #0E0E0E;
 
   /* Muted / lines */
-  --se-muted: #B5B5B5;
-  --se-muted-2: #99907c;
+  --se-muted: #99907c;
+  --se-muted-2: #8c8577;
   --se-faint: #333333;
   --se-border: rgba(255, 255, 255, 0.08);
+  --se-line: #4d4635;
   --se-ring: #F2CA50;
 
   /* Semantic */
@@ -51,6 +79,9 @@
   --se-radius-full: 9999px;
 
   /* Elevation */
+  --se-shadow-small: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --se-shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --se-shadow-large: 0 16px 40px rgba(0, 0, 0, 0.16);
   --se-shadow-gold: 0 0 40px rgba(242, 202, 80, 0.15);
   --se-shadow-elegant: 0 16px 40px rgba(0, 0, 0, 0.16);
   --se-focus-ring: 0 0 0 2px #121212, 0 0 0 4px #F2CA50;
@@ -67,6 +98,67 @@
   --se-dur-reveal: 550ms;
   --se-dur-image: 650ms;
   --se-dur-cinematic: 1000ms;
+}
+
+/* ── LIGHT THEME ──────────────────────────────────────────────
+   Warm ivory palette; gold fills stay brand-gold, gold "ink"
+   (text/borders) darkens for WCAG contrast on light surfaces. */
+:root.light {
+  color-scheme: light;
+
+  --th-page: 246 243 236;       /* #f6f3ec */
+  --th-panel: 252 250 245;      /* #fcfaf5 */
+  --th-card: 255 255 255;       /* #ffffff */
+  --th-elevated: 237 231 217;   /* #ede7d9 */
+  --th-ink: 28 25 20;           /* #1c1914 */
+  --th-ink2: 41 37 30;          /* #29251e */
+  --th-cream: 87 80 63;         /* #57503f */
+  --th-muted: 117 108 88;       /* #756c58 */
+  --th-line: 216 208 189;       /* #d8d0bd */
+  --th-gold-ink: 138 106 21;    /* #8a6a15 */
+  --th-gold-ink2: 124 95 19;    /* #7c5f13 */
+  --th-danger: 186 43 34;       /* #ba2b22 */
+  --th-danger-ink: 154 36 28;   /* #9a241c */
+  --th-success: 27 118 58;      /* #1b763a */
+  --th-success-ink: 22 101 50;  /* #166532 */
+  --th-info: 12 116 163;        /* #0c74a3 */
+  --th-info-ink: 26 100 128;    /* #1a6480 */
+  --th-warning: 140 106 0;      /* #8c6a00 */
+  --th-urgent: 187 62 12;       /* #bb3e0c */
+  --th-vip: 122 33 199;         /* #7a21c7 */
+  --th-divider: rgba(28, 25, 20, 0.10);
+
+  --se-bg: #f6f3ec;
+  --se-fg: #1c1914;
+  --se-surface: #ffffff;
+  --se-surface-1: #fcfaf5;
+  --se-surface-2: #ede7d9;
+  --se-surface-3: #e2dbc8;
+  --se-page: #f6f3ec;
+
+  --se-gold-ink: #8a6a15;
+
+  --se-muted: #756c58;
+  --se-muted-2: #6d6450;
+  --se-faint: #d8d1c0;
+  --se-border: rgba(28, 25, 20, 0.10);
+  --se-line: #d8d0bd;
+
+  --se-danger: #ba2b22;
+  --se-danger-solid: #ba2b22;
+  --se-new: #1b763a;
+  --se-info: #1a6480;
+  --se-info-accent: #0c74a3;
+  --se-success: #1b763a;
+  --se-urgent: #bb3e0c;
+  --se-vip: #7a21c7;
+
+  --se-shadow-small: 0 4px 12px rgba(60, 50, 30, 0.08);
+  --se-shadow-medium: 0 8px 24px rgba(60, 50, 30, 0.10);
+  --se-shadow-large: 0 16px 40px rgba(60, 50, 30, 0.12);
+  --se-shadow-gold: 0 0 40px rgba(178, 138, 30, 0.18);
+  --se-shadow-elegant: 0 16px 40px rgba(60, 50, 30, 0.12);
+  --se-focus-ring: 0 0 0 2px #f6f3ec, 0 0 0 4px #8a6a15;
 }
 
 @layer components {
@@ -112,7 +204,7 @@
     letter-spacing: -0.005em;
     line-height: 1.6;
   }
-  
+
   /* Global Layout Standard */
   .se-section {
     @apply py-16 md:py-20 lg:py-24;
@@ -143,37 +235,37 @@
 
   /* Hairline system */
   .se-hairline {
-    border-color: #4d4635;
+    border-color: rgb(var(--th-line));
   }
 
   .se-hairline-soft {
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--th-divider);
   }
 
   .se-divider-h {
     height: 1px;
-    background: #4d4635;
+    background: rgb(var(--th-line));
   }
 
   .se-divider-soft-h {
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--th-divider);
   }
 
   /* Image fallback */
   .se-img-fallback {
-    background: #131313;
-    border: 1px solid #4d4635;
+    background: rgb(var(--th-panel));
+    border: 1px solid rgb(var(--th-line));
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #d0c5af;
+    color: rgb(var(--th-cream));
   }
 
   /* Focus ring */
   .se-focus:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #f2ca50;
+    box-shadow: var(--se-focus-ring);
   }
 
   /* ── GLOBAL COMPONENTS ──────────────────────────────── */
@@ -181,49 +273,49 @@
     @apply inline-flex items-center justify-center font-sans font-bold uppercase tracking-wider text-[11px] md:text-[12px] transition-all duration-200 ease-out hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0;
   }
   .se-btn-primary {
-    @apply h-[56px] px-8 bg-[#F2CA50] text-[#0e0e0e] rounded-[16px] hover:shadow-[0_0_24px_rgba(242,202,80,0.3)];
+    @apply h-[56px] px-8 bg-gold text-ongold rounded-[16px] hover:shadow-[0_0_24px_rgba(242,202,80,0.3)];
   }
   .se-btn-secondary {
-    @apply h-[52px] px-6 bg-[#131313] border border-white/10 text-[#fafafa] rounded-[16px] hover:border-[#F2CA50] hover:bg-white/5;
+    @apply h-[52px] px-6 bg-panel border border-ink/10 text-ink rounded-[16px] hover:border-gold-ink hover:bg-ink/5;
   }
   .se-btn-ghost {
-    @apply h-[48px] px-6 bg-transparent text-[#99907c] hover:text-[#fafafa] hover:bg-white/5 rounded-[16px];
+    @apply h-[48px] px-6 bg-transparent text-muted hover:text-ink hover:bg-ink/5 rounded-[16px];
   }
   .se-btn-icon {
-    @apply w-[48px] h-[48px] rounded-[16px] flex items-center justify-center shrink-0 bg-white/5 text-[#fafafa] hover:bg-[#F2CA50] hover:text-[#0e0e0e];
+    @apply w-[48px] h-[48px] rounded-[16px] flex items-center justify-center shrink-0 bg-ink/5 text-ink hover:bg-gold hover:text-ongold;
   }
 
   .se-card {
-    @apply bg-[#1A1A1A] border border-white/5 rounded-[20px] p-6 shadow-elegant transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-[#F2CA50]/30;
+    @apply bg-card border border-ink/5 rounded-[20px] p-6 shadow-elegant transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] hover:border-gold-ink/30;
   }
 
   .se-input {
-    @apply w-full h-[56px] bg-[#131313] border border-white/10 rounded-[16px] px-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors;
+    @apply w-full h-[56px] bg-panel border border-ink/10 rounded-[16px] px-4 text-ink placeholder-ink/30 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors;
   }
-  
+
   .se-textarea {
-    @apply w-full h-[160px] bg-[#131313] border border-white/10 rounded-[16px] p-4 text-[#fafafa] placeholder-white/30 focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50] focus:outline-none transition-colors resize-none;
+    @apply w-full h-[160px] bg-panel border border-ink/10 rounded-[16px] p-4 text-ink placeholder-ink/30 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors resize-none;
   }
 
   /* ── Contact page glass / gold system ─────────────── */
   .glass {
-    @apply bg-[#131313]/70 backdrop-blur-xl border border-[#4d4635]/30;
+    @apply bg-panel/70 backdrop-blur-xl border border-line/30;
   }
 
   .gold-text {
-    @apply bg-gradient-to-r from-[#f2ca50] to-[#d4af37] bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-gold-ink to-gold-ink2 bg-clip-text text-transparent;
   }
 
   .gold-border {
-    @apply border border-[#f2ca50]/30;
+    @apply border border-gold-ink/30;
   }
 
   .gold-divider {
-    @apply h-px w-full bg-gradient-to-r from-transparent via-[#f2ca50]/50 to-transparent;
+    @apply h-px w-full bg-gradient-to-r from-transparent via-gold-ink/50 to-transparent;
   }
 
   .bg-gradient-gold {
-    @apply bg-gradient-to-r from-[#f2ca50] to-[#d4af37];
+    @apply bg-gradient-to-r from-gold to-gold-deep;
   }
 
   /* ── Cinematic Effects ──────────────────────────────── */
@@ -247,11 +339,11 @@
   /* ── ADMIN UI ──────────────────────────────── */
 
   .admin-page-shell {
-    @apply min-h-screen w-full bg-[#050505] text-[#e5e2e1] p-4 md:p-6;
+    @apply min-h-screen w-full bg-page text-ink-2 p-4 md:p-6;
   }
 
   .admin-page-header {
-    @apply relative mb-6 flex flex-col gap-4 overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0b0b0b] via-[#0f0f0f] to-[#050505] p-6 shadow-2xl shadow-black/80 lg:flex-row lg:items-end lg:justify-between;
+    @apply relative mb-6 flex flex-col gap-4 overflow-hidden rounded-3xl border border-ink/[0.08] bg-gradient-to-br from-panel via-panel to-page p-6 shadow-large lg:flex-row lg:items-end lg:justify-between;
   }
 
   .admin-page-header::before {
@@ -265,64 +357,64 @@
   }
 
   .admin-page-eyebrow {
-    @apply text-xs uppercase tracking-[0.3em] text-[#D4AF37];
+    @apply text-xs uppercase tracking-[0.3em] text-gold-ink2;
   }
 
   .admin-page-title {
-    @apply mt-2 text-3xl font-black tracking-tight text-[#e5e2e1];
+    @apply mt-2 text-3xl font-black tracking-tight text-ink-2;
   }
 
   .admin-page-description {
-    @apply mt-3 max-w-3xl text-sm leading-6 text-[#d0c5af];
+    @apply mt-3 max-w-3xl text-sm leading-6 text-cream;
   }
 
   .admin-panel {
-    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
+    @apply rounded-3xl border border-ink/10 bg-panel p-5;
   }
 
   .admin-panel-title {
-    @apply text-lg font-semibold text-[#e5e2e1];
+    @apply text-lg font-semibold text-ink-2;
   }
 
   .admin-panel-description {
-    @apply mt-2 text-sm text-[#d0c5af];
+    @apply mt-2 text-sm text-cream;
   }
 
   .admin-stat-card {
-    @apply rounded-3xl border border-white/10 bg-[#0b0b0b] p-5;
+    @apply rounded-3xl border border-ink/10 bg-panel p-5;
   }
 
   .admin-stat-label {
-    @apply text-[11px] uppercase tracking-[0.22em] text-[#d0c5af];
+    @apply text-[11px] uppercase tracking-[0.22em] text-cream;
   }
 
   .admin-stat-value {
-    @apply mt-2 text-3xl font-semibold tracking-tight text-[#e5e2e1];
+    @apply mt-2 text-3xl font-semibold tracking-tight text-ink-2;
   }
 
   .admin-stat-hint {
-    @apply mt-2 text-xs text-[#d0c5af];
+    @apply mt-2 text-xs text-cream;
   }
 
   /* ── Tiptap rich-text editor (admin) ───────────── */
   .tiptap-editor h2 {
-    @apply mt-4 mb-2 text-xl font-semibold tracking-tight text-white;
+    @apply mt-4 mb-2 text-xl font-semibold tracking-tight text-ink;
   }
 
   .tiptap-editor h3 {
-    @apply mt-3 mb-1.5 text-lg font-semibold tracking-tight text-white;
+    @apply mt-3 mb-1.5 text-lg font-semibold tracking-tight text-ink;
   }
 
   .tiptap-editor p {
-    @apply mb-2 leading-7 text-[#e5e2e1];
+    @apply mb-2 leading-7 text-ink-2;
   }
 
   .tiptap-editor ul {
-    @apply mb-3 list-disc pl-6 text-[#e5e2e1];
+    @apply mb-3 list-disc pl-6 text-ink-2;
   }
 
   .tiptap-editor ol {
-    @apply mb-3 list-decimal pl-6 text-[#e5e2e1];
+    @apply mb-3 list-decimal pl-6 text-ink-2;
   }
 
   .tiptap-editor li {
@@ -330,15 +422,15 @@
   }
 
   .tiptap-editor blockquote {
-    @apply my-3 border-l-2 border-[#D4AF37]/60 pl-4 italic text-[#d0c5af];
+    @apply my-3 border-l-2 border-gold-ink2/60 pl-4 italic text-cream;
   }
 
   .tiptap-editor strong {
-    @apply font-semibold text-white;
+    @apply font-semibold text-ink;
   }
 
   .tiptap-editor a {
-    @apply text-[#D4AF37] underline underline-offset-4;
+    @apply text-gold-ink2 underline underline-offset-4;
   }
 
   .tiptap-editor table {
@@ -347,16 +439,16 @@
 
   .tiptap-editor th,
   .tiptap-editor td {
-    @apply border border-white/10 px-3 py-2 align-top text-sm;
+    @apply border border-ink/10 px-3 py-2 align-top text-sm;
   }
 
   .tiptap-editor th {
-    @apply bg-white/5 text-left font-semibold;
+    @apply bg-ink/5 text-left font-semibold;
   }
 
   .tiptap-editor p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
-    color: #4d4635;
+    color: rgb(var(--th-line));
     pointer-events: none;
     height: 0;
     float: left;
@@ -418,3 +510,52 @@
     padding-bottom: 80px;
   }
 }
+
+/* ── Light-theme contrast overrides ───────────────────────────
+   A dark-first app used many fixed Tailwind utilities (grays and pastel
+   status colors) that are light-on-dark by design. On light surfaces they
+   wash out or vanish. These `:root.light`-scoped rules (specificity 0,2,0 —
+   beats the single-class utility regardless of source order) remap only the
+   light-toned variants to readable dark equivalents. Dark theme is untouched.
+   Not applied to `.dark` so it never affects the default palette. */
+:root.light .text-gray-100 { color: #1f1c17; }
+:root.light .text-gray-200 { color: #2a261f; }
+:root.light .text-gray-300 { color: #4a4436; }
+:root.light .text-gray-400 { color: #5f5747; }
+:root.light .text-gray-500 { color: #6f6656; }
+
+:root.light .bg-gray-700 { background-color: #ded7c6; }
+:root.light .bg-gray-800 { background-color: #e6e0d1; }
+:root.light .bg-gray-900 { background-color: #ede7d9; }
+:root.light .border-gray-700 { border-color: #d8d0bd; }
+:root.light .border-gray-800 { border-color: #ded7c6; }
+
+/* Status / semantic pastels (…-100/-200/-300 are meant for dark tints).
+   Darken to their ~700 equivalents so they read on light-tinted pills. */
+:root.light .text-emerald-100,
+:root.light .text-emerald-200,
+:root.light .text-emerald-300,
+:root.light .text-green-200,
+:root.light .text-green-300 { color: #15803d; }
+:root.light .text-rose-100,
+:root.light .text-rose-200,
+:root.light .text-rose-300,
+:root.light .text-red-200,
+:root.light .text-red-300 { color: #be123c; }
+:root.light .text-amber-100,
+:root.light .text-amber-200,
+:root.light .text-amber-300,
+:root.light .text-yellow-200,
+:root.light .text-yellow-300 { color: #b45309; }
+:root.light .text-orange-200,
+:root.light .text-orange-300 { color: #c2410c; }
+:root.light .text-sky-200,
+:root.light .text-sky-300,
+:root.light .text-blue-200,
+:root.light .text-blue-300 { color: #0369a1; }
+:root.light .text-indigo-200,
+:root.light .text-indigo-300,
+:root.light .text-purple-200,
+:root.light .text-purple-300,
+:root.light .text-violet-200,
+:root.light .text-violet-300 { color: #6d28d9; }

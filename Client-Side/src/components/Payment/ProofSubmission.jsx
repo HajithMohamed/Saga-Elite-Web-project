@@ -123,22 +123,22 @@ const ProofSubmission = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
       onSubmit={handleSubmit}
-      className="overflow-hidden rounded-[24px] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
+      className="overflow-hidden rounded-[24px] border border-ink/10 bg-page shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
       aria-label="Upload payment receipt"
     >
       <div className="p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <p className="se-label text-[8px] tracking-[0.25em] text-[#574500]">
+              <p className="se-label text-[8px] tracking-[0.25em] text-goldshadow">
                 Verification Step
               </p>
               <div className="flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-[0.2em] text-sky-400">
                 <ShieldCheck className="h-3 w-3" /> Auto-verification active
               </div>
             </div>
-            <h2 className="se-serif mt-3 text-[22px] text-[#e5e2e1]">{title}</h2>
-            <p className="se-body mt-2 text-sm leading-6 text-[#99907c]">
+            <h2 className="se-serif mt-3 text-[22px] text-ink-2">{title}</h2>
+            <p className="se-body mt-2 text-sm leading-6 text-muted">
               {description}
             </p>
           </div>
@@ -148,8 +148,8 @@ const ProofSubmission = ({
           className={cn(
             "mt-8 overflow-hidden rounded-[20px] border border-dashed transition-all duration-300 lg:h-[320px] flex items-center justify-center",
             isDragging
-              ? "scale-[1.01] border-[#F2CA50] bg-[#F2CA50]/5 shadow-[0_0_30px_rgba(242,202,80,0.15)]"
-              : "border-white/20 bg-[#131313] hover:border-[#F2CA50]/40"
+              ? "scale-[1.01] border-gold-ink bg-gold/5 shadow-[0_0_30px_rgba(242,202,80,0.15)]"
+              : "border-ink/20 bg-panel hover:border-gold-ink/40"
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -177,14 +177,14 @@ const ProofSubmission = ({
                   className="flex h-full w-full flex-col"
                   onClick={(e) => e.preventDefault()} // Prevent clicking preview from opening file dialog again
                 >
-                  <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-[#0a0a0a] px-4 py-3">
+                  <div className="mb-4 flex items-center justify-between rounded-2xl border border-ink/5 bg-page px-4 py-3">
                     <div className="flex items-center gap-3 text-left min-w-0 flex-1">
-                      <FileImage className="h-5 w-5 shrink-0 text-[#F2CA50]" />
+                      <FileImage className="h-5 w-5 shrink-0 text-gold-ink" />
                       <div className="min-w-0 pr-4">
-                        <p className="truncate text-sm font-semibold text-[#e5e2e1]">
+                        <p className="truncate text-sm font-semibold text-ink-2">
                           {selectedFile?.name}
                         </p>
-                        <p className="se-label text-[8px] tracking-wider text-[#99907c]">
+                        <p className="se-label text-[8px] tracking-wider text-muted">
                           {selectedFile?.type?.replace("image/", "")?.toUpperCase() || "FILE"}{" "}
                           • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
@@ -195,7 +195,7 @@ const ProofSubmission = ({
                         type="button"
                         onClick={openFileDialog}
                         disabled={isSubmitting}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-[#d0c5af] transition-colors hover:border-[#F2CA50]/50 hover:text-[#F2CA50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CA50]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-ink/10 bg-ink/[0.03] text-cream transition-colors hover:border-gold-ink/50 hover:text-gold-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink"
                         title="Replace file"
                       >
                         <RefreshCw className="h-3.5 w-3.5" />
@@ -204,7 +204,7 @@ const ProofSubmission = ({
                         type="button"
                         onClick={clearFile}
                         disabled={isSubmitting}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-rose-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-ink/10 bg-ink/[0.03] text-rose-400 transition-colors hover:border-rose-500/50 hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                         title="Remove file"
                       >
                         <X className="h-4 w-4" />
@@ -212,7 +212,7 @@ const ProofSubmission = ({
                     </div>
                   </div>
 
-                  <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-white/5 bg-[#0a0a0a]">
+                  <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-xl border border-ink/5 bg-page">
                     {selectedFile?.type?.startsWith("image/") ? (
                       <img
                         src={previewUrl}
@@ -220,7 +220,7 @@ const ProofSubmission = ({
                         className="max-h-full max-w-full object-contain p-2"
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center text-[#574500]">
+                      <div className="flex flex-col items-center justify-center text-goldshadow">
                         <FileImage className="mb-3 h-10 w-10 opacity-40" />
                         <span className="se-label text-[10px] tracking-[0.2em]">
                           PDF Document Selected
@@ -241,19 +241,19 @@ const ProofSubmission = ({
                     className={cn(
                       "mb-5 flex h-16 w-16 items-center justify-center rounded-full transition-colors duration-300",
                       isDragging
-                        ? "bg-[#F2CA50]/20 text-[#F2CA50]"
-                        : "border border-[#F2CA50]/20 bg-[#F2CA50]/5 text-[#F2CA50]/70"
+                        ? "bg-gold/20 text-gold-ink"
+                        : "border border-gold-ink/20 bg-gold/5 text-gold-ink/70"
                     )}
                   >
                     <UploadCloud className="h-7 w-7" />
                   </div>
-                  <p className="se-body text-sm text-[#e5e2e1]">
-                    <span className="font-semibold text-[#F2CA50]">
+                  <p className="se-body text-sm text-ink-2">
+                    <span className="font-semibold text-gold-ink">
                       Click to browse
                     </span>{" "}
                     or drag and drop
                   </p>
-                  <p className="se-label mt-2 text-[8px] tracking-[0.25em] text-[#574500]">
+                  <p className="se-label mt-2 text-[8px] tracking-[0.25em] text-goldshadow">
                     JPG, PNG, WEBP or PDF (MAX 10MB)
                   </p>
                 </motion.div>
@@ -263,8 +263,8 @@ const ProofSubmission = ({
         </div>
 
         {!selectedFile && !isDragging && (
-          <div className="mt-6 flex flex-col items-center border-t border-white/5 pt-6">
-            <p className="se-label mb-3 text-[8px] tracking-[0.25em] text-[#574500]">
+          <div className="mt-6 flex flex-col items-center border-t border-ink/5 pt-6">
+            <p className="se-label mb-3 text-[8px] tracking-[0.25em] text-goldshadow">
               For fast auto-verification ensure
             </p>
             <div className="flex flex-wrap justify-center gap-4">
@@ -272,9 +272,9 @@ const ProofSubmission = ({
                 (hint) => (
                   <div
                     key={hint}
-                    className="flex items-center gap-1.5 text-xs text-[#99907c]"
+                    className="flex items-center gap-1.5 text-xs text-muted"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[#34C759]/70" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success/70" />
                     {hint}
                   </div>
                 )
@@ -300,9 +300,9 @@ const ProofSubmission = ({
       </div>
 
       {/* Progress Bar (Visual only, to show activity during submission) */}
-      <div className="relative h-1 w-full bg-white/5">
+      <div className="relative h-1 w-full bg-ink/5">
         <motion.div
-          className="absolute inset-y-0 left-0 bg-[#F2CA50]"
+          className="absolute inset-y-0 left-0 bg-gold"
           initial={{ width: "0%" }}
           animate={{
             width: isSubmitting ? "90%" : selectedFile ? "0%" : "0%",
@@ -311,7 +311,7 @@ const ProofSubmission = ({
         />
         {isSubmitting && (
           <motion.div
-            className="absolute inset-y-0 left-0 bg-white/30"
+            className="absolute inset-y-0 left-0 bg-ink/30"
             initial={{ x: "-100%" }}
             animate={{ x: "200%" }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
@@ -320,15 +320,15 @@ const ProofSubmission = ({
         )}
       </div>
 
-      <div className="bg-[#0a0a0a] p-6 sm:px-8">
+      <div className="bg-page p-6 sm:px-8">
         <button
           type="submit"
           disabled={isSubmitting || !selectedFile}
-          className="group relative flex w-full h-[56px] items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[10px] uppercase tracking-[0.25em] font-semibold text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50 disabled:text-[#0a0a0a]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2CA50] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+          className="group relative flex w-full h-[56px] items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[10px] uppercase tracking-[0.25em] font-semibold text-ongold transition-all hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-gold/50 disabled:text-ongold/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink focus-visible:ring-offset-2 focus-visible:ring-offset-page"
         >
           {isSubmitting && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#F2CA50]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#0E0E0E]" />
+            <div className="absolute inset-0 flex items-center justify-center bg-gold">
+              <Loader2 className="h-5 w-5 animate-spin text-ongold" />
               <span className="ml-3">Uploading...</span>
             </div>
           )}

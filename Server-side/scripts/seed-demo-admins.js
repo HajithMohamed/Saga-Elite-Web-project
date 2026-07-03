@@ -5,6 +5,7 @@ const path = require("path");
 dotenv.config();
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
+const connectToDB = require("../DataBase/db");
 const User = require("../Models/User");
 const {
   FULL_ADMIN_PERMISSIONS,
@@ -70,13 +71,11 @@ const DEMO_ADMINS = [
 ];
 
 const seedDemoAdmins = async () => {
-  const dbUri = process.env.MONGO_DB_URI || process.env.MONGO_URI || process.env.DATABASE_URI || process.env.DATABASE;
-
-  if (!dbUri) {
-    throw new Error("Missing MONGO_DB_URI or MONGO_URI in environment.");
-  }
-
-  await mongoose.connect(dbUri);
+  // Use the app's own connector so the database name (/sagaelite) is appended
+  // consistently. A bare mongoose.connect(uri) — when the URI has no db name —
+  // silently lands in the default `test` database, so the seeded admins never
+  // reach the DB the running server reads from.
+  await connectToDB();
   console.log("Database connected.");
 
   for (const account of DEMO_ADMINS) {

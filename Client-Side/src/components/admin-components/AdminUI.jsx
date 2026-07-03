@@ -41,8 +41,8 @@ export const AdminStatCard = ({ label, value, hint, icon }) => {
           {hint ? <p className="admin-stat-hint">{hint}</p> : null}
         </div>
         {Icon ? (
-          <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
-            <Icon className="h-5 w-5 text-[#D4AF37]" />
+          <div className="rounded-xl border border-ink/10 bg-black/40 p-2.5">
+            <Icon className="h-5 w-5 text-gold-ink2" />
           </div>
         ) : null}
       </div>

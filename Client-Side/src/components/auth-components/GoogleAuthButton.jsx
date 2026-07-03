@@ -43,13 +43,13 @@ const GoogleAuthButton = ({ onSuccess, onError, disabled, label = "Quick Access 
       aria-label={label}
       className="
         group w-full h-12
-        bg-[#1c1b1b] hover:bg-[#2a2a2a] active:bg-[#131313]
-        text-[#e5e2e1]
-        border border-[#4d4635] hover:border-[#99907c]
+        bg-card hover:bg-elevated active:bg-panel
+        text-ink-2
+        border border-line hover:border-muted
         flex items-center justify-center gap-3
         transition-colors duration-200
         disabled:opacity-50 disabled:pointer-events-none
-        focus:outline-none focus:ring-2 focus:ring-[#f2ca50]/40 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]
+        focus:outline-none focus:ring-2 focus:ring-gold-ink/40 focus:ring-offset-2 focus:ring-offset-page
       "
     >
       <GoogleGlyph size={18} />

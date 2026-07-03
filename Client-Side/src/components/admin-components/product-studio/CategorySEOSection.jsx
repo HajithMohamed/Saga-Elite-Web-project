@@ -34,14 +34,14 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
     : null;
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 backdrop-blur-md">
-      <h2 className="mb-6 text-lg font-semibold text-white">Category & Tags</h2>
+    <div className="rounded-2xl border border-ink/[0.08] bg-ink/[0.02] p-6 backdrop-blur-md">
+      <h2 className="mb-6 text-lg font-semibold text-ink">Category & Tags</h2>
 
       <div className="grid gap-6">
         <div className="space-y-4">
-          <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Category Assignment</label>
+          <label className="text-xs font-semibold uppercase tracking-wider text-ink/50">Category Assignment</label>
           {pathDisplay && (
-            <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 px-3 py-2 text-xs text-[#D4AF37]">
+            <div className="rounded-lg border border-gold-ink2/20 bg-gold-deep/5 px-3 py-2 text-xs text-gold-ink2">
               Selected: {pathDisplay}
             </div>
           )}
@@ -49,12 +49,12 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
             <p className="text-sm text-rose-400">{validationErrors.category}</p>
           )}
           <div
-            className="rounded-xl border border-white/10 bg-black/40 p-4 max-h-[400px] overflow-y-auto"
+            className="rounded-xl border border-ink/10 bg-black/40 p-4 max-h-[400px] overflow-y-auto"
             data-lenis-prevent="true"
           >
-            <p className="mb-3 text-xs text-white/40">Select the primary category for this product.</p>
+            <p className="mb-3 text-xs text-ink/40">Select the primary category for this product.</p>
             {categoryTree.length === 0 ? (
-              <div className="text-sm text-white/30">Loading categories...</div>
+              <div className="text-sm text-ink/30">Loading categories...</div>
             ) : (
               <div className="space-y-2">
                 {categoryTree.map((category, index) => (
@@ -80,7 +80,7 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
         </div>
 
         <div className="space-y-4" id="tags-section">
-          <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Quick Tags</label>
+          <label className="text-xs font-semibold uppercase tracking-wider text-ink/50">Quick Tags</label>
           <div className="flex flex-wrap gap-2">
             {PRODUCT_TAG_OPTIONS.map((tag) => {
               const active = formData.tags.includes(tag);
@@ -91,8 +91,8 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
                   onClick={() => toggleTag(tag)}
                   className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition ${
                     active
-                      ? 'border-[#D4AF37]/40 bg-[#D4AF37]/15 text-[#D4AF37]'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
+                      ? 'border-gold-ink2/40 bg-gold-deep/15 text-gold-ink2'
+                      : 'border-ink/10 bg-ink/5 text-ink/50 hover:border-ink/20 hover:text-ink'
                   }`}
                 >
                   {tag}
@@ -103,16 +103,16 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
         </div>
 
         <div className="space-y-4">
-          <label className="text-xs font-semibold uppercase tracking-wider text-white/50">Product Tags</label>
-          <div className="flex flex-wrap gap-2 rounded-xl border border-white/10 bg-black/40 p-3">
+          <label className="text-xs font-semibold uppercase tracking-wider text-ink/50">Product Tags</label>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-ink/10 bg-black/40 p-3">
             {formData.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-bold text-white"
+                className="inline-flex items-center gap-1 rounded-lg bg-ink/10 px-2.5 py-1 text-xs font-bold text-ink"
               >
-                <Hash className="h-3 w-3 text-[#D4AF37]" />
+                <Hash className="h-3 w-3 text-gold-ink2" />
                 {tag}
-                <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-white/50 hover:text-white">
+                <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-ink/50 hover:text-ink">
                   &times;
                 </button>
               </span>
@@ -122,7 +122,7 @@ export const CategorySEOSection = ({ categoryTree = [] }) => {
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleAddTag}
-              className="min-w-[120px] flex-1 bg-transparent px-2 text-sm text-white placeholder-white/30 outline-none"
+              className="min-w-[120px] flex-1 bg-transparent px-2 text-sm text-ink placeholder-ink/30 outline-none"
               placeholder="Add tag and press enter..."
             />
           </div>
@@ -153,8 +153,8 @@ const CategoryNode = ({ node, level = 0, selectedId, onSelect, pathStr = [], nod
   return (
     <div className="select-none">
       <div
-        className={`flex cursor-pointer items-center gap-2 rounded-lg py-1.5 px-2 transition-colors hover:bg-white/5 ${
-          isSelected ? 'bg-[#D4AF37]/10' : ''
+        className={`flex cursor-pointer items-center gap-2 rounded-lg py-1.5 px-2 transition-colors hover:bg-ink/5 ${
+          isSelected ? 'bg-gold-deep/10' : ''
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => {
@@ -165,14 +165,14 @@ const CategoryNode = ({ node, level = 0, selectedId, onSelect, pathStr = [], nod
           }
         }}
       >
-        <div className="flex h-4 w-4 items-center justify-center text-white/40">
+        <div className="flex h-4 w-4 items-center justify-center text-ink/40">
           {hasChildren && (expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />)}
         </div>
-        <span className={`text-sm ${isSelected ? 'font-bold text-[#D4AF37]' : 'text-white/80'}`}>{node.name}</span>
+        <span className={`text-sm ${isSelected ? 'font-bold text-gold-ink2' : 'text-ink/80'}`}>{node.name}</span>
       </div>
 
       {expanded && hasChildren && (
-        <div className="mt-1 space-y-1 border-l border-white/5" style={{ marginLeft: `${level * 16 + 12}px` }}>
+        <div className="mt-1 space-y-1 border-l border-ink/5" style={{ marginLeft: `${level * 16 + 12}px` }}>
           {node.children.map((child, index) => (
             <CategoryNode
               key={`${child._id}-${level}-${index}`}

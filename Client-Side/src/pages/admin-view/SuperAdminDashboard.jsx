@@ -163,7 +163,7 @@ const SuperAdminDashboard = () => {
                 Export Customers (CSV)
               </span>
             </PrimaryButton>
-            <div className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-[#D4AF37]">
+            <div className="rounded-full border border-gold-ink2/20 bg-gold-deep/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-gold-ink2">
               {currentUser?.name || currentUser?.email}
             </div>
           </div>
@@ -186,10 +186,10 @@ const SuperAdminDashboard = () => {
               variants={itemVariants}
               whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
               transition={{ duration: 0.2 }}
-              className="admin-stat-card rounded-[28px] border border-white/10 bg-white/[0.03] p-5"
+              className="admin-stat-card rounded-[28px] border border-ink/10 bg-ink/[0.03] p-5"
             >
               <p className="admin-stat-label">{card.label}</p>
-              <p className="admin-stat-value mt-2 text-3xl font-semibold text-white">
+              <p className="admin-stat-value mt-2 text-3xl font-semibold text-ink">
                 <AnimatedNumber value={card.value} />
               </p>
               {card.hint ? <p className="admin-stat-hint mt-1 text-xs text-gray-500">{card.hint}</p> : null}
@@ -199,7 +199,7 @@ const SuperAdminDashboard = () => {
 
         <AdminPanel className="mt-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex gap-8 border-b border-white/10">
+            <div className="flex gap-8 border-b border-ink/10">
               {[
                 { key: TAB.ADMINS, label: "Admin Accounts" },
                 { key: TAB.LOGS, label: "Activity Log" },
@@ -209,14 +209,14 @@ const SuperAdminDashboard = () => {
                   type="button"
                   onClick={() => setTab(key)}
                   className={`relative pb-3 text-sm font-semibold transition-colors ${
-                    tab === key ? "text-white" : "text-gray-500 hover:text-gray-300"
+                    tab === key ? "text-ink" : "text-gray-500 hover:text-gray-300"
                   }`}
                 >
                   {label}
                   {tab === key ? (
                     <motion.div
                       layoutId="superadmin-tab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D4AF37]"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-deep"
                       transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
                   ) : null}
@@ -233,7 +233,7 @@ const SuperAdminDashboard = () => {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search admins…"
-                    className="w-full min-w-[200px] rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+                    className="w-full min-w-[200px] rounded-2xl border border-ink/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
                   />
                 </div>
                 <motion.button
@@ -242,7 +242,7 @@ const SuperAdminDashboard = () => {
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   onClick={() => setCreateOpen(true)}
-                  className="rounded-full bg-[#D4AF37] px-4 py-2.5 text-sm font-bold text-black hover:bg-[#c99d2f]"
+                  className="rounded-full bg-gold-deep px-4 py-2.5 text-sm font-bold text-black hover:bg-[#c99d2f]"
                 >
                   + New Admin
                 </motion.button>
@@ -313,16 +313,16 @@ const SuperAdminDashboard = () => {
                   variants={itemVariants}
                   whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
                   transition={{ duration: 0.2 }}
-                  className="admin-stat-card rounded-[28px] border border-white/10 bg-white/[0.03] p-5"
+                  className="admin-stat-card rounded-[28px] border border-ink/10 bg-ink/[0.03] p-5"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="admin-stat-label">{card.label}</p>
-                      <p className="mt-2 text-xl font-semibold text-white break-words">{card.value}</p>
+                      <p className="mt-2 text-xl font-semibold text-ink break-words">{card.value}</p>
                       {card.hint ? <p className="admin-stat-hint mt-1 text-xs text-gray-500">{card.hint}</p> : null}
                     </div>
-                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
-                      <Icon className="h-5 w-5 text-[#D4AF37]" />
+                    <div className="rounded-xl border border-ink/10 bg-black/40 p-2.5">
+                      <Icon className="h-5 w-5 text-gold-ink2" />
                     </div>
                   </div>
                 </motion.div>
@@ -343,13 +343,13 @@ const SuperAdminDashboard = () => {
             onClick={() => setDeleteTarget(null)}
           >
             <div
-              className="w-full max-w-md rounded-[1.5rem] border border-rose-400/30 bg-[#0b0b0b] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
+              className="w-full max-w-md rounded-[1.5rem] border border-rose-400/30 bg-page p-6 shadow-[0_30px_120px_rgba(0,0,0,0.6)]"
               onClick={(e) => e.stopPropagation()}
             >
               <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-rose-300">
                 Delete admin
               </p>
-              <h3 className="mt-2 text-xl font-bold text-white">
+              <h3 className="mt-2 text-xl font-bold text-ink">
                 Remove {deleteTarget.name || deleteTarget.email}?
               </h3>
               <p className="mt-3 text-sm leading-6 text-gray-400">
@@ -359,7 +359,7 @@ const SuperAdminDashboard = () => {
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(null)}
-                  className="rounded-full border border-white/10 px-5 py-2 text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:border-white/20"
+                  className="rounded-full border border-ink/10 px-5 py-2 text-sm font-bold uppercase tracking-[0.2em] text-ink transition hover:border-ink/20"
                 >
                   Cancel
                 </button>

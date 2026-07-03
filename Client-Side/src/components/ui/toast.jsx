@@ -28,7 +28,7 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 const toastVariants = cva(
   cn(
     "se-toast group pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden",
-    "border bg-[#0a0a0a] text-[#e5e2e1]",
+    "border bg-page text-ink-2",
     "p-4 pl-5 pr-10",
     "shadow-[0_8px_32px_rgba(0,0,0,0.45)]",
     "transition-all",
@@ -46,9 +46,9 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "se-toast-default border-[#4d4635]",
-        destructive: "se-toast-destructive border-[#ffb4ab]/30",
-        success: "se-toast-success border-[#a8d8b6]/30",
+        default: "se-toast-default border-line",
+        destructive: "se-toast-destructive border-danger-ink/30",
+        success: "se-toast-success border-success-ink/30",
       },
     },
     defaultVariants: { variant: "default" },
@@ -105,11 +105,11 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
     ref={ref}
     className={cn(
       "mt-2 inline-flex h-9 shrink-0 items-center justify-center gap-2 px-4",
-      "border border-[#4d4635] hover:border-[#99907c] hover:bg-[#1c1b1b]",
-      "se-label text-[10px] tracking-[0.18em] text-[#e5e2e1]",
+      "border border-line hover:border-muted hover:bg-card",
+      "se-label text-[10px] tracking-[0.18em] text-ink-2",
       "transition-colors se-focus disabled:pointer-events-none disabled:opacity-50",
-      "group-[.se-toast-destructive]:border-[#ffb4ab]/40 group-[.se-toast-destructive]:hover:border-[#ffb4ab] group-[.se-toast-destructive]:text-[#ffb4ab]",
-      "group-[.se-toast-success]:border-[#a8d8b6]/40 group-[.se-toast-success]:hover:border-[#a8d8b6] group-[.se-toast-success]:text-[#a8d8b6]",
+      "group-[.se-toast-destructive]:border-danger-ink/40 group-[.se-toast-destructive]:hover:border-danger-ink group-[.se-toast-destructive]:text-danger-ink",
+      "group-[.se-toast-success]:border-success-ink/40 group-[.se-toast-success]:hover:border-success-ink group-[.se-toast-success]:text-success-ink",
       className
     )}
     {...props}
@@ -122,11 +122,11 @@ const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
     ref={ref}
     className={cn(
       "absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center",
-      "text-[#99907c] hover:text-[#e5e2e1] transition-colors",
+      "text-muted hover:text-ink-2 transition-colors",
       "opacity-0 group-hover:opacity-100 focus:opacity-100",
       "se-focus",
-      "group-[.se-toast-destructive]:text-[#ffb4ab]/70 group-[.se-toast-destructive]:hover:text-[#ffb4ab]",
-      "group-[.se-toast-success]:text-[#a8d8b6]/70 group-[.se-toast-success]:hover:text-[#a8d8b6]",
+      "group-[.se-toast-destructive]:text-danger-ink/70 group-[.se-toast-destructive]:hover:text-danger-ink",
+      "group-[.se-toast-success]:text-success-ink/70 group-[.se-toast-success]:hover:text-success-ink",
       className
     )}
     toast-close=""
@@ -141,7 +141,7 @@ const ToastTitle = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
     className={cn(
-      "se-headline text-base text-[#e5e2e1] leading-tight [&+div]:mt-1.5",
+      "se-headline text-base text-ink-2 leading-tight [&+div]:mt-1.5",
       className
     )}
     {...props}
@@ -153,7 +153,7 @@ const ToastDescription = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
     className={cn(
-      "se-body text-xs md:text-[13px] text-[#d0c5af] leading-relaxed",
+      "se-body text-xs md:text-[13px] text-cream leading-relaxed",
       className
     )}
     {...props}

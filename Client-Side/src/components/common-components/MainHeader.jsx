@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, LogOut, Menu, Search, ShoppingBag, User, X, ArrowRight, TicketPercent } from "lucide-react";
+import { Heart, LogOut, Menu, Moon, Search, ShoppingBag, Sun, User, X, ArrowRight, TicketPercent } from "lucide-react";
 import axios from "axios";
 import { logoutUserAction } from "@/store/auth-slice";
 import NotificationsDropdown from "@/components/common-components/NotificationsDropdown";
 import { useAuthDrawer } from "@/components/auth-components/AuthDrawer";
+import { useTheme } from "@/context/theme-context";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 
 const buildCategoryUrl = (path = []) => {
@@ -23,21 +24,21 @@ const MegaMenuPanel = ({ category, onNavigate = () => { } }) => {
 
   return (
     <div className="absolute left-1/2 -translate-x-1/2 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 pt-4 w-screen max-w-[900px]">
-      <div className="bg-[#0e0e0e]/95 backdrop-blur-xl border border-[#D4AF37]/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden rounded-sm">
+      <div className="bg-page/95 backdrop-blur-xl border border-gold-ink2/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden rounded-sm">
         {/* Gold accent top border */}
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-gold-deep to-transparent" />
 
         <div className="p-8">
           {/* Category header */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#2a2a2a]">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-elevated">
             <Link
               to={buildCategoryUrl([category])}
               onClick={onNavigate}
-              className="font-display text-lg text-[#f2ca50] uppercase tracking-[0.2em] hover:text-[#ffe088] transition-colors"
+              className="font-display text-lg text-gold-ink uppercase tracking-[0.2em] hover:text-gold-ink transition-colors"
             >
               Shop All {category.name}
             </Link>
-            <ArrowRight className="w-4 h-4 text-[#D4AF37]/50" />
+            <ArrowRight className="w-4 h-4 text-gold-ink2/50" />
           </div>
 
           {/* Multi-column subcategory grid */}
@@ -47,7 +48,7 @@ const MegaMenuPanel = ({ category, onNavigate = () => { } }) => {
                 <Link
                   to={buildCategoryUrl([category, sub])}
                   onClick={onNavigate}
-                  className="block font-mono text-[11px] tracking-[0.2em] uppercase text-[#f2ca50] mb-3 hover:text-[#ffe088] transition-colors font-bold"
+                  className="block font-mono text-[11px] tracking-[0.2em] uppercase text-gold-ink mb-3 hover:text-gold-ink transition-colors font-bold"
                 >
                   {sub.name}
                 </Link>
@@ -58,7 +59,7 @@ const MegaMenuPanel = ({ category, onNavigate = () => { } }) => {
                         <Link
                           to={buildCategoryUrl([category, sub, child])}
                           onClick={onNavigate}
-                          className="text-[12px] text-[#d0c5af] hover:text-[#e5e2e1] transition-colors block leading-relaxed"
+                          className="text-[12px] text-cream hover:text-ink-2 transition-colors block leading-relaxed"
                         >
                           {child.name}
                         </Link>
@@ -85,16 +86,16 @@ const CategoryMobileList = ({ categories = [], path = [], onNavigate }) => {
         const hasChildren = Array.isArray(category.children) && category.children.length > 0;
 
         return (
-          <div key={category._id} className="border-l border-[#2a2a2a] pl-4">
+          <div key={category._id} className="border-l border-elevated pl-4">
             <Link
               to={buildCategoryUrl(nextPath)}
               onClick={onNavigate}
-              className="block py-3 text-[#e5e2e1] hover:text-[#f2ca50] transition-colors font-display text-2xl"
+              className="block py-3 text-ink-2 hover:text-gold-ink transition-colors font-display text-2xl"
             >
               {category.name}
             </Link>
             {hasChildren ? (
-              <div className="ml-3 border-l border-[#2a2a2a]/80 pl-4 pb-2">
+              <div className="ml-3 border-l border-elevated/80 pl-4 pb-2">
                 <CategoryMobileList categories={category.children} path={nextPath} onNavigate={onNavigate} />
               </div>
             ) : null}
@@ -108,7 +109,7 @@ const CategoryMobileList = ({ categories = [], path = [], onNavigate }) => {
 const AnimatedBadge = ({ count }) => {
   if (!count || count <= 0) return null;
   return (
-    <span className="absolute -top-2 -right-2 bg-[#ffb4ab] shadow-[0_0_8px_#ffb4ab] text-[#0e0e0e] text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
+    <span className="absolute -top-2 -right-2 bg-danger-ink shadow-[0_0_8px_#ffb4ab] text-ongold text-[9px] font-bold font-mono min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -131,6 +132,7 @@ const MainHeader = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuCategories, setMenuCategories] = useState([]);
   const userMenuRef = useRef(null);
+  const { theme, toggleTheme } = useTheme();
 
   const { user } = useSelector((state) => state.auth);
   const { totalQuantity } = useSelector((state) => state.cart.cart || {});
@@ -210,9 +212,9 @@ const MainHeader = () => {
 
   if (isAdminView) {
     return (
-      <header className="h-[72px] flex justify-between items-center px-8 border-b border-[#2a2a2a] bg-[#0a0a0a]">
-        <h2 className="se-label text-[#e5e2e1]">Saga Admin Connect</h2>
-        <button onClick={handleLogout} className="text-[#d0c5af] hover:text-[#f2ca50] transition-colors">
+      <header className="h-[72px] flex justify-between items-center px-8 border-b border-elevated bg-page">
+        <h2 className="se-label text-ink-2">Saga Admin Connect</h2>
+        <button onClick={handleLogout} className="text-cream hover:text-gold-ink transition-colors">
           <LogOut className="w-4 h-4" />
         </button>
       </header>
@@ -223,7 +225,7 @@ const MainHeader = () => {
     <>
       <header
         role="banner"
-        className={`sticky top-0 z-50 w-full transition-all duration-500 h-[72px] md:h-[80px] lg:h-[88px] flex items-center bg-[#0e0e0e]/95 backdrop-blur-[16px] border-b ${scrolled ? 'border-white/5 shadow-elegant' : 'border-transparent'}`}
+        className={`sticky top-0 z-50 w-full transition-all duration-500 h-[72px] md:h-[80px] lg:h-[88px] flex items-center bg-page/95 backdrop-blur-[16px] border-b ${scrolled ? 'border-ink/5 shadow-elegant' : 'border-transparent'}`}
       >
         <div className="max-w-[1600px] w-full mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
 
@@ -231,10 +233,10 @@ const MainHeader = () => {
           <Link to={homePath} className="flex items-center gap-4 group">
             <img src="/LOGO.png" alt="Saga Elite" className="h-8 w-8 object-contain opacity-90 group-hover:opacity-100 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <div className="hidden sm:flex flex-col justify-center">
-              <span className="font-display font-medium text-[20px] tracking-[0.12em] text-[#e5e2e1] leading-none">
+              <span className="font-display font-medium text-[20px] tracking-[0.12em] text-ink-2 leading-none">
                 SAGA ELITE
               </span>
-              <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#d0c5af] mt-1 opacity-60">
+              <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-cream mt-1 opacity-60">
                 Rare Fit Forever
               </span>
             </div>
@@ -246,15 +248,15 @@ const MainHeader = () => {
               <Link
                 key={item.key}
                 to={item.to}
-                className="relative group se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1"
+                className="relative group se-label text-[11px] text-ink-2 overflow-hidden px-1"
               >
                 <span className="block transition-all duration-300 group-hover:-translate-y-full">
                   {item.label}
                 </span>
-                <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-[#f2ca50]">
+                <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-gold-ink">
                   {item.label}
                 </span>
-                <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
+                <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gold scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
               </Link>
             ))}
 
@@ -263,15 +265,15 @@ const MainHeader = () => {
               <div key={category._id || category.slug} className="relative group">
                 <Link
                   to={buildCategoryUrl([category])}
-                  className="relative se-label text-[11px] text-[#e5e2e1] overflow-hidden px-1 block"
+                  className="relative se-label text-[11px] text-ink-2 overflow-hidden px-1 block"
                 >
                   <span className="block transition-all duration-300 group-hover:-translate-y-full">
                     {category.name}
                   </span>
-                  <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-[#f2ca50]">
+                  <span className="absolute inset-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 text-gold-ink">
                     {category.name}
                   </span>
-                  <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#f2ca50] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
+                  <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gold scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 shadow-[0_0_10px_#f2ca50]" />
                 </Link>
                 <MegaMenuPanel category={category} />
               </div>
@@ -280,20 +282,28 @@ const MainHeader = () => {
 
           {/* RIGHT: Actions */}
           <div className="flex items-center gap-5 sm:gap-6">
-            <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+            <button
+              aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+              title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+              onClick={toggleTheme}
+              className="text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300"
+            >
+              {theme === "light" ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-[18px] h-[18px]" />}
+            </button>
+            <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
               <Search className="w-[18px] h-[18px]" />
             </button>
-            <Link to="/shopping/account/wishlist" aria-label="Wishlist" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300 hidden sm:block">
+            <Link to="/shopping/account/wishlist" aria-label="Wishlist" className="relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300 hidden sm:block">
               <Heart className="w-[18px] h-[18px]" />
               <AnimatedBadge count={wishlistCount} />
             </Link>
             {user && <NotificationsDropdown />}
             {user && (
-              <Link to="/shopping/rewards" className="hidden sm:block text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300" aria-label="My rewards">
+              <Link to="/shopping/rewards" className="hidden sm:block text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300" aria-label="My rewards">
                 <TicketPercent className="w-[18px] h-[18px]" />
               </Link>
             )}
-            <Link to="/shopping/cart" aria-label="Shopping cart" className="relative text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300">
+            <Link to="/shopping/cart" aria-label="Shopping cart" className="relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
               <ShoppingBag className="w-[18px] h-[18px]" />
               <AnimatedBadge count={cartCount} />
             </Link>
@@ -301,10 +311,10 @@ const MainHeader = () => {
               <button
                 aria-label={user ? 'Account menu' : 'Sign in'}
                 onClick={() => user ? setUserMenuOpen((v) => !v) : openAuthDrawer('login')}
-                className="text-[#d0c5af] hover:text-[#f2ca50] hover:scale-110 transition-all duration-300"
+                className="text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300"
               >
                 {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt="avatar" className="w-6 h-6 rounded-full object-cover border border-[#D4AF37]/40" />
+                  <img src={user.profilePicture} alt="avatar" className="w-6 h-6 rounded-full object-cover border border-gold-ink2/40" />
                 ) : (
                   <User className="w-[18px] h-[18px]" />
                 )}
@@ -315,21 +325,21 @@ const MainHeader = () => {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 top-[140%] min-w-[200px] border border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md shadow-2xl p-2 z-50 overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/[0.02] before:to-transparent before:pointer-events-none"
+                    className="absolute right-0 top-[140%] min-w-[200px] border border-elevated bg-panel/95 backdrop-blur-md shadow-2xl p-2 z-50 overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-b before:from-ink/[0.02] before:to-transparent before:pointer-events-none"
                   >
-                    <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
-                      <div className="px-4 py-3 border-b border-[#2a2a2a] mb-1">
-                        <p className="text-[9px] text-[#d0c5af]/60 tracking-[0.2em]">Signed in as</p>
-                        <p className="text-[11px] text-[#e5e2e1] truncate normal-case mt-0.5">{user?.email || "Member"}</p>
+                    <div className="relative z-10 font-mono text-[11px] uppercase tracking-wider text-cream">
+                      <div className="px-4 py-3 border-b border-elevated mb-1">
+                        <p className="text-[9px] text-cream/60 tracking-[0.2em]">Signed in as</p>
+                        <p className="text-[11px] text-ink-2 truncate normal-case mt-0.5">{user?.email || "Member"}</p>
                       </div>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/account/orders" onClick={() => setUserMenuOpen(false)}>My Orders</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/rewards" onClick={() => setUserMenuOpen(false)}>My Rewards</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors md:hidden" to="/shopping/account/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
-                      <Link className="block px-4 py-3 hover:bg-[#1f1f1f] hover:text-[#f2ca50] transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
-                      <div className="h-[1px] bg-[#2a2a2a] my-1" />
-                      <button className="w-full text-left px-4 py-3 hover:bg-[#1f1f1f] text-[#ffb4ab] transition-colors" onClick={handleLogout}>Log Out</button>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors" to="/shopping/account" onClick={() => setUserMenuOpen(false)}>My Account</Link>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors" to="/shopping/account/orders" onClick={() => setUserMenuOpen(false)}>My Orders</Link>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors" to="/shopping/rewards" onClick={() => setUserMenuOpen(false)}>My Rewards</Link>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors" to="/account/my-reviews" onClick={() => setUserMenuOpen(false)}>My Reviews</Link>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors md:hidden" to="/shopping/account/wishlist" onClick={() => setUserMenuOpen(false)}>Wishlist</Link>
+                      <Link className="block px-4 py-3 hover:bg-card hover:text-gold-ink transition-colors" to="/shopping/find-payment" onClick={() => setUserMenuOpen(false)}>Find Payment</Link>
+                      <div className="h-[1px] bg-elevated my-1" />
+                      <button className="w-full text-left px-4 py-3 hover:bg-card text-danger-ink transition-colors" onClick={handleLogout}>Log Out</button>
                     </div>
                   </motion.div>
                 )}
@@ -337,7 +347,7 @@ const MainHeader = () => {
             </div>
 
             <button
-              className="lg:hidden p-1 text-[#e5e2e1]"
+              className="lg:hidden p-1 text-ink-2"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
             >
@@ -349,10 +359,10 @@ const MainHeader = () => {
         {/* Search Bar Dropdown */}
         <AnimatePresence>
           {searchOpen ? (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="absolute top-full left-0 w-full border-b border-[#2a2a2a] bg-[#131313]/95 backdrop-blur-md overflow-hidden">
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="absolute top-full left-0 w-full border-b border-elevated bg-panel/95 backdrop-blur-md overflow-hidden">
               <form onSubmit={submitSearch} className="max-w-[800px] mx-auto p-6">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d0c5af]" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cream" />
                   <input
                     autoFocus
                     type="search"
@@ -365,12 +375,12 @@ const MainHeader = () => {
                       }
                     }}
                     placeholder="SEARCH CATALOG OR DROPS..."
-                    className="w-full bg-[#1f1f1f] text-[#e5e2e1] placeholder:text-[#d0c5af]/50 pl-12 pr-6 py-4 outline-none font-mono text-[12px] tracking-widest border border-[#2a2a2a] focus:border-[#f2ca50] transition-colors shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]"
+                    className="w-full bg-card text-ink-2 placeholder:text-cream/50 pl-12 pr-6 py-4 outline-none font-mono text-[12px] tracking-widest border border-elevated focus:border-gold-ink transition-colors shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]"
                   />
                   <button
                     type="submit"
                     aria-label="Search"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-[#d0c5af]/60 hover:text-[#f2ca50] transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono text-cream/60 hover:text-gold-ink transition-colors"
                   >
                     {searchQuery.trim() ? <ArrowRight className="w-4 h-4" /> : "ESC"}
                   </button>
@@ -389,9 +399,9 @@ const MainHeader = () => {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
-            className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col pt-20 px-8 pb-12 lg:hidden"
+            className="fixed inset-0 z-[60] bg-page flex flex-col pt-20 px-8 pb-12 lg:hidden"
           >
-            <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="absolute top-8 right-8 text-[#d0c5af] hover:text-[#e5e2e1]"><X className="w-8 h-8" /></button>
+            <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="absolute top-8 right-8 text-cream hover:text-ink-2"><X className="w-8 h-8" /></button>
             <div className="flex flex-col gap-6 mt-12 flex-grow">
               {navItems.map((item, i) => (
                 <motion.div
@@ -403,7 +413,7 @@ const MainHeader = () => {
                   <Link
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className="font-display text-4xl block text-[#e5e2e1] hover:text-[#d0c5af]"
+                    className="font-display text-4xl block text-ink-2 hover:text-cream"
                   >
                     {item.label}
                   </Link>
@@ -421,18 +431,18 @@ const MainHeader = () => {
                   <Link
                     to={buildCategoryUrl([cat])}
                     onClick={() => setMobileOpen(false)}
-                    className="font-display text-4xl block text-[#e5e2e1] hover:text-[#f2ca50]"
+                    className="font-display text-4xl block text-ink-2 hover:text-gold-ink"
                   >
                     {cat.name}
                   </Link>
                   {Array.isArray(cat.children) && cat.children.length > 0 && (
-                    <div className="ml-4 mt-2 space-y-1 border-l border-[#2a2a2a] pl-4">
+                    <div className="ml-4 mt-2 space-y-1 border-l border-elevated pl-4">
                       {cat.children.map((sub) => (
                         <Link
                           key={sub._id}
                           to={buildCategoryUrl([cat, sub])}
                           onClick={() => setMobileOpen(false)}
-                          className="block text-lg text-[#d0c5af] hover:text-[#f2ca50] transition-colors py-1"
+                          className="block text-lg text-cream hover:text-gold-ink transition-colors py-1"
                         >
                           {sub.name}
                         </Link>
@@ -443,9 +453,9 @@ const MainHeader = () => {
               ))}
             </div>
 
-            <div className="mt-8 pt-8 border-t border-[#2a2a2a]">
-              <p className="font-mono text-xs uppercase tracking-widest text-[#4d4635] mb-4">Support & Service</p>
-              <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-[#d0c5af]">
+            <div className="mt-8 pt-8 border-t border-elevated">
+              <p className="font-mono text-xs uppercase tracking-widest text-line mb-4">Support & Service</p>
+              <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-wider text-cream">
                 <Link to="/about" onClick={() => setMobileOpen(false)}>Brand Story</Link>
                 <Link to="/contact" onClick={() => setMobileOpen(false)}>Reach Out</Link>
                 <Link to="/shopping/order-tracking" onClick={() => setMobileOpen(false)}>Track Order</Link>

@@ -178,18 +178,18 @@ function KanbanOrderCard({ order, disabled, onSelect }) {
       onClick={() => onSelect && onSelect(order)}
       whileHover={isDragging ? undefined : { y: -3, borderColor: "rgba(212,175,55,0.35)" }}
       transition={{ duration: 0.2 }}
-      className={`cursor-grab rounded-2xl border border-white/10 bg-black/50 p-4 shadow-sm active:cursor-grabbing ${onSelect ? 'hover:bg-white/5' : ''}`}
+      className={`cursor-grab rounded-2xl border border-ink/10 bg-black/50 p-4 shadow-sm active:cursor-grabbing ${onSelect ? 'hover:bg-ink/5' : ''}`}
     >
       <p className="text-[10px] uppercase tracking-wider text-gray-500">
         {formatDate(order.createdAt)}
       </p>
-      <p className="mt-1 line-clamp-2 text-sm font-semibold text-white">
+      <p className="mt-1 line-clamp-2 text-sm font-semibold text-ink">
         {getCustomerName(order)}
       </p>
       <p className="mt-2 font-mono text-[10px] text-gray-400">
         {String(order._id).slice(-8)}
       </p>
-      <p className="mt-2 text-sm text-[#D4AF37]">LKR {formatCurrency(order.totalAmount)}</p>
+      <p className="mt-2 text-sm text-gold-ink2">LKR {formatCurrency(order.totalAmount)}</p>
       <div className="mt-3">
         <StatusBadge status={order.status} />
       </div>
@@ -201,9 +201,9 @@ function KanbanColumn({ column, orders, updatingOrderId, onSelect }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex min-h-[420px] flex-1 min-w-[130px] flex-col rounded-2xl border border-white/10 bg-[#0b0b0b]/80">
-      <div className="border-b border-white/10 px-4 py-3">
-        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4AF37]">
+    <div className="flex min-h-[420px] flex-1 min-w-[130px] flex-col rounded-2xl border border-ink/10 bg-page/80">
+      <div className="border-b border-ink/10 px-4 py-3">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-gold-ink2">
           {column.title}
         </h3>
         <p className="text-[10px] text-gray-500">{orders.length} orders</p>
@@ -211,7 +211,7 @@ function KanbanColumn({ column, orders, updatingOrderId, onSelect }) {
       <div
         ref={setNodeRef}
         className={`flex flex-1 flex-col gap-3 p-3 transition-colors ${
-          isOver ? "bg-[#D4AF37]/5 ring-1 ring-[#D4AF37]/25" : ""
+          isOver ? "bg-gold-deep/5 ring-1 ring-gold-ink2/25" : ""
         }`}
       >
         {orders.map((order) => (
@@ -570,12 +570,12 @@ const Orders = () => {
       >
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-[#D4AF37]">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.3em] text-gold-ink2">
               Order Operations
             </p>
-            <h1 className="text-3xl font-black tracking-tight text-white">Orders</h1>
+            <h1 className="text-3xl font-black tracking-tight text-ink">Orders</h1>
             <p className="mt-2 max-w-xl text-sm text-gray-400">
-              <span className="text-white/90">{orders.length}</span> total ·{" "}
+              <span className="text-ink/90">{orders.length}</span> total ·{" "}
               <span className="text-emerald-300/90">{activeOrderCount}</span> active (non-cancelled)
               {isNarrow
                 ? " · On smaller screens, use table mode with status pills."
@@ -585,14 +585,14 @@ const Orders = () => {
 
           <div className="flex flex-wrap items-center gap-3">
             {!isNarrow ? (
-              <div className="inline-flex rounded-full border border-white/10 p-1">
+              <div className="inline-flex rounded-full border border-ink/10 p-1">
                 <button
                   type="button"
                   onClick={() => setViewMode("kanban")}
                   className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest ${
                     viewMode === "kanban"
-                      ? "bg-[#D4AF37] text-black"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-gold-deep text-black"
+                      : "text-gray-400 hover:text-ink"
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" /> Board
@@ -602,8 +602,8 @@ const Orders = () => {
                   onClick={() => setViewMode("table")}
                   className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-widest ${
                     viewMode === "table"
-                      ? "bg-[#D4AF37] text-black"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-gold-deep text-black"
+                      : "text-gray-400 hover:text-ink"
                   }`}
                 >
                   <Table2 className="h-4 w-4" /> Table
@@ -614,7 +614,7 @@ const Orders = () => {
             <button
               type="button"
               onClick={loadOrders}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-[#D4AF37]/50"
+              className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-4 py-2 text-sm font-semibold text-ink transition hover:border-gold-ink2/50"
             >
               <RefreshCcw className="h-4 w-4" /> Refresh
             </button>
@@ -632,13 +632,13 @@ const Orders = () => {
                 ordersPg.setPage(1);
               }}
               placeholder="Search order ID or email…"
-              className="w-full rounded-2xl border border-white/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-[#D4AF37]"
+              className="w-full rounded-2xl border border-ink/10 bg-black/60 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
             />
           </div>
           <select
             value={listStatusFilter}
             onChange={(e) => setListStatusFilter(e.target.value)}
-            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
           >
             <option value="all">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
@@ -650,7 +650,7 @@ const Orders = () => {
           <select
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
           >
             {paymentMethods.map((p) => (
               <option key={p} value={p}>
@@ -661,7 +661,7 @@ const Orders = () => {
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value)}
-            className="rounded-2xl border border-white/10 bg-black/60 px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]"
+            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -674,11 +674,11 @@ const Orders = () => {
         {showLoading ? (
           <SkeletonGrid count={3} className="grid gap-4 md:grid-cols-3" />
         ) : orders.length === 0 ? (
-          <div className="rounded-[28px] border border-white/10 bg-[#090909] p-10 text-center text-sm text-gray-400">
+          <div className="rounded-[28px] border border-ink/10 bg-page p-10 text-center text-sm text-gray-400">
             No orders placed yet.
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="rounded-[28px] border border-white/10 bg-[#090909] p-10 text-center text-sm text-gray-400">
+          <div className="rounded-[28px] border border-ink/10 bg-page p-10 text-center text-sm text-gray-400">
             No orders match your search or filters.
           </div>
         ) : (
@@ -689,7 +689,7 @@ const Orders = () => {
             className="flex flex-col xl:flex-row gap-6"
           >
             {/* Left side (Table OR Kanban) */}
-            <div className={`flex-1 overflow-x-auto rounded-[20px] ${!showKanban ? 'border border-white/10 bg-[#090909]' : ''}`}>
+            <div className={`flex-1 overflow-x-auto rounded-[20px] ${!showKanban ? 'border border-ink/10 bg-page' : ''}`}>
               {showKanban ? (
                 <DndContext
                   sensors={sensors}
@@ -710,11 +710,11 @@ const Orders = () => {
                   </div>
                   <DragOverlay dropAnimation={null}>
                     {activeDrag ? (
-                      <div className="w-[260px] cursor-grabbing rounded-2xl border border-[#D4AF37]/40 bg-[#111] p-4 shadow-2xl">
-                        <p className="text-sm font-semibold text-white">
+                      <div className="w-[260px] cursor-grabbing rounded-2xl border border-gold-ink2/40 bg-panel p-4 shadow-2xl">
+                        <p className="text-sm font-semibold text-ink">
                           {getCustomerName(activeDrag)}
                         </p>
-                        <p className="mt-2 text-xs text-[#D4AF37]">
+                        <p className="mt-2 text-xs text-gold-ink2">
                           LKR {formatCurrency(activeDrag.totalAmount)}
                         </p>
                       </div>
@@ -725,7 +725,7 @@ const Orders = () => {
                 <>
                 <table className="min-w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#4d4635] bg-[#111] text-[9px] uppercase tracking-[0.25em] text-[#99907c] se-label">
+                  <tr className="border-b border-line bg-panel text-[9px] uppercase tracking-[0.25em] text-muted se-label">
                     <th className="w-10 px-3 py-2">
                       <input
                         type="checkbox"
@@ -735,7 +735,7 @@ const Orders = () => {
                           if (el) el.indeterminate = bulk.isSomeSelected;
                         }}
                         onChange={bulk.toggleAll}
-                        className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                        className="h-4 w-4 cursor-pointer accent-gold-deep"
                         data-testid="admin-bulk-select-all"
                       />
                     </th>
@@ -754,8 +754,8 @@ const Orders = () => {
                         key={order._id}
                         variants={itemVariants}
                         onClick={() => setSelectedOrder(order)}
-                        className={`border-t border-[#4d4635]/40 align-top transition-colors cursor-pointer ${
-                          isSelected ? "bg-[#D4AF37]/[0.15] border-l-2 border-[#D4AF37]" : "hover:bg-[#131313]"
+                        className={`border-t border-line/40 align-top transition-colors cursor-pointer ${
+                          isSelected ? "bg-gold-deep/[0.15] border-l-2 border-gold-ink2" : "hover:bg-panel"
                         }`}
                       >
                         <td className="w-10 px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
@@ -764,25 +764,25 @@ const Orders = () => {
                               type="checkbox"
                               checked={bulk.isSelected(order._id)}
                               onChange={() => bulk.toggle(order._id)}
-                              className="h-4 w-4 cursor-pointer accent-[#D4AF37]"
+                              className="h-4 w-4 cursor-pointer accent-gold-deep"
                               data-testid="admin-bulk-row-select"
                             />
                           </div>
                         </td>
                         <td className="px-4 py-3 align-middle">
-                          <span className="text-left se-mono text-[10px] text-[#e5e2e1] block truncate max-w-[80px]">
+                          <span className="text-left se-mono text-[10px] text-ink-2 block truncate max-w-[80px]">
                             {String(order._id).slice(-12)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[#e5e2e1] se-body text-xs align-middle">
+                        <td className="px-4 py-3 text-ink-2 se-body text-xs align-middle">
                           <span className="block truncate max-w-[120px]">
                             {getCustomerName(order)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[#99907c] se-mono text-[10px] whitespace-nowrap align-middle">
+                        <td className="px-4 py-3 text-muted se-mono text-[10px] whitespace-nowrap align-middle">
                           {formatDate(order.createdAt)}
                         </td>
-                        <td className="px-4 py-3 text-[#99907c] se-label text-[9px] tracking-widest uppercase align-middle">
+                        <td className="px-4 py-3 text-muted se-label text-[9px] tracking-widest uppercase align-middle">
                           <span className="block truncate max-w-[100px]">
                             {formatPaymentMethod(order.paymentMethod)}
                           </span>
@@ -811,37 +811,37 @@ const Orders = () => {
             {/* Right side Details Panel */}
             {!showKanban && selectedOrder && (
               <div className="w-full xl:w-[260px] shrink-0">
-                <div className="rounded-[20px] border border-white/10 bg-[#090909] p-4 sticky top-6 text-sm">
+                <div className="rounded-[20px] border border-ink/10 bg-page p-4 sticky top-6 text-sm">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-bold text-white tracking-tight uppercase se-mono">
+                      <h3 className="text-lg font-bold text-ink tracking-tight uppercase se-mono">
                         {String(selectedOrder._id).slice(-12)}
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">{formatDate(selectedOrder.createdAt)}</p>
                     </div>
-                    <button onClick={() => setSelectedOrder(null)} className="text-white/40 hover:text-white shrink-0 ml-2">&times;</button>
+                    <button onClick={() => setSelectedOrder(null)} className="text-ink/40 hover:text-ink shrink-0 ml-2">&times;</button>
                   </div>
 
                   <div className="space-y-4 mb-6">
-                    <div className="flex justify-between items-center border-b border-white/[0.05] pb-2">
-                      <span className="text-white/40">Status</span>
+                    <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
+                      <span className="text-ink/40">Status</span>
                       <StatusBadge status={selectedOrder.status} />
                     </div>
-                    <div className="flex justify-between items-center border-b border-white/[0.05] pb-2">
-                      <span className="text-white/40">Payment</span>
-                      <span className="text-[#D4AF37] font-medium uppercase tracking-wider text-[10px]">{formatPaymentMethod(selectedOrder.paymentMethod)}</span>
+                    <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
+                      <span className="text-ink/40">Payment</span>
+                      <span className="text-gold-ink2 font-medium uppercase tracking-wider text-[10px]">{formatPaymentMethod(selectedOrder.paymentMethod)}</span>
                     </div>
-                    <div className="flex justify-between items-start border-b border-white/[0.05] pb-2">
-                      <span className="text-white/40 pt-0.5">Customer</span>
-                      <span className="text-white text-right break-words max-w-[160px]">{getCustomerName(selectedOrder)}</span>
+                    <div className="flex justify-between items-start border-b border-ink/[0.05] pb-2">
+                      <span className="text-ink/40 pt-0.5">Customer</span>
+                      <span className="text-ink text-right break-words max-w-[160px]">{getCustomerName(selectedOrder)}</span>
                     </div>
                     {(() => {
                       const phone = getOrderPhone(selectedOrder);
                       if (!phone) return null;
                       return (
-                        <div className="flex justify-between items-center border-b border-white/[0.05] pb-2">
-                          <span className="text-white/40">Contact</span>
-                          <span className="text-white text-xs">{phone}</span>
+                        <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
+                          <span className="text-ink/40">Contact</span>
+                          <span className="text-ink text-xs">{phone}</span>
                         </div>
                       )
                     })()}
@@ -854,18 +854,18 @@ const Orders = () => {
                       {(selectedOrder.items || []).map((line, idx) => (
                         <li key={idx} className="flex justify-between text-xs items-center">
                           <div className="flex flex-col">
-                            <span className="text-white max-w-[180px] truncate" title={line.name || line.product?.name || "Item"}>{line.name || line.product?.name || "Item"}</span>
-                            <span className="text-white/40 mt-0.5">Qty: {line.quantity || 1}</span>
+                            <span className="text-ink max-w-[180px] truncate" title={line.name || line.product?.name || "Item"}>{line.name || line.product?.name || "Item"}</span>
+                            <span className="text-ink/40 mt-0.5">Qty: {line.quantity || 1}</span>
                           </div>
-                          <span className="text-[#D4AF37]">LKR {formatCurrency((line.price || 0) * (line.quantity || 1))}</span>
+                          <span className="text-gold-ink2">LKR {formatCurrency((line.price || 0) * (line.quantity || 1))}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
                   {/* Pricing breakdown */}
-                  <div className="border-t border-white/[0.05] pt-4 space-y-2 text-xs">
-                    <div className="flex justify-between text-white/60">
+                  <div className="border-t border-ink/[0.05] pt-4 space-y-2 text-xs">
+                    <div className="flex justify-between text-ink/60">
                       <span>Subtotal</span>
                       <span>LKR {formatCurrency(selectedOrder.totalAmount - (selectedOrder.shippingFee || 0) + (selectedOrder.discountAmount || 0))}</span>
                     </div>
@@ -876,12 +876,12 @@ const Orders = () => {
                       </div>
                     )}
                     {selectedOrder.shippingFee > 0 && (
-                      <div className="flex justify-between text-white/60">
+                      <div className="flex justify-between text-ink/60">
                         <span>Shipping</span>
                         <span>LKR {formatCurrency(selectedOrder.shippingFee)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-[#D4AF37] font-bold text-sm pt-2 border-t border-white/[0.05] mt-2">
+                    <div className="flex justify-between text-gold-ink2 font-bold text-sm pt-2 border-t border-ink/[0.05] mt-2">
                       <span>Total</span>
                       <span>LKR {formatCurrency(selectedOrder.totalAmount)}</span>
                     </div>
@@ -904,8 +904,8 @@ const Orders = () => {
                             title={`Change status to ${s.label}`}
                             className={`p-2 rounded-sm border transition flex items-center justify-center
                               ${isCurrent 
-                                ? "border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37] cursor-default opacity-100" 
-                                : "border-[#4d4635] bg-transparent text-[#99907c] hover:border-[#f2ca50] hover:text-[#f2ca50] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                ? "border-gold-ink2 bg-gold-deep/10 text-gold-ink2 cursor-default opacity-100" 
+                                : "border-line bg-transparent text-muted hover:border-gold-ink hover:text-gold-ink cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                               }
                             `}
                           >
@@ -919,7 +919,7 @@ const Orders = () => {
                       <button
                         type="button"
                         onClick={() => setDetailOrder(selectedOrder)}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-[#4d4635] bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-[#d0c5af] transition hover:border-[#f2ca50] hover:text-[#f2ca50]"
+                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-line bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-cream transition hover:border-gold-ink hover:text-gold-ink"
                       >
                         <Eye className="h-3.5 w-3.5" /> Full Details
                       </button>
@@ -927,7 +927,7 @@ const Orders = () => {
                         type="button"
                         onClick={() => handleDownloadInvoice(selectedOrder)}
                         disabled={invoiceDownloadingId === selectedOrder._id}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-[#4d4635] bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-[#d0c5af] transition hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-50"
+                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-line bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-cream transition hover:border-gold-ink hover:text-gold-ink disabled:opacity-50"
                       >
                         {invoiceDownloadingId === selectedOrder._id ? (
                           <><Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF…</>
@@ -941,7 +941,7 @@ const Orders = () => {
                       <button
                         type="button"
                         onClick={() => setRefundOrderTarget(selectedOrder)}
-                        className="w-full inline-flex justify-center items-center gap-2 rounded-sm border border-[#ffb4ab]/40 bg-[#ffb4ab]/10 px-3 py-2.5 text-[10px] tracking-[0.22em] uppercase text-[#ffb4ab] hover:bg-[#ffb4ab]/20"
+                        className="w-full inline-flex justify-center items-center gap-2 rounded-sm border border-danger-ink/40 bg-danger-ink/10 px-3 py-2.5 text-[10px] tracking-[0.22em] uppercase text-danger-ink hover:bg-danger-ink/20"
                       >
                         Issue Refund
                       </button>

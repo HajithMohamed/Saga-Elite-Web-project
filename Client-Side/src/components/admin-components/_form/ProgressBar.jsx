@@ -20,13 +20,13 @@ export function ProgressBar({ label, value = 0, segments, filledCount, className
     <div className={className}>
       {label ? (
         <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] font-semibold">
-          <span className="text-white/60">{label}</span>
-          <span className="text-[#D4AF37] tabular-nums">{display}</span>
+          <span className="text-ink/60">{label}</span>
+          <span className="text-gold-ink2 tabular-nums">{display}</span>
         </div>
       ) : null}
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink/[0.06]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F2CA50] transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-gold-deep to-gold transition-all duration-500"
           style={{ width: `${pct * 100}%` }}
         />
       </div>

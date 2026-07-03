@@ -17,27 +17,27 @@ const DropAvailabilityBar = ({ soldPercent, totalProducts, totalRemaining }) => 
   return (
     <section
       ref={ref}
-      className="relative bg-[#050505] py-16 md:py-20 border-y border-[#1a1a1a] overflow-hidden"
+      className="relative bg-page py-16 md:py-20 border-y border-card overflow-hidden"
     >
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-[#f2ca50]/6 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gold/6 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
         <p
           className={`font-mono text-[10px] tracking-[0.4em] uppercase mb-4 flex items-center justify-center gap-2 ${
             isCritical
-              ? "text-[#ffb4ab]"
+              ? "text-danger-ink"
               : isHot
-                ? "text-[#f2ca50]"
-                : "text-[#d0c5af]"
+                ? "text-gold-ink"
+                : "text-cream"
           }`}
         >
           <span
             className={`w-1.5 h-1.5 rounded-full ${
               isCritical
-                ? "bg-[#ffb4ab] animate-pulse"
+                ? "bg-danger-ink animate-pulse"
                 : isHot
-                  ? "bg-[#f2ca50] animate-pulse"
-                  : "bg-[#d0c5af]"
+                  ? "bg-gold animate-pulse"
+                  : "bg-cream"
             }`}
           />
           {isCritical
@@ -48,24 +48,24 @@ const DropAvailabilityBar = ({ soldPercent, totalProducts, totalRemaining }) => 
         </p>
 
         <div className="flex items-baseline justify-center gap-3 mb-8">
-          <span className="font-display text-5xl md:text-7xl text-[#FAF7F2] tabular-nums">
+          <span className="font-display text-5xl md:text-7xl text-ink tabular-nums">
             {clamped}
           </span>
-          <span className="font-mono text-xl text-[#99907c]">% Sold Out</span>
+          <span className="font-mono text-xl text-muted">% Sold Out</span>
         </div>
 
         {/* Progress track */}
-        <div className="relative h-2 w-full bg-[#1c1b1b] overflow-hidden rounded-full">
+        <div className="relative h-2 w-full bg-card overflow-hidden rounded-full">
           <motion.div
             initial={{ width: "0%" }}
             animate={inView ? { width: `${clamped}%` } : { width: "0%" }}
             transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
             className={`absolute inset-y-0 left-0 rounded-full ${
               isCritical
-                ? "bg-[#ffb4ab]"
+                ? "bg-danger-ink"
                 : isHot
-                  ? "bg-[#f2ca50]"
-                  : "bg-[#d0c5af]"
+                  ? "bg-gold"
+                  : "bg-cream"
             }`}
             style={{
               boxShadow: isCritical
@@ -78,7 +78,7 @@ const DropAvailabilityBar = ({ soldPercent, totalProducts, totalRemaining }) => 
           {/* Shimmer */}
           {(isHot || isCritical) && (
             <motion.div
-              className="absolute inset-y-0 w-12 bg-white/30 blur-md rounded-full"
+              className="absolute inset-y-0 w-12 bg-ink/30 blur-md rounded-full"
               animate={{ x: ["-30px", "100%"] }}
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               style={{ left: "0%" }}
@@ -87,15 +87,15 @@ const DropAvailabilityBar = ({ soldPercent, totalProducts, totalRemaining }) => 
         </div>
 
         {totalProducts != null && totalRemaining != null ? (
-          <div className="mt-6 flex justify-center gap-8 font-mono text-[10px] tracking-[0.28em] uppercase text-[#99907c]">
+          <div className="mt-6 flex justify-center gap-8 font-mono text-[10px] tracking-[0.28em] uppercase text-muted">
             <span>
-              <span className="text-[#f2ca50] font-bold">
+              <span className="text-gold-ink font-bold">
                 {totalProducts}
               </span>{" "}
               Pieces
             </span>
             <span>
-              <span className="text-[#f2ca50] font-bold">
+              <span className="text-gold-ink font-bold">
                 {totalRemaining}
               </span>{" "}
               Remaining

@@ -38,34 +38,34 @@ const AccountLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="bg-[#0e0e0e] min-h-screen text-[#e5e2e1] pt-[64px] md:pt-[72px] font-sans overflow-x-hidden">
+    <div className="bg-page min-h-screen text-ink-2 pt-[64px] md:pt-[72px] font-sans overflow-x-hidden">
       
       {/* ── DASHBOARD HERO ── */}
-      <section className="relative h-[180px] md:h-[220px] lg:h-[280px] overflow-hidden flex items-end justify-center w-full border-b border-white/5">
+      <section className="relative h-[180px] md:h-[220px] lg:h-[280px] overflow-hidden flex items-end justify-center w-full border-b border-ink/5">
         <div className="absolute inset-0">
-          <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[100px] opacity-10 bg-[#F2CA50]" />
-          <div className="absolute inset-0 bg-[#0e0e0e]/80" />
+          <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full blur-[100px] opacity-10 bg-gold" />
+          <div className="absolute inset-0 bg-page/80" />
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-page to-transparent" />
         </div>
         
         <div className="relative z-10 w-full max-w-[1440px] px-4 md:px-8 pb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-             <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c] mb-4">
-                <Link to="/" className="hover:text-[#F2CA50] transition-colors">Home</Link>
+             <nav className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted mb-4">
+                <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
                 <ChevronRight className="w-3 h-3" />
-                <span className="text-[#fafafa] font-bold">My Account</span>
+                <span className="text-ink font-bold">My Account</span>
              </nav>
-             <h1 className="se-serif text-3xl md:text-4xl lg:text-5xl text-[#fafafa] mb-2">
+             <h1 className="se-serif text-3xl md:text-4xl lg:text-5xl text-ink mb-2">
                 Welcome Back, {firstName}
              </h1>
-             <p className="se-body text-[#99907c] text-sm md:text-base max-w-xl">
+             <p className="se-body text-muted text-sm md:text-base max-w-xl">
                 Manage your profile, orders, wishlist, and account settings.
              </p>
           </div>
           <button 
             onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden flex items-center justify-center gap-2 h-[48px] px-6 bg-[#1A1A1A] border border-white/10 rounded-[12px] text-[11px] font-bold uppercase tracking-wider text-[#fafafa]"
+            className="lg:hidden flex items-center justify-center gap-2 h-[48px] px-6 bg-card border border-ink/10 rounded-[12px] text-[11px] font-bold uppercase tracking-wider text-ink"
           >
             <Menu className="w-4 h-4" /> Account Menu
           </button>
@@ -77,7 +77,7 @@ const AccountLayout = () => {
          
          {/* ── DESKTOP SIDEBAR ── */}
          <aside className="hidden lg:block w-[300px] shrink-0 sticky top-28 self-start">
-            <div className="bg-[#1A1A1A] rounded-[24px] border border-white/5 p-4 flex flex-col gap-1">
+            <div className="bg-card rounded-[24px] border border-ink/5 p-4 flex flex-col gap-1">
                {NAV_ITEMS.map((item) => (
                   <NavLink
                      key={item.path}
@@ -85,14 +85,14 @@ const AccountLayout = () => {
                      end={item.exact}
                      className={({ isActive }) => `
                         flex items-center gap-4 px-4 py-3.5 rounded-[16px] transition-all
-                        ${isActive ? 'bg-[#F2CA50]/10 text-[#F2CA50] font-bold' : 'text-[#99907c] hover:bg-white/5 hover:text-[#fafafa] font-semibold'}
+                        ${isActive ? 'bg-gold/10 text-gold-ink font-bold' : 'text-muted hover:bg-ink/5 hover:text-ink font-semibold'}
                      `}
                   >
                      <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
                      <span className="text-[14px]">{item.label}</span>
                   </NavLink>
                ))}
-               <div className="my-2 border-t border-white/5 mx-4" />
+               <div className="my-2 border-t border-ink/5 mx-4" />
                <button className="flex items-center gap-4 px-4 py-3.5 rounded-[16px] text-red-400 hover:bg-red-500/10 transition-all font-semibold text-left">
                   <LogOut className="w-5 h-5 shrink-0" strokeWidth={2} />
                   <span className="text-[14px]">Logout</span>
@@ -111,11 +111,11 @@ const AccountLayout = () => {
                   />
                   <motion.div 
                      initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                     className="fixed bottom-0 left-0 right-0 max-h-[85vh] bg-[#131313] border-t border-white/10 z-[101] rounded-t-[24px] lg:hidden flex flex-col overflow-hidden"
+                     className="fixed bottom-0 left-0 right-0 max-h-[85vh] bg-panel border-t border-ink/10 z-[101] rounded-t-[24px] lg:hidden flex flex-col overflow-hidden"
                   >
-                     <div className="flex justify-between items-center p-6 border-b border-white/5 shrink-0">
-                        <span className="text-[#fafafa] font-bold tracking-widest uppercase text-[12px]">Account Menu</span>
-                        <button onClick={() => setMobileMenuOpen(false)} className="text-[#99907c] hover:text-[#F2CA50]"><X className="w-6 h-6" /></button>
+                     <div className="flex justify-between items-center p-6 border-b border-ink/5 shrink-0">
+                        <span className="text-ink font-bold tracking-widest uppercase text-[12px]">Account Menu</span>
+                        <button onClick={() => setMobileMenuOpen(false)} className="text-muted hover:text-gold-ink"><X className="w-6 h-6" /></button>
                      </div>
                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {NAV_ITEMS.map((item) => (
@@ -126,14 +126,14 @@ const AccountLayout = () => {
                               onClick={() => setMobileMenuOpen(false)}
                               className={({ isActive }) => `
                                  flex items-center gap-4 px-4 py-4 rounded-[16px] transition-all
-                                 ${isActive ? 'bg-[#F2CA50]/10 text-[#F2CA50] font-bold' : 'text-[#99907c] hover:bg-white/5 hover:text-[#fafafa] font-semibold'}
+                                 ${isActive ? 'bg-gold/10 text-gold-ink font-bold' : 'text-muted hover:bg-ink/5 hover:text-ink font-semibold'}
                               `}
                            >
                               <item.icon className="w-5 h-5 shrink-0" strokeWidth={2} />
                               <span className="text-[15px]">{item.label}</span>
                            </NavLink>
                         ))}
-                        <div className="my-2 border-t border-white/5 mx-4" />
+                        <div className="my-2 border-t border-ink/5 mx-4" />
                         <button className="flex items-center gap-4 px-4 py-4 rounded-[16px] text-red-400 hover:bg-red-500/10 transition-all font-semibold text-left">
                            <LogOut className="w-5 h-5 shrink-0" strokeWidth={2} />
                            <span className="text-[15px]">Logout</span>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, KeyRound, Loader2, Mail, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, KeyRound, Loader2, Mail, ShieldCheck, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { createAdmin, clearCreateStatus } from "../../store/admin/super-admin-slice";
 import {
@@ -151,6 +151,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
     (s) => s.superAdmin
   );
   const [form, setForm] = useState(INITIAL);
+  const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({});
   const [activePreset, setActivePreset] = useState(null);
 
@@ -199,10 +200,10 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
   const isValid = Object.keys(errors).length === 0;
 
   const inputClass = (name) =>
-    `w-full rounded-xl border bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition-colors ${
+    `w-full rounded-xl border bg-black/70 px-3 py-2.5 text-sm text-ink outline-none transition-colors ${
       touched[name] && errors[name]
         ? "border-red-500/60 focus:border-red-500"
-        : "border-white/10 focus:border-[#D4AF37]"
+        : "border-ink/10 focus:border-gold-ink2"
     }`;
 
   const handleTextChange = (e) => {
@@ -296,20 +297,20 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
         >
           <motion.div
             key="create-admin-card"
-            className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-[#111111] shadow-2xl"
+            className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-ink/10 bg-panel shadow-2xl"
             variants={modalCardVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between border-b border-white/10 px-6 py-5">
+            <div className="flex items-start justify-between border-b border-ink/10 px-6 py-5">
               <div>
-                <div className="flex items-center gap-2 text-[#D4AF37]">
+                <div className="flex items-center gap-2 text-gold-ink2">
                   <ShieldCheck className="h-5 w-5" />
                   <span className="text-xs font-semibold uppercase tracking-[0.22em]">Super Admin</span>
                 </div>
-                <h2 className="mt-2 text-xl font-semibold text-white">Create admin access</h2>
+                <h2 className="mt-2 text-xl font-semibold text-ink">Create admin access</h2>
                 <p className="mt-1 text-sm text-gray-400">
                   Select a role, verify permissions, and send login credentials by email.
                 </p>
@@ -317,7 +318,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-ink/5 hover:text-ink"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -435,10 +436,10 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                <div className="rounded-xl border border-ink/10 bg-black/30 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-white">Temporary password</p>
+                      <p className="text-sm font-semibold text-ink">Temporary password</p>
                       <p className="mt-0.5 text-xs text-gray-500">
                         Auto-generated passwords are emailed to the new admin.
                       </p>
@@ -454,7 +455,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                             password: e.target.checked ? "" : prev.password,
                           }))
                         }
-                        className="h-4 w-4 accent-[#D4AF37]"
+                        className="h-4 w-4 accent-gold-deep"
                       />
                       Auto generate
                     </label>
@@ -465,14 +466,23 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                       <div className="relative">
                         <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                         <input
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           name="password"
                           value={form.password}
                           onChange={handleTextChange}
                           onBlur={handleBlur}
                           placeholder="Strong temporary password"
-                          className={`${inputClass("password")} pl-10`}
+                          className={`${inputClass("password")} pl-10 pr-11`}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          title={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gold-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-ink/40"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                       {touched.password && errors.password ? (
                         <p className="mt-1 text-xs text-red-400">{errors.password}</p>
@@ -483,7 +493,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-semibold text-white">Quick role presets</p>
+                    <p className="text-sm font-semibold text-ink">Quick role presets</p>
                     <p className="mt-0.5 text-xs text-gray-500">
                       Pick a starting profile, then fine-tune the permissions below.
                     </p>
@@ -498,8 +508,8 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                           onClick={() => applyRolePreset(presetKey)}
                           className={`rounded-2xl border p-4 text-left transition-all duration-200 ${
                             isActive
-                              ? "border-[#D4AF37]/50 bg-[#D4AF37]/10 text-white shadow-[0_0_24px_rgba(212,175,55,0.12)]"
-                              : "border-white/10 bg-black/30 text-gray-300 hover:border-[#D4AF37]/30 hover:bg-black/50"
+                              ? "border-gold-ink2/50 bg-gold-deep/10 text-ink shadow-[0_0_24px_rgba(212,175,55,0.12)]"
+                              : "border-ink/10 bg-black/30 text-gray-300 hover:border-gold-ink2/30 hover:bg-black/50"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -507,7 +517,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                               <p className="text-sm font-semibold">{preset.label}</p>
                               <p className="mt-1 text-xs text-gray-500">{preset.description}</p>
                             </div>
-                            <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]">
+                            <span className="rounded-full border border-ink/10 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-gold-ink2">
                               Preset
                             </span>
                           </div>
@@ -520,7 +530,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-white">Permission verification</p>
+                      <p className="text-sm font-semibold text-ink">Permission verification</p>
                       <p className="mt-0.5 text-xs text-gray-500">
                         Full admins receive all permissions. Sub-admins start from the role preset.
                       </p>
@@ -537,8 +547,8 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                           key={permission.key}
                           className={`flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2 text-sm transition ${
                             checked
-                              ? "border-[#D4AF37]/40 bg-[#D4AF37]/10 text-white"
-                              : "border-white/10 bg-black/30 text-gray-400 hover:border-white/20"
+                              ? "border-gold-ink2/40 bg-gold-deep/10 text-ink"
+                              : "border-ink/10 bg-black/30 text-gray-400 hover:border-ink/20"
                           }`}
                         >
                           <span>{permission.label}</span>
@@ -546,7 +556,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                             type="checkbox"
                             checked={checked}
                             onChange={() => handlePermissionToggle(permission.key)}
-                            className="h-4 w-4 accent-[#D4AF37]"
+                            className="h-4 w-4 accent-gold-deep"
                           />
                         </label>
                       );
@@ -554,7 +564,7 @@ const CreateAdminModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-ink/10 pt-5 sm:flex-row sm:justify-end">
                   <SecondaryButton
                     type="button"
                     onClick={onClose}

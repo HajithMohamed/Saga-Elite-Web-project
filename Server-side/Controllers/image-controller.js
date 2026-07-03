@@ -631,10 +631,8 @@ const getSocialUgcImages = catchAsync(async (req, res, next) => {
     ...visibilityFilter(req),
   }).sort({ isPrimary: -1, order: 1 });
 
-  if (!images.length) {
-    return next(new AppError("No social UGC images found", 404));
-  }
-
+  // An empty gallery is a normal state (section simply hides on the
+  // storefront) — don't surface it as a 404 console error.
   res.status(200).json({
     success: true,
     results: images.length,

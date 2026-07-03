@@ -43,7 +43,7 @@ const Features = () => {
               <motion.div key={item.to} variants={itemVariants}>
                 <Link
                   to={item.to}
-                  className="admin-panel block transition hover:border-[#D4AF37]/40"
+                  className="admin-panel block transition hover:border-gold-ink2/40"
                 >
                   <motion.div
                     whileHover={{ y: -3, borderColor: "rgba(212,175,55,0.35)" }}
@@ -51,8 +51,8 @@ const Features = () => {
                     className="rounded-[inherit]"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-white">{item.label}</p>
-                      <Icon className="h-5 w-5 text-[#D4AF37]" />
+                      <p className="font-semibold text-ink">{item.label}</p>
+                      <Icon className="h-5 w-5 text-gold-ink2" />
                     </div>
                     <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">Open module</p>
                   </motion.div>

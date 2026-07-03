@@ -95,9 +95,9 @@ const OtpCells = ({ length = 6, value, onChange, disabled, success = false, erro
               disabled={disabled}
               className={cn(
                 "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-center text-xl md:text-2xl font-mono rounded-[16px]",
-                "border border-white/10 bg-[#0a0a0a] text-[#e5e2e1] transition-colors duration-200",
-                "focus:outline-none focus:border-[#F2CA50] focus:ring-1 focus:ring-[#F2CA50]/30 focus:shadow-[0_0_15px_rgba(242,202,80,0.15)]",
-                success && "border-[#34C759]/50 text-[#34C759] bg-[#34C759]/5",
+                "border border-ink/10 bg-page text-ink-2 transition-colors duration-200",
+                "focus:outline-none focus:border-gold-ink focus:ring-1 focus:ring-gold-ink/30 focus:shadow-[0_0_15px_rgba(242,202,80,0.15)]",
+                success && "border-success/50 text-success bg-success/5",
                 error && "border-rose-500/50 text-rose-400 bg-rose-500/5",
                 disabled && "opacity-50 cursor-not-allowed"
               )}

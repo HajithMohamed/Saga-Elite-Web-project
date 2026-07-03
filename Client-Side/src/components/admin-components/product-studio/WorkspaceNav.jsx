@@ -36,11 +36,11 @@ export const WorkspaceNav = ({ activeTab, onTabChange }) => {
             onClick={() => handleTabSelect(item.id)}
             className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
               isActive 
-                ? 'bg-[#111111] text-[#D4AF37] border border-white/5' 
-                : 'text-white/50 hover:bg-white/[0.02] hover:text-white'
+                ? 'bg-panel text-gold-ink2 border border-ink/5' 
+                : 'text-ink/50 hover:bg-ink/[0.02] hover:text-ink'
             }`}
           >
-            <Icon className={`h-4 w-4 ${isActive ? 'text-[#D4AF37]' : 'text-white/40'}`} />
+            <Icon className={`h-4 w-4 ${isActive ? 'text-gold-ink2' : 'text-ink/40'}`} />
             {item.label}
           </button>
         );

@@ -16,18 +16,18 @@ export const useAuthDrawer = () => useContext(DrawerCtx);
 
 /* ── Tab bar ─────────────────────────────────────── */
 const Tabs = ({ tab, setTab }) => (
-  <div className="flex border-b border-[#1a1a1a] shrink-0">
+  <div className="flex border-b border-card shrink-0">
     {[["login","Sign In"],["register","Join"]].map(([key, label]) => (
       <button
         key={key}
         onClick={() => setTab(key)}
         className={`flex-1 py-3.5 relative se-label text-[10px] tracking-[0.25em] uppercase transition-colors ${
-          tab === key ? "text-[#f2ca50]" : "text-[#574500] hover:text-[#99907c]"
+          tab === key ? "text-gold-ink" : "text-goldshadow hover:text-muted"
         }`}
       >
         {label}
         {tab === key && (
-          <motion.span layoutId="tab-underline" className="absolute bottom-0 inset-x-0 h-[1.5px] bg-[#f2ca50]" />
+          <motion.span layoutId="tab-underline" className="absolute bottom-0 inset-x-0 h-[1.5px] bg-gold" />
         )}
       </button>
     ))}
@@ -92,18 +92,18 @@ export const AuthDrawerProvider = ({ children }) => {
               animate={isMobile ? { y: 0 } : { x: 0 }}
               exit={isMobile ? { y: "100%" } : { x: "100%" }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-              className={`fixed ${isMobile ? 'bottom-0 left-0 w-full h-[85vh] rounded-t-[28px]' : `top-0 right-0 h-full w-full ${isRecoveryView ? "sm:w-[460px]" : "sm:w-[420px]"} border-l border-[#2a2a2a]`} z-[201] bg-[#0a0a0a] flex flex-col shadow-2xl`}
+              className={`fixed ${isMobile ? 'bottom-0 left-0 w-full h-[85vh] rounded-t-[28px]' : `top-0 right-0 h-full w-full ${isRecoveryView ? "sm:w-[460px]" : "sm:w-[420px]"} border-l border-elevated`} z-[201] bg-page flex flex-col shadow-2xl`}
             >
               {/* Gold left accent */}
-              <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-[#f2ca50]/70 via-[#D4AF37]/20 to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-gold/70 via-gold-deep/20 to-transparent pointer-events-none" />
 
               {/* Header row */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1a1a1a] shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-card shrink-0">
                 <div className="flex items-center gap-2.5">
                   <img src="/LOGO.png" alt="Saga Elite" className="h-7 w-7 object-contain" onError={e => e.currentTarget.style.display="none"} />
-                  <span className="se-label text-[10px] tracking-[0.35em] text-[#D4AF37] uppercase">Saga Elite</span>
+                  <span className="se-label text-[10px] tracking-[0.35em] text-gold-ink2 uppercase">Saga Elite</span>
                 </div>
-                <button onClick={close} aria-label="Close" className="text-[#574500] hover:text-[#d0c5af] transition-colors p-1 rounded">
+                <button onClick={close} aria-label="Close" className="text-goldshadow hover:text-cream transition-colors p-1 rounded">
                   <X size={17} strokeWidth={1.5} />
                 </button>
               </div>

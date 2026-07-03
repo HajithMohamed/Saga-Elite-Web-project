@@ -56,10 +56,10 @@ const ManagedImageCard = ({ image, onDelete, onUpdateLabel, deleting }) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="group relative rounded-xl overflow-hidden border border-white/10 bg-[#0e0e0e]"
+      className="group relative rounded-xl overflow-hidden border border-ink/10 bg-page"
     >
       {/* Image */}
-      <div className="aspect-[16/10] relative overflow-hidden bg-[#131313]">
+      <div className="aspect-[16/10] relative overflow-hidden bg-panel">
         <img
           src={image.url}
           alt={image.label || "Homepage image"}
@@ -74,7 +74,7 @@ const ManagedImageCard = ({ image, onDelete, onUpdateLabel, deleting }) => {
           <button
             onClick={() => onDelete(image._id)}
             disabled={deleting}
-            className="w-9 h-9 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-white transition-colors disabled:opacity-50"
+            className="w-9 h-9 rounded-full bg-red-500/90 hover:bg-red-500 flex items-center justify-center text-ink transition-colors disabled:opacity-50"
             title="Delete image"
           >
             {deleting ? (
@@ -85,7 +85,7 @@ const ManagedImageCard = ({ image, onDelete, onUpdateLabel, deleting }) => {
           </button>
           <button
             onClick={() => setEditing(true)}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+            className="w-9 h-9 rounded-full bg-ink/20 hover:bg-ink/30 flex items-center justify-center text-ink transition-colors backdrop-blur-sm"
             title="Edit label"
           >
             <Edit3 className="w-4 h-4" />
@@ -108,12 +108,12 @@ const ManagedImageCard = ({ image, onDelete, onUpdateLabel, deleting }) => {
               value={labelValue}
               onChange={(e) => setLabelValue(e.target.value)}
               placeholder="Image label..."
-              className="flex-1 bg-[#1a1a1a] border border-[#4d4635] rounded px-2 py-1 text-xs text-[#e5e2e1] placeholder:text-[#4d4635] outline-none focus:border-[#D4AF37] transition-colors"
+              className="flex-1 bg-card border border-line rounded px-2 py-1 text-xs text-ink-2 placeholder:text-line outline-none focus:border-gold-ink2 transition-colors"
               autoFocus
             />
             <button
               type="submit"
-              className="text-[#34C759] hover:text-[#2db84d] transition-colors"
+              className="text-success hover:text-[#2db84d] transition-colors"
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>
@@ -123,18 +123,18 @@ const ManagedImageCard = ({ image, onDelete, onUpdateLabel, deleting }) => {
                 setEditing(false);
                 setLabelValue(image.label || "");
               }}
-              className="text-[#99907c] hover:text-[#e5e2e1] transition-colors"
+              className="text-muted hover:text-ink-2 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </form>
         ) : (
-          <span className="text-[11px] text-[#99907c] truncate">
+          <span className="text-[11px] text-muted truncate">
             {image.label || "No label"}
           </span>
         )}
         {image.order !== undefined && !editing && (
-          <span className="text-[10px] text-[#4d4635] tabular-nums shrink-0">
+          <span className="text-[10px] text-line tabular-nums shrink-0">
             #{image.order}
           </span>
         )}
@@ -252,12 +252,12 @@ const ImageZone = ({
     <AdminPanel
       title={
         <span className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-            <Icon className="w-4.5 h-4.5 text-[#D4AF37]" />
+          <div className="w-9 h-9 rounded-lg bg-gold-deep/10 border border-gold-ink2/20 flex items-center justify-center">
+            <Icon className="w-4.5 h-4.5 text-gold-ink2" />
           </div>
           <div>
-            <span className="text-[#e5e2e1]">{title}</span>
-            <span className="block text-[11px] text-[#99907c] font-normal tracking-normal normal-case mt-0.5">
+            <span className="text-ink-2">{title}</span>
+            <span className="block text-[11px] text-muted font-normal tracking-normal normal-case mt-0.5">
               {description}
             </span>
           </div>
@@ -267,10 +267,10 @@ const ImageZone = ({
     >
       {/* Aspect ratio hint */}
       {aspectHint && (
-        <div className="mb-4 flex items-center gap-2 text-[11px] text-[#99907c] bg-[#131313] border border-[#4d4635]/30 rounded-lg px-3 py-2">
-          <AlertCircle className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+        <div className="mb-4 flex items-center gap-2 text-[11px] text-muted bg-panel border border-line/30 rounded-lg px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 text-gold-ink2 shrink-0" />
           <span>
-            Recommended: <strong className="text-[#d0c5af]">{aspectHint}</strong>
+            Recommended: <strong className="text-cream">{aspectHint}</strong>
           </span>
         </div>
       )}
@@ -291,7 +291,7 @@ const ImageZone = ({
       )}
 
       {images.length >= maxImages && (
-        <div className="mb-4 flex items-center gap-2 text-[11px] text-[#FF6B35] bg-[#FF6B35]/10 border border-[#FF6B35]/20 rounded-lg px-3 py-2">
+        <div className="mb-4 flex items-center gap-2 text-[11px] text-urgent bg-urgent/10 border border-urgent/20 rounded-lg px-3 py-2">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           Maximum of {maxImages} images reached. Delete some to upload more.
         </div>
@@ -299,12 +299,12 @@ const ImageZone = ({
 
       {/* Existing Images Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-[#99907c]">
-          <Loader2 className="w-5 h-5 animate-spin text-[#D4AF37] mr-3" />
+        <div className="flex items-center justify-center py-16 text-muted">
+          <Loader2 className="w-5 h-5 animate-spin text-gold-ink2 mr-3" />
           Loading images…
         </div>
       ) : images.length === 0 ? (
-        <div className="text-center py-12 text-[#4d4635] text-sm">
+        <div className="text-center py-12 text-line text-sm">
           <ImageIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
           No images uploaded yet
         </div>
@@ -329,7 +329,7 @@ const ImageZone = ({
         <div className="mt-4 flex justify-end">
           <button
             onClick={fetchImages}
-            className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#99907c] hover:text-[#D4AF37] transition-colors"
+            className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted hover:text-gold-ink2 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 export function SkeletonCard({ className = "" }) {
   return (
     <motion.div
-      className={`rounded-[28px] border border-white/10 bg-white/[0.03] p-5 h-36 ${className}`.trim()}
+      className={`rounded-[28px] border border-ink/10 bg-ink/[0.03] p-5 h-36 ${className}`.trim()}
       animate={{ opacity: [0.4, 0.8, 0.4] }}
       transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
     />
@@ -15,12 +15,12 @@ export function SkeletonCard({ className = "" }) {
 export function SkeletonRow({ colSpan = 1 }) {
   return (
     <motion.tr
-      className="border-t border-white/10"
+      className="border-t border-ink/10"
       animate={{ opacity: [0.35, 0.7, 0.35] }}
       transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
     >
       <td colSpan={colSpan} className="px-5 py-4">
-        <div className="h-4 w-full max-w-md rounded-full bg-white/10" />
+        <div className="h-4 w-full max-w-md rounded-full bg-ink/10" />
       </td>
     </motion.tr>
   );

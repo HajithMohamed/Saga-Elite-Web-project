@@ -139,15 +139,15 @@ const DropDetails = () => {
 
   if (error || !drop) {
     return (
-      <div className="flex flex-col h-[80vh] w-full items-center justify-center bg-[#0a0a0a] text-[#e5e2e1] gap-6">
-        <h2 className="font-display text-3xl text-[#f2ca50]">Error</h2>
-        <p className="font-mono text-xs tracking-widest uppercase text-[#99907c]">
+      <div className="flex flex-col h-[80vh] w-full items-center justify-center bg-page text-ink-2 gap-6">
+        <h2 className="font-display text-3xl text-gold-ink">Error</h2>
+        <p className="font-mono text-xs tracking-widest uppercase text-muted">
           {error || "Drop not found"}
         </p>
         <button
           type="button"
           onClick={() => navigate("/shopping/drops")}
-          className="border border-[#4d4635] hover:border-[#f2ca50] hover:text-[#f2ca50] text-[#d0c5af] px-8 py-3 font-mono uppercase tracking-widest text-xs transition-colors"
+          className="border border-line hover:border-gold-ink hover:text-gold-ink text-cream px-8 py-3 font-mono uppercase tracking-widest text-xs transition-colors"
         >
           Back to Drops
         </button>
@@ -156,7 +156,7 @@ const DropDetails = () => {
   }
 
   return (
-    <div className="bg-[#0a0a0a] text-[#e5e2e1] min-h-screen relative w-full overflow-hidden">
+    <div className="bg-page text-ink-2 min-h-screen relative w-full overflow-hidden">
       {/* 1. Cinematic hero */}
       <DropHeroCinematic
         drop={drop}
@@ -178,15 +178,15 @@ const DropDetails = () => {
       ) : null}
 
       {/* Action bar — back + article count, kept terse */}
-      <div className="bg-[#050505] py-5 border-y border-[#1a1a1a] px-8 md:px-12 flex justify-between items-center">
+      <div className="bg-page py-5 border-y border-card px-8 md:px-12 flex justify-between items-center">
         <button
           type="button"
           onClick={() => navigate("/shopping/drops")}
-          className="flex items-center gap-2 text-[#f2ca50] font-mono uppercase tracking-widest text-xs hover:text-[#ffe088] transition-colors"
+          className="flex items-center gap-2 text-gold-ink font-mono uppercase tracking-widest text-xs hover:text-gold-ink transition-colors"
         >
           <ArrowLeft size={14} /> All Drops
         </button>
-        <div className="font-mono text-[10px] tracking-widest text-[#99907c] uppercase">
+        <div className="font-mono text-[10px] tracking-widest text-muted uppercase">
           {products.length} {products.length === 1 ? "Article" : "Articles"}
         </div>
       </div>
@@ -204,13 +204,13 @@ const DropDetails = () => {
 
       {/* 5. Premium product grid */}
       {remainingProducts.length > 0 ? (
-        <section className="bg-[#0a0a0a] py-16 md:py-24">
+        <section className="bg-page py-16 md:py-24">
           <div className="max-w-[1440px] mx-auto px-5 md:px-12">
             <div className="text-center mb-12">
-              <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#f2ca50] mb-3">
+              <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-gold-ink mb-3">
                 The Pieces
               </p>
-              <h2 className="font-display text-[32px] md:text-[48px] uppercase text-[#FAF7F2] leading-none">
+              <h2 className="font-display text-[32px] md:text-[48px] uppercase text-ink leading-none">
                 Read every fit
               </h2>
             </div>
@@ -222,7 +222,7 @@ const DropDetails = () => {
                 hidden: {},
                 show: { transition: { staggerChildren: 0.06 } },
               }}
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-[#4d4635]/40 border border-[#4d4635]/40"
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-px bg-line/40 border border-line/40"
             >
               {remainingProducts.map((product, idx) => (
                 <motion.div
@@ -248,7 +248,7 @@ const DropDetails = () => {
               <Link to="/shopping/drops" className="inline-flex">
                 <button
                   type="button"
-                  className="inline-flex bg-[#f2ca50] px-6 py-3 text-[#0a0a0a] font-mono uppercase tracking-widest text-xs font-bold hover:bg-[#ffe088] transition-colors"
+                  className="inline-flex bg-gold px-6 py-3 text-ongold font-mono uppercase tracking-widest text-xs font-bold hover:bg-gold-hover transition-colors"
                 >
                   All Drops
                 </button>

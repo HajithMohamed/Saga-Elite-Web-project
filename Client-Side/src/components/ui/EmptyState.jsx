@@ -24,15 +24,15 @@ const EmptyState = ({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full flex flex-col items-center justify-center p-12 lg:p-24 bg-[#1A1A1A] border border-white/5 rounded-[24px] text-center"
+      className="w-full flex flex-col items-center justify-center p-12 lg:p-24 bg-card border border-ink/5 rounded-[24px] text-center"
     >
-      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 text-[#99907c]">
+      <div className="w-20 h-20 bg-ink/5 rounded-full flex items-center justify-center mb-6 text-muted">
         <Icon className="w-10 h-10" />
       </div>
       
-      <h2 className="se-serif text-2xl lg:text-3xl text-[#fafafa] mb-3">{title}</h2>
+      <h2 className="se-serif text-2xl lg:text-3xl text-ink mb-3">{title}</h2>
       
-      <p className="se-body text-[15px] text-[#99907c] max-w-md mx-auto mb-8">
+      <p className="se-body text-[15px] text-muted max-w-md mx-auto mb-8">
         {description}
       </p>
       

@@ -369,53 +369,53 @@ const AdminCoupons = () => {
             title="Live Preview"
             description="The badge that customers see at checkout."
           >
-            <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
+            <div className="rounded-2xl border border-ink/[0.06] bg-panel p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="font-mono text-lg font-bold tracking-[0.18em] text-white">
+                <h4 className="font-mono text-lg font-bold tracking-[0.18em] text-ink">
                   {formData.code?.trim() || "YOUR-CODE"}
                 </h4>
                 <button
                   type="button"
                   onClick={() => handleCopy(formData.code || "")}
-                  className="text-white/40 hover:text-[#D4AF37]"
+                  className="text-ink/40 hover:text-gold-ink2"
                   title="Copy"
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="mt-3 inline-flex rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[#D4AF37]">
+              <div className="mt-3 inline-flex rounded-full border border-gold-ink2/30 bg-gold-deep/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-gold-ink2">
                 {previewDiscount} off
               </div>
-              <dl className="mt-4 space-y-1.5 border-t border-white/[0.05] pt-3 text-[11px]">
+              <dl className="mt-4 space-y-1.5 border-t border-ink/[0.05] pt-3 text-[11px]">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-white/40 uppercase tracking-wider">Status</dt>
+                  <dt className="text-ink/40 uppercase tracking-wider">Status</dt>
                   <dd>
                     <StatusPill status={computedStatus} size="sm" />
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-white/40 uppercase tracking-wider">Issued for</dt>
-                  <dd className="text-white/80 capitalize">
+                  <dt className="text-ink/40 uppercase tracking-wider">Issued for</dt>
+                  <dd className="text-ink/80 capitalize">
                     {formData.issuedFor.replace(/_/g, " ")}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-white/40 uppercase tracking-wider">Window</dt>
-                  <dd className="text-white/80 text-right">
+                  <dt className="text-ink/40 uppercase tracking-wider">Window</dt>
+                  <dd className="text-ink/80 text-right">
                     {formatDate(formData.startsAt)} → {formatDate(formData.endsAt)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-white/40 uppercase tracking-wider">Min order</dt>
-                  <dd className="text-white/80 tabular-nums">
+                  <dt className="text-ink/40 uppercase tracking-wider">Min order</dt>
+                  <dd className="text-ink/80 tabular-nums">
                     {Number(formData.minOrderValue) > 0
                       ? `LKR ${formatCurrency(formData.minOrderValue)}`
                       : "None"}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-white/40 uppercase tracking-wider">Max uses</dt>
-                  <dd className="text-white/80 tabular-nums">
+                  <dt className="text-ink/40 uppercase tracking-wider">Max uses</dt>
+                  <dd className="text-ink/80 tabular-nums">
                     {formData.maxUses === "" || formData.maxUses === null
                       ? "Unlimited"
                       : formData.maxUses}
@@ -441,25 +441,25 @@ const AdminCoupons = () => {
               segments={5}
               filledCount={completedCount}
             />
-            <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+            <p className="mt-2 text-[11px] leading-relaxed text-ink/40">
               Required: code and discount. Add a description and validity window for
               campaign clarity.
             </p>
           </RightRailPanel>
 
           <RightRailPanel title="Tips">
-            <ul className="space-y-2 text-[11px] leading-relaxed text-white/50">
+            <ul className="space-y-2 text-[11px] leading-relaxed text-ink/50">
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 Codes are immutable after issue. Use the auto-generator for clean,
                 unguessable codes.
               </li>
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 For percent discounts, the value cannot exceed 100.
               </li>
               <li className="flex gap-2">
-                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[#D4AF37]" />
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-gold-ink2" />
                 Limit to specific categories when running tier-only campaigns.
               </li>
             </ul>
@@ -503,7 +503,7 @@ const AdminCoupons = () => {
                       code: generateRandomCode(""),
                     }))
                   }
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-white/70 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-ink/10 bg-ink/[0.04] px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/70 hover:border-gold-ink2/40 hover:text-gold-ink2 transition"
                 >
                   <Wand2 className="h-3.5 w-3.5" />
                   Auto
@@ -670,8 +670,8 @@ const AdminCoupons = () => {
                 onClick={() => handleToggleCategory(cat)}
                 className={`rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] border transition ${
                   active
-                    ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
-                    : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                    ? "border-gold-ink2/40 bg-gold-deep/[0.10] text-gold-ink2"
+                    : "border-ink/10 bg-ink/[0.04] text-ink/60 hover:text-ink hover:border-ink/20"
                 }`}
               >
                 {cat}
@@ -805,8 +805,8 @@ const AdminCoupons = () => {
                     }
                     className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
                       active
-                        ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
-                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                        ? "border-gold-ink2/40 bg-gold-deep/[0.10] text-gold-ink2"
+                        : "border-ink/10 bg-ink/[0.04] text-ink/60 hover:text-ink hover:border-ink/20"
                     }`}
                   >
                     {tier}
@@ -838,8 +838,8 @@ const AdminCoupons = () => {
                     }
                     className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
                       active
-                        ? "border-[#D4AF37]/40 bg-[#D4AF37]/[0.10] text-[#D4AF37]"
-                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                        ? "border-gold-ink2/40 bg-gold-deep/[0.10] text-gold-ink2"
+                        : "border-ink/10 bg-ink/[0.04] text-ink/60 hover:text-ink hover:border-ink/20"
                     }`}
                   >
                     {cat}
@@ -872,7 +872,7 @@ const AdminCoupons = () => {
                     className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] border transition ${
                       active
                         ? "border-rose-500/40 bg-rose-500/[0.10] text-rose-400"
-                        : "border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:border-white/20"
+                        : "border-ink/10 bg-ink/[0.04] text-ink/60 hover:text-ink hover:border-ink/20"
                     }`}
                   >
                     {cat}
@@ -887,44 +887,44 @@ const AdminCoupons = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl p-6 text-white">
-      <div className="mb-8 flex items-center justify-between border-b border-white/[0.06] pb-4">
+    <div className="mx-auto max-w-7xl p-6 text-ink">
+      <div className="mb-8 flex items-center justify-between border-b border-ink/[0.06] pb-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">
+          <h1 className="text-3xl font-semibold tracking-tight text-ink">
             Coupons
           </h1>
-          <p className="mt-2 text-sm text-white/50">
+          <p className="mt-2 text-sm text-ink/50">
             Promo codes for campaigns, VIPs, review rewards, and one-off perks.
           </p>
         </div>
         <button
           type="button"
           onClick={startCreate}
-          className="inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-[#0A0A0A] shadow-[0_4px_14px_rgba(212,175,55,0.35)] hover:bg-[#E2BD45] transition"
+          className="inline-flex items-center gap-2 rounded-full bg-gold-deep px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-ongold shadow-[0_4px_14px_rgba(212,175,55,0.35)] hover:bg-gold-deep transition"
         >
           <Plus className="h-4 w-4" /> New Coupon
         </button>
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+        <div className="rounded-2xl border border-ink/[0.06] bg-panel p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink/50">
             Total coupons
           </p>
-          <p className="mt-2 text-3xl font-semibold text-white tabular-nums">
+          <p className="mt-2 text-3xl font-semibold text-ink tabular-nums">
             {coupons.length}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+        <div className="rounded-2xl border border-ink/[0.06] bg-panel p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink/50">
             Total redemptions
           </p>
-          <p className="mt-2 text-3xl font-semibold text-[#D4AF37] tabular-nums">
+          <p className="mt-2 text-3xl font-semibold text-gold-ink2 tabular-nums">
             {totalRedemptions}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-[#0F0F0F] p-5">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+        <div className="rounded-2xl border border-ink/[0.06] bg-panel p-5">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink/50">
             Active right now
           </p>
           <p className="mt-2 text-3xl font-semibold text-emerald-400 tabular-nums">
@@ -935,31 +935,31 @@ const AdminCoupons = () => {
 
       {loading ? (
         <div className="flex justify-center p-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-t-2 border-[#D4AF37]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-t-2 border-gold-ink2" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0F0F0F]">
+        <div className="overflow-hidden rounded-2xl border border-ink/[0.06] bg-panel">
           {coupons.length === 0 ? (
-            <div className="p-12 text-center text-xs uppercase tracking-[0.2em] text-white/40">
-              <Tag className="mx-auto mb-3 h-8 w-8 text-white/20" />
+            <div className="p-12 text-center text-xs uppercase tracking-[0.2em] text-ink/40">
+              <Tag className="mx-auto mb-3 h-8 w-8 text-ink/20" />
               No coupons yet — click "New Coupon" to issue one.
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.05]">
+            <div className="divide-y divide-ink/[0.05]">
               {pageItems.map((c) => (
                 <div
                   key={c._id}
-                  className="flex flex-col gap-4 p-6 hover:bg-white/[0.02] md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-4 p-6 hover:bg-ink/[0.02] md:flex-row md:items-center md:justify-between"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-mono text-lg font-bold tracking-[0.18em] text-white">
+                      <h3 className="font-mono text-lg font-bold tracking-[0.18em] text-ink">
                         {c.code}
                       </h3>
                       <button
                         type="button"
                         onClick={() => handleCopy(c.code)}
-                        className="text-white/40 hover:text-[#D4AF37]"
+                        className="text-ink/40 hover:text-gold-ink2"
                         title="Copy code"
                       >
                         <Copy className="h-4 w-4" />
@@ -989,18 +989,18 @@ const AdminCoupons = () => {
                       />
                     </div>
                     {c.description ? (
-                      <p className="mt-2 text-sm text-white/60">
+                      <p className="mt-2 text-sm text-ink/60">
                         {c.description}
                       </p>
                     ) : null}
-                    <div className="mt-3 flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.15em] text-white/40">
+                    <div className="mt-3 flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.15em] text-ink/40">
                       <span className="flex items-center gap-1.5">
-                        <Users className="h-3 w-3 text-[#D4AF37]" />
+                        <Users className="h-3 w-3 text-gold-ink2" />
                         {c.usedCount || 0}
                         {c.maxUses != null ? ` / ${c.maxUses}` : " / ∞"}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3 w-3 text-[#D4AF37]" />
+                        <Calendar className="h-3 w-3 text-gold-ink2" />
                         {formatDate(c.startsAt)} → {formatDate(c.endsAt)}
                       </span>
                       {c.minOrderValue ? (
@@ -1015,7 +1015,7 @@ const AdminCoupons = () => {
                     <button
                       type="button"
                       onClick={() => startEdit(c)}
-                      className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white/80 hover:border-[#D4AF37]/40 hover:text-[#D4AF37] transition"
+                      className="rounded-full border border-ink/10 bg-ink/[0.04] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/80 hover:border-gold-ink2/40 hover:text-gold-ink2 transition"
                     >
                       Edit
                     </button>

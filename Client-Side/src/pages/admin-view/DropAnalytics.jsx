@@ -103,7 +103,7 @@ export default function DropAnalytics() {
       headerAction={
         <Link
           to="/admin/dashboard"
-          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white/10"
+          className="flex items-center gap-2 rounded-full border border-ink/10 bg-ink/5 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-ink hover:bg-ink/10"
         >
           <ChevronLeft className="h-4 w-4" />
           Back
@@ -113,13 +113,13 @@ export default function DropAnalytics() {
       <div className="mx-auto max-w-7xl flex flex-col gap-6 pb-20">
         
         {/* Dropdown Selection */}
-        <div className="bg-[#111] p-6 rounded-2xl border border-white/10 flex items-center justify-between">
+        <div className="bg-panel p-6 rounded-2xl border border-ink/10 flex items-center justify-between">
           <div className="flex-1 max-w-sm">
-            <label className="block text-xs uppercase tracking-widest text-[#D4AF37] mb-2 font-semibold">Select a Drop</label>
+            <label className="block text-xs uppercase tracking-widest text-gold-ink2 mb-2 font-semibold">Select a Drop</label>
             <select
               value={selectedDrop}
               onChange={(e) => setSelectedDrop(e.target.value)}
-              className="w-full bg-[#1A1A1A] text-white border border-white/20 rounded-md px-4 py-3 focus:outline-none focus:border-[#D4AF37]"
+              className="w-full bg-card text-ink border border-ink/20 rounded-md px-4 py-3 focus:outline-none focus:border-gold-ink2"
             >
               <option value="">-- Choose Drop --</option>
               {drops.map(d => (
@@ -131,28 +131,28 @@ export default function DropAnalytics() {
 
         {loading && (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+            <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
           </div>
         )}
 
         {!loading && analytics && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                <p className="text-xs uppercase text-white/50 tracking-wider">Total Sales</p>
-                <p className="text-3xl text-white font-serif mt-2">{analytics.totalSales}</p>
+              <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                <p className="text-xs uppercase text-ink/50 tracking-wider">Total Sales</p>
+                <p className="text-3xl text-ink font-serif mt-2">{analytics.totalSales}</p>
               </div>
-              <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                <p className="text-xs uppercase text-white/50 tracking-wider">Est. Revenue</p>
-                <p className="text-3xl text-white font-serif mt-2 text-[#D4AF37]">Rs. {analytics.revenue.toLocaleString()}</p>
+              <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                <p className="text-xs uppercase text-ink/50 tracking-wider">Est. Revenue</p>
+                <p className="text-3xl text-ink font-serif mt-2 text-gold-ink2">Rs. {analytics.revenue.toLocaleString()}</p>
               </div>
-              <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                <p className="text-xs uppercase text-white/50 tracking-wider">Total Reviews</p>
-                <p className="text-3xl text-white font-serif mt-2">{analytics.totalReviews}</p>
+              <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                <p className="text-xs uppercase text-ink/50 tracking-wider">Total Reviews</p>
+                <p className="text-3xl text-ink font-serif mt-2">{analytics.totalReviews}</p>
               </div>
-              <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                <p className="text-xs uppercase text-white/50 tracking-wider">Avg Rating</p>
-                <p className="text-3xl text-white font-serif mt-2">{analytics.averageRating} / 5.0</p>
+              <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                <p className="text-xs uppercase text-ink/50 tracking-wider">Avg Rating</p>
+                <p className="text-3xl text-ink font-serif mt-2">{analytics.averageRating} / 5.0</p>
               </div>
             </div>
 
@@ -160,8 +160,8 @@ export default function DropAnalytics() {
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* SENTIMENT */}
-                  <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                    <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-6">Sentiment Analysis</h3>
+                  <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-ink mb-6">Sentiment Analysis</h3>
                     <div className="h-64 relative">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -184,8 +184,8 @@ export default function DropAnalytics() {
                   </div>
 
                   {/* RATING DIST */}
-                  <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                     <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-6">Rating Distribution</h3>
+                  <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                     <h3 className="text-sm font-semibold uppercase tracking-wider text-ink mb-6">Rating Distribution</h3>
                      <div className="h-64">
                        <ResponsiveContainer width="100%" height="100%">
                          <BarChart data={ratingData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -204,19 +204,19 @@ export default function DropAnalytics() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-[#D4AF37]/20 to-transparent p-6 rounded-2xl border border-[#D4AF37]/30">
-                  <h3 className="text-xs font-semibold uppercase tracking-widest text-[#D4AF37] mb-2">Automated Recommendation</h3>
-                  <p className="text-white lg:text-lg">{renderDecision()}</p>
+                <div className="bg-gradient-to-r from-gold-deep/20 to-transparent p-6 rounded-2xl border border-gold-ink2/30">
+                  <h3 className="text-xs font-semibold uppercase tracking-widest text-gold-ink2 mb-2">Automated Recommendation</h3>
+                  <p className="text-ink lg:text-lg">{renderDecision()}</p>
                 </div>
                 
                 {analytics.topProducts.length > 0 && (
-                  <div className="bg-[#111] p-6 rounded-2xl border border-white/10">
-                     <h3 className="text-sm font-semibold uppercase tracking-wider text-white mb-4">Top Products in Drop</h3>
+                  <div className="bg-panel p-6 rounded-2xl border border-ink/10">
+                     <h3 className="text-sm font-semibold uppercase tracking-wider text-ink mb-4">Top Products in Drop</h3>
                      <div className="space-y-3">
                        {analytics.topProducts.map((p, i) => (
-                         <div key={i} className="flex justify-between items-center text-sm p-4 bg-[#1A1A1A] rounded-lg">
-                           <span className="text-white font-medium">{p.name}</span>
-                           <span className="text-white/50">{p.avgRating} <span className="text-[#D4AF37]">★</span> ({p.reviewCount} reviews)</span>
+                         <div key={i} className="flex justify-between items-center text-sm p-4 bg-card rounded-lg">
+                           <span className="text-ink font-medium">{p.name}</span>
+                           <span className="text-ink/50">{p.avgRating} <span className="text-gold-ink2">★</span> ({p.reviewCount} reviews)</span>
                          </div>
                        ))}
                      </div>
@@ -224,8 +224,8 @@ export default function DropAnalytics() {
                 )}
               </>
             ) : (
-              <div className="text-center py-20 px-6 bg-[#111] rounded-2xl border border-white/10 mt-4">
-                <p className="text-white/60">No reviews found for this drop yet.</p>
+              <div className="text-center py-20 px-6 bg-panel rounded-2xl border border-ink/10 mt-4">
+                <p className="text-ink/60">No reviews found for this drop yet.</p>
               </div>
             )}
           </>

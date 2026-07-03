@@ -42,8 +42,8 @@ function DropEndingBadge({ target }) {
   const c = useCountdown(target);
   if (c.expired) return null;
   return (
-    <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-[#93000a] text-[#ffb4ab] px-2.5 py-1 se-label text-[9px] tracking-[0.22em] backdrop-blur-sm animate-pulse">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#ffb4ab]" />
+    <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-danger-deep text-danger-ink px-2.5 py-1 se-label text-[9px] tracking-[0.22em] backdrop-blur-sm animate-pulse">
+      <span className="w-1.5 h-1.5 rounded-full bg-danger-ink" />
       ENDS · {pad2(c.h)}:{pad2(c.m)}:{pad2(c.s)}
     </div>
   );
@@ -261,16 +261,16 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
   return (
     <div
       className={cn(
-        "group relative flex flex-col bg-[#0E0E0E] rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
+        "group relative flex flex-col bg-page rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
         "w-full",
         className
       )}
     >
       {/* 1. Image Area (1:1 Aspect Ratio) */}
-      <div className="relative w-full aspect-square bg-[#131313] overflow-hidden shrink-0">
+      <div className="relative w-full aspect-square bg-panel overflow-hidden shrink-0">
         {/* Loading State Skeleton */}
         {!imgLoaded && (
-          <div className="absolute inset-0 bg-[#1a1a1a] animate-pulse" />
+          <div className="absolute inset-0 bg-card animate-pulse" />
         )}
         
         <Link to={productHref} className="block w-full h-full">
@@ -298,11 +298,11 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
               key={b.key}
               className={cn(
                 "px-2 py-1 rounded-[12px] se-label text-[10px] tracking-wider font-bold shadow-sm backdrop-blur-md",
-                b.tone === "dead" ? "bg-[#ffb4ab] text-[#93000a]" :
-                b.tone === "alert" ? "bg-[#ffb4ab] text-[#93000a]" :
-                b.tone === "gold" ? "bg-[#f2ca50] text-[#0E0E0E]" :
-                b.tone === "goldOutline" ? "bg-[#0E0E0E]/80 text-[#f2ca50] border border-[#f2ca50]" :
-                "bg-[#0E0E0E]/80 text-[#e5e2e1] border border-[#f2ca50]/50"
+                b.tone === "dead" ? "bg-danger-ink text-danger-deep" :
+                b.tone === "alert" ? "bg-danger-ink text-danger-deep" :
+                b.tone === "gold" ? "bg-gold text-ongold" :
+                b.tone === "goldOutline" ? "bg-page/80 text-gold-ink border border-gold-ink" :
+                "bg-page/80 text-ink-2 border border-gold-ink/50"
               )}
             >
               {b.label}
@@ -314,13 +314,13 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         <button
           onClick={handleWishlist}
           aria-label="Wishlist"
-          className="absolute top-3 right-3 flex items-center justify-center w-10 h-10 rounded-full bg-[#0E0E0E]/50 border border-[#f2ca50] transition-colors duration-300 hover:bg-[#f2ca50] group/wishlist z-10"
+          className="absolute top-3 right-3 flex items-center justify-center w-10 h-10 rounded-full bg-page/50 border border-gold-ink transition-colors duration-300 hover:bg-gold group/wishlist z-10"
         >
           <Heart 
             size={16} 
             className={cn(
               "transition-colors duration-300", 
-              inWishlist ? "fill-[#f2ca50] text-[#f2ca50]" : "text-[#f2ca50] group-hover/wishlist:text-[#0E0E0E] group-hover/wishlist:fill-[#0E0E0E]"
+              inWishlist ? "fill-gold text-gold-ink" : "text-gold-ink group-hover/wishlist:text-ongold group-hover/wishlist:fill-page"
             )} 
           />
         </button>
@@ -328,7 +328,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         {/* Quick View Button (Desktop Hover Overlay) */}
         <div className="absolute inset-0 hidden lg:flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-250 pointer-events-none">
           <button 
-            className="h-[44px] px-6 border border-[#f2ca50] text-[#f2ca50] bg-transparent rounded-full font-sans text-[13px] font-semibold tracking-wider uppercase backdrop-blur-sm pointer-events-auto hover:bg-[#f2ca50] hover:text-[#0E0E0E] transition-colors duration-250 translate-y-4 group-hover:translate-y-0"
+            className="h-[44px] px-6 border border-gold-ink text-gold-ink bg-transparent rounded-full font-sans text-[13px] font-semibold tracking-wider uppercase backdrop-blur-sm pointer-events-auto hover:bg-gold hover:text-ongold transition-colors duration-250 translate-y-4 group-hover:translate-y-0"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* Hook into QuickView Modal if exists */ }}
           >
             Quick View
@@ -337,16 +337,16 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       </div>
 
       {/* 2. Content Area (Flex Grow) */}
-      <div className="flex flex-col justify-between flex-1 p-3 md:p-4 bg-[#0E0E0E]">
+      <div className="flex flex-col justify-between flex-1 p-3 md:p-4 bg-page">
         
         {/* Top: Category & Title & Rating */}
         <div className="flex flex-col gap-1">
-          <span className="se-label text-[9px] md:text-[10px] text-[#99907c] uppercase tracking-widest">
+          <span className="se-label text-[9px] md:text-[10px] text-muted uppercase tracking-widest">
             {product?.category?.name || product?.category || "Category"}
           </span>
           
-          <Link to={productHref} className="block group-hover:text-[#f2ca50] transition-colors">
-            <h3 className="font-sans font-semibold text-[#e5e2e1] text-[14px] md:text-[16px] lg:text-[18px] leading-tight line-clamp-2">
+          <Link to={productHref} className="block group-hover:text-gold-ink transition-colors">
+            <h3 className="font-sans font-semibold text-ink-2 text-[14px] md:text-[16px] lg:text-[18px] leading-tight line-clamp-2">
               {product?.name || "Premium Product"}
             </h3>
           </Link>
@@ -354,14 +354,14 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
           <div className="flex items-center gap-1.5 mt-1">
             {(product?.reviewCount || product?.numReviews || 0) > 0 ? (
               <>
-                <div className="flex items-center text-[#f2ca50] text-[12px] md:text-[14px]">
+                <div className="flex items-center text-gold-ink text-[12px] md:text-[14px]">
                   <Star className="w-3 h-3 md:w-3.5 md:h-3.5 fill-current" />
                   <span className="ml-1 font-semibold">{Number(product?.averageRating || product?.rating || 5).toFixed(1)}</span>
                 </div>
-                <span className="text-[#99907c] text-[10px] md:text-[12px]">({product?.reviewCount || product?.numReviews})</span>
+                <span className="text-muted text-[10px] md:text-[12px]">({product?.reviewCount || product?.numReviews})</span>
               </>
             ) : (
-              <span className="text-[#99907c] text-[10px] md:text-[11px] italic">No Reviews Yet</span>
+              <span className="text-muted text-[10px] md:text-[11px] italic">No Reviews Yet</span>
             )}
           </div>
         </div>
@@ -369,11 +369,11 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         {/* Bottom: Price & CTA */}
         <div className="flex flex-col gap-2 mt-auto">
           <div className="flex items-baseline gap-2">
-            <span className="font-sans font-bold text-[#e5e2e1] text-[16px] md:text-[18px] lg:text-[22px]">
+            <span className="font-sans font-bold text-ink-2 text-[16px] md:text-[18px] lg:text-[22px]">
               {formatLKR(price)}
             </span>
             {discountPct > 0 && basePrice > 0 && (
-              <span className="font-sans text-[12px] md:text-[14px] lg:text-[16px] text-[#99907c] line-through">
+              <span className="font-sans text-[12px] md:text-[14px] lg:text-[16px] text-muted line-through">
                 {formatLKR(basePrice)}
               </span>
             )}
@@ -383,7 +383,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
             onClick={handleQuickAdd}
             disabled={adding || isSoldOut}
             aria-label={isSoldOut ? "Sold out" : "Add to bag"}
-            className="w-full h-[36px] md:h-[40px] lg:h-[48px] bg-[#f2ca50] text-[#0a0a0a] rounded-[16px] font-sans font-bold text-[12px] md:text-[13px] lg:text-[14px] transition-transform duration-200 hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full h-[36px] md:h-[40px] lg:h-[48px] bg-gold text-ongold rounded-[16px] font-sans font-bold text-[12px] md:text-[13px] lg:text-[14px] transition-transform duration-200 hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {adding ? (
               <>
@@ -403,10 +403,10 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
       {quickAddOpen && inStockVariants.length > 0 && (
         <div
           ref={overlayRef}
-          className="absolute inset-x-0 bottom-0 z-20 border-t border-[#f2ca50]/30 bg-[#0E0E0E]/95 p-3 backdrop-blur-md md:p-4"
+          className="absolute inset-x-0 bottom-0 z-20 border-t border-gold-ink/30 bg-page/95 p-3 backdrop-blur-md md:p-4"
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="se-label text-[10px] uppercase tracking-widest text-[#99907c]">
+            <span className="se-label text-[10px] uppercase tracking-widest text-muted">
               Select an option
             </span>
             <button
@@ -417,7 +417,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
                 e.stopPropagation();
                 setQuickAddOpen(false);
               }}
-              className="text-[#99907c] transition-colors hover:text-[#f2ca50]"
+              className="text-muted transition-colors hover:text-gold-ink"
             >
               <X size={14} />
             </button>
@@ -429,7 +429,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
                 type="button"
                 disabled={adding}
                 onClick={(e) => handleQuickAdd(e, v._id)}
-                className="rounded-full border border-[#4d4635] px-3 py-1.5 text-[11px] text-[#e5e2e1] transition-colors hover:border-[#f2ca50] hover:text-[#f2ca50] disabled:opacity-50"
+                className="rounded-full border border-line px-3 py-1.5 text-[11px] text-ink-2 transition-colors hover:border-gold-ink hover:text-gold-ink disabled:opacity-50"
               >
                 {variantChipLabel(v)}
               </button>

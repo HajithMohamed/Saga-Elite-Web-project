@@ -53,12 +53,12 @@ export const CareInstructionsBuilder = ({ value, onChange }) => {
               const IconComp = matchedOption ? ICON_MAP[matchedOption.icon] : Check;
               
               return (
-                <div key={line} className="flex items-center justify-between bg-[#111] border border-[#2a2a2a] rounded-xl px-4 py-3 text-sm text-white">
+                <div key={line} className="flex items-center justify-between bg-panel border border-elevated rounded-xl px-4 py-3 text-sm text-ink">
                   <div className="flex items-center gap-3">
-                    {IconComp && <IconComp className="w-4 h-4 text-[#D4AF37]" />}
+                    {IconComp && <IconComp className="w-4 h-4 text-gold-ink2" />}
                     <span>{line}</span>
                   </div>
-                  <button type="button" onClick={() => removeInstruction(line)} className="text-white/40 hover:text-rose-400 text-lg leading-none transition-colors">
+                  <button type="button" onClick={() => removeInstruction(line)} className="text-ink/40 hover:text-rose-400 text-lg leading-none transition-colors">
                     &times;
                   </button>
                 </div>
@@ -72,13 +72,13 @@ export const CareInstructionsBuilder = ({ value, onChange }) => {
           value=""
           onChange={(e) => addInstruction(e.target.value)}
         >
-          <option value="" disabled className="bg-[#0f1014] text-white/50">Select instruction from dropdown...</option>
+          <option value="" disabled className="bg-panel text-ink/50">Select instruction from dropdown...</option>
           {CARE_INSTRUCTION_OPTIONS.map((option) => (
             <option 
               key={option.id} 
               value={option.label}
               disabled={selectedLines.includes(option.label)}
-              className="bg-[#0f1014] text-white disabled:text-white/20"
+              className="bg-panel text-ink disabled:text-ink/20"
             >
               {option.label}
             </option>

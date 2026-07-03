@@ -12,11 +12,11 @@ import axiosInstance from "@/api/axiosInstance";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 
 const ServiceCard = ({ service }) => (
-  <div className="flex flex-col gap-3 border border-[#2a2a2a] bg-[#131313] p-5">
+  <div className="flex flex-col gap-3 border border-elevated bg-panel p-5">
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-[#FAF7F2]">{service.service}</h3>
-        <p className="mt-1 text-xs leading-5 text-[#99907c]">{service.description}</p>
+        <h3 className="text-sm font-semibold text-ink">{service.service}</h3>
+        <p className="mt-1 text-xs leading-5 text-muted">{service.description}</p>
       </div>
       {service.configured ? (
         <span className="flex shrink-0 items-center gap-1.5 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-emerald-400">
@@ -30,15 +30,15 @@ const ServiceCard = ({ service }) => (
     </div>
 
     {service.configured && service.maskedIdentifier ? (
-      <div className="text-xs text-[#d0c5af]">
-        <span className="text-[#99907c]">Identifier: </span>
+      <div className="text-xs text-cream">
+        <span className="text-muted">Identifier: </span>
         <span className="font-mono">{service.maskedIdentifier}</span>
       </div>
     ) : null}
 
-    <div className="border-t border-[#2a2a2a] pt-3">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-[#574500]">Env keys</p>
-      <p className="mt-1 break-words font-mono text-[11px] text-[#99907c]">{service.envHint}</p>
+    <div className="border-t border-elevated pt-3">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-goldshadow">Env keys</p>
+      <p className="mt-1 break-words font-mono text-[11px] text-muted">{service.envHint}</p>
     </div>
   </div>
 );
@@ -83,7 +83,7 @@ const IntegrationsStatusPage = () => {
         <button
           type="button"
           onClick={() => fetchStatus({ silent: true })}
-          className="flex items-center gap-2 border border-[#2a2a2a] bg-[#131313] px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-[#d0c5af] transition hover:border-[#f2ca50] hover:text-[#f2ca50]"
+          className="flex items-center gap-2 border border-elevated bg-panel px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-cream transition hover:border-gold-ink hover:text-gold-ink"
         >
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </button>
@@ -91,22 +91,22 @@ const IntegrationsStatusPage = () => {
     >
       {isLoading ? (
         <div className="flex h-64 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f2ca50]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center gap-4 border border-[#2a2a2a] bg-[#131313] px-5 py-4">
-            <div className="flex items-center gap-2 text-sm text-[#FAF7F2]">
-              <Plug className="h-4 w-4 text-[#f2ca50]" />
+          <div className="flex flex-wrap items-center gap-4 border border-elevated bg-panel px-5 py-4">
+            <div className="flex items-center gap-2 text-sm text-ink">
+              <Plug className="h-4 w-4 text-gold-ink" />
               <span className="font-semibold">{configuredCount}</span>
-              <span className="text-[#99907c]">of {services.length} services configured</span>
+              <span className="text-muted">of {services.length} services configured</span>
             </div>
             {environment ? (
-              <span className="border border-[#2a2a2a] bg-[#0a0a0a] px-2.5 py-1 font-mono text-[11px] text-[#99907c]">
+              <span className="border border-elevated bg-page px-2.5 py-1 font-mono text-[11px] text-muted">
                 NODE_ENV: {environment}
               </span>
             ) : null}
-            <div className="flex items-center gap-1.5 text-[11px] text-[#99907c]">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
               Presence check only — secret values never leave the server.
             </div>
@@ -118,7 +118,7 @@ const IntegrationsStatusPage = () => {
             ))}
           </div>
 
-          {note ? <p className="text-xs text-[#574500]">{note}</p> : null}
+          {note ? <p className="text-xs text-goldshadow">{note}</p> : null}
         </div>
       )}
     </AdminPage>

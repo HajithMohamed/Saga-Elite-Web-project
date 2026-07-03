@@ -40,10 +40,10 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
       <div className="hidden md:block">
         <div className="relative flex items-start justify-between">
           {/* Background line */}
-          <div className="absolute left-0 right-0 top-[18px] h-px bg-white/10" />
+          <div className="absolute left-0 right-0 top-[18px] h-px bg-ink/10" />
           {/* Progress line */}
           <motion.div
-            className="absolute left-0 top-[18px] h-px bg-gradient-to-r from-[#34C759] via-[#F2CA50] to-[#F2CA50]"
+            className="absolute left-0 top-[18px] h-px bg-gradient-to-r from-success via-gold to-gold"
             initial={{ width: "0%" }}
             animate={{
               width: `${Math.min((currentIndex / (STEPS.length - 1)) * 100, 100)}%`,
@@ -74,21 +74,21 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
                   className={cn(
                     "relative flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all duration-500",
                     isComplete
-                      ? "border-[#34C759] bg-[#34C759]/15"
+                      ? "border-success bg-success/15"
                       : isActive
-                        ? "border-[#F2CA50] bg-[#F2CA50]/15 shadow-[0_0_20px_rgba(242,202,80,0.3)]"
-                        : "border-white/15 bg-[#1A1A1A]"
+                        ? "border-gold-ink bg-gold/15 shadow-[0_0_20px_rgba(242,202,80,0.3)]"
+                        : "border-ink/15 bg-card"
                   )}
                 >
                   {isComplete ? (
-                    <CheckCircle2 className="h-4 w-4 text-[#34C759]" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : isActive ? (
                     <>
-                      <Icon className="h-4 w-4 text-[#F2CA50]" />
-                      <span className="absolute inset-0 animate-ping rounded-full border border-[#F2CA50]/30" />
+                      <Icon className="h-4 w-4 text-gold-ink" />
+                      <span className="absolute inset-0 animate-ping rounded-full border border-gold-ink/30" />
                     </>
                   ) : (
-                    <Icon className="h-4 w-4 text-[#574500]" />
+                    <Icon className="h-4 w-4 text-goldshadow" />
                   )}
                 </div>
 
@@ -97,10 +97,10 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
                   className={cn(
                     "se-label mt-3 text-center text-[8px] tracking-[0.2em] sm:text-[9px]",
                     isComplete
-                      ? "text-[#34C759]"
+                      ? "text-success"
                       : isActive
-                        ? "text-[#F2CA50]"
-                        : "text-[#574500]"
+                        ? "text-gold-ink"
+                        : "text-goldshadow"
                   )}
                 >
                   {step.label}
@@ -115,10 +115,10 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
       <div className="block md:hidden">
         <div className="relative pl-5">
           {/* Background line */}
-          <div className="absolute bottom-4 left-[11px] top-2 w-px bg-white/10" />
+          <div className="absolute bottom-4 left-[11px] top-2 w-px bg-ink/10" />
           {/* Progress line */}
           <motion.div
-            className="absolute left-[11px] top-2 w-px bg-gradient-to-b from-[#34C759] to-[#F2CA50]"
+            className="absolute left-[11px] top-2 w-px bg-gradient-to-b from-success to-gold"
             initial={{ height: 0 }}
             animate={{
               height: `${Math.min((currentIndex / (STEPS.length - 1)) * 100, 100)}%`,
@@ -149,21 +149,21 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
                     className={cn(
                       "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all duration-500",
                       isComplete
-                        ? "bg-[#34C759] shadow-[0_0_10px_rgba(52,199,89,0.4)]"
+                        ? "bg-success shadow-[0_0_10px_rgba(52,199,89,0.4)]"
                         : isActive
-                          ? "bg-[#F2CA50] shadow-[0_0_12px_rgba(242,202,80,0.5)]"
-                          : "border border-white/15 bg-[#1A1A1A]"
+                          ? "bg-gold shadow-[0_0_12px_rgba(242,202,80,0.5)]"
+                          : "border border-ink/15 bg-card"
                     )}
                   >
                     {isComplete ? (
-                      <CheckCircle2 className="h-3 w-3 text-white" />
+                      <CheckCircle2 className="h-3 w-3 text-ink" />
                     ) : isActive ? (
                       <>
-                        <Icon className="h-3 w-3 text-[#0E0E0E]" />
-                        <span className="absolute inset-0 animate-ping rounded-full bg-[#F2CA50]/30" />
+                        <Icon className="h-3 w-3 text-ongold" />
+                        <span className="absolute inset-0 animate-ping rounded-full bg-gold/30" />
                       </>
                     ) : (
-                      <Circle className="h-2.5 w-2.5 text-[#574500]" />
+                      <Circle className="h-2.5 w-2.5 text-goldshadow" />
                     )}
                   </div>
 
@@ -172,10 +172,10 @@ const PaymentStepper = ({ currentStatus = "pending_payment" }) => {
                     className={cn(
                       "se-label text-[10px] tracking-[0.2em]",
                       isComplete
-                        ? "text-[#34C759]"
+                        ? "text-success"
                         : isActive
-                          ? "text-[#F2CA50]"
-                          : "text-[#574500]"
+                          ? "text-gold-ink"
+                          : "text-goldshadow"
                     )}
                   >
                     {step.label}

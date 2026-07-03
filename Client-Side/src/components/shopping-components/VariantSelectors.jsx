@@ -65,12 +65,12 @@ const VariantSelectors = ({
           <Eyebrow tone="gold" size="xs">Size</Eyebrow>
           <a
             href="#size-guide"
-            className="se-label text-[9px] tracking-[0.28em] text-[#99907c] hover:text-[#f2ca50] transition-colors"
+            className="se-label text-[9px] tracking-[0.28em] text-muted hover:text-gold-ink transition-colors"
           >
             Size guide →
           </a>
         </div>
-        <div className="inline-flex flex-wrap gap-px bg-[#4d4635]/40 p-px">
+        <div className="inline-flex flex-wrap gap-px bg-line/40 p-px">
           {sizes.map((size) => {
             const hasStock = sizeHasStock(product, size);
             const isSelected = size === selectedSize;
@@ -98,7 +98,7 @@ const VariantSelectors = ({
             )}
           </div>
           {colors.length === 0 ? (
-            <p className="se-body text-xs text-[#574500]">
+            <p className="se-body text-xs text-goldshadow">
               Select a size to view available colours.
             </p>
           ) : (

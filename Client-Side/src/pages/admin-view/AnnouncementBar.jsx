@@ -35,7 +35,7 @@ const DEFAULTS = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/40";
+  "w-full rounded-lg border border-ink/10 bg-black/60 px-3 py-2 text-sm text-ink outline-none focus:border-gold-ink2/40";
 
 const AnnouncementBar = () => {
   const { toast } = useToast();
@@ -105,7 +105,7 @@ const AnnouncementBar = () => {
     return (
       <AdminPage eyebrow="Content" title="Announcement Bar">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#D4AF37]" />
+          <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
         </div>
       </AdminPage>
     );
@@ -140,14 +140,14 @@ const AnnouncementBar = () => {
       >
         <div className="space-y-6">
           {/* Live preview */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <Eye className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <Eye className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Live preview
               </h2>
             </header>
-            <div className="overflow-hidden rounded-lg border border-white/10">
+            <div className="overflow-hidden rounded-lg border border-ink/10">
               {values.message?.trim() ? (
                 <div
                   className="relative flex items-center justify-center gap-3 px-10 py-2.5 text-sm"
@@ -180,10 +180,10 @@ const AnnouncementBar = () => {
           </section>
 
           {/* Message & CTA */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <Megaphone className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Message
               </h2>
             </header>
@@ -193,7 +193,7 @@ const AnnouncementBar = () => {
                 type="checkbox"
                 checked={!!values.enabled}
                 onChange={(e) => setField("enabled", e.target.checked)}
-                className="accent-[#D4AF37]"
+                className="accent-gold-deep"
               />
               Show announcement bar on the public site
             </label>
@@ -211,10 +211,10 @@ const AnnouncementBar = () => {
           </section>
 
           {/* Call to action */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <MousePointerClick className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <MousePointerClick className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Call to action
               </h2>
             </header>
@@ -250,10 +250,10 @@ const AnnouncementBar = () => {
           </section>
 
           {/* Schedule */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <CalendarClock className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <CalendarClock className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Schedule
               </h2>
             </header>
@@ -287,10 +287,10 @@ const AnnouncementBar = () => {
           </section>
 
           {/* Colors */}
-          <section className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6">
+          <section className="rounded-2xl border border-ink/10 bg-page p-6">
             <header className="mb-4 flex items-center gap-2">
-              <Palette className="h-4 w-4 text-[#D4AF37]" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-white">
+              <Palette className="h-4 w-4 text-gold-ink2" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-ink">
                 Colors
               </h2>
             </header>
@@ -304,7 +304,7 @@ const AnnouncementBar = () => {
                     type="color"
                     value={values.backgroundColor || "#0a0a0a"}
                     onChange={(e) => setField("backgroundColor", e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded-md border border-white/10 bg-black/40"
+                    className="h-10 w-14 cursor-pointer rounded-md border border-ink/10 bg-black/40"
                   />
                   <input
                     type="text"
@@ -324,7 +324,7 @@ const AnnouncementBar = () => {
                     type="color"
                     value={values.textColor || "#D4AF37"}
                     onChange={(e) => setField("textColor", e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded-md border border-white/10 bg-black/40"
+                    className="h-10 w-14 cursor-pointer rounded-md border border-ink/10 bg-black/40"
                   />
                   <input
                     type="text"

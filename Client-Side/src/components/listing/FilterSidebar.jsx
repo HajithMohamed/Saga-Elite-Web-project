@@ -7,11 +7,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 
 const FilterAccordion = ({ title, children, defaultOpen = true }) => (
-  <details className="group border-b border-[#4d4635]/30 pb-2 mb-2" open={defaultOpen}>
-    <summary className="flex justify-between items-center cursor-pointer list-none py-2 text-[#e5e2e1] text-xs font-sans tracking-[0.1em] uppercase font-bold hover:text-[#f2ca50] transition-colors">
+  <details className="group border-b border-line/30 pb-2 mb-2" open={defaultOpen}>
+    <summary className="flex justify-between items-center cursor-pointer list-none py-2 text-ink-2 text-xs font-sans tracking-[0.1em] uppercase font-bold hover:text-gold-ink transition-colors">
       {title}
       <span className="transition group-open:rotate-180">
-        <ChevronDown size={14} className="text-[#99907c]" />
+        <ChevronDown size={14} className="text-muted" />
       </span>
     </summary>
     <div className="pt-4 pb-2 overflow-hidden">
@@ -101,7 +101,7 @@ const FilterSidebar = ({
     if (children.length === 0) return null;
 
     return (
-      <div className={`space-y-2 ${depth > 0 ? 'ml-4 mt-2 border-l border-[#4d4635] pl-4' : ''}`}>
+      <div className={`space-y-2 ${depth > 0 ? 'ml-4 mt-2 border-l border-line pl-4' : ''}`}>
         {children.map(c => {
           const isSelected = currentCategory === (c.slug || c.name).toLowerCase();
           const isExpanded = isSelected || isCategoryAncestor(c._id, currentCategory);
@@ -109,10 +109,10 @@ const FilterSidebar = ({
           return (
             <div key={c._id}>
               <Link to={`/shopping/product-list?category=${c.slug || c.name}`} className="flex items-center gap-3 group cursor-pointer">
-                <div className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-[#f2ca50] border-[#f2ca50]' : 'border-[#4d4635] group-hover:border-[#D4AF37]'}`}>
-                   {isSelected && <span className="w-2 h-2 bg-black rounded-sm" />}
+                <div className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-gold border-gold-ink' : 'border-line group-hover:border-gold-ink2'}`}>
+                   {isSelected && <span className="w-2 h-2 bg-page rounded-sm" />}
                 </div>
-                <span className={`text-xs uppercase tracking-wider ${isSelected ? 'text-[#f2ca50]' : 'text-[#e5e2e1]'}`}>{c.name}</span>
+                <span className={`text-xs uppercase tracking-wider ${isSelected ? 'text-gold-ink' : 'text-ink-2'}`}>{c.name}</span>
               </Link>
               {isExpanded && renderCategoryTree(c._id, depth + 1)}
             </div>
@@ -130,16 +130,16 @@ const FilterSidebar = ({
     priceRange[1] < priceMax;
 
   return (
-    <div className="w-full bg-[#0a0a0a]/60 backdrop-blur-xl border border-[#D4AF37]/15 rounded-lg p-6">
-      <div className="flex items-center justify-between mx-auto mb-8 border-b border-[#D4AF37]/15 pb-4">
-        <h2 className="text-white text-sm font-sans tracking-[0.2em] uppercase font-bold">
+    <div className="w-full bg-page/60 backdrop-blur-xl border border-gold-ink2/15 rounded-lg p-6">
+      <div className="flex items-center justify-between mx-auto mb-8 border-b border-gold-ink2/15 pb-4">
+        <h2 className="text-ink text-sm font-sans tracking-[0.2em] uppercase font-bold">
           Filter + Sort
         </h2>
         {hasActive && (
           <button
             type="button"
             onClick={onClearAll}
-            className="text-[10px] tracking-widest uppercase text-[#99907c] hover:text-[#f2ca50] transition-colors"
+            className="text-[10px] tracking-widest uppercase text-muted hover:text-gold-ink transition-colors"
           >
             Clear
           </button>
@@ -157,8 +157,8 @@ const FilterSidebar = ({
                   key={d._id}
                   className="flex items-center gap-3 group cursor-pointer"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f2ca50] shrink-0" />
-                  <span className="text-xs uppercase tracking-wider text-[#e5e2e1] group-hover:text-[#f2ca50] transition-colors">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
+                  <span className="text-xs uppercase tracking-wider text-ink-2 group-hover:text-gold-ink transition-colors">
                     {d.name}
                   </span>
                 </Link>
@@ -188,10 +188,10 @@ const FilterSidebar = ({
                     onClick={() => onToggleBrand?.(key)}
                     className="flex items-center gap-3 group cursor-pointer w-full text-left"
                   >
-                    <div className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-[#f2ca50] border-[#f2ca50]' : 'border-[#4d4635] group-hover:border-[#D4AF37]'}`}>
-                      {isSelected && <span className="w-2 h-2 bg-black rounded-sm" />}
+                    <div className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-gold border-gold-ink' : 'border-line group-hover:border-gold-ink2'}`}>
+                      {isSelected && <span className="w-2 h-2 bg-page rounded-sm" />}
                     </div>
-                    <span className={`text-xs uppercase tracking-wider ${isSelected ? 'text-[#f2ca50]' : 'text-[#e5e2e1]'}`}>{b}</span>
+                    <span className={`text-xs uppercase tracking-wider ${isSelected ? 'text-gold-ink' : 'text-ink-2'}`}>{b}</span>
                   </button>
                 );
               })}

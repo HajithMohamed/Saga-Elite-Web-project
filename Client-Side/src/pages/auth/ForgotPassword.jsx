@@ -87,17 +87,17 @@ const ForgotPassword = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-[#F2CA50] px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#0E0E0E] transition-all hover:bg-[#FFD86A] disabled:cursor-not-allowed disabled:bg-[#F2CA50]/50"
+          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[16px] bg-gold px-5 text-[12px] font-semibold uppercase tracking-[0.2em] text-ongold transition-all hover:bg-gold-hover disabled:cursor-not-allowed disabled:bg-gold/50"
         >
           {isLoading ? "Sending Code..." : "Send Verification Code"}
           {!isLoading && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
         </button>
       </form>
 
-      <div className="mt-8 text-center border-t border-white/5 pt-6">
+      <div className="mt-8 text-center border-t border-ink/5 pt-6">
         <Link
           to="/auth/login"
-          className="inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.2em] text-[#99907c] hover:text-[#F2CA50] transition-colors"
+          className="inline-flex items-center gap-2 se-label text-[10px] uppercase tracking-[0.2em] text-muted hover:text-gold-ink transition-colors"
         >
           <ArrowLeft className="h-3 w-3" />
           Return to Sign In

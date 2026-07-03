@@ -288,7 +288,7 @@ const persistBuyNowItem = (item) => {
 };
 
 const fieldBaseClass =
-  "h-12 w-full rounded-xl border bg-[#0a0a0a] px-4 text-sm text-[#e5e2e1] placeholder-[#574500] transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
+  "h-12 w-full rounded-xl border bg-page px-4 text-sm text-ink-2 placeholder-goldshadow transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20";
 
 const Field = ({
   label,
@@ -301,7 +301,7 @@ const Field = ({
   ...rest
 }) => (
   <div className={cn("space-y-2", className)}>
-    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-muted">
       {label}
     </label>
     <input
@@ -311,7 +311,7 @@ const Field = ({
       placeholder={placeholder}
       className={cn(
         fieldBaseClass,
-        error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[var(--accent)]"
+        error ? "border-rose-500/60" : "border-line/40 focus:border-[var(--accent)]"
       )}
       {...rest}
     />
@@ -330,7 +330,7 @@ const SelectField = ({
   className,
 }) => (
   <div className={cn("space-y-2", className)}>
-    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-[#99907c]">
+    <label className="se-label block text-[10px] uppercase tracking-[0.28em] text-muted">
       {label}
     </label>
     <div className="relative">
@@ -342,17 +342,17 @@ const SelectField = ({
           fieldBaseClass,
           "appearance-none pr-10",
           disabled && "cursor-not-allowed opacity-70",
-          error ? "border-rose-500/60" : "border-[#4d4635]/40 focus:border-[var(--accent)]"
+          error ? "border-rose-500/60" : "border-line/40 focus:border-[var(--accent)]"
         )}
       >
         {!value && <option value="">{placeholder}</option>}
         {options.map((opt) => (
-          <option key={opt} value={opt} className="bg-[#0a0a0a]">
+          <option key={opt} value={opt} className="bg-page">
             {opt}
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#99907c]" />
+      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
     </div>
     {error && <p className="text-xs text-rose-400">{error}</p>}
   </div>
@@ -492,8 +492,9 @@ const Checkout = () => {
     persistBuyNowItem(null);
     setIsBuyNow(false);
     setHasInitializedSource(true);
-    dispatch(fetchCartAction());
-  }, [cartStateItems, dispatch, location.state]);
+    // Guests have no server cart — skip the fetch instead of collecting 401s.
+    if (isAuthenticated) dispatch(fetchCartAction());
+  }, [cartStateItems, dispatch, location.state, isAuthenticated]);
 
   useEffect(() => {
     if (!hasInitializedSource || isBuyNow) return;
@@ -970,10 +971,30 @@ const Checkout = () => {
   const proceedToStep = (step) => {
     if (currentStep === "contact") {
       const nextErrors = validateStep("contact");
-      if (Object.keys(nextErrors).length === 0) setCurrentStep("address");
+      if (Object.keys(nextErrors).length === 0) {
+        setCurrentStep("address");
+      } else {
+        toast({
+          title: "Check your contact details",
+          description: "Please complete the highlighted fields before continuing.",
+          variant: "destructive",
+        });
+      }
     } else if (currentStep === "address") {
       const nextErrors = validateStep("address");
-      if (Object.keys(nextErrors).length === 0) setCurrentStep("payment");
+      if (Object.keys(nextErrors).length === 0) {
+        setCurrentStep("payment");
+      } else {
+        // The delivery-address inputs live on the contact step, so send the
+        // user back there to see the highlighted fields — otherwise the button
+        // silently does nothing and the flow feels broken.
+        toast({
+          title: "Delivery address needed",
+          description: "Please complete your delivery address to continue.",
+          variant: "destructive",
+        });
+        setCurrentStep("contact");
+      }
     }
     else if (step) setCurrentStep(step); // allow backward nav without validation
   };
@@ -1185,20 +1206,20 @@ const Checkout = () => {
   const currentStepNum = getStepNumber(currentStep);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e2e1] pb-36 md:pb-16">
+    <div className="min-h-screen bg-page text-ink-2 pb-36 md:pb-16">
       {/* ═══════════ STICKY HEADER ═══════════ */}
-      <header className="sticky top-0 z-40 border-b border-[#1c1b1b] bg-[#0a0a0a]/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-card bg-page/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-4 md:px-8">
           <Link to="/shopping/home" className="flex flex-col leading-none group">
-            <span className="font-serif text-xl md:text-2xl tracking-[0.18em] text-[#e5e2e1] group-hover:text-[#f2ca50] transition-colors duration-300">
+            <span className="font-serif text-xl md:text-2xl tracking-[0.18em] text-ink-2 group-hover:text-gold-ink transition-colors duration-300">
               SAGA ELITE
             </span>
-            <span className="text-[8px] uppercase tracking-[0.32em] text-[#99907c] mt-0.5">Rare Fit Forever</span>
+            <span className="text-[8px] uppercase tracking-[0.32em] text-muted mt-0.5">Rare Fit Forever</span>
           </Link>
-          <div className="flex items-center gap-2 rounded-full border border-[#f2ca50]/30 bg-[#f2ca50]/5 px-4 py-2">
-            <Lock className="h-3.5 w-3.5 text-[#f2ca50]" />
-            <span className="text-[10px] uppercase tracking-widest text-[#f2ca50] font-bold hidden sm:inline">Secure Checkout ·</span>
-            <span className="text-[10px] uppercase tracking-widest text-[#f2ca50] font-bold">SSL</span>
+          <div className="flex items-center gap-2 rounded-full border border-gold-ink/30 bg-gold/5 px-4 py-2">
+            <Lock className="h-3.5 w-3.5 text-gold-ink" />
+            <span className="text-[10px] uppercase tracking-widest text-gold-ink font-bold hidden sm:inline">Secure Checkout ·</span>
+            <span className="text-[10px] uppercase tracking-widest text-gold-ink font-bold">SSL</span>
           </div>
         </div>
       </header>
@@ -1206,12 +1227,12 @@ const Checkout = () => {
       <div className="mx-auto max-w-[1440px] px-4 md:px-8 pt-8">
 
         {/* ═══════════ BREADCRUMB ═══════════ */}
-        <nav className="mb-8 flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#99907c]">
-          <Link to="/" className="hover:text-[#f2ca50] transition-colors">Home</Link>
-          <span className="text-[#2a2a2a]">›</span>
-          <Link to="/shopping/cart" className="hover:text-[#f2ca50] transition-colors">Shopping Cart</Link>
-          <span className="text-[#2a2a2a]">›</span>
-          <span className="text-[#f2ca50] font-bold">Secure Checkout</span>
+        <nav className="mb-8 flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted">
+          <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
+          <span className="text-muted">›</span>
+          <Link to="/shopping/cart" className="hover:text-gold-ink transition-colors">Shopping Cart</Link>
+          <span className="text-muted">›</span>
+          <span className="text-gold-ink font-bold">Secure Checkout</span>
         </nav>
 
         {/* ═══════════ PROGRESS STEPPER ═══════════ */}
@@ -1225,15 +1246,15 @@ const Checkout = () => {
                   <div className="flex flex-col items-center gap-2 min-w-[80px]">
                     <div className={[
                       "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
-                      isPast   ? "bg-[#f2ca50] border-[#f2ca50] text-black"           :
-                      isActive ? "bg-transparent border-[#f2ca50] text-[#f2ca50]"    :
-                                 "bg-transparent border-[#2a2a2a] text-[#4d4635]"
+                      isPast   ? "bg-gold border-gold-ink text-black"           :
+                      isActive ? "bg-transparent border-gold-ink text-gold-ink"    :
+                                 "bg-transparent border-elevated text-line"
                     ].join(" ")}>
                       {isPast ? <Check size={14} /> : step.num}
                     </div>
                     <span className={[
                       "text-[9px] uppercase tracking-widest font-bold",
-                      isActive ? "text-[#f2ca50]" : isPast ? "text-[#e5e2e1]" : "text-[#4d4635]"
+                      isActive ? "text-gold-ink" : isPast ? "text-ink-2" : "text-line"
                     ].join(" ")}>
                       {step.label}
                     </span>
@@ -1242,7 +1263,7 @@ const Checkout = () => {
                     <div
                       className={[
                         "h-[2px] mx-3 rounded-full transition-colors duration-500",
-                        currentStepNum > step.num ? "bg-[#f2ca50]" : "bg-[#1c1b1b]"
+                        currentStepNum > step.num ? "bg-gold" : "bg-card"
                       ].join(" ")}
                       style={{ minWidth: 48, flex: 1 }}
                     />
@@ -1255,38 +1276,38 @@ const Checkout = () => {
 
         {/* ═══════════ MOBILE COLLAPSIBLE SUMMARY ═══════════ */}
         <div className="lg:hidden mb-8">
-          <details className="group bg-[#131313] border border-[#1c1b1b] rounded-2xl overflow-hidden">
+          <details className="group bg-panel border border-card rounded-2xl overflow-hidden">
             <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xs uppercase tracking-widest text-[#e5e2e1]">Order Summary</span>
-                <span className="text-[10px] text-[#99907c] font-bold">({itemCount} item{itemCount !== 1 ? "s" : ""})</span>
+                <span className="font-bold text-xs uppercase tracking-widest text-ink-2">Order Summary</span>
+                <span className="text-[10px] text-muted font-bold">({itemCount} item{itemCount !== 1 ? "s" : ""})</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-bold text-[#f2ca50]">{formatLKR(finalTotal)}</span>
-                <ChevronDown className="w-4 h-4 text-[#99907c] transition-transform duration-300 group-open:rotate-180" />
+                <span className="font-bold text-gold-ink">{formatLKR(finalTotal)}</span>
+                <ChevronDown className="w-4 h-4 text-muted transition-transform duration-300 group-open:rotate-180" />
               </div>
             </summary>
-            <div className="p-5 border-t border-[#1c1b1b] bg-[#0a0a0a] flex flex-col gap-4">
+            <div className="p-5 border-t border-card bg-page flex flex-col gap-4">
               {checkoutItems.map((item) => (
                 <div key={item.id} className="flex gap-4">
-                  <div className="relative w-16 h-16 bg-[#131313] rounded-xl border border-[#1c1b1b] overflow-hidden flex-shrink-0">
+                  <div className="relative w-16 h-16 bg-panel rounded-xl border border-card overflow-hidden flex-shrink-0">
                     <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1" />
-                    <span className="absolute -top-1.5 -right-1.5 bg-[#f2ca50] text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
+                    <span className="absolute -top-1.5 -right-1.5 bg-gold text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
                   </div>
                   <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
-                    <h4 className="text-xs font-bold text-[#e5e2e1] line-clamp-2">{item.product?.name}</h4>
-                    <div className="text-[10px] text-[#99907c] uppercase tracking-wider">
+                    <h4 className="text-xs font-bold text-ink-2 line-clamp-2">{item.product?.name}</h4>
+                    <div className="text-[10px] text-muted uppercase tracking-wider">
                       {[item.variant?.size, item.variant?.color].filter(Boolean).join(" · ")}
                     </div>
-                    <div className="text-xs font-bold text-[#f2ca50]">{formatLKR(item.unitPrice * item.quantity)}</div>
+                    <div className="text-xs font-bold text-gold-ink">{formatLKR(item.unitPrice * item.quantity)}</div>
                   </div>
                 </div>
               ))}
-              <div className="border-t border-[#1c1b1b] pt-4 flex flex-col gap-2">
-                <div className="flex justify-between text-sm"><span className="text-[#99907c]">Subtotal</span><span className="text-[#e5e2e1] font-bold">{formatLKR(checkoutTotal)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-[#99907c]">Delivery{activeZone && formData.deliveryMode !== "pickup" ? ` · ${activeZone.name}` : ""}</span><span className="text-[#e5e2e1] font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span></div>
+              <div className="border-t border-card pt-4 flex flex-col gap-2">
+                <div className="flex justify-between text-sm"><span className="text-muted">Subtotal</span><span className="text-ink-2 font-bold">{formatLKR(checkoutTotal)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted">Delivery{activeZone && formData.deliveryMode !== "pickup" ? ` · ${activeZone.name}` : ""}</span><span className="text-ink-2 font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span></div>
                 {couponDiscount > 0 && <div className="flex justify-between text-sm"><span className="text-green-400">Discount</span><span className="text-green-400 font-bold">-{formatLKR(couponDiscount)}</span></div>}
-                <div className="flex justify-between text-base pt-2 border-t border-[#f2ca50]/20"><span className="font-bold text-[#e5e2e1]">Total</span><span className="font-bold text-[#f2ca50]">{formatLKR(finalTotal)}</span></div>
+                <div className="flex justify-between text-base pt-2 border-t border-gold-ink/20"><span className="font-bold text-ink-2">Total</span><span className="font-bold text-gold-ink">{formatLKR(finalTotal)}</span></div>
               </div>
             </div>
           </details>
@@ -1308,65 +1329,65 @@ const Checkout = () => {
                 >
                   {/* Sign-in nudge */}
                   {!isAuthenticated && (
-                    <div className="p-5 rounded-2xl border border-[#4d4635]/60 bg-[#131313] flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="p-5 rounded-2xl border border-line/60 bg-panel flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div>
-                        <h4 className="font-bold text-[#e5e2e1] text-sm">Already have an account?</h4>
-                        <p className="text-[11px] text-[#99907c] mt-0.5">Sign in for faster checkout, saved addresses & exclusive rewards.</p>
+                        <h4 className="font-bold text-ink-2 text-sm">Already have an account?</h4>
+                        <p className="text-[11px] text-muted mt-0.5">Sign in for faster checkout, saved addresses & exclusive rewards.</p>
                       </div>
-                      <Link to="/auth/login" className="whitespace-nowrap px-6 py-3 rounded-xl border border-[#f2ca50] text-[#f2ca50] font-bold uppercase tracking-widest text-[10px] hover:bg-[#f2ca50]/10 transition-colors flex-shrink-0">
+                      <Link to="/auth/login" className="whitespace-nowrap px-6 py-3 rounded-xl border border-gold-ink text-gold-ink font-bold uppercase tracking-widest text-[10px] hover:bg-gold/10 transition-colors flex-shrink-0">
                         Sign In
                       </Link>
                     </div>
                   )}
 
-                  <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <h2 className="text-xl font-bold text-[#e5e2e1]">Contact Information</h2>
+                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+                    <h2 className="text-xl font-bold text-ink-2">Contact Information</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Full Name *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Full Name *</label>
                         <input type="text" value={formData.fullName}
                           onChange={(e) => updateField("fullName")(e)}
                           placeholder="Your full name"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.fullName ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.fullName ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {errors.fullName && <span className="text-[10px] text-[#ffb4ab]">{errors.fullName}</span>}
+                        {errors.fullName && <span className="text-[10px] text-danger-ink">{errors.fullName}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Email Address *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Email Address *</label>
                         <input type="email" value={formData.email}
                           onChange={handleEmailChange} readOnly={isAuthenticated}
                           onBlur={() => { if (!isAuthenticated) fetchGuestAddresses(formData.email); }}
                           placeholder="you@example.com"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.email ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]", isAuthenticated ? "opacity-60 cursor-not-allowed" : ""].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.email ? "border-danger-ink" : "border-card focus:border-gold-ink", isAuthenticated ? "opacity-60 cursor-not-allowed" : ""].join(" ")}
                         />
-                        {errors.email && <span className="text-[10px] text-[#ffb4ab]">{errors.email}</span>}
-                        {errors.emailHint && <span className="text-[10px] text-[#f2ca50]">💡 {errors.emailHint}</span>}
+                        {errors.email && <span className="text-[10px] text-danger-ink">{errors.email}</span>}
+                        {errors.emailHint && <span className="text-[10px] text-gold-ink">💡 {errors.emailHint}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Phone Number *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Phone Number *</label>
                         <input type="tel" value={formData.phone} inputMode="tel"
                           onChange={handlePhoneChange} onBlur={handlePhoneBlur} placeholder="07X XXX XXXX"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.phone ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.phone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {errors.phone && <span className="text-[10px] text-[#ffb4ab]">{errors.phone}</span>}
+                        {errors.phone && <span className="text-[10px] text-danger-ink">{errors.phone}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">
-                          Alt. Phone <span className="normal-case font-normal text-[#4d4635]">(Optional)</span>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">
+                          Alt. Phone <span className="normal-case font-normal text-line">(Optional)</span>
                         </label>
                         <input type="tel" value={formData.alternativePhone} inputMode="tel"
                           onChange={handleAlternativePhoneChange} onBlur={handleAlternativePhoneBlur} placeholder="07X XXX XXXX"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.alternativePhone ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.alternativePhone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {errors.alternativePhone && <span className="text-[10px] text-[#ffb4ab]">{errors.alternativePhone}</span>}
+                        {errors.alternativePhone && <span className="text-[10px] text-danger-ink">{errors.alternativePhone}</span>}
                       </div>
                     </div>
                   </section>
 
-                  <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                      <h2 className="text-xl font-bold text-[#e5e2e1]">Permanent Address</h2>
-                      <p className="text-[11px] text-[#99907c] mt-1">Saved to your account and auto-filled on your next purchase.</p>
+                      <h2 className="text-xl font-bold text-ink-2">Permanent Address</h2>
+                      <p className="text-[11px] text-muted mt-1">Saved to your account and auto-filled on your next purchase.</p>
                     </div>
 
                     {savedAddresses.length > 0 && (
@@ -1374,14 +1395,14 @@ const Checkout = () => {
                         {savedAddresses.map((addr, i) => (
                           <div key={i}
                             onClick={() => { applySavedAddress(addr); setUseNewAddress(false); }}
-                            className={["p-4 rounded-xl border cursor-pointer transition-all", !useNewAddress ? "border-[#f2ca50] bg-[#f2ca50]/5" : "border-[#1c1b1b] bg-[#0a0a0a] hover:border-[#4d4635]"].join(" ")}
+                            className={["p-4 rounded-xl border cursor-pointer transition-all", !useNewAddress ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}
                           >
-                            <div className="text-xs font-bold text-[#e5e2e1] mb-1">{addr.label || "Saved Address"}</div>
-                            <div className="text-[10px] text-[#99907c]">{addr.street}, {addr.city}</div>
+                            <div className="text-xs font-bold text-ink-2 mb-1">{addr.label || "Saved Address"}</div>
+                            <div className="text-[10px] text-muted">{addr.street}, {addr.city}</div>
                           </div>
                         ))}
                         <div onClick={() => setUseNewAddress(true)}
-                          className={["p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-center", useNewAddress ? "border-[#f2ca50] text-[#f2ca50]" : "border-[#1c1b1b] text-[#4d4635] hover:border-[#4d4635]"].join(" ")}
+                          className={["p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-center", useNewAddress ? "border-gold-ink text-gold-ink" : "border-card text-line hover:border-line"].join(" ")}
                         >
                           <span className="text-xs font-bold uppercase tracking-widest">+ New Address</span>
                         </div>
@@ -1390,103 +1411,104 @@ const Checkout = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Street Address *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
                         <input type="text" value={formData.permStreet}
                           onChange={updatePermField("permStreet")} placeholder="No. 12, Main Street"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.addressLine ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {formData.sameAsPermanent && errors.addressLine && <span className="text-[10px] text-[#ffb4ab]">{errors.addressLine}</span>}
+                        {formData.sameAsPermanent && errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">City *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
                         <input type="text" value={formData.permCity}
                           onChange={updatePermField("permCity")} placeholder="Colombo"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.city ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {formData.sameAsPermanent && errors.city && <span className="text-[10px] text-[#ffb4ab]">{errors.city}</span>}
+                        {formData.sameAsPermanent && errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">District *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
                         <select value={formData.permDistrict}
                           onChange={updatePermField("permDistrict")}
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] outline-none transition-colors appearance-none cursor-pointer", formData.sameAsPermanent && errors.district ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer", formData.sameAsPermanent && errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         >
                           <option value="">Select District</option>
                           {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
                         </select>
-                        {formData.sameAsPermanent && errors.district && <span className="text-[10px] text-[#ffb4ab]">{errors.district}</span>}
+                        {formData.sameAsPermanent && errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Postal Code *</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
                         <input type="text" value={formData.permPostalCode}
                           onChange={updatePermField("permPostalCode")} placeholder="10100"
-                          className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", formData.sameAsPermanent && errors.postalCode ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                         />
-                        {formData.sameAsPermanent && errors.postalCode && <span className="text-[10px] text-[#ffb4ab]">{errors.postalCode}</span>}
+                        {formData.sameAsPermanent && errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
                       </div>
                     </div>
 
                     {/* Same-as-permanent toggle */}
-                    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-[#1c1b1b] bg-[#0a0a0a] p-4 hover:border-[#4d4635] transition-colors">
+                    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-card bg-page p-4 hover:border-line transition-colors">
                       <input
                         type="checkbox"
                         checked={!!formData.sameAsPermanent}
                         onChange={(e) => toggleSameAsPermanent(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-[#f2ca50] cursor-pointer"
+                        className="mt-0.5 h-4 w-4 accent-gold cursor-pointer"
                       />
                       <span className="flex flex-col gap-0.5">
-                        <span className="text-xs font-bold text-[#e5e2e1]">Delivery address is same as permanent address</span>
-                        <span className="text-[10px] text-[#99907c]">Untick to ship this order somewhere else — your permanent address stays saved.</span>
+                        <span className="text-xs font-bold text-ink-2">Delivery address is same as permanent address</span>
+                        <span className="text-[10px] text-muted">Untick to ship this order somewhere else — your permanent address stays saved.</span>
                       </span>
                     </label>
 
                     {!formData.sameAsPermanent && (
-                      <div className="flex flex-col gap-4 rounded-xl border border-[#f2ca50]/20 bg-[#f2ca50]/[0.02] p-4 md:p-5">
-                        <h3 className="text-sm font-bold text-[#e5e2e1]">Delivery Address</h3>
+                      <div className="flex flex-col gap-4 rounded-xl border border-gold-ink/20 bg-gold/[0.02] p-4 md:p-5">
+                        <h3 className="text-sm font-bold text-ink-2">Delivery Address</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="md:col-span-2 flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Street Address *</label>
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
                             <input type="text" value={formData.addressLine}
                               onChange={(e) => updateField("addressLine")(e)} placeholder="No. 12, Main Street"
-                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.addressLine ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                             />
-                            {errors.addressLine && <span className="text-[10px] text-[#ffb4ab]">{errors.addressLine}</span>}
+                            {errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
                           </div>
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">City *</label>
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
                             <input type="text" value={formData.city}
                               onChange={(e) => updateField("city")(e)} placeholder="Colombo"
-                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.city ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                             />
-                            {errors.city && <span className="text-[10px] text-[#ffb4ab]">{errors.city}</span>}
+                            {errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
                           </div>
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">District *</label>
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
                             <select value={formData.district}
                               onChange={(e) => updateField("district")(e)}
-                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] outline-none transition-colors appearance-none cursor-pointer", errors.district ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer", errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                             >
                               <option value="">Select District</option>
                               {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
                             </select>
-                            {errors.district && <span className="text-[10px] text-[#ffb4ab]">{errors.district}</span>}
+                            {errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
                           </div>
                           <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-[#99907c]">Postal Code *</label>
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
                             <input type="text" value={formData.postalCode}
                               onChange={(e) => updateField("postalCode")(e)} placeholder="10100"
-                              className={["h-14 rounded-xl bg-[#0a0a0a] border px-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors", errors.postalCode ? "border-[#ffb4ab]" : "border-[#1c1b1b] focus:border-[#f2ca50]"].join(" ")}
+                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
                             />
-                            {errors.postalCode && <span className="text-[10px] text-[#ffb4ab]">{errors.postalCode}</span>}
+                            {errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
                           </div>
                         </div>
                       </div>
                     )}
                   </section>
 
-                  <div className="flex justify-end">
+                  {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
+                  <div className="hidden lg:flex justify-end">
                     <button onClick={() => proceedToStep("address")}
-                      className="bg-[#f2ca50] text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
+                      className="bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
                     >
                       Continue to Shipping
                     </button>
@@ -1501,22 +1523,22 @@ const Checkout = () => {
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
                   className="flex flex-col gap-8"
                 >
-                  <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-[#e5e2e1]">Shipping Method</h2>
-                      <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                      <h2 className="text-xl font-bold text-ink-2">Shipping Method</h2>
+                      <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">
                         ← Edit Contact
                       </button>
                     </div>
 
                     {!isFreeShippingQualify && formData.deliveryMode === "standard" && (
-                      <div className="p-4 rounded-xl border border-[#4d4635]/40 bg-[#0a0a0a] flex flex-col gap-2">
+                      <div className="p-4 rounded-xl border border-line/40 bg-page flex flex-col gap-2">
                         <div className="flex justify-between text-[10px] uppercase tracking-widest font-bold">
-                          <span className="text-[#99907c]">Add {formatLKR(amountToFreeShipping)} more for free shipping</span>
-                          <span className="text-[#f2ca50]">{Math.round(shippingProgress)}%</span>
+                          <span className="text-muted">Add {formatLKR(amountToFreeShipping)} more for free shipping</span>
+                          <span className="text-gold-ink">{Math.round(shippingProgress)}%</span>
                         </div>
-                        <div className="h-1.5 bg-[#1c1b1b] rounded-full overflow-hidden">
-                          <div className="h-full bg-[#f2ca50] rounded-full transition-all duration-700" style={{ width: `${shippingProgress}%` }} />
+                        <div className="h-1.5 bg-card rounded-full overflow-hidden">
+                          <div className="h-full bg-gold rounded-full transition-all duration-700" style={{ width: `${shippingProgress}%` }} />
                         </div>
                       </div>
                     )}
@@ -1524,26 +1546,26 @@ const Checkout = () => {
                     {/* Delivery zone transparency — resolved from the admin-managed
                         shipping zones by the selected district's province. */}
                     {activeZone && formData.deliveryMode !== "pickup" && (
-                      <div className="p-4 rounded-xl border border-[#f2ca50]/20 bg-[#f2ca50]/[0.03] flex flex-col gap-3">
+                      <div className="p-4 rounded-xl border border-gold-ink/20 bg-gold/[0.03] flex flex-col gap-3">
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Delivery Zone</div>
-                            <div className="text-sm font-bold text-[#e5e2e1] mt-0.5">{activeZone.name}</div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Delivery Zone</div>
+                            <div className="text-sm font-bold text-ink-2 mt-0.5">{activeZone.name}</div>
                           </div>
                           <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Estimated</div>
-                            <div className="text-sm font-bold text-[#e5e2e1] mt-0.5">{activeZone.estimatedDays || "1–3 business days"}</div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Estimated</div>
+                            <div className="text-sm font-bold text-ink-2 mt-0.5">{activeZone.estimatedDays || "1–3 business days"}</div>
                           </div>
                           <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-[#99907c]">Delivery Charge</div>
+                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Delivery Charge</div>
                             <div className="text-sm font-bold mt-0.5">
                               {isFreeShippingQualify && formData.deliveryMode === "standard"
                                 ? <span className="text-green-400">FREE</span>
-                                : <span className="text-[#f2ca50]">{formatLKR(standardFee)}</span>}
+                                : <span className="text-gold-ink">{formatLKR(standardFee)}</span>}
                             </div>
                           </div>
                         </div>
-                        <p className="text-[10px] text-[#99907c] border-t border-[#f2ca50]/10 pt-2.5">
+                        <p className="text-[10px] text-muted border-t border-gold-ink/10 pt-2.5">
                           Delivery charges are calculated automatically based on your delivery zone
                           ({deliveryProvince} Province).
                           {Number(activeZone.freeAbove) > 0 && (
@@ -1568,22 +1590,22 @@ const Checkout = () => {
                         return (
                           <div key={method.id}
                             onClick={() => updateField("deliveryMode")(method.id)}
-                            className={["relative flex items-start gap-4 p-5 rounded-2xl border cursor-pointer transition-all duration-300", isSelected ? "border-[#f2ca50] bg-[#f2ca50]/5" : "border-[#1c1b1b] bg-[#0a0a0a] hover:border-[#4d4635]"].join(" ")}
+                            className={["relative flex items-start gap-4 p-5 rounded-2xl border cursor-pointer transition-all duration-300", isSelected ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}
                           >
-                            <div className={["mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-[#f2ca50]" : "border-[#4d4635]"].join(" ")}>
-                              {isSelected && <div className="w-2 h-2 bg-[#f2ca50] rounded-full" />}
+                            <div className={["mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-gold-ink" : "border-line"].join(" ")}>
+                              {isSelected && <div className="w-2 h-2 bg-gold rounded-full" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <h4 className={["font-bold text-sm", isSelected ? "text-[#f2ca50]" : "text-[#e5e2e1]"].join(" ")}>{method.label}</h4>
-                                <span className="font-bold text-[#e5e2e1] text-sm flex-shrink-0">
+                                <h4 className={["font-bold text-sm", isSelected ? "text-gold-ink" : "text-ink-2"].join(" ")}>{method.label}</h4>
+                                <span className="font-bold text-ink-2 text-sm flex-shrink-0">
                                   {fee === 0 ? <span className="text-green-400">FREE</span> : formatLKR(fee)}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-[#99907c] mt-1">{method.desc}</p>
-                              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-[#2a2a2a]">
-                                <Clock size={10} className="text-[#d0c5af]" />
-                                <span className="text-[9px] uppercase tracking-widest text-[#d0c5af] font-bold">{eta}</span>
+                              <p className="text-[11px] text-muted mt-1">{method.desc}</p>
+                              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-elevated">
+                                <Clock size={10} className="text-cream" />
+                                <span className="text-[9px] uppercase tracking-widest text-cream font-bold">{eta}</span>
                               </div>
                             </div>
                           </div>
@@ -1593,9 +1615,10 @@ const Checkout = () => {
                   </section>
 
                   <div className="flex items-center justify-between">
-                    <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-[#99907c] hover:text-[#f2ca50] transition-colors">← Back</button>
+                    <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">← Back</button>
+                    {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
                     <button onClick={() => proceedToStep("payment")}
-                      className="bg-[#f2ca50] text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
+                      className="hidden lg:block bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
                     >
                       Continue to Payment
                     </button>
@@ -1610,38 +1633,38 @@ const Checkout = () => {
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
                   className="flex flex-col gap-8"
                 >
-                  <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-[#e5e2e1]">Payment Method</h2>
-                      <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-[#99907c] hover:text-[#f2ca50] transition-colors">
+                      <h2 className="text-xl font-bold text-ink-2">Payment Method</h2>
+                      <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">
                         ← Edit Shipping
                       </button>
                     </div>
-                    <p className="text-[11px] text-[#99907c] -mt-2">All transactions are encrypted and 100% secure.</p>
+                    <p className="text-[11px] text-muted -mt-2">All transactions are encrypted and 100% secure.</p>
 
                     <div className="flex flex-col gap-3">
                       {PAYMENT_METHODS.map((method) => {
                         const isSelected = formData.paymentMethod === method.id;
                         const Icon = method.icon;
                         return (
-                          <div key={method.id} className={["border rounded-2xl overflow-hidden transition-all duration-300", isSelected ? "border-[#f2ca50]" : "border-[#1c1b1b]"].join(" ")}>
+                          <div key={method.id} className={["border rounded-2xl overflow-hidden transition-all duration-300", isSelected ? "border-gold-ink" : "border-card"].join(" ")}>
                             <div
                               onClick={() => updateField("paymentMethod")(method.id)}
-                              className={["flex items-center gap-4 p-5 cursor-pointer transition-colors", isSelected ? "bg-[#f2ca50]/5" : "bg-[#0a0a0a] hover:bg-[#131313]"].join(" ")}
+                              className={["flex items-center gap-4 p-5 cursor-pointer transition-colors", isSelected ? "bg-gold/5" : "bg-page hover:bg-panel"].join(" ")}
                             >
-                              <div className={["w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-[#f2ca50]" : "border-[#4d4635]"].join(" ")}>
-                                {isSelected && <div className="w-2 h-2 bg-[#f2ca50] rounded-full" />}
+                              <div className={["w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-gold-ink" : "border-line"].join(" ")}>
+                                {isSelected && <div className="w-2 h-2 bg-gold rounded-full" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className={["font-bold text-sm", isSelected ? "text-[#f2ca50]" : "text-[#e5e2e1]"].join(" ")}>{method.label}</h4>
+                                  <h4 className={["font-bold text-sm", isSelected ? "text-gold-ink" : "text-ink-2"].join(" ")}>{method.label}</h4>
                                   {method.badge && (
-                                    <span className="text-[8px] uppercase tracking-widest bg-[#4d4635] text-[#d0c5af] px-2 py-0.5 rounded font-bold">{method.badge}</span>
+                                    <span className="text-[8px] uppercase tracking-widest bg-line text-cream px-2 py-0.5 rounded font-bold">{method.badge}</span>
                                   )}
                                 </div>
-                                <span className="text-[10px] text-[#99907c]">{method.sublabel}</span>
+                                <span className="text-[10px] text-muted">{method.sublabel}</span>
                               </div>
-                              <Icon className={["w-6 h-6 flex-shrink-0 transition-colors", isSelected ? "text-[#f2ca50]" : "text-[#4d4635]"].join(" ")} />
+                              <Icon className={["w-6 h-6 flex-shrink-0 transition-colors", isSelected ? "text-gold-ink" : "text-line"].join(" ")} />
                             </div>
 
                             <AnimatePresence>
@@ -1649,29 +1672,29 @@ const Checkout = () => {
                                 <motion.div key="bank-panel"
                                   initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                                  className="overflow-hidden border-t border-[#f2ca50]/20 bg-[#0a0a0a]"
+                                  className="overflow-hidden border-t border-gold-ink/20 bg-page"
                                 >
                                   <div className="p-6 flex flex-col gap-4">
-                                    <div className="p-4 rounded-xl border border-[#4d4635]/50 bg-[#131313]">
+                                    <div className="p-4 rounded-xl border border-line/50 bg-panel">
                                       {[
                                         { label: "Bank", value: displayBankDetails.bankName },
                                         { label: "Branch", value: displayBankDetails.branch },
                                         { label: "Account Name", value: displayBankDetails.accountName },
                                       ].map(({ label, value }) => (
-                                        <div key={label} className="flex justify-between items-center py-3 border-b border-[#1c1b1b]">
-                                          <span className="text-[10px] uppercase tracking-widest text-[#99907c] font-bold">{label}</span>
-                                          <span className="font-bold text-[#e5e2e1] text-sm">{value}</span>
+                                        <div key={label} className="flex justify-between items-center py-3 border-b border-card">
+                                          <span className="text-[10px] uppercase tracking-widest text-muted font-bold">{label}</span>
+                                          <span className="font-bold text-ink-2 text-sm">{value}</span>
                                         </div>
                                       ))}
                                       <div className="flex justify-between items-center pt-3">
-                                        <span className="text-[10px] uppercase tracking-widest text-[#99907c] font-bold">Account No.</span>
+                                        <span className="text-[10px] uppercase tracking-widest text-muted font-bold">Account No.</span>
                                         <div className="flex items-center gap-2">
-                                          <span className="font-bold text-[#f2ca50] tracking-wider">{displayBankDetails.accountNumber}</span>
-                                          <button onClick={(e) => { e.preventDefault(); copyToClipboard(displayBankDetails.accountNumber); }} className="text-[#99907c] hover:text-[#f2ca50] transition-colors p-1"><Copy size={13} /></button>
+                                          <span className="font-bold text-gold-ink tracking-wider">{displayBankDetails.accountNumber}</span>
+                                          <button onClick={(e) => { e.preventDefault(); copyToClipboard(displayBankDetails.accountNumber); }} className="text-muted hover:text-gold-ink transition-colors p-1"><Copy size={13} /></button>
                                         </div>
                                       </div>
                                     </div>
-                                    <p className="text-[11px] text-[#99907c] leading-relaxed p-3 bg-[#131313] rounded-xl border border-[#1c1b1b]">
+                                    <p className="text-[11px] text-muted leading-relaxed p-3 bg-panel rounded-xl border border-card">
                                       ⏱ {displayBankDetails.deadline || "Pay within 24 hours to confirm your order."} You can upload your payment slip on the next page.
                                     </p>
                                   </div>
@@ -1681,11 +1704,11 @@ const Checkout = () => {
                                 <motion.div key="card-panel"
                                   initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                                  className="overflow-hidden border-t border-[#f2ca50]/20 bg-[#0a0a0a]"
+                                  className="overflow-hidden border-t border-gold-ink/20 bg-page"
                                 >
                                   <div className="p-6 flex flex-col items-center text-center gap-3">
-                                    <Lock className="w-8 h-8 text-[#4d4635]" />
-                                    <p className="text-[11px] text-[#99907c] max-w-xs leading-relaxed">
+                                    <Lock className="w-8 h-8 text-line" />
+                                    <p className="text-[11px] text-muted max-w-xs leading-relaxed">
                                       You will be redirected to our secure payment gateway after placing your order.
                                     </p>
                                   </div>
@@ -1699,37 +1722,37 @@ const Checkout = () => {
                   </section>
 
                   {/* Order Notes */}
-                  <section className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-6 md:p-8 flex flex-col gap-4">
-                    <h3 className="text-base font-bold text-[#e5e2e1]">
-                      Order Notes <span className="text-[#4d4635] text-xs font-normal normal-case">(Optional)</span>
+                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-4">
+                    <h3 className="text-base font-bold text-ink-2">
+                      Order Notes <span className="text-line text-xs font-normal normal-case">(Optional)</span>
                     </h3>
                     <textarea value={formData.notes}
                       onChange={(e) => updateField("notes")(e)}
                       placeholder="Special delivery instructions, gate codes, etc..."
                       maxLength={500}
-                      className="h-28 rounded-xl bg-[#0a0a0a] border border-[#1c1b1b] focus:border-[#f2ca50] p-4 text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors resize-none text-sm"
+                      className="h-28 rounded-xl bg-page border border-card focus:border-gold-ink p-4 text-ink-2 placeholder-line outline-none transition-colors resize-none text-sm"
                     />
-                    <span className="text-[10px] text-[#4d4635] self-end">{(formData.notes || "").length}/500</span>
+                    <span className="text-[10px] text-line self-end">{(formData.notes || "").length}/500</span>
                   </section>
 
                   {/* Terms */}
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={formData.termsAccepted}
                       onChange={(e) => updateField("termsAccepted")(e)}
-                      className="mt-1 w-4 h-4 accent-[#f2ca50] flex-shrink-0"
+                      className="mt-1 w-4 h-4 accent-gold flex-shrink-0"
                     />
-                    <span className="text-[11px] text-[#99907c] leading-relaxed">
+                    <span className="text-[11px] text-muted leading-relaxed">
                       I agree to the{" "}
-                      <Link to="/terms" className="text-[#f2ca50] hover:underline">Terms & Conditions</Link>{" "}
+                      <Link to="/terms" className="text-gold-ink hover:underline">Terms & Conditions</Link>{" "}
                       and{" "}
-                      <Link to="/privacy" className="text-[#f2ca50] hover:underline">Privacy Policy</Link>.
+                      <Link to="/privacy" className="text-gold-ink hover:underline">Privacy Policy</Link>.
                     </span>
                   </label>
-                  {errors.termsAccepted && <span className="text-[10px] text-[#ffb4ab] -mt-4">{errors.termsAccepted}</span>}
+                  {errors.termsAccepted && <span className="text-[10px] text-danger-ink -mt-4">{errors.termsAccepted}</span>}
 
-                  {/* CTA */}
+                  {/* CTA — desktop only; on mobile the sticky bottom bar places the order */}
                   <button onClick={handleSubmit} disabled={isSubmitting}
-                    className="w-full bg-[#f2ca50] text-black h-16 rounded-xl font-black uppercase tracking-[0.18em] text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_6px_30px_rgba(242,202,80,0.25)] flex items-center justify-center gap-2"
+                    className="w-full bg-gold text-black h-16 rounded-xl font-black uppercase tracking-[0.18em] text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_6px_30px_rgba(242,202,80,0.25)] hidden lg:flex items-center justify-center gap-2"
                   >
                     {isSubmitting
                       ? <><Loader2 className="animate-spin" size={18} /> Processing...</>
@@ -1737,12 +1760,12 @@ const Checkout = () => {
                     }
                   </button>
 
-                  <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-[#99907c] hover:text-[#f2ca50] transition-colors text-center">
+                  <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors text-center">
                     ← Back to Shipping
                   </button>
 
                   {/* Trust badges */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#1c1b1b]">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-card">
                     {[
                       { icon: ShieldCheck, label: "Secure Checkout"  },
                       { icon: Lock,        label: "SSL Protected"    },
@@ -1750,8 +1773,8 @@ const Checkout = () => {
                       { icon: Check,       label: "Easy Returns"     },
                     ].map(({ icon: Icon, label }) => (
                       <div key={label} className="flex flex-col items-center gap-2 text-center">
-                        <Icon className="w-5 h-5 text-[#f2ca50]" />
-                        <span className="text-[9px] uppercase tracking-widest text-[#99907c] font-bold">{label}</span>
+                        <Icon className="w-5 h-5 text-gold-ink" />
+                        <span className="text-[9px] uppercase tracking-widest text-muted font-bold">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -1765,23 +1788,23 @@ const Checkout = () => {
           <div className="w-full lg:w-[35%] hidden lg:block">
             <div className="sticky top-[110px] flex flex-col gap-6">
 
-              <div className="bg-[#131313] border border-[#1c1b1b] rounded-[24px] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-                <h3 className="text-lg font-bold text-[#e5e2e1] mb-6">Order Summary</h3>
+              <div className="bg-panel border border-card rounded-[24px] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+                <h3 className="text-lg font-bold text-ink-2 mb-6">Order Summary</h3>
 
                 {/* Items */}
                 <div className="flex flex-col gap-5 max-h-[350px] overflow-y-auto pr-1 mb-6">
                   {checkoutItems.map((item) => (
                     <div key={item.id} className="flex gap-4">
-                      <div className="relative w-[72px] h-[72px] bg-[#0a0a0a] rounded-xl border border-[#1c1b1b] overflow-hidden flex-shrink-0">
+                      <div className="relative w-[72px] h-[72px] bg-page rounded-xl border border-card overflow-hidden flex-shrink-0">
                         <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1.5" />
-                        <span className="absolute -top-1.5 -right-1.5 bg-[#f2ca50] text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
+                        <span className="absolute -top-1.5 -right-1.5 bg-gold text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
                       </div>
                       <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                        <h4 className="text-xs font-bold text-[#e5e2e1] line-clamp-2 leading-snug">{item.product?.name}</h4>
-                        <div className="text-[9px] text-[#99907c] uppercase tracking-wider font-bold">
+                        <h4 className="text-xs font-bold text-ink-2 line-clamp-2 leading-snug">{item.product?.name}</h4>
+                        <div className="text-[9px] text-muted uppercase tracking-wider font-bold">
                           {[item.variant?.size, item.variant?.color].filter(Boolean).join(" · ")}
                         </div>
-                        <div className="text-sm font-bold text-[#f2ca50]">{formatLKR(item.unitPrice * item.quantity)}</div>
+                        <div className="text-sm font-bold text-gold-ink">{formatLKR(item.unitPrice * item.quantity)}</div>
                       </div>
                     </div>
                   ))}
@@ -1791,10 +1814,10 @@ const Checkout = () => {
                 <div className="flex gap-2 mb-3">
                   <input type="text" placeholder="Gift card or discount code"
                     value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    className="flex-1 h-11 bg-[#0a0a0a] border border-[#1c1b1b] focus:border-[#f2ca50] rounded-xl px-4 text-sm text-[#e5e2e1] placeholder-[#4d4635] outline-none transition-colors"
+                    className="flex-1 h-11 bg-page border border-card focus:border-gold-ink rounded-xl px-4 text-sm text-ink-2 placeholder-line outline-none transition-colors"
                   />
                   <button onClick={() => applyCouponCode()} disabled={!couponInput || couponApplying}
-                    className="h-11 px-5 bg-[#4d4635] text-[#d0c5af] rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#f2ca50] hover:text-black transition-colors disabled:opacity-40 flex items-center justify-center"
+                    className="h-11 px-5 bg-line text-cream rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-40 flex items-center justify-center"
                   >
                     {couponApplying ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
                   </button>
@@ -1804,34 +1827,34 @@ const Checkout = () => {
                     <span className="text-[10px] uppercase tracking-widest text-green-400 font-bold flex items-center gap-1.5">
                       <Gift size={11} /> {appliedCoupon.code} applied
                     </span>
-                    <button onClick={removeCoupon} className="text-[#99907c] hover:text-[#ffb4ab] transition-colors"><Trash2 size={12} /></button>
+                    <button onClick={removeCoupon} className="text-muted hover:text-danger-ink transition-colors"><Trash2 size={12} /></button>
                   </div>
                 )}
                 {rewardSuggestions.length > 0 && !appliedCoupon && (
                   <div className="flex flex-col gap-2 mb-4">
                     {rewardSuggestions.map((r) => (
                       <button key={r.code} onClick={() => applyCouponCode(r.code)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl border border-[#4d4635]/40 hover:border-[#f2ca50]/40 bg-[#0a0a0a] transition-colors text-left group"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl border border-line/40 hover:border-gold-ink/40 bg-page transition-colors text-left group"
                       >
-                        <span className="text-[10px] font-bold text-[#d0c5af] uppercase tracking-widest group-hover:text-[#f2ca50]">{r.code}</span>
-                        <span className="text-[10px] text-[#99907c]">Tap to apply</span>
+                        <span className="text-[10px] font-bold text-cream uppercase tracking-widest group-hover:text-gold-ink">{r.code}</span>
+                        <span className="text-[10px] text-muted">Tap to apply</span>
                       </button>
                     ))}
                   </div>
                 )}
 
                 {/* Totals */}
-                <div className="border-t border-[#1c1b1b] pt-5 flex flex-col gap-3">
+                <div className="border-t border-card pt-5 flex flex-col gap-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#99907c]">Subtotal</span>
-                    <span className="text-[#e5e2e1] font-bold">{formatLKR(checkoutTotal)}</span>
+                    <span className="text-muted">Subtotal</span>
+                    <span className="text-ink-2 font-bold">{formatLKR(checkoutTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#99907c]">Shipping ({selectedDelivery.label})</span>
-                    <span className="font-bold">{shippingFee === 0 ? <span className="text-green-400">FREE</span> : <span className="text-[#e5e2e1]">{formatLKR(shippingFee)}</span>}</span>
+                    <span className="text-muted">Shipping ({selectedDelivery.label})</span>
+                    <span className="font-bold">{shippingFee === 0 ? <span className="text-green-400">FREE</span> : <span className="text-ink-2">{formatLKR(shippingFee)}</span>}</span>
                   </div>
                   {activeZone && formData.deliveryMode !== "pickup" && (
-                    <p className="text-[9px] uppercase tracking-widest text-[#4d4635] -mt-1.5">
+                    <p className="text-[9px] uppercase tracking-widest text-line -mt-1.5">
                       {activeZone.name} · {activeZone.estimatedDays || "1–3 business days"}
                     </p>
                   )}
@@ -1842,28 +1865,28 @@ const Checkout = () => {
                     </div>
                   )}
                 </div>
-                <div className="border-t border-[#f2ca50]/20 mt-4 pt-5 flex justify-between items-end">
+                <div className="border-t border-gold-ink/20 mt-4 pt-5 flex justify-between items-end">
                   <div>
-                    <span className="text-base font-bold text-[#e5e2e1]">Total</span>
-                    <div className="text-[9px] uppercase tracking-widest text-[#4d4635] mt-0.5">incl. all charges</div>
+                    <span className="text-base font-bold text-ink-2">Total</span>
+                    <div className="text-[9px] uppercase tracking-widest text-line mt-0.5">incl. all charges</div>
                   </div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-xs text-[#99907c] font-bold">LKR</span>
-                    <span className="text-[28px] font-black text-[#f2ca50] leading-none">{finalTotal.toLocaleString()}</span>
+                    <span className="text-xs text-muted font-bold">LKR</span>
+                    <span className="text-[28px] font-black text-gold-ink leading-none">{finalTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
               {/* Trust block */}
-              <div className="bg-[#131313] border border-[#1c1b1b] rounded-2xl p-5 flex flex-col gap-3">
+              <div className="bg-panel border border-card rounded-2xl p-5 flex flex-col gap-3">
                 {[
                   { icon: ShieldCheck, label: "Secure & Encrypted Checkout"    },
                   { icon: Truck,       label: "Islandwide Delivery Available"   },
                   { icon: Package,     label: "Careful Packaging Guaranteed"    },
                 ].map(({ icon: Icon, label }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-[#f2ca50] flex-shrink-0" />
-                    <span className="text-[10px] uppercase tracking-widest text-[#99907c] font-bold">{label}</span>
+                    <Icon className="w-4 h-4 text-gold-ink flex-shrink-0" />
+                    <span className="text-[10px] uppercase tracking-widest text-muted font-bold">{label}</span>
                   </div>
                 ))}
               </div>
@@ -1875,13 +1898,13 @@ const Checkout = () => {
       </div>
 
       {/* ═══════════ MOBILE STICKY BOTTOM BAR ═══════════ */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-t-2 border-[#f2ca50] px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-page/95 backdrop-blur-xl border-t-2 border-gold-ink px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between mb-2.5">
           <div>
-            <div className="text-[9px] uppercase tracking-widest text-[#99907c] font-bold">Total Due</div>
-            <div className="text-xl font-black text-[#f2ca50]">{formatLKR(finalTotal)}</div>
+            <div className="text-[9px] uppercase tracking-widest text-muted font-bold">Total Due</div>
+            <div className="text-xl font-black text-gold-ink">{formatLKR(finalTotal)}</div>
           </div>
-          <div className="text-[10px] text-[#99907c]">{itemCount} item{itemCount !== 1 ? "s" : ""}</div>
+          <div className="text-[10px] text-muted">{itemCount} item{itemCount !== 1 ? "s" : ""}</div>
         </div>
         <button
           onClick={
@@ -1890,7 +1913,7 @@ const Checkout = () => {
             handleSubmit
           }
           disabled={isSubmitting}
-          className="w-full bg-[#f2ca50] text-black h-14 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50"
+          className="w-full bg-gold text-black h-14 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50"
         >
           {isSubmitting
             ? <><Loader2 className="animate-spin" size={16} /> Processing...</>
@@ -1904,34 +1927,34 @@ const Checkout = () => {
       {/* ═══════════ OTP MODAL ═══════════ */}
       {otpModal.open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#131313] p-8 border border-[#1c1b1b] shadow-2xl flex flex-col gap-5">
+          <div className="w-full max-w-sm rounded-2xl bg-panel p-8 border border-card shadow-2xl flex flex-col gap-5">
             <div>
-              <h3 className="text-xl font-bold text-white">Verify Your Email</h3>
-              <p className="text-[11px] text-[#99907c] mt-1">
-                Enter the 4-digit code sent to <span className="text-[#f2ca50]">{formData.email}</span>.
+              <h3 className="text-xl font-bold text-ink">Verify Your Email</h3>
+              <p className="text-[11px] text-muted mt-1">
+                Enter the 4-digit code sent to <span className="text-gold-ink">{formData.email}</span>.
               </p>
             </div>
             <input type="text" value={otpModal.code}
               onChange={(e) => setOtpModal((prev) => ({ ...prev, code: e.target.value }))}
               placeholder="0000" maxLength={4}
-              className="w-full h-16 rounded-xl bg-[#0a0a0a] border border-[#1c1b1b] focus:border-[#f2ca50] text-center text-3xl tracking-[0.6em] text-white font-black outline-none"
+              className="w-full h-16 rounded-xl bg-page border border-card focus:border-gold-ink text-center text-3xl tracking-[0.6em] text-ink font-black outline-none"
             />
             {!otpModal.sent ? (
               <button onClick={sendGuestOtp} disabled={otpModal.sending}
-                className="w-full bg-[#f2ca50] text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-gold text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {otpModal.sending ? <><Loader2 className="animate-spin" size={14} /> Sending...</> : "Send Code"}
               </button>
             ) : (
               <button onClick={verifyGuestOtp} disabled={otpModal.verifying}
-                className="w-full bg-[#f2ca50] text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-gold text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {otpModal.verifying ? <><Loader2 className="animate-spin" size={14} /> Verifying...</> : "Verify & Place Order"}
               </button>
             )}
             <button
               onClick={() => setOtpModal({ open: false, sending: false, sent: false, code: "", verifying: false })}
-              className="text-[#99907c] text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors text-center"
+              className="text-muted text-[10px] font-bold uppercase tracking-widest hover:text-ink transition-colors text-center"
             >
               Cancel
             </button>

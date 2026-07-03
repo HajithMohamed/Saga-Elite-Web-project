@@ -18,10 +18,10 @@ const PaymentInstructionSteps = () => {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.7, ease: MOTION_EASE, delay: 0.2 }}
-      className="rounded-[24px] border border-white/10 bg-[#0d0d0d] p-6 sm:p-8"
+      className="rounded-[24px] border border-ink/10 bg-page p-6 sm:p-8"
       aria-label="Payment instructions"
     >
-      <div className="flex items-center gap-2 text-sm font-semibold text-[#F2CA50]">
+      <div className="flex items-center gap-2 text-sm font-semibold text-gold-ink">
         <Clock3 className="h-5 w-5" />
         How to complete your payment
       </div>
@@ -33,12 +33,12 @@ const PaymentInstructionSteps = () => {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 + index * 0.08 }}
-            className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4 transition-colors hover:border-[#F2CA50]/20 hover:bg-white/[0.04]"
+            className="flex items-center gap-4 rounded-2xl border border-ink/5 bg-ink/[0.02] px-5 py-4 transition-colors hover:border-gold-ink/20 hover:bg-ink/[0.04]"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#F2CA50]/25 bg-[#F2CA50]/10 text-xs font-bold text-[#F2CA50]">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gold-ink/25 bg-gold/10 text-xs font-bold text-gold-ink">
               {index + 1}
             </div>
-            <p className="se-body text-sm leading-6 text-[#d0c5af]">{step}</p>
+            <p className="se-body text-sm leading-6 text-cream">{step}</p>
           </motion.div>
         ))}
       </div>
