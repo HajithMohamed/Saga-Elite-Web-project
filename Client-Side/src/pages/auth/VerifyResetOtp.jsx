@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ArrowLeft, ArrowRight, Edit2 } from "lucide-react";
 import { verifyResetOtpAction, forgotPasswordAction } from "@/store/auth-slice";
+import { describeAuthError } from "@/lib/auth-errors";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import AuthPageWrapper from "@/components/auth-components/AuthPageWrapper";
@@ -59,8 +60,11 @@ const VerifyResetOtp = () => {
       toast({ title: "Code Resent", description: "A fresh code is on its way.", variant: "success" });
       setSeconds(60);
     } catch (err) {
-      const msg = err?.response?.data?.message || "Couldn't resend. Try again shortly.";
-      toast({ title: "Failed to resend", description: msg, variant: "destructive" });
+      const { title, description } = describeAuthError(err, {
+        title: "Failed to resend",
+        fallbackDescription: "Couldn't resend. Try again shortly.",
+      });
+      toast({ title, description, variant: "destructive" });
     } finally {
       setResending(false);
     }

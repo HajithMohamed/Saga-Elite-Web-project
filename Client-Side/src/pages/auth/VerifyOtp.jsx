@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, ArrowRight, CheckCircle2, Edit2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,20 +15,21 @@ const VerifyOtp = () => {
   const navigate = useNavigate();
   const { user, isLoading } = useSelector((state) => state.auth);
 
-  const [otp, setOtp] = useState("");
-  const [resending, setResending] = useState(false);
-  const [seconds, setSeconds] = useState(60);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { state: routerState } = useLocation();
+  const fallbackEmail = routerState?.email;
+  const fallbackUserId = routerState?.userId;
+
+  const resolvedUser = user?._id ? user : (fallbackUserId ? { _id: fallbackUserId, email: fallbackEmail } : null);
 
   useEffect(() => {
-    if (user?.isVerified && !showSuccess) {
+    if (resolvedUser?.isVerified && !showSuccess) {
       setShowSuccess(true);
       const t = setTimeout(() => {
-        navigate(user.role === "admin" ? "/admin/dashboard" : "/shopping/home");
+        navigate(resolvedUser.role === "admin" ? "/admin/dashboard" : "/shopping/home");
       }, 3000);
       return () => clearTimeout(t);
     }
-  }, [user, navigate, showSuccess]);
+  }, [resolvedUser, navigate, showSuccess]);
 
   useEffect(() => {
     if (seconds <= 0) return;
@@ -42,12 +43,12 @@ const VerifyOtp = () => {
       toast({ title: "Incomplete code", description: "Enter all digits to verify.", variant: "destructive" });
       return;
     }
-    if (!user?._id) {
+    if (!resolvedUser?._id) {
       toast({ title: "Session expired", description: "Please register again.", variant: "destructive" });
       navigate("/auth/register");
       return;
     }
-    dispatch(verifyOtpAction({ otp, userId: user._id }))
+    dispatch(verifyOtpAction({ otp, userId: resolvedUser._id }))
       .unwrap()
       .catch((err) => {
         toast({ title: "Verification failed", description: err || "The code didn't match or has expired.", variant: "destructive" });
@@ -55,10 +56,10 @@ const VerifyOtp = () => {
   };
 
   const handleResend = async () => {
-    if (!user?.email) return;
+    if (!resolvedUser?.email) return;
     setResending(true);
     try {
-      await dispatch(resendOtpAction({ email: user.email })).unwrap();
+      await dispatch(resendOtpAction({ email: resolvedUser.email })).unwrap();
       toast({ title: "Code Resent", description: "A fresh code is on its way.", variant: "success" });
       setSeconds(60);
     } catch (err) {
@@ -69,7 +70,7 @@ const VerifyOtp = () => {
   };
 
   const maskedEmail = (() => {
-    const e = user?.email || "";
+    const e = resolvedUser?.email || "";
     if (!e.includes("@")) return e;
     const [name, domain] = e.split("@");
     if (name.length <= 3) return `${name[0]}***@${domain}`;

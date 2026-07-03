@@ -147,7 +147,7 @@ const Register = () => {
       const response = await dispatch(registerUserAction(payload)).unwrap();
       setIsSuccess(true);
       setTimeout(() => {
-        navigate("/auth/verify-otp", { state: { email: payload.email } });
+        navigate("/auth/verify-otp", { state: { email: formData.email, userId: response?.data?._id } });
       }, 3000);
     } catch (err) {
       const { title, description } = describeAuthError(err, { title: "Registration failed" });

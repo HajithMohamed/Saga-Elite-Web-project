@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { forgotPasswordAction } from "@/store/auth-slice";
+import { describeAuthError } from "@/lib/auth-errors";
 import { toast } from "@/hooks/use-toast";
 import usePageMeta from "@/hooks/use-page-meta";
 import AuthPageWrapper from "@/components/auth-components/AuthPageWrapper";
@@ -50,11 +51,14 @@ const ForgotPassword = () => {
       });
       navigate("/auth/verify-reset-otp", { state: { email } });
     } catch (err) {
-      const msg = err?.response?.data?.message || "Couldn't send the code. Please confirm the email is correct.";
-      setError(msg);
-      toast({
+      const { title, description } = describeAuthError(err, {
         title: "Failed to send",
-        description: msg,
+        fallbackDescription: "Couldn't send the code. Please confirm the email is correct.",
+      });
+      setError(description);
+      toast({
+        title,
+        description,
         variant: "destructive",
       });
     } finally {
