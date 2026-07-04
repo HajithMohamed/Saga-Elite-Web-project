@@ -1,18 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import {
-  CheckCircle2,
-  CreditCard,
-  Loader2,
-  Lock,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
 
 import { toast } from "@/hooks/use-toast";
-import { submitSampleCardPayment } from "@/store/manualPaymentSlice";
 import {
   fetchPayHereConfig,
   initiatePayHerePayment,
@@ -28,38 +20,6 @@ const formatLKR = (value) =>
     maximumFractionDigits: 2,
   });
 
-// PAN auto-format: 4-4-4-4 (or 4-4-4-7 for AmEx-length cards) with spaces.
-const formatCardNumber = (raw) => {
-  const digits = String(raw || "").replace(/\D/g, "").slice(0, 19);
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-};
-
-const detectBrand = (digits) => {
-  const d = String(digits || "");
-  if (/^4/.test(d)) return "Visa";
-  if (/^(5[1-5]|2[2-7])/.test(d)) return "Mastercard";
-  if (/^3[47]/.test(d)) return "Amex";
-  if (/^(6011|65|64[4-9])/.test(d)) return "Discover";
-  return null;
-};
-
-const luhnOk = (digits) => {
-  const s = String(digits || "").replace(/\D/g, "");
-  if (s.length < 13 || s.length > 19) return false;
-  let sum = 0;
-  let alt = false;
-  for (let i = s.length - 1; i >= 0; i -= 1) {
-    let n = Number(s[i]);
-    if (alt) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alt = !alt;
-  }
-  return sum > 0 && sum % 10 === 0;
-};
-
 // Persist just enough context (payment reference + guest email) to confirm the
 // payment status after PayHere redirects the browser back to this page.
 const storePayHereContext = (orderId, reference, email) => {
@@ -67,30 +27,39 @@ const storePayHereContext = (orderId, reference, email) => {
     if (reference) window.sessionStorage.setItem(`payhere_ref_${orderId}`, reference);
     if (email) window.sessionStorage.setItem(`payhere_email_${orderId}`, email);
   } catch {
-    /* sessionStorage unavailable — non-fatal, we just can't auto-poll on return */
+    /* sessionStorage unavailable — non-fatal */
   }
 };
 
-const readStoredRef = (orderId) => {
+const readStored = (key) => {
   try {
-    return window.sessionStorage.getItem(`payhere_ref_${orderId}`);
+    return window.sessionStorage.getItem(key);
   } catch {
     return null;
   }
 };
 
-const readStoredEmail = (orderId) => {
+// One-shot guard so the Back button (which lands on this page WITHOUT a
+// ?payment param) doesn't bounce the customer straight back into PayHere.
+const markRedirected = (orderId) => {
   try {
-    return window.sessionStorage.getItem(`payhere_email_${orderId}`);
+    window.sessionStorage.setItem(`payhere_started_${orderId}`, "1");
   } catch {
-    return null;
+    /* ignore */
+  }
+};
+const wasRedirected = (orderId) => readStored(`payhere_started_${orderId}`) === "1";
+const clearRedirected = (orderId) => {
+  try {
+    window.sessionStorage.removeItem(`payhere_started_${orderId}`);
+  } catch {
+    /* ignore */
   }
 };
 
-// Redirect the browser to PayHere by POSTing a self-submitting hidden form to
-// the (sandbox or live) checkout URL. This is PayHere's Checkout API redirect
-// flow — more reliable on mobile than the JS popup, and the customer returns
-// via return_url / cancel_url.
+// PayHere Checkout API redirect: POST a self-submitting hidden form to the
+// (sandbox or live) checkout URL. Card details are entered on PayHere's
+// PCI-DSS window — they never touch our servers.
 const PAYHERE_FORM_FIELDS = [
   "merchant_id",
   "return_url",
@@ -146,26 +115,7 @@ const PageHeader = () => (
   </header>
 );
 
-const DemoBanner = () => (
-  <div className="rounded-[2rem] border border-gold-ink/30 bg-gold/10 p-5 sm:p-6">
-    <div className="flex items-start gap-3">
-      <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-gold-ink" />
-      <div>
-        <p className="se-label text-[10px] tracking-[0.28em] text-gold-ink">
-          Demo Mode — No Real Charge
-        </p>
-        <p className="se-body mt-2 text-sm text-ink-2">
-          This is a sample gateway. Use test card{" "}
-          <span className="se-mono text-gold-ink">4111 1111 1111 1111</span> with any future
-          expiry and 3-digit CVV. Our team will verify the sample transaction manually until the
-          PayHere gateway is live.
-        </p>
-      </div>
-    </div>
-  </div>
-);
-
-const SubmittedPanel = ({ payment, title, message }) => (
+const SuccessPanel = ({ reference, verified }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
@@ -176,16 +126,16 @@ const SubmittedPanel = ({ payment, title, message }) => (
       <div className="rounded-full bg-gold/10 p-5">
         <CheckCircle2 className="h-10 w-10 text-gold-ink" />
       </div>
-      <h2 className="se-serif mt-6 text-2xl text-ink-2">
-        {title || "Card payment received"}
-      </h2>
-      <p className="se-body mt-3 text-sm text-muted">
-        Reference{" "}
-        <span className="se-mono text-ink-2">{payment?.referenceNumber || "—"}</span>
-      </p>
+      <h2 className="se-serif mt-6 text-2xl text-ink-2">Payment successful</h2>
+      {reference ? (
+        <p className="se-body mt-3 text-sm text-muted">
+          Reference <span className="se-mono text-ink-2">{reference}</span>
+        </p>
+      ) : null}
       <p className="se-body mt-5 text-sm text-cream">
-        {message ||
-          "Our team is verifying your sample card transaction. You'll get an email and WhatsApp update once the order is confirmed — usually within a few minutes."}
+        {verified
+          ? "Your card payment was successful and your order is confirmed. A confirmation email is on its way."
+          : "We received your payment and are confirming it with the gateway. Your order will update within a few minutes — no further action needed."}
       </p>
       <Link
         to="/shopping/orders"
@@ -202,41 +152,30 @@ const CardPaymentPage = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
-  const isSubmitting = useSelector((state) => state.manualPayment?.isSubmitting);
   const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated);
   const userEmail = useSelector((state) => state.auth?.user?.email);
   const userName = useSelector((state) => state.auth?.user?.name);
 
-  // Pull amount + email from navigation state where possible; the order ID
-  // comes from the URL so the customer can reload the page without losing
-  // context (only the URL survives a hard refresh).
+  // Order id survives a hard refresh via the URL; amount/email come from the
+  // checkout navigation state or the ?email= query.
   const orderId = orderIdParam || location.state?.orderId || null;
   const presetAmount = location.state?.amount || null;
   const presetEmail =
     searchParams.get("email") || location.state?.email || userEmail || "";
 
-  // Gateway resolution: "loading" until we know if PayHere is configured, then
-  // "payhere" (real gateway) or "sample" (legacy demo form fallback).
+  // loading → probing config; payhere → gateway ready; unavailable → not configured.
   const [gatewayMode, setGatewayMode] = useState("loading");
-  const [phState, setPhState] = useState("idle"); // idle | initiating | processing | confirming | failed
+  const [phState, setPhState] = useState("idle"); // idle | initiating | redirecting | confirming | failed
   const [payReference, setPayReference] = useState(null);
-
-  const [form, setForm] = useState({
-    cardholderName: "",
-    cardNumber: "",
-    expiry: "",
-    cvv: "",
-    email: presetEmail,
-  });
-  const [errors, setErrors] = useState({});
+  const [email, setEmail] = useState(presetEmail);
+  const [emailError, setEmailError] = useState(null);
   const [submitted, setSubmitted] = useState(null);
 
+  const guestEmail = () => (email || presetEmail || "").trim().toLowerCase();
+
   useEffect(() => {
-    if (presetEmail && !form.email) {
-      setForm((prev) => ({ ...prev, email: presetEmail }));
-    }
+    if (presetEmail && !email) setEmail(presetEmail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetEmail]);
 
@@ -245,12 +184,9 @@ const CardPaymentPage = () => {
     (async () => {
       try {
         const config = await fetchPayHereConfig();
-        if (!active) return;
-        setGatewayMode(config?.enabled ? "payhere" : "sample");
+        if (active) setGatewayMode(config?.enabled ? "payhere" : "unavailable");
       } catch {
-        // If the config probe fails, fall back to the sample form so the
-        // customer is never stranded without a way to pay.
-        if (active) setGatewayMode("sample");
+        if (active) setGatewayMode("unavailable");
       }
     })();
     return () => {
@@ -258,74 +194,12 @@ const CardPaymentPage = () => {
     };
   }, []);
 
-  // PayHere redirects the browser back here after checkout: ?payment=success
-  // (customer returned via return_url) or ?payment=cancelled (cancel_url).
-  // "success" only means they finished the PayHere flow — the notify webhook is
-  // what actually confirms the charge — so we poll the record until it flips.
-  useEffect(() => {
-    const outcome = searchParams.get("payment");
-    if (outcome === "cancelled") {
-      toast({
-        title: "Payment cancelled",
-        description: "You can try the card payment again below.",
-      });
-      return;
-    }
-    if (outcome === "success" && orderId) {
-      const ref = readStoredRef(orderId);
-      if (!ref) {
-        // Different device / cleared storage — show a neutral confirming state.
-        setSubmitted({ referenceNumber: null, status: "pending" });
-        return;
-      }
-      setPayReference(ref);
-      setPhState("confirming");
-      const email = isAuthenticated ? undefined : readStoredEmail(orderId) || presetEmail;
-      (async () => {
-        const result = await pollUntilResolved(ref, email);
-        if (result === "rejected") {
-          setPhState("failed");
-          toast({
-            title: "Payment failed",
-            description: "The payment couldn't be completed. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-        setPhState("idle");
-        setSubmitted({ referenceNumber: ref, status: result });
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const brand = useMemo(() => detectBrand(form.cardNumber.replace(/\s/g, "")), [form.cardNumber]);
-
-  const guestEmail = () =>
-    (form.email || presetEmail || "").trim().toLowerCase();
-
-  const handleChange = (field) => (event) => {
-    let value = event.target.value;
-
-    if (field === "cardNumber") {
-      value = formatCardNumber(value);
-    } else if (field === "expiry") {
-      const digits = value.replace(/\D/g, "").slice(0, 4);
-      value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-    } else if (field === "cvv") {
-      value = value.replace(/\D/g, "").slice(0, 4);
-    }
-
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  // Poll the payment record after returning from PayHere. The order is confirmed
-  // asynchronously by the notify webhook, so we wait for it to flip to verified.
-  const pollUntilResolved = async (reference, email) => {
+  // Poll the payment record after returning from PayHere — the notify webhook
+  // confirms the charge asynchronously, so we wait for it to flip to verified.
+  const pollUntilResolved = async (reference, pollEmail) => {
     for (let i = 0; i < 10; i += 1) {
       try {
-        const status = await fetchCardPaymentStatus({ reference, email });
+        const status = await fetchCardPaymentStatus({ reference, email: pollEmail });
         if (status?.status === "verified") return "verified";
         if (status?.status === "rejected") return "rejected";
       } catch {
@@ -336,11 +210,10 @@ const CardPaymentPage = () => {
     return "pending";
   };
 
-  const handlePayHerePay = async () => {
+  const startPayHere = async () => {
     if (!orderId) return;
-
     if (!isAuthenticated && !guestEmail()) {
-      setErrors({ email: "Please enter the email used at checkout." });
+      setEmailError("Please enter the email used at checkout.");
       return;
     }
 
@@ -356,14 +229,8 @@ const CardPaymentPage = () => {
         throw new Error("Could not start the payment. Please try again.");
       }
 
-      // Remember the reference (+ guest email) so we can confirm the payment
-      // when PayHere redirects back to ?payment=success.
-      storePayHereContext(
-        orderId,
-        init.referenceNumber,
-        isAuthenticated ? "" : guestEmail(),
-      );
-
+      storePayHereContext(orderId, init.referenceNumber, isAuthenticated ? "" : guestEmail());
+      markRedirected(orderId);
       setPhState("redirecting");
       redirectToPayHere(init.checkoutUrl, init.payment);
     } catch (err) {
@@ -376,85 +243,59 @@ const CardPaymentPage = () => {
     }
   };
 
-  const validate = () => {
-    const nextErrors = {};
-    const rawCard = form.cardNumber.replace(/\s/g, "");
+  // Handle the return from PayHere (?payment=success|cancelled), and otherwise
+  // auto-launch the gateway so card checkout goes straight to PayHere.
+  useEffect(() => {
+    if (gatewayMode !== "payhere" || !orderId) return;
 
-    if (!orderId) {
-      nextErrors.form = "Missing order reference — please return to checkout and try again.";
-    }
-    if (!form.cardholderName.trim() || form.cardholderName.trim().length < 2) {
-      nextErrors.cardholderName = "Enter the name printed on the card.";
-    }
-    if (!luhnOk(rawCard)) {
-      nextErrors.cardNumber = "Card number isn't valid.";
-    }
+    const outcome = searchParams.get("payment");
 
-    const [monthStr, yearStr] = form.expiry.split("/");
-    const month = Number.parseInt(monthStr, 10);
-    const yearTwoDigit = Number.parseInt(yearStr, 10);
-    const year = Number.isFinite(yearTwoDigit) ? 2000 + yearTwoDigit : NaN;
-    const now = new Date();
-    if (!month || month < 1 || month > 12 || !year) {
-      nextErrors.expiry = "Use MM/YY.";
-    } else {
-      const end = new Date(year, month, 0, 23, 59, 59);
-      if (end < now) {
-        nextErrors.expiry = "Card has expired.";
-      }
-    }
-
-    if (!/^\d{3,4}$/.test(form.cvv)) {
-      nextErrors.cvv = "CVV must be 3 or 4 digits.";
-    }
-
-    if (!isAuthenticated && !form.email) {
-      nextErrors.email = "Please enter the email used at checkout.";
-    }
-
-    setErrors(nextErrors);
-    return { ok: Object.keys(nextErrors).length === 0, month, year, rawCard };
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    const { ok, month, year, rawCard } = validate();
-    if (!ok) {
+    if (outcome === "cancelled") {
+      clearRedirected(orderId);
       toast({
-        title: "Check your card details",
-        description: "A few fields need attention before we can process the payment.",
-        variant: "destructive",
+        title: "Payment cancelled",
+        description: "You can try the card payment again below.",
       });
       return;
     }
 
-    try {
-      const response = await dispatch(
-        submitSampleCardPayment({
-          orderId,
-          cardholderName: form.cardholderName.trim(),
-          cardNumber: rawCard,
-          expiryMonth: month,
-          expiryYear: year,
-          cvv: form.cvv,
-          email: isAuthenticated ? undefined : form.email.trim().toLowerCase(),
-        }),
-      ).unwrap();
-
-      setSubmitted(response?.data || response);
-      toast({
-        title: "Card payment received",
-        description: "Verification in progress — we'll confirm your order shortly.",
-        variant: "success",
-      });
-    } catch (err) {
-      toast({
-        title: "Payment failed",
-        description: typeof err === "string" ? err : err?.message || "Please try again.",
-        variant: "destructive",
-      });
+    if (outcome === "success") {
+      const ref = readStored(`payhere_ref_${orderId}`);
+      clearRedirected(orderId);
+      if (!ref) {
+        setSubmitted({ reference: null, verified: false });
+        return;
+      }
+      setPayReference(ref);
+      setPhState("confirming");
+      const pollEmail = isAuthenticated
+        ? undefined
+        : readStored(`payhere_email_${orderId}`) || presetEmail;
+      (async () => {
+        const result = await pollUntilResolved(ref, pollEmail);
+        if (result === "rejected") {
+          setPhState("failed");
+          toast({
+            title: "Payment failed",
+            description: "The payment couldn't be completed. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setPhState("idle");
+        setSubmitted({ reference: ref, verified: result === "verified" });
+      })();
+      return;
     }
-  };
+
+    // Fresh visit (no ?payment): go straight to PayHere. The one-shot guard
+    // stops the Back button from bouncing the customer into a redirect loop,
+    // and guests without an email get the prompt below instead.
+    if (!wasRedirected(orderId) && (isAuthenticated || guestEmail())) {
+      startPayHere();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gatewayMode]);
 
   if (!orderId) {
     return (
@@ -479,9 +320,7 @@ const CardPaymentPage = () => {
   }
 
   const phBusy =
-    phState === "initiating" ||
-    phState === "redirecting" ||
-    phState === "confirming";
+    phState === "initiating" || phState === "redirecting" || phState === "confirming";
 
   return (
     <div className="min-h-screen bg-page text-ink-2 pb-20">
@@ -489,9 +328,7 @@ const CardPaymentPage = () => {
 
       <main className="mx-auto max-w-3xl px-4 py-10 md:py-14 space-y-8">
         <div>
-          <p className="se-label text-[10px] tracking-[0.32em] text-muted">
-            Step 4 of 4
-          </p>
+          <p className="se-label text-[10px] tracking-[0.32em] text-muted">Step 4 of 4</p>
           <h1 className="se-serif mt-2 text-3xl sm:text-4xl text-ink-2">Card payment</h1>
           <p className="se-body mt-2 text-sm text-muted">
             Order reference <span className="se-mono text-cream">{orderId}</span>
@@ -499,24 +336,12 @@ const CardPaymentPage = () => {
         </div>
 
         {submitted ? (
-          <SubmittedPanel
-            payment={submitted}
-            title={
-              gatewayMode === "payhere" ? "Payment successful" : "Card payment received"
-            }
-            message={
-              gatewayMode === "payhere"
-                ? submitted?.status === "verified"
-                  ? "Your card payment was successful and your order is confirmed. A confirmation email is on its way."
-                  : "We received your payment and are confirming it with the gateway. Your order will update within a few minutes — no further action needed."
-                : undefined
-            }
-          />
+          <SuccessPanel reference={submitted.reference} verified={submitted.verified} />
         ) : gatewayMode === "loading" ? (
           <div className="flex items-center justify-center rounded-[2rem] border border-gold-ink/10 bg-page p-16">
             <Loader2 className="h-6 w-6 animate-spin text-gold-ink" />
           </div>
-        ) : gatewayMode === "payhere" && phState === "confirming" ? (
+        ) : phState === "confirming" ? (
           <div className="flex flex-col items-center gap-4 rounded-[2rem] border border-gold-ink/10 bg-page p-10 text-center sm:p-16">
             <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
             <p className="se-serif text-xl text-ink-2">Confirming your payment…</p>
@@ -525,7 +350,22 @@ const CardPaymentPage = () => {
               please don't close this page.
             </p>
           </div>
-        ) : gatewayMode === "payhere" ? (
+        ) : gatewayMode === "unavailable" ? (
+          <div className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10 text-center">
+            <h2 className="se-serif text-2xl text-ink-2">Card payment is unavailable</h2>
+            <p className="se-body mt-4 text-sm text-muted">
+              Online card payment isn't available right now. Please return to checkout and choose
+              <strong className="text-ink-2"> Manual Bank Transfer</strong> to complete your order.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/shopping/checkout")}
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-[10px] tracking-[0.28em] text-black uppercase"
+            >
+              Return to checkout
+            </button>
+          </div>
+        ) : (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -549,9 +389,9 @@ const CardPaymentPage = () => {
             ) : null}
 
             <p className="se-body text-sm text-muted">
-              You'll pay securely on PayHere — Sri Lanka's trusted payment gateway. Your card
-              details are entered on PayHere's PCI-DSS secured window and are never stored on our
-              servers. Visa, Mastercard and Amex are accepted.
+              You'll be taken to PayHere — Sri Lanka's trusted payment gateway — to enter your card
+              details securely. Your card details are never stored on our servers. Visa, Mastercard
+              and Amex are accepted.
             </p>
 
             {!isAuthenticated ? (
@@ -561,20 +401,21 @@ const CardPaymentPage = () => {
                 </label>
                 <input
                   type="email"
-                  value={form.email}
-                  onChange={handleChange("email")}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError(null);
+                  }}
                   placeholder="you@example.com"
                   className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                 />
-                {errors.email ? (
-                  <p className="mt-2 text-xs text-rose-400">{errors.email}</p>
-                ) : null}
+                {emailError ? <p className="mt-2 text-xs text-rose-400">{emailError}</p> : null}
               </div>
             ) : null}
 
             <button
               type="button"
-              onClick={handlePayHerePay}
+              onClick={startPayHere}
               disabled={phBusy}
               className={cn(
                 "w-full h-14 bg-accent text-black font-bold uppercase tracking-[0.2em] text-sm",
@@ -583,8 +424,7 @@ const CardPaymentPage = () => {
             >
               {phBusy ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  {phState === "confirming" ? "Confirming payment…" : "Redirecting to PayHere…"}
+                  <Loader2 className="h-5 w-5 animate-spin" /> Redirecting to PayHere…
                 </>
               ) : (
                 <>
@@ -615,170 +455,6 @@ const CardPaymentPage = () => {
               </div>
             </div>
           </motion.div>
-        ) : (
-          <>
-            <DemoBanner />
-            <motion.form
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: MOTION_EASE }}
-              onSubmit={handleSubmit}
-              className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10 space-y-6"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-gold-ink" />
-                  <span className="se-label text-[10px] tracking-[0.28em] text-gold-ink">
-                    Card details
-                  </span>
-                </div>
-                {brand ? (
-                  <span className="se-label text-[10px] tracking-[0.28em] text-cream">
-                    {brand}
-                  </span>
-                ) : null}
-              </div>
-
-              {presetAmount ? (
-                <div className="rounded-2xl border border-ink/5 bg-panel px-5 py-4">
-                  <p className="se-label text-[9px] tracking-[0.32em] text-muted">
-                    Amount due
-                  </p>
-                  <p className="se-instrument mt-1 text-2xl text-accent">
-                    LKR {formatLKR(presetAmount)}
-                  </p>
-                </div>
-              ) : null}
-
-              <div>
-                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
-                  Cardholder name
-                </label>
-                <input
-                  type="text"
-                  autoComplete="cc-name"
-                  value={form.cardholderName}
-                  onChange={handleChange("cardholderName")}
-                  placeholder="As printed on the card"
-                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
-                />
-                {errors.cardholderName ? (
-                  <p className="mt-2 text-xs text-rose-400">{errors.cardholderName}</p>
-                ) : null}
-              </div>
-
-              <div>
-                <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
-                  Card number
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                  value={form.cardNumber}
-                  onChange={handleChange("cardNumber")}
-                  placeholder="1234 5678 9012 3456"
-                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
-                />
-                {errors.cardNumber ? (
-                  <p className="mt-2 text-xs text-rose-400">{errors.cardNumber}</p>
-                ) : null}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
-                    Expiry (MM/YY)
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="cc-exp"
-                    value={form.expiry}
-                    onChange={handleChange("expiry")}
-                    placeholder="MM/YY"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
-                  />
-                  {errors.expiry ? (
-                    <p className="mt-2 text-xs text-rose-400">{errors.expiry}</p>
-                  ) : null}
-                </div>
-                <div>
-                  <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
-                    CVV
-                  </label>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="cc-csc"
-                    value={form.cvv}
-                    onChange={handleChange("cvv")}
-                    placeholder="•••"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.4em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
-                  />
-                  {errors.cvv ? (
-                    <p className="mt-2 text-xs text-rose-400">{errors.cvv}</p>
-                  ) : null}
-                </div>
-              </div>
-
-              {!isAuthenticated ? (
-                <div>
-                  <label className="se-label block text-[9px] uppercase tracking-[0.28em] text-muted mb-2">
-                    Email used at checkout
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange("email")}
-                    placeholder="you@example.com"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
-                  />
-                  {errors.email ? (
-                    <p className="mt-2 text-xs text-rose-400">{errors.email}</p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {errors.form ? (
-                <p className="text-xs text-rose-400">{errors.form}</p>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={cn(
-                  "w-full h-14 bg-accent text-black font-bold uppercase tracking-[0.2em] text-sm",
-                  "hover:bg-white transition-all disabled:opacity-50 flex items-center justify-center gap-3",
-                )}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" /> Processing…
-                  </>
-                ) : (
-                  <>
-                    Pay {presetAmount ? `LKR ${formatLKR(presetAmount)}` : "now"}
-                  </>
-                )}
-              </button>
-
-              <div className="grid grid-cols-3 gap-4 pt-2 text-center">
-                <div className="flex flex-col items-center gap-2 text-muted">
-                  <Lock size={16} />
-                  <span className="text-[9px] uppercase tracking-widest">Encrypted</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 text-muted">
-                  <ShieldCheck size={16} />
-                  <span className="text-[9px] uppercase tracking-widest">Admin verified</span>
-                </div>
-                <div className="flex flex-col items-center gap-2 text-muted">
-                  <Sparkles size={16} />
-                  <span className="text-[9px] uppercase tracking-widest">Sample mode</span>
-                </div>
-              </div>
-            </motion.form>
-          </>
         )}
       </main>
     </div>
