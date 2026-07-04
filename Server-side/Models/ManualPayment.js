@@ -68,8 +68,21 @@ const manualPaymentSchema = new mongoose.Schema(
       gatewayReference: { type: String, default: null, trim: true, maxlength: 100 },
       // `simulated: true` marks records created by the pre-PayHere sample
       // flow so we can filter them out (or migrate) once the real gateway
-      // is live.
+      // is live. PayHere-backed records set this to false.
       simulated: { type: Boolean, default: true },
+    },
+    // PayHere gateway audit — populated by the notify webhook when a card
+    // record is paid through PayHere (cardDetails.simulated === false). Card
+    // data (PAN/CVV) is never here; PayHere only ever hands us a masked card
+    // number and its own payment id.
+    payhere: {
+      paymentId: { type: String, default: null, trim: true, maxlength: 64 },
+      statusCode: { type: String, default: null, trim: true, maxlength: 8 },
+      statusMessage: { type: String, default: null, trim: true, maxlength: 300 },
+      method: { type: String, default: null, trim: true, maxlength: 40 },
+      capturedAmount: { type: Number, default: null },
+      capturedCurrency: { type: String, default: null, trim: true, maxlength: 8 },
+      notifiedAt: { type: Date, default: null },
     },
     proofUrl: {
       type: String,

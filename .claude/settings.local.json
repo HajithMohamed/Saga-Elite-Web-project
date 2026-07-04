@@ -206,7 +206,11 @@
       "Bash(curl -s -o /dev/null -w 'google/sign-in -> HTTP %{http_code}  time=%{time_total}s\\\\n' -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{\"accessToken\":\"invalid\"}' https://server-side-production-19a7.up.railway.app/api/v1/google/sign-in)",
       "Bash(curl -s -o /dev/null -w 'register\\(empty\\) -> HTTP %{http_code}  time=%{time_total}s\\\\n' -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{}' https://server-side-production-19a7.up.railway.app/api/v1/register)",
       "Bash(curl -s -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{\"email\":\"diag-__CMDSUB_OUTPUT__@example.com\",\"password\":\"TestPass123!\",\"confirmPassword\":\"TestPass123!\",\"username\":\"DiagUser\"}' -w '\\\\n\\\\n--- HTTP %{http_code}  total=%{time_total}s ---\\\\n' --max-time 90 https://server-side-production-19a7.up.railway.app/api/v1/auth/register)",
-      "Bash(node Server-side/scripts/cleanup-diag-users.js)"
+      "Bash(node Server-side/scripts/cleanup-diag-users.js)",
+      "Bash(PAYHERE_MERCHANT_ID=1221149 PAYHERE_MERCHANT_SECRET=testsecret123 PAYHERE_SANDBOX=true node -e ' *)",
+      "Bash(node --check Controllers/manualPaymentController.js)",
+      "WebSearch",
+      "WebFetch(domain:support.payhere.lk)"
     ]
   }
 }
