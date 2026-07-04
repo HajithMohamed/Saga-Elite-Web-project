@@ -10,6 +10,7 @@ const {
   searchProducts,
   getRecommendations,
   recordDwell,
+  getCompleteTheLook,
   bulkUpdateProducts,
 } = require("../Controllers/product-controller");
 const paginatedResult = require("../Middlewares/pagination-middleware");
@@ -31,6 +32,7 @@ router.get("/", getLandingProducts);
 router.get("/search", optionalAuthMiddleware, searchProducts);
 router.get("/recommendations", optionalAuthMiddleware, getRecommendations);
 router.post("/:productId/dwell", optionalAuthMiddleware, recordDwell);
+router.get("/:productId/complete-the-look", getCompleteTheLook);
 router.get("/get-single-product/:slug", optionalAuthMiddleware, getSingleProduct);
 router.get("/analytics", authMiddleware, adminMiddleware, requirePermission("products"), getAdminAnalytics);
 router.post("/add-product", authMiddleware, adminMiddleware, requirePermission("products"), validateProductCreate, adminLogMiddleware, addProduct);

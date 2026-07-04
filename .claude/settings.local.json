@@ -190,7 +190,15 @@
       "Bash(node -e \"const g=require\\('./Controllers/google-auth-controller'\\); const f=require\\('./Controllers/facebook-auth-controller'\\); console.log\\('google exports:', Object.keys\\(g\\).join\\(','\\)\\); console.log\\('facebook exports:', Object.keys\\(f\\).join\\(','\\)\\); const {isAdminRole}=require\\('./Utils/admin-roles'\\); console.log\\('guard test — customer:', isAdminRole\\('customer'\\), '| super_admin:', isAdminRole\\('super_admin'\\), '| sub_admin:', isAdminRole\\('sub_admin'\\), '| admin:', isAdminRole\\('admin'\\)\\);\")",
       "Bash(awk '/step.*login/,/step.*register/' src/components/auth-components/AuthForms.jsx)",
       "Bash(curl -s -X POST http://localhost:5001/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@sagaelite.com\",\"password\":\"SuperSecret123!\"}' -w \"\\\\nHTTP %{http_code}\\\\n\")",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);const s=j.data||j;console.log\\(JSON.stringify\\(s,null,1\\)\\)}catch\\(e\\){console.log\\('raw:',d.slice\\(0,400\\)\\)}}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(d\\);const s=j.data||j;console.log\\(JSON.stringify\\(s,null,1\\)\\)}catch\\(e\\){console.log\\('raw:',d.slice\\(0,400\\)\\)}}\\)\")",
+      "Bash(node --check \"Server-side/Controllers/reviewController.js\")",
+      "Bash(node --check \"Server-side/Routes/reviewRoutes.js\")",
+      "Bash(node --check \"Server-side/Middlewares/request-validation.js\")",
+      "Bash(node -e \"require\\('./Server-side/Routes/admin-routes.js'\\); require\\('./Server-side/Controllers/recommendations-controller.js'\\); console.log\\('BACKEND_REQUIRE_OK'\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('./Routes/admin-routes.js'\\); console.log\\('admin-routes OK'\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('tailwindcss', \\(p.devDependencies&&p.devDependencies.tailwindcss\\)||\\(p.dependencies&&p.dependencies.tailwindcss\\)\\);\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('recharts', \\(p.dependencies&&p.dependencies.recharts\\)||\\(p.devDependencies&&p.devDependencies.recharts\\)\\);\")"
     ]
   }
 }

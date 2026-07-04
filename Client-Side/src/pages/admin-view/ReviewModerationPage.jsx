@@ -11,6 +11,7 @@ import {
   Tag,
   Archive,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import {
   fetchAdminReviews,
@@ -19,6 +20,7 @@ import {
   featureReview,
   archiveReview,
   restoreReview,
+  deleteAdminReview,
   fetchReviewAnalytics,
   bulkModerateReviews,
 } from "@/store/reviewSlice";
@@ -258,6 +260,30 @@ const ReviewModerationPage = () => {
     }
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleteSubmittingId, setDeleteSubmittingId] = useState(null);
+
+  const handleDeletePermanent = async (review) => {
+    try {
+      setDeleteSubmittingId(review._id);
+      await dispatch(deleteAdminReview(review._id)).unwrap();
+      toast({
+        title: "Review deleted",
+        description: "It has been permanently removed.",
+      });
+      setDeleteConfirmId(null);
+      dispatch(fetchReviewAnalytics());
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteSubmittingId(null);
+    }
+  };
+
   const filteredReviews = useMemo(
     () => applyClientSideFilter(adminReviews || [], activeFilter),
     [adminReviews, activeFilter]
@@ -268,6 +294,12 @@ const ReviewModerationPage = () => {
   const bulk = useBulkSelection(filteredReviews);
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkCategory, setBulkCategory] = useState("fit");
+  const [bulkDeleteArmed, setBulkDeleteArmed] = useState(false);
+
+  // Disarm the two-click bulk-delete guard whenever the view changes.
+  useEffect(() => {
+    setBulkDeleteArmed(false);
+  }, [activeFilter]);
 
   const runBulkReviewAction = async (action) => {
     const ids = bulk.selectedIds;
@@ -540,15 +572,25 @@ const ReviewModerationPage = () => {
                       <div className="flex flex-wrap items-center gap-3">
                         <StarRating value={review.rating} readOnly size="sm" />
                         {isArchivedView ? (
-                          <button
-                            type="button"
-                            disabled={archiveSubmittingId === review._id}
-                            onClick={() => handleRestore(review)}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-emerald-300 transition-colors hover:bg-emerald-400/20 disabled:opacity-50"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            {archiveSubmittingId === review._id ? "Restoring…" : "Restore"}
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              disabled={archiveSubmittingId === review._id}
+                              onClick={() => handleRestore(review)}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-emerald-300 transition-colors hover:bg-emerald-400/20 disabled:opacity-50"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              {archiveSubmittingId === review._id ? "Restoring…" : "Restore"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deleteSubmittingId === review._id}
+                              onClick={() => setDeleteConfirmId(review._id)}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
+                          </>
                         ) : (
                           <>
                             <select
@@ -611,6 +653,19 @@ const ReviewModerationPage = () => {
                       }
                       onConfirm={() => handleArchive(review)}
                       onCancel={() => setArchiveConfirmId(null)}
+                      className="ml-7"
+                    />
+
+                    <ConfirmInline
+                      show={deleteConfirmId === review._id}
+                      message="Permanently delete this review? This cannot be undone — the review and its images are removed for good and the product rating is recalculated."
+                      confirmLabel={
+                        deleteSubmittingId === review._id
+                          ? "Deleting…"
+                          : "Delete forever"
+                      }
+                      onConfirm={() => handleDeletePermanent(review)}
+                      onCancel={() => setDeleteConfirmId(null)}
                       className="ml-7"
                     />
 
@@ -848,12 +903,26 @@ const ReviewModerationPage = () => {
       </motion.div>
       <BulkActionBar
         count={bulk.count}
-        onClear={bulk.clear}
+        onClear={() => {
+          bulk.clear();
+          setBulkDeleteArmed(false);
+        }}
         pending={bulkPending}
         label="reviews selected"
         actions={
           isArchivedView
-            ? [{ label: "Restore", onClick: () => runBulkReviewAction("restore") }]
+            ? [
+                { label: "Restore", onClick: () => runBulkReviewAction("restore") },
+                bulkDeleteArmed
+                  ? {
+                      label: "Confirm delete forever",
+                      onClick: () => {
+                        setBulkDeleteArmed(false);
+                        runBulkReviewAction("delete");
+                      },
+                    }
+                  : { label: "Delete forever", onClick: () => setBulkDeleteArmed(true) },
+              ]
             : [
                 { label: "Feature", onClick: () => runBulkReviewAction("feature") },
                 { label: "Unfeature", onClick: () => runBulkReviewAction("unfeature") },

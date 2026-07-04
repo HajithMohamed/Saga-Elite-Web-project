@@ -27,6 +27,18 @@ import {
 } from "@/components/admin-components/_shared/animations";
 import { AnimatedNumber } from "@/components/admin-components/_shared/AnimatedNumber";
 import { SkeletonGrid } from "@/components/admin-components/_shared/SkeletonCard";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
@@ -48,6 +60,31 @@ const statusToneMap = {
 
 const formatCurrency = (value) => currencyFormatter.format(value || 0);
 const formatNumber = (value) => numberFormatter.format(value || 0);
+
+// Compact axis labels for the revenue chart (e.g. 1.2M, 45K).
+const compactCurrency = (value) => {
+  const n = Number(value) || 0;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(Math.round(n));
+};
+
+// Donut slice colours, tuned to the same hues as the status pills above.
+const STATUS_CHART = [
+  { key: "pending_payment", label: "Pending", color: "#f59e0b" },
+  { key: "verification_pending", label: "Verifying", color: "#fb923c" },
+  { key: "confirmed", label: "Confirmed", color: "#38bdf8" },
+  { key: "shipped", label: "Shipped", color: "#818cf8" },
+  { key: "delivered", label: "Delivered", color: "#34d399" },
+  { key: "cancelled", label: "Cancelled", color: "#fb7185" },
+];
+
+const chartTooltipStyle = {
+  background: "#0a0a0a",
+  border: "1px solid #2a2a2a",
+  borderRadius: 12,
+  fontSize: 12,
+};
 
 const formatDate = (value) => {
   if (!value) return "Not scheduled";
@@ -268,13 +305,23 @@ const Dashboard = () => {
     : quickLinks.filter((item) => !item.permission || userPerms[item.permission]);
 
   const dropCd = dropCountdown(activeDrop, nowMs);
-  const maxRevenue = Math.max(...salesTrend.map((entry) => entry.revenue || 0), 1);
 
   const latestOrders = recentOrders.slice(0, 5);
   const latestFeed = recentOrders.slice(0, 4);
   const lowStockLead = inventoryAlerts[0];
   const bestSeller = highlights.bestSellingProduct || topProducts[0];
   const topDrop = highlights.topDrop || topDrops[0];
+
+  const statusChartData = useMemo(
+    () =>
+      STATUS_CHART.map((s) => ({
+        name: s.label,
+        value: Number(orderStatusBreakdown[s.key]) || 0,
+        color: s.color,
+      })).filter((s) => s.value > 0),
+    [orderStatusBreakdown]
+  );
+  const totalStatusOrders = statusChartData.reduce((sum, s) => sum + s.value, 0);
 
   const topStrip = useMemo(
     () => [
@@ -472,36 +519,52 @@ const Dashboard = () => {
         <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <Card>
             <SectionTitle eyebrow="Sales" title="Revenue trend" />
-            <div className="grid min-h-[260px] gap-3 sm:grid-cols-6">
-              {salesTrend.length === 0 ? (
-                <div className="sm:col-span-6">
-                  <EmptyBlock>Revenue data will appear after orders are placed.</EmptyBlock>
-                </div>
-              ) : (
-                salesTrend.map((entry, index) => (
-                  <div key={entry.monthKey} className="flex flex-col items-center gap-3">
-                    <div className="flex h-44 w-full items-end rounded-xl border border-ink/10 bg-black/25 p-2">
-                      <motion.div
-                        className="w-full rounded-lg bg-gold-deep"
-                        style={{
-                          height: `${Math.max(10, Math.round((entry.revenue / maxRevenue) * 100))}%`,
-                        }}
-                        initial={{ scaleY: 0 }}
-                        animate={{ scaleY: 1 }}
-                        transition={{ duration: 0.35, delay: index * 0.04 }}
-                      />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500">{entry.label}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">
-                        {formatCurrency(entry.revenue)}
-                      </p>
-                      <p className="text-xs text-gray-500">{formatNumber(entry.orders)} orders</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {salesTrend.length === 0 ? (
+              <EmptyBlock>Revenue data will appear after orders are placed.</EmptyBlock>
+            ) : (
+              <div className="min-h-[260px]">
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={salesTrend} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dashRevFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D4AF37" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#D4AF37" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: "#99907c", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: "#99907c", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={44}
+                      tickFormatter={compactCurrency}
+                    />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      labelStyle={{ color: "#99907c" }}
+                      formatter={(value, name) =>
+                        name === "revenue"
+                          ? [formatCurrency(value), "Revenue"]
+                          : [formatNumber(value), "Orders"]
+                      }
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#D4AF37"
+                      strokeWidth={2}
+                      fill="url(#dashRevFill)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -548,6 +611,96 @@ const Dashboard = () => {
                 ))
               )}
             </div>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+          <Card>
+            <SectionTitle eyebrow="Fulfilment" title="Order status mix" />
+            {totalStatusOrders === 0 ? (
+              <EmptyBlock>Order status breakdown will appear once orders exist.</EmptyBlock>
+            ) : (
+              <div className="grid items-center gap-4 sm:grid-cols-2">
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={statusChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={92}
+                      paddingAngle={2}
+                    >
+                      {statusChartData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} stroke="#0a0a0a" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      formatter={(value, name) => [formatNumber(value), name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2">
+                  {statusChartData.map((entry) => {
+                    const pct = totalStatusOrders
+                      ? Math.round((entry.value / totalStatusOrders) * 100)
+                      : 0;
+                    return (
+                      <div key={entry.name} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="flex items-center gap-2 text-gray-300">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: entry.color }}
+                          />
+                          {entry.name}
+                        </span>
+                        <span className="text-gray-400">
+                          {formatNumber(entry.value)} · {pct}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <SectionTitle
+              eyebrow="Catalog"
+              title="Top products"
+              action={
+                <Link
+                  to="/admin/product"
+                  className="inline-flex items-center justify-center rounded-md border border-gold-ink2/30 bg-gold-deep/10 px-3 py-1.5 text-xs font-medium text-gold-ink2 transition hover:bg-gold-deep/20 hover:text-ink"
+                >
+                  View all
+                </Link>
+              }
+            />
+            {topProducts.length === 0 ? (
+              <EmptyBlock>Best-selling products will appear here after sales.</EmptyBlock>
+            ) : (
+              <div className="space-y-2.5">
+                {topProducts.slice(0, 5).map((product, index) => (
+                  <div
+                    key={product._id || product.name}
+                    className="flex items-center gap-3 rounded-xl border border-ink/10 bg-black/25 px-4 py-2.5"
+                  >
+                    <span className="w-5 shrink-0 text-center text-sm font-semibold text-gold-ink2">
+                      {index + 1}
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-sm text-ink">{product.name}</p>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {formatNumber(product.soldCount)} sold
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </section>
 

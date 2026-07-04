@@ -332,7 +332,7 @@ const InfluencersTab = () => {
               placeholder="Display name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
               required
             />
             <input
@@ -340,13 +340,13 @@ const InfluencersTab = () => {
               placeholder="@handle"
               value={form.handle}
               onChange={(e) => setForm({ ...form, handle: e.target.value })}
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
               required
             />
             <select
               value={form.platform}
               onChange={(e) => setForm({ ...form, platform: e.target.value })}
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
             >
               {PLATFORMS.map((p) => (
                 <option key={p} value={p}>
@@ -357,7 +357,7 @@ const InfluencersTab = () => {
             <select
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -372,7 +372,7 @@ const InfluencersTab = () => {
               onChange={(e) =>
                 setForm({ ...form, campaignName: e.target.value })
               }
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
             />
             <input
               type="email"
@@ -381,7 +381,7 @@ const InfluencersTab = () => {
               onChange={(e) =>
                 setForm({ ...form, contactEmail: e.target.value })
               }
-              className="border border-elevated bg-page p-3 text-sm text-ink focus:border-gold-ink focus:outline-none"
+              className="admin-input w-full"
             />
             <textarea
               placeholder="Notes (negotiated rate, deliverables, dates…)"

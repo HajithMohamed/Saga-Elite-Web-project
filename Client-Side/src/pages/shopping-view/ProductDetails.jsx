@@ -132,6 +132,7 @@ import VariantSelectors, {
 } from "@/components/shopping-components/VariantSelectors";
 import { ColorSwatch, Eyebrow } from "@/components/ui/editorial";
 import ProductCard from "@/components/shopping-components/ProductCard";
+import CompleteTheLook from "@/components/shopping-components/CompleteTheLook";
 
 import { API_V1_URL as API_BASE } from "@/lib/api";
 const FALLBACK_DROP_NAME = "Independent Release";
@@ -1063,6 +1064,9 @@ const ProductDetails = () => {
             )}
           </div>
         </div>
+
+        {/* COMPLETE THE LOOK — complementary, cross-category pairings */}
+        <CompleteTheLook productId={product._id} limit={8} />
 
         {/* RELATED PRODUCTS */}
         <section className="mt-24">

@@ -55,6 +55,8 @@ const AdminAccount = lazy(() => import("./pages/admin-view/AdminAccount"));
 const ContentManagement = lazy(() => import("./pages/admin-view/ContentManagement"));
 const AdminAnalytics = lazy(() => import("./pages/admin-view/Analytics"));
 const DropAnalytics = lazy(() => import("./pages/admin-view/DropAnalytics"));
+const AIInsights = lazy(() => import("./pages/admin-view/AIInsightsPage"));
+const AdminNotifications = lazy(() => import("./pages/admin-view/NotificationsPage"));
 
 import ErrorBoundary from "./components/common-components/ErrorBoundary";
 
@@ -411,6 +413,22 @@ function App() {
                 element={
                   <PermissionGuard permission="viewAnalytics">
                     <DropAnalytics />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="insights"
+                element={
+                  <PermissionGuard permission="viewAnalytics">
+                    <AIInsights />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="notifications"
+                element={
+                  <PermissionGuard permission="notifications">
+                    <AdminNotifications />
                   </PermissionGuard>
                 }
               />

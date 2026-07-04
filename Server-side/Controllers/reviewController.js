@@ -1003,6 +1003,47 @@ const restoreReview = catchAsync(async (req, res, next) => {
 
 /*
 |--------------------------------------------------------------------------
+| Permanently delete a review (admin hard delete)
+|--------------------------------------------------------------------------
+| The customer-facing deleteReview only lets an author remove their own review.
+| This admin variant permanently removes ANY review — used to purge spam/abuse
+| for good. The UI surfaces it as a two-step (archive → delete) safety flow, but
+| we don't hard-require "archived" here so a super admin can still nuke directly.
+*/
+const adminDeleteReview = catchAsync(async (req, res, next) => {
+  const { reviewId } = req.params;
+
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    return next(new AppError("Review not found", 404));
+  }
+
+  const wasApproved = review.status === "approved";
+  const productId = review.productId;
+
+  await review.deleteOne();
+
+  if (wasApproved) {
+    await recalculateProductRating(productId);
+  }
+
+  emitToAll(SOCKET_EVENTS.REVIEW_REFRESH, {
+    reviewId,
+    productId,
+    source: "review-deleted",
+  });
+
+  req.adminAction = "Permanently deleted review";
+
+  res.status(200).json({
+    success: true,
+    message: "Review permanently deleted",
+    reviewId,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Reviews analytics (admin)
 |--------------------------------------------------------------------------
 */
@@ -1101,6 +1142,17 @@ const bulkModerateReviews = catchAsync(async (req, res) => {
         continue;
       }
 
+      // Hard delete short-circuits the shared save() below — the doc is gone.
+      if (action === "delete") {
+        if (review.status === "approved" && review.productId) {
+          ratingRecalcProductIds.add(String(review.productId));
+        }
+        if (review.productId) touchedProductIds.add(String(review.productId));
+        await review.deleteOne();
+        succeeded.push(id);
+        continue;
+      }
+
       if (action === "feature") review.isFeatured = true;
       else if (action === "unfeature") review.isFeatured = false;
       else if (action === "category") review.category = category;
@@ -1188,6 +1240,7 @@ module.exports = {
   featureReview,
   archiveReview,
   restoreReview,
+  adminDeleteReview,
   getReviewsAnalytics,
   bulkModerateReviews,
 };

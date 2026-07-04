@@ -100,6 +100,11 @@ export const restoreReviewApi = (reviewId) =>
     withCredentials: true,
   });
 
+export const deleteAdminReviewApi = (reviewId) =>
+  axios.delete(`${API_BASE}/admin/reviews/${reviewId}`, {
+    withCredentials: true,
+  });
+
 export const fetchReviewAnalyticsApi = () =>
   axios.get(`${API_BASE}/admin/reviews/analytics`, { withCredentials: true });
 

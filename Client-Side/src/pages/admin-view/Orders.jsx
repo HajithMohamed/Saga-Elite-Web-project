@@ -621,7 +621,7 @@ const Orders = () => {
           </div>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="admin-toolbar">
           <div className="relative min-w-[200px] flex-1 sm:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
@@ -638,7 +638,7 @@ const Orders = () => {
           <select
             value={listStatusFilter}
             onChange={(e) => setListStatusFilter(e.target.value)}
-            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
+            className="admin-select"
           >
             <option value="all">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
@@ -650,7 +650,7 @@ const Orders = () => {
           <select
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
+            className="admin-select"
           >
             {paymentMethods.map((p) => (
               <option key={p} value={p}>
@@ -661,7 +661,7 @@ const Orders = () => {
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value)}
-            className="rounded-2xl border border-ink/10 bg-black/60 px-4 py-2.5 text-sm text-ink outline-none focus:border-gold-ink2"
+            className="admin-select"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>

@@ -20,6 +20,8 @@ import {
   ChevronDown,
   FolderTree,
   BarChart3,
+  Sparkles,
+  Bell,
 } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -31,11 +33,11 @@ import { useSocketEvent } from "@/hooks/use-socket-events";
 import { API_V1_URL } from "@/lib/api";
 
 const SECTION_LABELS = {
-  Dashboard: ["Dashboard", "Analytics"],
+  Dashboard: ["Dashboard", "Analytics", "AI Insights"],
   Store: ["Products", "Categories", "Drops"],
   Sales: ["Orders", "Payments", "Shipping"],
   Marketing: ["Offers / Campaigns", "Coupons"],
-  Customers: ["Customers", "Reviews", "Contact Messages"],
+  Customers: ["Customers", "Reviews", "Contact Messages", "Notifications"],
   Content: ["Content Management"],
   Settings: ["Admin Team", "API Status"],
 };
@@ -202,6 +204,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       icon: <BarChart3 className="h-5 w-5" />,
       permission: "viewAnalytics",
     },
+    {
+      label: "AI Insights",
+      path: "/admin/insights",
+      icon: <Sparkles className="h-5 w-5" />,
+      permission: "viewAnalytics",
+    },
 
     // Store
     {
@@ -265,6 +273,12 @@ const SideBar = ({ mobileOpen = false, onClose }) => {
       path: "/admin/contact-inquiries",
       icon: <Inbox className="h-5 w-5" />,
       permission: null,
+    },
+    {
+      label: "Notifications",
+      path: "/admin/notifications",
+      icon: <Bell className="h-5 w-5" />,
+      permission: "notifications",
     },
 
     // Marketing
