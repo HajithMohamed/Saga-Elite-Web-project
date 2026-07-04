@@ -641,6 +641,33 @@ const AdminOffers = () => {
             rows={2}
           />
         </FormField>
+
+        <FormField
+          label="Homepage Banner Image"
+          optional
+          helper="Appears in the homepage hero slider and links shoppers to the offers page. Recommended 1280 × 420 px (21:9). Requires 'Show on Homepage' enabled."
+        >
+          <LuxuryInput
+            type="text"
+            value={formData.bannerImage}
+            onChange={(e) =>
+              setFormData({ ...formData, bannerImage: e.target.value })
+            }
+            placeholder="https://res.cloudinary.com/…/offer-banner.jpg"
+          />
+          {formData.bannerImage ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-ink/10 bg-page aspect-[1280/420]">
+              <img
+                src={formData.bannerImage}
+                alt="Banner preview"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
+          ) : null}
+        </FormField>
       </FormSection>
 
       <FormSection
@@ -815,17 +842,9 @@ const AdminOffers = () => {
         <FormSection
           number="03"
           title="Campaign Assets"
-          description="Visual branding for the campaign landing page."
+          description="Visual branding for the campaign landing page. The homepage banner image is set in section 01."
         >
           <div className="grid grid-cols-1 gap-5">
-            <FormField label="Banner Image URL" optional helper="Full URL to the campaign hero banner.">
-              <LuxuryInput
-                type="text"
-                value={formData.bannerImage}
-                onChange={(e) => setFormData({ ...formData, bannerImage: e.target.value })}
-                placeholder="https://..."
-              />
-            </FormField>
             <div className="grid grid-cols-2 gap-5">
               <FormField label="Theme Color" optional helper="Hex colour code (e.g. #D4AF37).">
                 <LuxuryInput

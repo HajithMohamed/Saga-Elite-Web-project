@@ -206,13 +206,29 @@ export const getLandingData = async () => {
 
   const bannerPayload = bannersRes.status === "fulfilled" ? bannersRes.value?.data?.data?.banners || [] : [];
   const systemHeroPayload = heroImagesRes.status === "fulfilled" ? heroImagesRes.value?.data?.images || [] : [];
-  const heroSlides = (
-    bannerPayload.length
-      ? bannerPayload.map(normalizeBanner)
-      : systemHeroPayload.length
-        ? systemHeroPayload.map(normalizeSystemHeroImage)
-        : []
-  ).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const offerPayload = offersRes.status === "fulfilled" ? offersRes.value : [];
+
+  // Homepage offers that carry a banner image join the hero rotation as
+  // clickable slides — tapping one lands the shopper on the offers page.
+  const offerHeroSlides = offerPayload
+    .filter((offer) => offer?.bannerImage)
+    .map((offer, index) => ({
+      id: `offer-${offer._id || index}`,
+      label: offer.name || "Featured offer",
+      imageUrl: offer.bannerImage,
+      link: offer.campaignLandingPage || "/shopping/offers",
+      order: (offer.displayOrder ?? 0) + 100,
+    }));
+
+  const baseHeroSlides = bannerPayload.length
+    ? bannerPayload.map(normalizeBanner)
+    : systemHeroPayload.length
+      ? systemHeroPayload.map(normalizeSystemHeroImage)
+      : [];
+
+  const heroSlides = [...baseHeroSlides, ...offerHeroSlides].sort(
+    (a, b) => (a.order || 0) - (b.order || 0)
+  );
 
   const categoryLogoImages = categoryLogosRes.status === "fulfilled" ? categoryLogosRes.value : [];
   const adImages = adImagesRes.status === "fulfilled"
