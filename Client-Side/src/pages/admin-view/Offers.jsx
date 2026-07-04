@@ -32,6 +32,7 @@ import {
 } from "@/components/admin-components/_form";
 import Pagination from "@/components/common-components/Pagination";
 import usePagination from "@/hooks/use-pagination";
+import ImagePicker from "@/components/admin-components/_shared/ImagePicker";
 
 const OFFER_TYPES = [
   { value: "percentage_discount", label: "Percentage Discount" },
@@ -647,13 +648,13 @@ const AdminOffers = () => {
           optional
           helper="Appears in the homepage hero slider and links shoppers to the offers page. Recommended 1280 × 420 px (21:9). Requires 'Show on Homepage' enabled."
         >
-          <LuxuryInput
-            type="text"
+          <ImagePicker
             value={formData.bannerImage}
-            onChange={(e) =>
-              setFormData({ ...formData, bannerImage: e.target.value })
-            }
-            placeholder="https://res.cloudinary.com/…/offer-banner.jpg"
+            onChange={(v) => setFormData({ ...formData, bannerImage: v })}
+            label="Upload banner"
+            refModel="Offer"
+            refId={editingId || "new_offer"}
+            type="offerBanner"
           />
           {formData.bannerImage ? (
             <div className="mt-3 overflow-hidden rounded-xl border border-ink/10 bg-page aspect-[1280/420]">
