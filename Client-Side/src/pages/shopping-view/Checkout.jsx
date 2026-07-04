@@ -64,6 +64,52 @@ const DEFAULT_MANUAL_BANK_DETAILS = {
   deadline: "Pay within 24 hours to confirm your order.",
 };
 
+const PAYHERE_FORM_FIELDS = [
+  "merchant_id",
+  "return_url",
+  "cancel_url",
+  "notify_url",
+  "order_id",
+  "items",
+  "currency",
+  "amount",
+  "first_name",
+  "last_name",
+  "email",
+  "phone",
+  "address",
+  "city",
+  "country",
+  "hash",
+];
+
+const storePayHereContext = (orderId, reference, email) => {
+  try {
+    if (reference) window.sessionStorage.setItem(`payhere_ref_${orderId}`, reference);
+    if (email) window.sessionStorage.setItem(`payhere_email_${orderId}`, email);
+    window.sessionStorage.setItem(`payhere_started_${orderId}`, "1");
+  } catch {
+    // Non-fatal: the return page can still show a generic confirmation state.
+  }
+};
+
+const redirectToPayHere = (checkoutUrl, payment) => {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = checkoutUrl;
+  PAYHERE_FORM_FIELDS.forEach((key) => {
+    const value = payment?.[key];
+    if (value === undefined || value === null) return;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = String(value);
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+};
+
 const SRI_LANKA_DISTRICTS = [
   "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo",
   "Galle", "Gampaha", "Hambantota", "Jaffna", "Kalutara",
@@ -1172,6 +1218,13 @@ const Checkout = () => {
       clearPersisted();
 
       const isCardPayment = formData.paymentMethod === "card";
+      const payHere = response?.payHere || null;
+
+      if (isCardPayment && payHere?.checkoutUrl && payHere?.payment) {
+        storePayHereContext(newOrderId, payHere.referenceNumber, guestEmailReturned);
+        redirectToPayHere(payHere.checkoutUrl, payHere.payment);
+        return;
+      }
 
       // Card sample flow goes to the dedicated demo gateway page keyed on
       // orderId (no manualPayment slug yet — that record is created when the
@@ -1975,4 +2028,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout;
+export default Checkout;

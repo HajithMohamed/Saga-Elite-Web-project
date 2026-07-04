@@ -210,7 +210,9 @@
       "Bash(PAYHERE_MERCHANT_ID=1221149 PAYHERE_MERCHANT_SECRET=testsecret123 PAYHERE_SANDBOX=true node -e ' *)",
       "Bash(node --check Controllers/manualPaymentController.js)",
       "WebSearch",
-      "WebFetch(domain:support.payhere.lk)"
+      "WebFetch(domain:support.payhere.lk)",
+      "Bash(curl -s -m 20 -w \"\\\\nHTTP %{http_code}\\\\n\" \"https://server-side-production-19a7.up.railway.app/api/v1/card-payment/payhere/config\")",
+      "Bash(curl -s -m 20 -w \"\\\\nHTTP %{http_code}\\\\n\" \"https://server-side-production-19a7.up.railway.app/health\")"
     ]
   }
 }
