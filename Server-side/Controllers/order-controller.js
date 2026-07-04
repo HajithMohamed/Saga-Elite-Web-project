@@ -28,6 +28,14 @@ const sendEmail = require("../Utils/send-mail");
 const buildEmailTemplate = require("../Utils/email-template");
 const logger = require("../Utils/logger");
 const runInTransaction = require("../Utils/safe-transaction");
+const {
+    isPayHereConfigured,
+    isPayHereSandbox,
+    getMerchantId,
+    getCheckoutUrl,
+    formatAmount,
+    generateCheckoutHash,
+} = require("../Utils/payhere-service");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
 const ONLINE_PAYMENT_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -59,6 +67,84 @@ const REFUND_REASONS = new Set([
 ]);
 
 const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
+
+const trimTrailingSlash = (value = "") => String(value || "").trim().replace(/\/+$/, "");
+
+const normalizeEmail = (value) =>
+    typeof value === "string" ? value.trim().toLowerCase() : "";
+
+const resolvePayHereName = (order, email) => {
+    const firstAddressLine = String(order?.shippingAddress || "")
+        .split(/\r?\n/)[0]
+        .trim();
+    const pickupName = /^STORE PICKUP/i.test(firstAddressLine)
+        ? firstAddressLine.replace(/^STORE PICKUP/i, "").replace(/^[^A-Za-z0-9]+/, "").trim()
+        : firstAddressLine;
+    return pickupName || (email ? email.split("@")[0] : "Saga Customer");
+};
+
+const buildPayHereCheckout = ({ order, payment, email }) => {
+    if (!order || !payment || !isPayHereConfigured()) return null;
+
+    const merchantId = getMerchantId();
+    const currency = "LKR";
+    const amount = Number(order.totalAmount);
+    const orderRef = payment.referenceNumber;
+    const hash = generateCheckoutHash({
+        merchantId,
+        orderId: orderRef,
+        amount,
+        currency,
+    });
+
+    const backendUrl = trimTrailingSlash(process.env.BACKEND_URL || "");
+    const notifyUrl =
+        process.env.PAYHERE_NOTIFY_URL ||
+        (backendUrl ? `${backendUrl}/api/webhooks/payhere` : "");
+    const shopUrl = trimTrailingSlash(clientShopUrl());
+    const emailQuery = email ? `&email=${encodeURIComponent(email)}` : "";
+    const returnUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=success${emailQuery}`;
+    const cancelUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=cancelled${emailQuery}`;
+
+    if (!notifyUrl) {
+        logger.warn(
+            "PayHere checkout: BACKEND_URL / PAYHERE_NOTIFY_URL is not set - payments cannot auto-confirm"
+        );
+    }
+
+    const rawName = resolvePayHereName(order, email);
+    const [firstNameRaw, ...restName] = rawName.split(/\s+/);
+    const firstName = firstNameRaw || "Saga";
+    const lastName = restName.join(" ") || "Customer";
+
+    return {
+        sandbox: isPayHereSandbox(),
+        checkoutUrl: getCheckoutUrl(),
+        referenceNumber: orderRef,
+        orderId: order._id,
+        amount: formatAmount(amount),
+        currency,
+        payment: {
+            sandbox: isPayHereSandbox(),
+            merchant_id: merchantId,
+            return_url: returnUrl,
+            cancel_url: cancelUrl,
+            notify_url: notifyUrl,
+            order_id: orderRef,
+            items: `Saga Elite Order ${order._id}`,
+            amount: formatAmount(amount),
+            currency,
+            hash,
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone: order.contactNumber || "",
+            address: String(order.shippingAddress || "").slice(0, 200) || "N/A",
+            city: "N/A",
+            country: "Sri Lanka",
+        },
+    };
+};
 
 const DASHBOARD_ORDER_STATUSES = [
     "pending",
@@ -543,6 +629,33 @@ const createOrder = catchAsync(async (req, res, next) => {
     }
 
     let createdManualPayment = null;
+    let createdCardPayment = null;
+    let payHereCheckout = null;
+
+    if (isCardPayment && isPayHereConfigured()) {
+        const referenceNumber = await generateUniqueReference(
+            createdOrder._id,
+            ManualPayment
+        );
+
+        createdCardPayment = await ManualPayment.create({
+            referenceNumber,
+            orderId: createdOrder._id,
+            userId: user ? user._id : undefined,
+            guestId: guest ? guest._id : undefined,
+            amount: createdOrder.totalAmount,
+            currency: "LKR",
+            paymentType: "card",
+            status: "pending_payment",
+            cardDetails: { simulated: false },
+        });
+
+        payHereCheckout = buildPayHereCheckout({
+            order: createdOrder,
+            payment: createdCardPayment,
+            email: normalizeEmail(user?.email || guestEmailNormalized || ""),
+        });
+    }
 
     if (isBankTransferPayment) {
         const referenceNumber = await generateUniqueReference(
@@ -618,6 +731,13 @@ const createOrder = catchAsync(async (req, res, next) => {
                 amount: createdManualPayment.amount,
             }
             : null,
+        cardPayment: createdCardPayment
+            ? {
+                referenceNumber: createdCardPayment.referenceNumber,
+                amount: createdCardPayment.amount,
+            }
+            : null,
+        payHere: payHereCheckout,
         guestEmail: guestEmailNormalized || null,
         // True when a guest checked out with an email that already has an
         // account — the order was linked to it; the frontend invites sign-in.
