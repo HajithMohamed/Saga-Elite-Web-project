@@ -75,7 +75,7 @@ const NotificationsDropdown = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-h-[420px] min-w-[24rem] overflow-hidden overflow-y-auto rounded-2xl border border-gray-800 bg-page text-ink shadow-2xl">
+        <div className="absolute right-[-1rem] sm:right-0 z-50 mt-2 w-[calc(100vw-2rem)] max-h-[420px] sm:w-96 sm:min-w-[24rem] overflow-hidden overflow-y-auto rounded-2xl border border-gray-800 bg-page text-ink shadow-2xl">
           <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Notifications</p>

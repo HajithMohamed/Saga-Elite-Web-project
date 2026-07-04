@@ -117,14 +117,23 @@ const resolveCategoryValues = async (value) => {
       { name: { $regex: `^${escapeRegex(raw)}$`, $options: "i" } },
     ],
   })
-    .select("slug name")
+    .select("_id slug name")
     .lean();
 
   const values = new Set([raw, normalized]);
-  categories.forEach((category) => {
-    if (category.slug) values.add(category.slug);
-    if (category.name) values.add(category.name);
-  });
+  
+  if (categories.length > 0) {
+    const parentIds = categories.map((c) => c._id);
+    const childCategories = await Category.find({ parentCategory: { $in: parentIds } })
+      .select("slug name")
+      .lean();
+      
+    const allCategories = [...categories, ...childCategories];
+    allCategories.forEach((category) => {
+      if (category.slug) values.add(category.slug);
+      if (category.name) values.add(category.name);
+    });
+  }
 
   return [...values].filter(Boolean);
 };

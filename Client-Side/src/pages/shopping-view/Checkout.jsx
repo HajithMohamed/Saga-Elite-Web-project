@@ -1164,15 +1164,7 @@ const Checkout = () => {
       return;
     }
 
-    // Guest + bank transfer requires OTP verification (Fix #3).
-    if (
-      !isAuthenticated &&
-      formData.paymentMethod === "manual_bank_transfer" &&
-      !guestVerified
-    ) {
-      setOtpModal({ open: true, sending: false, sent: false, code: "", verifying: false });
-      return;
-    }
+    // Guest + bank transfer check removed as per requirements.
 
     // Structured address payload for persistence (Fix #4) — stores the
     // PERMANENT address so the next checkout auto-fills it. Pickup keeps the

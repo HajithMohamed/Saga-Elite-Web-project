@@ -190,20 +190,17 @@ const OffersPage = () => {
               <Reveal key={offer._id || i}>
                 <div className="bg-card rounded-[24px] border border-ink/5 overflow-hidden flex flex-col md:flex-row group">
                   {/* Banner Image */}
-                  <div className="w-full md:w-1/2 lg:w-3/5 relative overflow-hidden">
-                     {/* Aspect Ratio 16:5 approximation on desktop, but letting flex handle it nicely */}
-                    <div className="absolute inset-0 pb-[40%] md:pb-[31%]">
-                        <img
-                          src={offer.image || "/LOGO.png"}
-                          alt={offer.name}
-                          loading={i < 2 ? "eager" : "lazy"}
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+                  <div className="w-full md:w-1/2 lg:w-3/5 relative overflow-hidden aspect-[4/3] md:aspect-auto">
+                    <img
+                      src={offer.image || "/LOGO.png"}
+                      alt={offer.name}
+                      loading={i < 2 ? "eager" : "lazy"}
+                      className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+                    <div className="absolute top-4 left-4 px-4 py-2 bg-gold text-ongold font-sans font-bold text-[12px] uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-lg z-10">
+                      <Percent className="w-4 h-4" /> {offer.discountPercent}% OFF
                     </div>
-                     <div className="absolute top-4 left-4 px-4 py-2 bg-gold text-ongold font-sans font-bold text-[12px] uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-lg">
-                        <Percent className="w-4 h-4" /> {offer.discountPercent}% OFF
-                      </div>
                   </div>
                   
                   {/* Info */}
