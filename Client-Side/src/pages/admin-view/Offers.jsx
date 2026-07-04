@@ -990,7 +990,7 @@ const AdminOffers = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl p-6 text-ink">
+    <div className="w-full p-4 text-ink md:p-6">
       <div className="mb-8 flex items-center justify-between border-b border-ink/[0.06] pb-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-ink">
