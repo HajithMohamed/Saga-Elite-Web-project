@@ -178,25 +178,26 @@ const parseOriginList = (value) =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
+const normalizeOrigin = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\/+$/, "")
+    .toLowerCase();
+
 const socketOrigins = new Set();
 
-if (process.env.CLIENT_URL) {
-  socketOrigins.add(process.env.CLIENT_URL.trim());
-}
+const addSocketOrigin = (value) => {
+  const origin = normalizeOrigin(value);
+  if (origin) socketOrigins.add(origin);
+};
 
-if (process.env.FRONTEND_URL) {
-  socketOrigins.add(process.env.FRONTEND_URL.trim());
-}
-
-parseOriginList(process.env.FRONTEND_URLS).forEach((origin) => {
-  socketOrigins.add(origin);
-});
+addSocketOrigin(process.env.CLIENT_URL);
+addSocketOrigin(process.env.FRONTEND_URL);
+parseOriginList(process.env.FRONTEND_URLS).forEach(addSocketOrigin);
 
 if (process.env.NODE_ENV !== "production") {
   ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"].forEach(
-    (origin) => {
-      socketOrigins.add(origin);
-    }
+    addSocketOrigin
   );
 }
 

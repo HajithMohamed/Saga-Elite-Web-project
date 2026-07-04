@@ -20,6 +20,10 @@ const VerifyOtp = () => {
   const fallbackUserId = routerState?.userId;
 
   const resolvedUser = user?._id ? user : (fallbackUserId ? { _id: fallbackUserId, email: fallbackEmail } : null);
+  const [otp, setOtp] = useState("");
+  const [resending, setResending] = useState(false);
+  const [seconds, setSeconds] = useState(60);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     if (resolvedUser?.isVerified && !showSuccess) {
