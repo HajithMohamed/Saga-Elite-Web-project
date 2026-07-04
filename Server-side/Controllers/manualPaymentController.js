@@ -16,6 +16,16 @@ const { cleanPhoneNumber, parsePhoneList, sendWhatsAppMessage } = require("../Ut
 const logger = require("../Utils/logger");
 const uploadToCloudinary = require("../Utils/image-upload");
 const { processReceipt } = require("../Utils/receipt-ocr");
+const {
+  PAYHERE_STATUS,
+  isPayHereConfigured,
+  isPayHereSandbox,
+  getMerchantId,
+  getCheckoutUrl,
+  formatAmount,
+  generateCheckoutHash,
+  verifyNotifySignature,
+} = require("../Utils/payhere-service");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
 
@@ -765,6 +775,534 @@ const submitSampleCardPayment = catchAsync(async (req, res, next) => {
       orderId: order._id,
     },
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PayHere card payment
+//
+// Flow:
+//   1. Order is placed with paymentMethod "card" (order-controller) → the
+//      customer lands on the card-payment page.
+//   2. The page calls `initiatePayHereCardPayment` → we create/reuse a card
+//      ManualPayment record and return a PayHere-signed payment object.
+//   3. The browser hands that object to PayHere's JS SDK; the customer pays on
+//      PayHere's PCI-compliant popup (we never see PAN/CVV).
+//   4. PayHere calls `handlePayHereNotify` (server-to-server) — the single
+//      source of truth — which verifies the signature and confirms the order.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const trimTrailingSlash = (value) => String(value || "").replace(/\/+$/, "");
+
+// Public — the frontend uses this to decide whether to launch PayHere or fall
+// back to the legacy sample card form. Never exposes the merchant secret.
+const getPayHereConfig = catchAsync(async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      enabled: isPayHereConfigured(),
+      sandbox: isPayHereSandbox(),
+    },
+  });
+});
+
+// Shared notification/socket/email/WhatsApp fan-out for a card payment that has
+// been confirmed by the gateway. Mirrors the approve branch of verifyPayment.
+const notifyCardPaymentVerified = async (payment, order, source = "payhere") => {
+  const orderId = order?._id || payment.orderId?._id || payment.orderId;
+  const customerUserId =
+    order?.user?._id || order?.user || payment.userId?._id || payment.userId;
+  const customerEmail =
+    order?.user?.email || payment.userId?.email || order?.guestEmail || null;
+  const customerPhone = cleanPhoneNumber(order?.contactNumber);
+
+  if (customerUserId) {
+    await createNotification({
+      userId: customerUserId,
+      type: "order",
+      title: "Card payment successful",
+      message: `Your card payment for order ${orderId} was successful — your order is confirmed.`,
+      entityRef: orderId,
+      entityType: "Order",
+      meta: {
+        orderId,
+        referenceNumber: payment.referenceNumber,
+        paymentId: payment._id,
+        status: "verified",
+        paymentType: "card",
+        source,
+      },
+    });
+  }
+
+  await broadcastNotification({
+    type: "admin",
+    title: "Card payment received (PayHere)",
+    message: `Order ${orderId} was paid by card via PayHere. Reference ${payment.referenceNumber}.`,
+    entityRef: orderId,
+    entityType: "Order",
+    meta: {
+      orderId,
+      referenceNumber: payment.referenceNumber,
+      paymentId: payment._id,
+      status: "verified",
+      paymentType: "card",
+      source,
+    },
+    filter: { role: { $in: ADMIN_ROLES } },
+  });
+
+  if (customerEmail) {
+    try {
+      await sendEmail({
+        email: customerEmail,
+        subject: "Your Saga Elite card payment was successful",
+        html: buildEmailTemplate(
+          "Payment successful",
+          `<p>Thank you! Your card payment for order <strong>${orderId}</strong> was successful.</p>
+           <p><strong>Reference:</strong> ${payment.referenceNumber}</p>
+           <p><strong>Amount:</strong> ${payment.currency} ${formatCurrency(payment.amount)}</p>
+           <p>Your order is now confirmed and being prepared.</p>`
+        ),
+      });
+    } catch (emailError) {
+      logger.error("Failed to send card-payment success email", {
+        error: emailError?.message,
+      });
+    }
+  }
+
+  if (customerPhone) {
+    try {
+      await sendWhatsAppMessage({
+        to: customerPhone,
+        message: `Saga Elite: your card payment for order ${orderId} was successful. Your order is confirmed — thank you!`,
+      });
+    } catch (whatsAppError) {
+      logger.error("Failed to send card-payment success WhatsApp", {
+        error: whatsAppError?.message,
+      });
+    }
+  }
+
+  emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: `card-${source}-verified`,
+  });
+  emitToAll(SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: `card-${source}-verified`,
+  });
+  emitToAll(SOCKET_EVENTS.ORDER_REFRESH, {
+    userId: customerUserId,
+    orderId,
+    status: order?.status,
+    paymentStatus: order?.paymentStatus,
+    source: `card-${source}-verified`,
+  });
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: `card-${source}-verified`,
+    paymentId: payment._id,
+    orderId,
+    userId: customerUserId,
+  });
+};
+
+// Fan-out for a card payment the gateway reported as canceled/failed. The order
+// is held at verification_pending so the customer can retry or switch methods.
+const notifyCardPaymentFailed = async (payment, order, reason) => {
+  const orderId = order?._id || payment.orderId?._id || payment.orderId;
+  const customerUserId =
+    order?.user?._id || order?.user || payment.userId?._id || payment.userId;
+  const customerEmail =
+    order?.user?.email || payment.userId?.email || order?.guestEmail || null;
+  const detail = reason ? ` (${reason})` : "";
+
+  if (customerUserId) {
+    await createNotification({
+      userId: customerUserId,
+      type: "order",
+      title: "Card payment not completed",
+      message: `Your card payment for order ${orderId} did not go through${detail}. You can try again from your order.`,
+      entityRef: orderId,
+      entityType: "Order",
+      meta: {
+        orderId,
+        referenceNumber: payment.referenceNumber,
+        paymentId: payment._id,
+        status: "rejected",
+        paymentType: "card",
+      },
+    });
+  }
+
+  if (customerEmail) {
+    try {
+      await sendEmail({
+        email: customerEmail,
+        subject: "Your Saga Elite card payment didn't go through",
+        html: buildEmailTemplate(
+          "Card payment not completed",
+          `<p>We couldn't complete your card payment for order <strong>${orderId}</strong>${detail}.</p>
+           <p>Your order is still reserved for a short time — you can retry the payment or choose bank transfer instead.</p>`
+        ),
+      });
+    } catch (emailError) {
+      logger.error("Failed to send card-payment failed email", {
+        error: emailError?.message,
+      });
+    }
+  }
+
+  emitToUser(customerUserId, SOCKET_EVENTS.PAYMENT_REFRESH, {
+    userId: customerUserId,
+    paymentId: payment._id,
+    orderId,
+    referenceNumber: payment.referenceNumber,
+    status: payment.status,
+    source: "card-payhere-failed",
+  });
+  emitToAll(SOCKET_EVENTS.ADMIN_REFRESH, {
+    source: "card-payhere-failed",
+    paymentId: payment._id,
+    orderId,
+    userId: customerUserId,
+  });
+};
+
+const initiatePayHereCardPayment = catchAsync(async (req, res, next) => {
+  if (!isPayHereConfigured()) {
+    return next(new AppError("Card payments are not available right now", 503));
+  }
+
+  const { orderId } = req.body;
+  if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
+    return next(new AppError("A valid orderId is required", 400));
+  }
+
+  const order = await Order.findById(orderId).populate(
+    "user",
+    "email role profilePicture"
+  );
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (order.paymentMethod !== "card") {
+    return next(
+      new AppError("This order was not placed with a card payment method", 400)
+    );
+  }
+
+  if (
+    ["confirmed", "shipped", "delivered", "cancelled", "refunded"].includes(
+      order.status
+    )
+  ) {
+    return next(new AppError("This order can no longer accept card payments", 400));
+  }
+
+  // Authorize the payer — a logged-in user must own the order; a guest must
+  // present the email used at checkout (body or x-payment-email header).
+  if (req.userInfo?._id) {
+    const orderUserId = order.user?._id || order.user;
+    if (orderUserId && String(orderUserId) !== String(req.userInfo._id)) {
+      return next(new AppError("You are not authorized to pay for this order", 403));
+    }
+  } else {
+    const providedEmail = normalizeEmail(
+      req.body.email || req.headers["x-payment-email"] || ""
+    );
+    const expectedEmail = normalizeEmail(
+      order.guestEmail || order.user?.email || ""
+    );
+    if (!providedEmail || !expectedEmail || providedEmail !== expectedEmail) {
+      return next(
+        new AppError(
+          "Email does not match the order — please use the email you provided at checkout",
+          403
+        )
+      );
+    }
+  }
+
+  // Reuse an in-flight card record if the customer relaunched the popup;
+  // otherwise create one. The referenceNumber doubles as the PayHere order_id
+  // so the notify webhook can map back to this payment.
+  let payment = await ManualPayment.findOne({
+    orderId: order._id,
+    paymentType: "card",
+    status: { $in: ACTIVE_STATUSES },
+  });
+
+  if (!payment) {
+    const referenceNumber = await generateUniqueReference(order._id, ManualPayment);
+    payment = await ManualPayment.create({
+      referenceNumber,
+      orderId: order._id,
+      userId: order.user?._id || order.user || undefined,
+      amount: Number(order.totalAmount),
+      currency: "LKR",
+      paymentType: "card",
+      status: "pending_payment",
+      cardDetails: { simulated: false },
+    });
+  } else if (Number(payment.amount) !== Number(order.totalAmount)) {
+    // Keep the record's amount aligned with the order total so the hash we sign
+    // always matches what PayHere will charge.
+    payment.amount = Number(order.totalAmount);
+    await payment.save({ validateModifiedOnly: true });
+  }
+
+  const merchantId = getMerchantId();
+  const currency = "LKR";
+  const amount = Number(order.totalAmount);
+  const orderRef = payment.referenceNumber;
+  const hash = generateCheckoutHash({
+    merchantId,
+    orderId: orderRef,
+    amount,
+    currency,
+  });
+
+  const email = normalizeEmail(
+    order.user?.email || order.guestEmail || req.body.email || ""
+  );
+  const rawName = String(
+    req.body.customerName ||
+      `${req.body.firstName || ""} ${req.body.lastName || ""}`
+  ).trim();
+  const fallbackName = email ? email.split("@")[0] : "Saga";
+  const [firstNameRaw, ...restName] = (rawName || fallbackName).split(/\s+/);
+  // PayHere requires a non-empty first_name / last_name.
+  const firstName = firstNameRaw || "Saga";
+  const lastName = restName.join(" ") || "Customer";
+
+  const backendUrl = trimTrailingSlash(process.env.BACKEND_URL || "");
+  const notifyUrl =
+    process.env.PAYHERE_NOTIFY_URL ||
+    (backendUrl ? `${backendUrl}/api/webhooks/payhere` : "");
+  const shopUrl = trimTrailingSlash(clientShopUrl());
+  const returnUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=success`;
+  const cancelUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=cancelled`;
+
+  if (!notifyUrl) {
+    logger.warn(
+      "PayHere initiate: BACKEND_URL / PAYHERE_NOTIFY_URL is not set — the notify webhook will not fire, so payments cannot auto-confirm"
+    );
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "PayHere payment initiated",
+    data: {
+      sandbox: isPayHereSandbox(),
+      checkoutUrl: getCheckoutUrl(),
+      referenceNumber: orderRef,
+      orderId: order._id,
+      amount: formatAmount(amount),
+      currency,
+      payment: {
+        sandbox: isPayHereSandbox(),
+        merchant_id: merchantId,
+        return_url: returnUrl,
+        cancel_url: cancelUrl,
+        notify_url: notifyUrl,
+        order_id: orderRef,
+        items: `Saga Elite Order ${order._id}`,
+        amount: formatAmount(amount),
+        currency,
+        hash,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone: order.contactNumber || "",
+        address: String(order.shippingAddress || "").slice(0, 200) || "N/A",
+        city: String(req.body.city || "").trim() || "N/A",
+        country: "Sri Lanka",
+      },
+    },
+  });
+});
+
+// Server-to-server notify_url handler — the single source of truth for a
+// PayHere card payment. PayHere POSTs application/x-www-form-urlencoded here.
+const handlePayHereNotify = catchAsync(async (req, res) => {
+  const {
+    merchant_id: merchantId,
+    order_id: orderRef,
+    payment_id: paymentId,
+    payhere_amount: payhereAmount,
+    payhere_currency: payhereCurrency,
+    status_code: statusCode,
+    md5sig: receivedSig,
+    method,
+    status_message: statusMessage,
+    card_holder_name: cardHolderName,
+    card_no: cardNo,
+  } = req.body || {};
+
+  if (!isPayHereConfigured()) {
+    logger.error("PayHere notify received but the gateway is not configured");
+    return res.status(503).send("PayHere not configured");
+  }
+
+  // The signature is the gate: only a callback PayHere actually signed with our
+  // merchant secret is trusted. Everything else is rejected without side effects.
+  const signatureValid = verifyNotifySignature({
+    merchantId,
+    orderId: orderRef,
+    payhereAmount,
+    payhereCurrency,
+    statusCode,
+    receivedSig,
+  });
+
+  if (merchantId !== getMerchantId() || !signatureValid) {
+    logger.warn("PayHere notify rejected: signature/merchant mismatch", {
+      orderRef,
+      merchantId,
+    });
+    return res.status(403).send("Invalid signature");
+  }
+
+  const payment = await ManualPayment.findOne({
+    referenceNumber: String(orderRef || "").toUpperCase(),
+  })
+    .populate({
+      path: "orderId",
+      populate: { path: "user", select: "email role profilePicture" },
+    })
+    .populate("userId", "email role profilePicture");
+
+  if (!payment) {
+    // Ack so PayHere stops retrying — a missing record won't appear on retry.
+    logger.warn("PayHere notify: no payment found for reference", { orderRef });
+    return res.status(200).send("OK");
+  }
+
+  // Always record the raw gateway response for audit, even on duplicate hits.
+  payment.payhere = {
+    paymentId: paymentId || payment.payhere?.paymentId || null,
+    statusCode: String(statusCode ?? ""),
+    statusMessage: statusMessage || null,
+    method: method || null,
+    capturedAmount: payhereAmount != null ? Number(payhereAmount) : null,
+    capturedCurrency: payhereCurrency || null,
+    notifiedAt: new Date(),
+  };
+  payment.paymentType = "card";
+
+  const order = payment.orderId;
+
+  // Idempotency — PayHere retries notifications. Never re-run confirmation side
+  // effects once we've verified this payment.
+  if (payment.status === "verified") {
+    await payment.save({ validateModifiedOnly: true });
+    return res.status(200).send("OK");
+  }
+
+  if (String(statusCode) === PAYHERE_STATUS.SUCCESS) {
+    // Amount-tamper guard — the signed payhere_amount must equal the order
+    // total. A mismatch is held for manual admin review, never auto-confirmed.
+    const expected = formatAmount(payment.amount);
+    const captured = formatAmount(payhereAmount);
+
+    payment.cardDetails = {
+      ...(payment.cardDetails?.toObject?.() || payment.cardDetails || {}),
+      cardholderName: cardHolderName || payment.cardDetails?.cardholderName || null,
+      last4: cardNo
+        ? String(cardNo).replace(/\D/g, "").slice(-4)
+        : payment.cardDetails?.last4 || null,
+      brand: method || payment.cardDetails?.brand || null,
+      gatewayReference: paymentId || payment.cardDetails?.gatewayReference || null,
+      simulated: false,
+    };
+
+    if (expected !== captured) {
+      payment.status = "proof_submitted";
+      payment.adminNotes = `PayHere amount mismatch: expected ${expected}, received ${captured}. Held for manual review.`;
+      await payment.save({ validateModifiedOnly: true });
+
+      if (order) {
+        await syncOrderWithPayment(order, payment, {
+          status: "verification_pending",
+          paymentStatus: "pending",
+          clearExpiry: true,
+        });
+      }
+
+      await broadcastNotification({
+        type: "admin",
+        title: "PayHere payment needs review (amount mismatch)",
+        message: `Order ${order?._id || orderRef}: PayHere charged ${captured} but the order total is ${expected}. Reference ${payment.referenceNumber}.`,
+        entityRef: order?._id,
+        entityType: "ManualPayment",
+        meta: {
+          orderId: order?._id,
+          referenceNumber: payment.referenceNumber,
+          paymentId: payment._id,
+          status: payment.status,
+          paymentType: "card",
+        },
+        filter: { role: { $in: ADMIN_ROLES } },
+      });
+
+      logger.error("PayHere amount mismatch held for review", {
+        orderRef,
+        expected,
+        captured,
+      });
+      return res.status(200).send("OK");
+    }
+
+    payment.status = "verified";
+    payment.verifiedAt = new Date();
+    payment.rejectionReason = null;
+    await payment.save({ validateModifiedOnly: true });
+
+    if (order) {
+      await syncOrderWithPayment(order, payment, {
+        status: "confirmed",
+        paymentStatus: "paid",
+        clearExpiry: true,
+      });
+    }
+
+    await notifyCardPaymentVerified(payment, order, "payhere");
+    return res.status(200).send("OK");
+  }
+
+  // PayHere "pending" (rare for cards — e.g. bank-backed instruments). Leave the
+  // record open so a later success/failure notification can resolve it.
+  if (String(statusCode) === PAYHERE_STATUS.PENDING) {
+    payment.status = "pending_payment";
+    await payment.save({ validateModifiedOnly: true });
+    return res.status(200).send("OK");
+  }
+
+  // Canceled / failed / chargedback.
+  payment.status = "rejected";
+  payment.rejectionReason = statusMessage || "Card payment was not completed.";
+  await payment.save({ validateModifiedOnly: true });
+
+  if (order) {
+    await syncOrderWithPayment(order, payment, {
+      status: "verification_pending",
+      paymentStatus: "failed",
+      clearExpiry: true,
+    });
+  }
+
+  await notifyCardPaymentFailed(payment, order, statusMessage);
+  return res.status(200).send("OK");
 });
 
 // New flow: customer submits the receipt file directly. We OCR the file before
@@ -1715,6 +2253,9 @@ module.exports = {
   submitProof,
   submitWithReceipt,
   submitSampleCardPayment,
+  getPayHereConfig,
+  initiatePayHereCardPayment,
+  handlePayHereNotify,
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,

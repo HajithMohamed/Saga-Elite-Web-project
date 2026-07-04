@@ -17,6 +17,8 @@ const {
   submitProof,
   submitWithReceipt,
   submitSampleCardPayment,
+  getPayHereConfig,
+  initiatePayHereCardPayment,
   getMyPaymentStatus,
   getMyPendingPayments,
   getPendingPayments,
@@ -64,13 +66,22 @@ router.post(
   receiptUpload.single("receipt"),
   submitWithReceipt
 );
-// Sample/demo card payment — placeholder for the real PayHere integration.
+// Sample/demo card payment — fallback used only when PayHere is NOT configured.
 // Records last4 + brand only; full PAN and CVV are never persisted.
 router.post(
   "/card-payment/submit-sample",
   optionalAuthMiddleware,
   validateSampleCardPayment,
   submitSampleCardPayment
+);
+// PayHere: public config (enabled/sandbox) + signed payment initiation. The
+// server-to-server notify webhook is mounted separately at /api/webhooks/payhere
+// (it needs a urlencoded body parser and no auth/CORS).
+router.get("/card-payment/payhere/config", getPayHereConfig);
+router.post(
+  "/card-payment/payhere/initiate",
+  optionalAuthMiddleware,
+  initiatePayHereCardPayment
 );
 router.get(
   "/manual-payment/status/:paymentIdentifier",

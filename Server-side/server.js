@@ -129,6 +129,7 @@ app.get("/health", (_req, res) => {
 /* ================== API ROUTES ================== */
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
 app.use("/api/webhooks/bank-sms", require("./Routes/bank-sms-webhook-routes"));
+app.use("/api/webhooks/payhere", require("./Routes/payhere-webhook-routes"));
 
 // Dev-only test routes. The router self-blocks production via NODE_ENV
 // checks in every handler, but we also gate the mount itself so we don't

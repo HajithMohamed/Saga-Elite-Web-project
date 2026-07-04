@@ -123,9 +123,9 @@ const PAYMENT_METHODS = [
   {
     id: "card",
     label: "Card Payment",
-    sublabel: "Visa · Mastercard",
-    description: "Secure checkout on our demo gateway (PayHere wires in post-hosting).",
-    badge: "Demo mode",
+    sublabel: "Visa · Mastercard · Amex",
+    description: "Pay securely online via PayHere. Your card details never touch our servers.",
+    badge: "Secure",
     icon: CreditCard,
   },
   {
@@ -1709,7 +1709,7 @@ const Checkout = () => {
                                   <div className="p-6 flex flex-col items-center text-center gap-3">
                                     <Lock className="w-8 h-8 text-line" />
                                     <p className="text-[11px] text-muted max-w-xs leading-relaxed">
-                                      You will be redirected to our secure payment gateway after placing your order.
+                                      After placing your order you'll complete payment on PayHere's secure window — your card details are never stored on our servers.
                                     </p>
                                   </div>
                                 </motion.div>

@@ -46,6 +46,9 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
   const fbAppSecret = env("FACEBOOK_APP_SECRET");
   const openAiKey = env("OPENAI_API_KEY");
   const openAiModel = env("OPENAI_MODEL") || "gpt-4o-mini";
+  const payhereMerchantId = env("PAYHERE_MERCHANT_ID");
+  const payhereSecret = env("PAYHERE_MERCHANT_SECRET");
+  const payhereSandbox = env("PAYHERE_SANDBOX").toLowerCase() !== "false";
   const mongoUri = env("MONGO_DB_URI", "MONGO_URI", "MONGODB_URI");
   const frontendUrl = env("FRONTEND_URL", "FRONTEND_URLS", "CLIENT_URL");
 
@@ -105,6 +108,15 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
       configured: Boolean(openAiKey),
       maskedIdentifier: openAiKey ? openAiModel : "",
       envHint: "OPENAI_API_KEY, OPENAI_MODEL",
+    },
+    {
+      service: "PayHere (Card Payments)",
+      description: `Online card checkout — ${
+        payhereSandbox ? "sandbox" : "LIVE"
+      } mode. Needs BACKEND_URL set for the notify webhook.`,
+      configured: Boolean(payhereMerchantId && payhereSecret),
+      maskedIdentifier: payhereMerchantId ? maskText(payhereMerchantId) : "",
+      envHint: "PAYHERE_MERCHANT_ID, PAYHERE_MERCHANT_SECRET, PAYHERE_SANDBOX",
     },
     {
       service: "Frontend URL (CORS)",
