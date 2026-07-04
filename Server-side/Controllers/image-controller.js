@@ -166,18 +166,23 @@ const uploadImages = catchAsync(async (req, res, next) => {
     imageData.refModel.charAt(0).toUpperCase() +
     imageData.refModel.slice(1).toLowerCase();
 
-  const validRefModels = ["Product", "Drop", "System", "Review"];
+  const validRefModels = ["Product", "Drop", "System", "Review", "Siteconfig", "Offer"];
   if (!validRefModels.includes(imageData.refModel)) {
     return next(new AppError("Invalid refModel", 400));
   }
 
-  // System images don't require refId
-  if (imageData.refModel !== "System" && !imageData.refId) {
-    return next(new AppError("refId is required for non-System images", 400));
+  // System, Siteconfig, Offer images don't require valid ObjectId refId
+  if (imageData.refModel !== "System" && imageData.refModel !== "Siteconfig" && imageData.refModel !== "Offer" && !imageData.refId) {
+    return next(new AppError("refId is required for this image type", 400));
   }
 
-  // Validate ObjectId for non-System
-  if (imageData.refModel !== "System" && !mongoose.Types.ObjectId.isValid(imageData.refId)) {
+  // Validate ObjectId for standard entities
+  if (
+    imageData.refModel !== "System" && 
+    imageData.refModel !== "Siteconfig" && 
+    imageData.refModel !== "Offer" && 
+    !mongoose.Types.ObjectId.isValid(imageData.refId)
+  ) {
     return next(new AppError("Invalid refId", 400));
   }
 
