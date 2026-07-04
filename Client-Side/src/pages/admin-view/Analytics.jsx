@@ -22,6 +22,9 @@ import {
   Cell,
   BarChart,
   Bar,
+  AreaChart,
+  Area,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
@@ -55,6 +58,14 @@ const formatCurrency = (value) =>
 
 const formatNumber = (value) =>
   Number(value || 0).toLocaleString("en-LK");
+
+// Compact axis labels for the revenue chart (e.g. 1.2M, 45K).
+const compactCurrency = (value) => {
+  const n = Number(value) || 0;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(Math.round(n));
+};
 
 const formatPercent = (value) =>
   `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -146,7 +157,11 @@ const SalesTab = ({ data, range, onRangeChange }) => {
   const summary = data.summary || {};
   const daily = data.daily || [];
   const paymentMethods = data.paymentMethods || [];
-  const maxRevenue = Math.max(...daily.map((d) => d.revenue), 1);
+  const revenueTrend = daily.map((d) => ({
+    label: formatShortDate(d.date),
+    revenue: Number(d.revenue) || 0,
+    orders: Number(d.orders) || 0,
+  }));
 
   return (
     <div className="space-y-6">
@@ -202,28 +217,58 @@ const SalesTab = ({ data, range, onRangeChange }) => {
             No orders in this range.
           </p>
         ) : (
-          <div className="space-y-1.5">
-            {daily.map((d) => (
-              <div key={d.date} className="flex items-center gap-3 text-xs">
-                <span className="w-20 shrink-0 font-mono text-[10px] text-muted">
-                  {formatShortDate(d.date)}
-                </span>
-                <div className="h-1.5 flex-1 overflow-hidden bg-card">
-                  <div
-                    className="h-full bg-gold transition-all duration-700"
-                    style={{
-                      width: `${Math.max(2, (d.revenue / maxRevenue) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <span className="w-32 text-right text-gold-ink">
-                  {formatCurrency(d.revenue)}
-                </span>
-                <span className="w-12 text-right font-mono text-[10px] text-muted">
-                  {d.orders}
-                </span>
-              </div>
-            ))}
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={revenueTrend}
+                margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="salesRevFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#D4AF37" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="#D4AF37" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.05)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#99907c", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#99907c", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={52}
+                  tickFormatter={compactCurrency}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0a0a0a",
+                    border: "1px solid #2a2a2a",
+                    fontSize: 12,
+                  }}
+                  labelStyle={{ color: "#99907c" }}
+                  formatter={(value, name) =>
+                    name === "revenue"
+                      ? [formatCurrency(value), "Revenue"]
+                      : [formatNumber(value), "Orders"]
+                  }
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#D4AF37"
+                  strokeWidth={2}
+                  fill="url(#salesRevFill)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>

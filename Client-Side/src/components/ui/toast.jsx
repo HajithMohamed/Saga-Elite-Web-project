@@ -12,7 +12,10 @@ const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] flex max-h-screen w-full flex-col-reverse gap-3 p-4",
+      // z-[300] keeps toasts above every overlay (the auth drawer sits at
+      // z-[201]) — otherwise error/success toasts render *behind* the drawer
+      // backdrop and the user never sees them.
+      "fixed z-[300] flex max-h-screen w-full flex-col-reverse gap-3 p-4",
       "bottom-0 left-1/2 -translate-x-1/2", // mobile bottom-center
       "sm:bottom-6 sm:right-6 sm:left-auto sm:translate-x-0 sm:max-w-[400px]", // desktop bottom-right
       className
