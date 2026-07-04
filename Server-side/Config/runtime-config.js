@@ -18,8 +18,8 @@ const validateRuntimeConfig = () => {
   }
 
   requireProductionConfig(
-    process.env.FRONTEND_URL || process.env.FRONTEND_URLS,
-    "Production CORS requires FRONTEND_URL or FRONTEND_URLS to be configured"
+    process.env.FRONTEND_URL || process.env.FRONTEND_URLS || process.env.CLIENT_URL,
+    "Production CORS requires FRONTEND_URL, FRONTEND_URLS, or CLIENT_URL to be configured"
   );
 };
 

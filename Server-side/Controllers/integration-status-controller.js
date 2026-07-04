@@ -47,7 +47,7 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
   const openAiKey = env("OPENAI_API_KEY");
   const openAiModel = env("OPENAI_MODEL") || "gpt-4o-mini";
   const mongoUri = env("MONGO_DB_URI", "MONGO_URI", "MONGODB_URI");
-  const frontendUrl = env("FRONTEND_URL", "FRONTEND_URLS");
+  const frontendUrl = env("FRONTEND_URL", "FRONTEND_URLS", "CLIENT_URL");
 
   const services = [
     {
@@ -111,7 +111,7 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
       description: "Allowed origins for production CORS.",
       configured: Boolean(frontendUrl),
       maskedIdentifier: frontendUrl ? frontendUrl.split(",")[0] : "",
-      envHint: "FRONTEND_URL / FRONTEND_URLS",
+      envHint: "FRONTEND_URL / FRONTEND_URLS / CLIENT_URL",
     },
   ];
 
