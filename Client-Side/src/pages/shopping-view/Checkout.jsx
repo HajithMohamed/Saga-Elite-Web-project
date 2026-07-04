@@ -1158,6 +1158,16 @@ const Checkout = () => {
       const manualPaymentRef = response?.manualPayment?.referenceNumber || null;
       const guestEmailReturned = response?.guestEmail || formData.email || null;
 
+      // Guest checked out with an email that already has an account — the order
+      // was linked to it. Let them know so they can sign in to track it.
+      if (response?.linkedToAccount) {
+        toast({
+          title: "This email already has a Saga Elite account",
+          description:
+            "We've linked this order to your account — sign in with this email to track it in your order history.",
+        });
+      }
+
       persistBuyNowItem(null);
       clearPersisted();
 
