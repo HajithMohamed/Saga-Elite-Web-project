@@ -48,6 +48,12 @@ const DEFAULT_CORE_VALUES = [
   { icon: Headphones, title: "Trusted Service" },
 ];
 
+const DEFAULT_STORY_PARAGRAPHS = [
+  "Saga Elite was born out of a desire to elevate the online shopping experience in Sri Lanka. We noticed a gap in the market for a trusted, premium destination that offered not just clothes, but a complete lifestyle experience.",
+  "We believe that premium quality shouldn't be hard to find. By carefully curating every piece in our collection, we ensure that our customers receive only the best in fashion, footwear, and accessories.",
+  "Our vision for the future is simple: to become the most trusted and sought-after luxury fashion retailer in Sri Lanka, continuously bringing exclusive drops and exceptional service to our elite community.",
+];
+
 const GlassCard = ({ children, className = "" }) => (
   <div className={`rounded-[20px] bg-card border border-ink/5 backdrop-blur-md ${className}`}>
     {children}
@@ -72,6 +78,17 @@ const AboutPage = () => {
   const heroCtaUrl = about?.about_hero_cta_url?.trim() || "/shopping/product-list";
   const storyImage = about?.about_story_image?.trim() || "";
   const brandName = about?.shop_brand_name?.trim() || "Saga Elite";
+
+  const storyParagraphs = useMemo(() => {
+    const raw = about?.about_brand_story;
+    const rows = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    const normalized = rows
+      .map((row) => (typeof row === "string" ? row : row?.text || ""))
+      .map((row) => row.trim())
+      .filter(Boolean);
+
+    return normalized.length ? normalized : DEFAULT_STORY_PARAGRAPHS;
+  }, [about?.about_brand_story]);
 
   const timeline = useMemo(() => {
     const rows = Array.isArray(about?.about_timeline) ? about.about_timeline.filter((r) => r?.year && r?.milestone) : [];
@@ -162,15 +179,9 @@ const AboutPage = () => {
           <Reveal>
             <h2 className="se-serif text-[36px] text-ink mb-6">Our Story</h2>
             <div className="se-body text-muted space-y-6 text-[16px] leading-relaxed">
-              <p>
-                {about?.about_brand_story || `Saga Elite was born out of a desire to elevate the online shopping experience in Sri Lanka. We noticed a gap in the market for a trusted, premium destination that offered not just clothes, but a complete lifestyle experience.`}
-              </p>
-              <p>
-                {`We believe that premium quality shouldn't be hard to find. By carefully curating every piece in our collection, we ensure that our customers receive only the best in fashion, footwear, and accessories.`}
-              </p>
-              <p>
-                {`Our vision for the future is simple: to become the most trusted and sought-after luxury fashion retailer in Sri Lanka, continuously bringing exclusive drops and exceptional service to our elite community.`}
-              </p>
+              {storyParagraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
             </div>
           </Reveal>
           {storyImage ? (
