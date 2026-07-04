@@ -27,6 +27,7 @@ import {
   Crown,
   History,
   GalleryHorizontal,
+  X,
 } from "lucide-react";
 import { API_V1_URL as API_BASE } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -176,10 +177,28 @@ const ensureArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Uploads a single file via the same multipart endpoint as ImageUpload.jsx
 // but stores just a URL string in form state.
 
-const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
+const ImagePicker = ({
+  value,
+  onChange,
+  label = "Upload image",
+  configKey,
+  onSaved,
+}) => {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const inputRef = React.useRef(null);
+
+  const saveImageValue = async (url) => {
+    if (!configKey) return;
+
+    await axios.put(
+      `${API_BASE}/site-config/${configKey}`,
+      { value: url, label: configKey },
+      { withCredentials: true }
+    );
+    invalidateShopAbout();
+    if (onSaved) onSaved(url);
+  };
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -199,7 +218,11 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
       const url = res.data?.images?.[0]?.url || res.data?.url;
       if (!url) throw new Error("Upload returned no URL");
       onChange(url);
-      toast({ title: "Image uploaded", variant: "success" });
+      await saveImageValue(url);
+      toast({
+        title: configKey ? "Image uploaded and saved" : "Image uploaded",
+        variant: "success",
+      });
     } catch (err) {
       toast({
         title: "Upload failed",
@@ -209,6 +232,26 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    setBusy(true);
+    try {
+      onChange("");
+      await saveImageValue("");
+      toast({
+        title: configKey ? "Image removed and saved" : "Image removed",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Remove failed",
+        description: err?.response?.data?.message || err?.message || "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -244,11 +287,13 @@ const ImagePicker = ({ value, onChange, label = "Upload image" }) => {
           {value ? (
             <button
               type="button"
-              onClick={() => onChange("")}
+              onClick={handleRemove}
               disabled={busy}
-              className="text-[10px] uppercase tracking-[0.18em] text-rose-300 hover:text-rose-200"
+              aria-label="Remove image"
+              title="Remove image"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-300/25 bg-rose-950/20 text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Remove
+              <X className="h-3.5 w-3.5" />
             </button>
           ) : null}
         </div>
@@ -409,6 +454,10 @@ const AboutSiteConfig = () => {
     setValues((current) => ({ ...current, [key]: val }));
   };
 
+  const markFieldSaved = (key, val) => {
+    setOriginal((current) => ({ ...current, [key]: val }));
+  };
+
   // Sequential PUTs for changed keys. The backend logs each via
   // adminLogMiddleware so we get a per-key audit trail.
   const persist = async (keys) => {
@@ -509,6 +558,8 @@ const AboutSiteConfig = () => {
         <ImagePicker
           value={values.shop_logo_url}
           onChange={(v) => setField("shop_logo_url", v)}
+          configKey="shop_logo_url"
+          onSaved={(v) => markFieldSaved("shop_logo_url", v)}
           label="Upload logo"
           guidelines={{ dims: "512×512", aspect: "1:1", maxSize: "2 MB", formats: "PNG / SVG / WEBP" }}
         />
@@ -572,6 +623,8 @@ const AboutSiteConfig = () => {
           <ImagePicker
             value={values.about_hero_image}
             onChange={(v) => setField("about_hero_image", v)}
+            configKey="about_hero_image"
+            onSaved={(v) => markFieldSaved("about_hero_image", v)}
             label="Upload hero image"
           />
         </FieldShell>
@@ -617,6 +670,8 @@ const AboutSiteConfig = () => {
           <ImagePicker
             value={values.about_story_image}
             onChange={(v) => setField("about_story_image", v)}
+            configKey="about_story_image"
+            onSaved={(v) => markFieldSaved("about_story_image", v)}
             label="Upload story image"
           />
         </FieldShell>
@@ -646,6 +701,8 @@ const AboutSiteConfig = () => {
         <ImagePicker
           value={values.shop_founder_photo_url}
           onChange={(v) => setField("shop_founder_photo_url", v)}
+          configKey="shop_founder_photo_url"
+          onSaved={(v) => markFieldSaved("shop_founder_photo_url", v)}
           label="Upload photo"
         />
       </FieldShell>
