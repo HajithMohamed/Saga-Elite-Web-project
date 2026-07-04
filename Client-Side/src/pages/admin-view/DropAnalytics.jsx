@@ -119,7 +119,7 @@ export default function DropAnalytics() {
             <select
               value={selectedDrop}
               onChange={(e) => setSelectedDrop(e.target.value)}
-              className="w-full bg-card text-ink border border-ink/20 rounded-md px-4 py-3 focus:outline-none focus:border-gold-ink2"
+              className="admin-select w-full"
             >
               <option value="">-- Choose Drop --</option>
               {drops.map(d => (

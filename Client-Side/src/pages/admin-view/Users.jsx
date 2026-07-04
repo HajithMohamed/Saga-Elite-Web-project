@@ -567,20 +567,20 @@ const UsersPage = () => {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <label className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
                       value={searchTerm}
                       onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                       placeholder="Search customers..."
-                      className="h-9 w-64 rounded-sm border border-ink/10 bg-black/60 pl-9 pr-3 text-xs text-ink outline-none focus:border-gold-ink2/50 transition"
+                      className="admin-input w-64 !pl-10"
                     />
                   </label>
                   <select
                     value={statusFilter}
                     onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    className="h-9 rounded-sm border border-ink/10 bg-black/60 px-3 text-xs text-ink outline-none focus:border-gold-ink2/50"
+                    className="admin-select"
                   >
                     <option value="all">Any Status</option>
                     <option value="active">Active</option>

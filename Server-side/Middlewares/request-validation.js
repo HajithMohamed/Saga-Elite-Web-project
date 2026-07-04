@@ -1417,7 +1417,7 @@ const validateBulkReviewAction = createValidationMiddleware((req) => {
 
   const action = sanitizeEnum(
     req.body.action,
-    ["feature", "unfeature", "category", "archive", "restore"],
+    ["feature", "unfeature", "category", "archive", "restore", "delete"],
     "action",
     { required: true }
   );

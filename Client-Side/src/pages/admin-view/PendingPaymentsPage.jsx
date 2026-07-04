@@ -425,7 +425,7 @@ const PendingPaymentsPage = () => {
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="w-full appearance-none rounded-2xl border border-ink/10 bg-black/80 py-3 pl-4 pr-4 text-sm text-ink outline-none focus:border-gold-ink2"
+                  className="admin-select w-full"
                 >
                   {statusOptions.map((option) => (
                     <option key={option.value} value={option.value}>

@@ -13,6 +13,7 @@ import {
   featureReviewApi,
   archiveReviewApi,
   restoreReviewApi,
+  deleteAdminReviewApi,
   fetchReviewAnalyticsApi,
   bulkModerateReviewsApi,
 } from "@/api/reviewAPI";
@@ -253,6 +254,20 @@ export const restoreReview = createAsyncThunk(
   }
 );
 
+export const deleteAdminReview = createAsyncThunk(
+  "review/deleteAdminReview",
+  async (reviewId, thunkAPI) => {
+    try {
+      const response = await deleteAdminReviewApi(reviewId);
+      return { ...response.data, reviewId };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        unwrapError(error, "Failed to delete review")
+      );
+    }
+  }
+);
+
 export const fetchReviewAnalytics = createAsyncThunk(
   "review/fetchReviewAnalytics",
   async (_, thunkAPI) => {
@@ -442,6 +457,15 @@ const reviewSlice = createSlice({
         );
       })
       .addCase(restoreReview.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(deleteAdminReview.fulfilled, (state, action) => {
+        const { reviewId } = action.payload;
+        state.adminReviews = state.adminReviews.filter(
+          (review) => review._id !== reviewId
+        );
+      })
+      .addCase(deleteAdminReview.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
       })
       .addCase(fetchReviewAnalytics.fulfilled, (state, action) => {

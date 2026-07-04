@@ -28,6 +28,7 @@ const {
   featureReview,
   archiveReview,
   restoreReview,
+  adminDeleteReview,
   getReviewsAnalytics,
   bulkModerateReviews,
 } = require("../Controllers/reviewController");
@@ -54,5 +55,6 @@ adminRouter.patch("/:reviewId/feature", authMiddleware, adminMiddleware, require
 adminRouter.patch("/:reviewId/archive", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, archiveReview);
 adminRouter.patch("/:reviewId/restore", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, restoreReview);
 adminRouter.patch("/bulk", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateBulkReviewAction, adminLogMiddleware, bulkModerateReviews);
+adminRouter.delete("/:reviewId", authMiddleware, adminMiddleware, requirePermission("manageReviews"), validateObjectIdParam("reviewId", "review id"), adminLogMiddleware, adminDeleteReview);
 
 module.exports = { userRouter, adminRouter };

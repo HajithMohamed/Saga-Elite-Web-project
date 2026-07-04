@@ -396,6 +396,28 @@
     @apply mt-2 text-xs text-cream;
   }
 
+  /* ── Admin form controls (one canonical look) ──────
+     Every filter/select/text input in the admin panel should share the
+     same height, radius, colour and focus ring so toolbars line up and read
+     as one system. Based on the dominant Orders toolbar pattern. */
+  .admin-select,
+  .admin-input {
+    @apply h-10 rounded-2xl border border-ink/10 bg-black/60 px-4 text-sm text-ink outline-none transition-colors focus:border-gold-ink2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .admin-select {
+    @apply min-w-[11rem] cursor-pointer;
+  }
+
+  .admin-input::placeholder {
+    @apply text-muted;
+  }
+
+  /* Horizontal filter/action toolbar — consistent spacing + wrapping. */
+  .admin-toolbar {
+    @apply mb-6 flex flex-wrap items-center gap-3;
+  }
+
   /* ── Tiptap rich-text editor (admin) ───────────── */
   .tiptap-editor h2 {
     @apply mt-4 mb-2 text-xl font-semibold tracking-tight text-ink;

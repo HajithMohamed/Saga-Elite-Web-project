@@ -12,6 +12,7 @@ const filterObj = require("../Utils/filter-object");
 const { broadcastNotification } = require("../Utils/notification-service");
 const { emitToAll } = require("../Utils/socket-service");
 const runInTransaction = require("../Utils/safe-transaction");
+const { completeTheLookIds } = require("../Utils/recommendation-engine");
 const {
     assignVariantSkus,
     generateUniqueProductArtNo,
@@ -1071,6 +1072,55 @@ const recordDwell = catchAsync(async (req, res, next) => {
   res.status(204).end();
 });
 
+/*
+|--------------------------------------------------------------------------
+| Complete the Look — complementary product recommendations (public)
+|--------------------------------------------------------------------------
+| Given a product, return cross-category items that pair with it (e.g. a
+| t-shirt → matching jeans). Ranking blends curated relatedProductIds,
+| co-purchase frequency and the complementary-category heuristic. Returns the
+| same shape as the personalized rails so the storefront ProductCard renders it.
+*/
+const getCompleteTheLook = catchAsync(async (req, res, next) => {
+  const { productId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return next(new AppError("Invalid product id", 400));
+  }
+
+  const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 12);
+
+  const source = await Product.findById(productId)
+    .select("_id name category subCategory categoryPath tags relatedProductIds")
+    .lean();
+  if (!source) {
+    return next(new AppError("Product not found", 404));
+  }
+
+  const ids = await completeTheLookIds(source, limit);
+  if (ids.length === 0) {
+    return res
+      .status(200)
+      .json({ status: "success", results: 0, data: { recommendations: [] } });
+  }
+
+  const products = await Product.find({ _id: { $in: ids }, isActive: true })
+    .populate("images")
+    .lean();
+
+  // Preserve the ranked order produced by the engine.
+  const orderMap = new Map(ids.map((id, index) => [String(id), index]));
+  products.sort(
+    (a, b) =>
+      (orderMap.get(String(a._id)) ?? 999) - (orderMap.get(String(b._id)) ?? 999)
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: products.length,
+    data: { recommendations: products },
+  });
+});
+
 // Bulk activate/deactivate/delete. Body is pre-validated by validateBulkProductAction.
 // All-or-nothing semantics — Mongo updateMany / deleteMany either succeeds for the
 // matched set or fails outright, so `failed` is always [] here.
@@ -1128,5 +1178,6 @@ module.exports = {
     getRecommendations,
     searchProducts,
     recordDwell,
+    getCompleteTheLook,
     bulkUpdateProducts,
 };
