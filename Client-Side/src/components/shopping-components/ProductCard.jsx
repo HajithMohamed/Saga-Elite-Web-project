@@ -266,7 +266,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     [v?.size, v?.color].filter(Boolean).join(" · ") || "Add";
 
   return (
-    <div
+    <>
+      <div
       className={cn(
         "group relative flex flex-col bg-page rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
         "w-full",
