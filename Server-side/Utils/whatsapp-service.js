@@ -39,6 +39,9 @@ const postWhatsAppPayload = async (payload) => {
     return { skipped: true, reason: "WhatsApp API is not configured" };
   }
 
+  // Cap the request so a slow/unreachable Graph API can't hang the caller.
+  // register `await`s the WhatsApp OTP send before responding, so an un-timed
+  // fetch here would stall the whole HTTP request (→ browser "network error").
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -46,6 +49,9 @@ const postWhatsAppPayload = async (payload) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(
+      Number(process.env.WHATSAPP_REQUEST_TIMEOUT_MS || 10000)
+    ),
   });
 
   if (!response.ok) {
