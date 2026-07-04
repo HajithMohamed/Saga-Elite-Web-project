@@ -455,7 +455,7 @@ const Checkout = () => {
   const [checkoutItems, setCheckoutItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [bankDetails, setBankDetails] = useState(null);
-  const [currentStep, setCurrentStep] = useState("contact"); // contact, address, payment
+  const [currentStep, setCurrentStep] = useState("contact"); // retained for legacy step helpers
   const [isBuyNow, setIsBuyNow] = useState(false);
   const [hasInitializedSource, setHasInitializedSource] = useState(false);
   const [couponExpanded, setCouponExpanded] = useState(false);
@@ -483,6 +483,20 @@ const Checkout = () => {
     { id: "address", label: "Delivery", num: 2 },
     { id: "payment", label: "Payment", num: 3 },
   ];
+
+  const sectionAnchorByStep = {
+    contact: "checkout-contact",
+    address: "checkout-delivery",
+    payment: "checkout-payment",
+  };
+
+  const scrollToCheckoutSection = (sectionId) => {
+    if (typeof document === "undefined") return;
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   const formatLKR = (value = 0) =>
     `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -1015,6 +1029,11 @@ const Checkout = () => {
   };
 
   const proceedToStep = (step) => {
+    if (step !== "__legacy__") {
+      scrollToCheckoutSection(sectionAnchorByStep[step] || step);
+      return;
+    }
+
     if (currentStep === "contact") {
       const nextErrors = validateStep("contact");
       if (Object.keys(nextErrors).length === 0) {
@@ -1088,9 +1107,11 @@ const Checkout = () => {
         nextErrors.phone ||
         nextErrors.alternativePhone
       ) {
-        setCurrentStep("contact");
+        scrollToCheckoutSection("checkout-contact");
       } else if (nextErrors.addressLine || nextErrors.city || nextErrors.district) {
-        setCurrentStep("address");
+        scrollToCheckoutSection("checkout-delivery");
+      } else if (nextErrors.termsAccepted) {
+        scrollToCheckoutSection("checkout-payment");
       }
       return;
     }
@@ -1265,8 +1286,7 @@ const Checkout = () => {
     toast({ title: "Copied to clipboard", variant: "success" });
   };
 
-  const getStepNumber = (id) => checkoutSteps.find(s => s.id === id).num;
-  const currentStepNum = getStepNumber(currentStep);
+  const currentStepNum = checkoutSteps.length;
 
   return (
     <div className="min-h-screen bg-page text-ink-2 pb-36 md:pb-16">
@@ -1306,7 +1326,11 @@ const Checkout = () => {
               const isPast   = currentStepNum >  step.num;
               return (
                 <React.Fragment key={step.id}>
-                  <div className="flex flex-col items-center gap-2 min-w-[80px]">
+                  <button
+                    type="button"
+                    onClick={() => proceedToStep(step.id)}
+                    className="flex flex-col items-center gap-2 min-w-[80px]"
+                  >
                     <div className={[
                       "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
                       isPast   ? "bg-gold border-gold-ink text-black"           :
@@ -1321,7 +1345,7 @@ const Checkout = () => {
                     ].join(" ")}>
                       {step.label}
                     </span>
-                  </div>
+                  </button>
                   {idx < checkoutSteps.length - 1 && (
                     <div
                       className={[
@@ -1381,14 +1405,14 @@ const Checkout = () => {
 
           {/* LEFT 65% */}
           <div className="w-full lg:w-[65%] flex flex-col gap-8">
-            <AnimatePresence mode="wait">
+            <>
 
               {/* ── STEP 1: CONTACT ── */}
-              {currentStep === "contact" && (
-                <motion.div key="contact"
+              {true && (
+                <motion.div id="checkout-contact" key="contact"
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8"
+                  className="flex flex-col gap-8 scroll-mt-28"
                 >
                   {/* Sign-in nudge */}
                   {!isAuthenticated && (
@@ -1568,30 +1592,19 @@ const Checkout = () => {
                     )}
                   </section>
 
-                  {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
-                  <div className="hidden lg:flex justify-end">
-                    <button onClick={() => proceedToStep("address")}
-                      className="bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
-                    >
-                      Continue to Shipping
-                    </button>
-                  </div>
                 </motion.div>
               )}
 
               {/* ── STEP 2: SHIPPING ── */}
-              {currentStep === "address" && (
-                <motion.div key="address"
+              {true && (
+                <motion.div id="checkout-delivery" key="address"
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8"
+                  className="flex flex-col gap-8 scroll-mt-28"
                 >
                   <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-ink-2">Shipping Method</h2>
-                      <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">
-                        ← Edit Contact
-                      </button>
+                      <h2 className="text-xl font-bold text-ink-2">Delivery Information</h2>
                     </div>
 
                     {!isFreeShippingQualify && formData.deliveryMode === "standard" && (
@@ -1677,32 +1690,18 @@ const Checkout = () => {
                     </div>
                   </section>
 
-                  <div className="flex items-center justify-between">
-                    <button onClick={() => setCurrentStep("contact")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">← Back</button>
-                    {/* Desktop-only CTA — on mobile the sticky bottom bar drives navigation */}
-                    <button onClick={() => proceedToStep("payment")}
-                      className="hidden lg:block bg-gold text-black h-14 px-10 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 transition-all"
-                    >
-                      Continue to Payment
-                    </button>
-                  </div>
                 </motion.div>
               )}
 
               {/* ── STEP 3: PAYMENT ── */}
-              {currentStep === "payment" && (
-                <motion.div key="payment"
+              {true && (
+                <motion.div id="checkout-payment" key="payment"
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8"
+                  className="flex flex-col gap-8 scroll-mt-28"
                 >
                   <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-ink-2">Payment Method</h2>
-                      <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors">
-                        ← Edit Shipping
-                      </button>
-                    </div>
+                    <h2 className="text-xl font-bold text-ink-2">Payment Method</h2>
                     <p className="text-[11px] text-muted -mt-2">All transactions are encrypted and 100% secure.</p>
 
                     <div className="flex flex-col gap-3">
@@ -1823,10 +1822,6 @@ const Checkout = () => {
                     }
                   </button>
 
-                  <button onClick={() => setCurrentStep("address")} className="text-[10px] uppercase tracking-widest font-bold text-muted hover:text-gold-ink transition-colors text-center">
-                    ← Back to Shipping
-                  </button>
-
                   {/* Trust badges */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-card">
                     {[
@@ -1844,7 +1839,7 @@ const Checkout = () => {
                 </motion.div>
               )}
 
-            </AnimatePresence>
+            </>
           </div>
 
           {/* RIGHT 35% — STICKY SUMMARY (Desktop only) */}
@@ -1970,19 +1965,13 @@ const Checkout = () => {
           <div className="text-[10px] text-muted">{itemCount} item{itemCount !== 1 ? "s" : ""}</div>
         </div>
         <button
-          onClick={
-            currentStep === "contact" ? () => proceedToStep("address") :
-            currentStep === "address" ? () => proceedToStep("payment") :
-            handleSubmit
-          }
+          onClick={handleSubmit}
           disabled={isSubmitting}
           className="w-full bg-gold text-black h-14 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50"
         >
           {isSubmitting
             ? <><Loader2 className="animate-spin" size={16} /> Processing...</>
-            : currentStep === "payment"
-              ? <><Lock size={14} /> Place Secure Order</>
-              : "Continue →"
+            : <><Lock size={14} /> Place Secure Order</>
           }
         </button>
       </div>
