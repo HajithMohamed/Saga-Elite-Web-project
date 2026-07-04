@@ -33,25 +33,25 @@ const createRateLimiting = (maxRequests, time) => {
     });
 };
 
-const loginMax = parsePositiveNumber(process.env.RATE_LIMIT_LOGIN_MAX, 5);
+const loginMax = parsePositiveNumber(process.env.RATE_LIMIT_LOGIN_MAX, 25);
 const loginWindow = parsePositiveNumber(
     process.env.RATE_LIMIT_LOGIN_WINDOW_MS,
     15 * 60 * 1000
 );
 
-const authMax = parsePositiveNumber(process.env.RATE_LIMIT_AUTH_MAX, 10);
+const authMax = parsePositiveNumber(process.env.RATE_LIMIT_AUTH_MAX, 60);
 const authWindow = parsePositiveNumber(
     process.env.RATE_LIMIT_AUTH_WINDOW_MS,
     15 * 60 * 1000
 );
 
-const generalMax = parsePositiveNumber(process.env.RATE_LIMIT_GENERAL_MAX, 100);
+const generalMax = parsePositiveNumber(process.env.RATE_LIMIT_GENERAL_MAX, 500);
 const generalWindow = parsePositiveNumber(
     process.env.RATE_LIMIT_GENERAL_WINDOW_MS,
     15 * 60 * 1000
 );
 
-const contactMax = parsePositiveNumber(process.env.RATE_LIMIT_CONTACT_MAX, 3);
+const contactMax = parsePositiveNumber(process.env.RATE_LIMIT_CONTACT_MAX, 15);
 const contactWindow = parsePositiveNumber(
     process.env.RATE_LIMIT_CONTACT_WINDOW_MS,
     60 * 60 * 1000
