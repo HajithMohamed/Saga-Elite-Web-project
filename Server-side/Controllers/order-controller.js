@@ -164,6 +164,16 @@ const createOrder = catchAsync(async (req, res, next) => {
         );
     }
 
+    // Guest checkout with an email that already belongs to a registered account:
+    // link the order to that account so it shows up in the customer's order
+    // history, and flag it so the frontend can invite them to sign in. The
+    // order still carries guestEmail so the guest can pay without logging in.
+    const existingAccountUser =
+        !user && guestEmailNormalized
+            ? await User.findOne({ email: guestEmailNormalized }).select("_id")
+            : null;
+    const linkedUserId = user ? user._id : existingAccountUser?._id || undefined;
+
     const createdOrder = await runInTransaction(async (session) => {
         const orderItems = [];
         let totalAmount = 0;
@@ -314,7 +324,7 @@ const createOrder = catchAsync(async (req, res, next) => {
 
         // ✅ Single, complete orderPayload declaration (duplicate removed)
         const orderPayload = {
-            user: user ? user._id : undefined,
+            user: linkedUserId,
             guest: guest ? guest._id : undefined,
             guestEmail: guestEmailNormalized,
             items: orderItems,
@@ -609,6 +619,9 @@ const createOrder = catchAsync(async (req, res, next) => {
             }
             : null,
         guestEmail: guestEmailNormalized || null,
+        // True when a guest checked out with an email that already has an
+        // account — the order was linked to it; the frontend invites sign-in.
+        linkedToAccount: Boolean(existingAccountUser),
     });
 });
 

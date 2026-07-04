@@ -21,7 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 
 const MOTION_EASE = [0.16, 1, 0.3, 1];
-const PAYHERE_SDK_URL = "https://www.payhere.lk/lib/payhere.js";
 
 const formatLKR = (value) =>
   Number(value || 0).toLocaleString("en-LK", {
@@ -61,34 +60,72 @@ const luhnOk = (digits) => {
   return sum > 0 && sum % 10 === 0;
 };
 
-// Load the PayHere onsite-checkout SDK once. The `sandbox` flag inside the
-// payment object (not a different script) selects the sandbox gateway.
-const loadPayHereSdk = () =>
-  new Promise((resolve, reject) => {
-    if (typeof window === "undefined") {
-      reject(new Error("PayHere is only available in the browser."));
-      return;
-    }
-    if (window.payhere) {
-      resolve(window.payhere);
-      return;
-    }
-    const existing = document.querySelector(`script[src="${PAYHERE_SDK_URL}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve(window.payhere));
-      existing.addEventListener("error", () =>
-        reject(new Error("Could not load the payment gateway.")),
-      );
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = PAYHERE_SDK_URL;
-    script.async = true;
-    script.onload = () => resolve(window.payhere);
-    script.onerror = () =>
-      reject(new Error("Could not load the payment gateway. Check your connection and try again."));
-    document.body.appendChild(script);
+// Persist just enough context (payment reference + guest email) to confirm the
+// payment status after PayHere redirects the browser back to this page.
+const storePayHereContext = (orderId, reference, email) => {
+  try {
+    if (reference) window.sessionStorage.setItem(`payhere_ref_${orderId}`, reference);
+    if (email) window.sessionStorage.setItem(`payhere_email_${orderId}`, email);
+  } catch {
+    /* sessionStorage unavailable — non-fatal, we just can't auto-poll on return */
+  }
+};
+
+const readStoredRef = (orderId) => {
+  try {
+    return window.sessionStorage.getItem(`payhere_ref_${orderId}`);
+  } catch {
+    return null;
+  }
+};
+
+const readStoredEmail = (orderId) => {
+  try {
+    return window.sessionStorage.getItem(`payhere_email_${orderId}`);
+  } catch {
+    return null;
+  }
+};
+
+// Redirect the browser to PayHere by POSTing a self-submitting hidden form to
+// the (sandbox or live) checkout URL. This is PayHere's Checkout API redirect
+// flow — more reliable on mobile than the JS popup, and the customer returns
+// via return_url / cancel_url.
+const PAYHERE_FORM_FIELDS = [
+  "merchant_id",
+  "return_url",
+  "cancel_url",
+  "notify_url",
+  "order_id",
+  "items",
+  "currency",
+  "amount",
+  "first_name",
+  "last_name",
+  "email",
+  "phone",
+  "address",
+  "city",
+  "country",
+  "hash",
+];
+
+const redirectToPayHere = (checkoutUrl, payment) => {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = checkoutUrl;
+  PAYHERE_FORM_FIELDS.forEach((key) => {
+    const value = payment[key];
+    if (value === undefined || value === null) return;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = String(value);
+    form.appendChild(input);
   });
+  document.body.appendChild(form);
+  form.submit();
+};
 
 const PageHeader = () => (
   <header className="sticky top-0 z-40 border-b border-ink/5 bg-page/85 backdrop-blur-xl">
@@ -221,15 +258,43 @@ const CardPaymentPage = () => {
     };
   }, []);
 
-  // A redirect-based return (rare — the popup uses callbacks) can land here with
-  // ?payment=cancelled. Surface it once so the customer knows why nothing moved.
+  // PayHere redirects the browser back here after checkout: ?payment=success
+  // (customer returned via return_url) or ?payment=cancelled (cancel_url).
+  // "success" only means they finished the PayHere flow — the notify webhook is
+  // what actually confirms the charge — so we poll the record until it flips.
   useEffect(() => {
-    if (searchParams.get("payment") === "cancelled") {
+    const outcome = searchParams.get("payment");
+    if (outcome === "cancelled") {
       toast({
         title: "Payment cancelled",
         description: "You can try the card payment again below.",
-        variant: "default",
       });
+      return;
+    }
+    if (outcome === "success" && orderId) {
+      const ref = readStoredRef(orderId);
+      if (!ref) {
+        // Different device / cleared storage — show a neutral confirming state.
+        setSubmitted({ referenceNumber: null, status: "pending" });
+        return;
+      }
+      setPayReference(ref);
+      setPhState("confirming");
+      const email = isAuthenticated ? undefined : readStoredEmail(orderId) || presetEmail;
+      (async () => {
+        const result = await pollUntilResolved(ref, email);
+        if (result === "rejected") {
+          setPhState("failed");
+          toast({
+            title: "Payment failed",
+            description: "The payment couldn't be completed. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setPhState("idle");
+        setSubmitted({ referenceNumber: ref, status: result });
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -255,10 +320,9 @@ const CardPaymentPage = () => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  // Poll the payment record after the PayHere popup completes. The order is
-  // confirmed asynchronously by the notify webhook, so we wait for "verified".
-  const pollUntilResolved = async (reference) => {
-    const email = isAuthenticated ? undefined : guestEmail();
+  // Poll the payment record after returning from PayHere. The order is confirmed
+  // asynchronously by the notify webhook, so we wait for it to flip to verified.
+  const pollUntilResolved = async (reference, email) => {
     for (let i = 0; i < 10; i += 1) {
       try {
         const status = await fetchCardPaymentStatus({ reference, email });
@@ -288,58 +352,20 @@ const CardPaymentPage = () => {
         customerName: userName || undefined,
       });
 
-      if (!init?.payment) {
+      if (!init?.payment || !init?.checkoutUrl) {
         throw new Error("Could not start the payment. Please try again.");
       }
 
-      const reference = init.referenceNumber;
-      setPayReference(reference);
+      // Remember the reference (+ guest email) so we can confirm the payment
+      // when PayHere redirects back to ?payment=success.
+      storePayHereContext(
+        orderId,
+        init.referenceNumber,
+        isAuthenticated ? "" : guestEmail(),
+      );
 
-      const payhere = await loadPayHereSdk();
-
-      payhere.onCompleted = async () => {
-        setPhState("confirming");
-        const result = await pollUntilResolved(reference);
-        if (result === "rejected") {
-          setPhState("failed");
-          toast({
-            title: "Payment failed",
-            description: "The payment couldn't be completed. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-        setPhState("idle");
-        setSubmitted({ referenceNumber: reference, status: result });
-        toast({
-          title: "Payment successful",
-          description:
-            result === "verified"
-              ? "Your order is confirmed."
-              : "We're confirming your payment — your order will update shortly.",
-          variant: "success",
-        });
-      };
-
-      payhere.onDismissed = () => {
-        setPhState("idle");
-        toast({
-          title: "Payment cancelled",
-          description: "You closed the payment window before completing.",
-        });
-      };
-
-      payhere.onError = (error) => {
-        setPhState("idle");
-        toast({
-          title: "Payment error",
-          description: String(error || "Something went wrong. Please try again."),
-          variant: "destructive",
-        });
-      };
-
-      setPhState("processing");
-      payhere.startPayment(init.payment);
+      setPhState("redirecting");
+      redirectToPayHere(init.checkoutUrl, init.payment);
     } catch (err) {
       setPhState("idle");
       toast({
@@ -452,7 +478,10 @@ const CardPaymentPage = () => {
     );
   }
 
-  const phBusy = phState === "initiating" || phState === "processing" || phState === "confirming";
+  const phBusy =
+    phState === "initiating" ||
+    phState === "redirecting" ||
+    phState === "confirming";
 
   return (
     <div className="min-h-screen bg-page text-ink-2 pb-20">
@@ -487,6 +516,15 @@ const CardPaymentPage = () => {
           <div className="flex items-center justify-center rounded-[2rem] border border-gold-ink/10 bg-page p-16">
             <Loader2 className="h-6 w-6 animate-spin text-gold-ink" />
           </div>
+        ) : gatewayMode === "payhere" && phState === "confirming" ? (
+          <div className="flex flex-col items-center gap-4 rounded-[2rem] border border-gold-ink/10 bg-page p-10 text-center sm:p-16">
+            <Loader2 className="h-8 w-8 animate-spin text-gold-ink" />
+            <p className="se-serif text-xl text-ink-2">Confirming your payment…</p>
+            <p className="se-body max-w-sm text-sm text-muted">
+              We're verifying your card payment with PayHere. This usually takes a few seconds —
+              please don't close this page.
+            </p>
+          </div>
         ) : gatewayMode === "payhere" ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -504,7 +542,7 @@ const CardPaymentPage = () => {
             {presetAmount ? (
               <div className="rounded-2xl border border-ink/5 bg-panel px-5 py-4">
                 <p className="se-label text-[9px] tracking-[0.32em] text-muted">Amount due</p>
-                <p className="se-instrument mt-1 text-2xl text-[var(--accent)]">
+                <p className="se-instrument mt-1 text-2xl text-accent">
                   LKR {formatLKR(presetAmount)}
                 </p>
               </div>
@@ -526,7 +564,7 @@ const CardPaymentPage = () => {
                   value={form.email}
                   onChange={handleChange("email")}
                   placeholder="you@example.com"
-                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                 />
                 {errors.email ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.email}</p>
@@ -539,14 +577,14 @@ const CardPaymentPage = () => {
               onClick={handlePayHerePay}
               disabled={phBusy}
               className={cn(
-                "w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm",
+                "w-full h-14 bg-accent text-black font-bold uppercase tracking-[0.2em] text-sm",
                 "hover:bg-white transition-all disabled:opacity-50 flex items-center justify-center gap-3",
               )}
             >
               {phBusy ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  {phState === "confirming" ? "Confirming payment…" : "Opening secure window…"}
+                  {phState === "confirming" ? "Confirming payment…" : "Redirecting to PayHere…"}
                 </>
               ) : (
                 <>
@@ -606,7 +644,7 @@ const CardPaymentPage = () => {
                   <p className="se-label text-[9px] tracking-[0.32em] text-muted">
                     Amount due
                   </p>
-                  <p className="se-instrument mt-1 text-2xl text-[var(--accent)]">
+                  <p className="se-instrument mt-1 text-2xl text-accent">
                     LKR {formatLKR(presetAmount)}
                   </p>
                 </div>
@@ -622,7 +660,7 @@ const CardPaymentPage = () => {
                   value={form.cardholderName}
                   onChange={handleChange("cardholderName")}
                   placeholder="As printed on the card"
-                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                 />
                 {errors.cardholderName ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.cardholderName}</p>
@@ -640,7 +678,7 @@ const CardPaymentPage = () => {
                   value={form.cardNumber}
                   onChange={handleChange("cardNumber")}
                   placeholder="1234 5678 9012 3456"
-                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                 />
                 {errors.cardNumber ? (
                   <p className="mt-2 text-xs text-rose-400">{errors.cardNumber}</p>
@@ -659,7 +697,7 @@ const CardPaymentPage = () => {
                     value={form.expiry}
                     onChange={handleChange("expiry")}
                     placeholder="MM/YY"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.2em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                   />
                   {errors.expiry ? (
                     <p className="mt-2 text-xs text-rose-400">{errors.expiry}</p>
@@ -676,7 +714,7 @@ const CardPaymentPage = () => {
                     value={form.cvv}
                     onChange={handleChange("cvv")}
                     placeholder="•••"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.4em] text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 se-mono tracking-[0.4em] text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                   />
                   {errors.cvv ? (
                     <p className="mt-2 text-xs text-rose-400">{errors.cvv}</p>
@@ -694,7 +732,7 @@ const CardPaymentPage = () => {
                     value={form.email}
                     onChange={handleChange("email")}
                     placeholder="you@example.com"
-                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-[var(--accent)] focus:outline-none transition-colors"
+                    className="w-full bg-page border border-line/40 rounded-xl px-4 py-3 text-ink-2 placeholder-line focus:border-accent focus:outline-none transition-colors"
                   />
                   {errors.email ? (
                     <p className="mt-2 text-xs text-rose-400">{errors.email}</p>
@@ -710,7 +748,7 @@ const CardPaymentPage = () => {
                 type="submit"
                 disabled={isSubmitting}
                 className={cn(
-                  "w-full h-14 bg-[var(--accent)] text-black font-bold uppercase tracking-[0.2em] text-sm",
+                  "w-full h-14 bg-accent text-black font-bold uppercase tracking-[0.2em] text-sm",
                   "hover:bg-white transition-all disabled:opacity-50 flex items-center justify-center gap-3",
                 )}
               >
