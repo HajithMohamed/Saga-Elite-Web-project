@@ -10,8 +10,8 @@ const PRODUCT_CATEGORIES = ["Ladies", "Gents", "Unisex"];
 const PAYMENT_METHODS = ["payhere", "gpay", "manual", "manual_bank_transfer", "card", "lankapay", "cash"];
 const ORDER_STATUSES = ["pending", "pending_payment", "verification_pending", "confirmed", "shipped", "delivered", "cancelled", "refund_requested", "refunded"];
 const NOTIFICATION_TYPES = ["drop", "offer", "order", "admin", "reminder", "system"];
-const IMAGE_REF_MODELS = ["Product", "Drop", "System", "Review"];
-const IMAGE_SYSTEM_TYPES = ["hero", "ad", "logo", "category-logo"];
+const IMAGE_REF_MODELS = ["Product", "Drop", "System", "Review", "SiteConfig", "Offer"];
+const IMAGE_SYSTEM_TYPES = ["hero", "ad", "logo", "category-logo", "social-ugc"];
 const CONTACT_STATUSES = ["new", "read", "resolved"];
 const ADMIN_PERMISSION_KEYS = ["products", "orders", "users", "notifications", "drops", "verifyPayments", "manageReviews", "viewAnalytics", "sendCampaigns", "manageInventory", "manageAdmins"];
 const ADMIN_ROLE_VALUES = ["admin", "sub_admin"];
@@ -185,6 +185,21 @@ const sanitizeObjectId = (value, field) => {
   }
 
   return String(value);
+};
+
+const normalizeImageRefModel = (value) => {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLowerCase().replace(/[\s_-]/g, "");
+  const map = {
+    product: "Product",
+    drop: "Drop",
+    system: "System",
+    review: "Review",
+    siteconfig: "SiteConfig",
+    offer: "Offer",
+  };
+
+  return map[normalized] || raw;
 };
 
 const sanitizeNumber = (
@@ -600,21 +615,35 @@ const validateBulkProductAction = createValidationMiddleware((req) => {
 });
 
 const validateImageUploadRequest = createValidationMiddleware((req) => {
-  const validated = {
-    refModel: sanitizeString(req.body.refModel, "refModel", {
+  const refModel = normalizeImageRefModel(
+    sanitizeString(req.body.refModel, "refModel", {
       required: true,
       maxLength: 32,
-    }),
+    })
+  );
+
+  if (!IMAGE_REF_MODELS.includes(refModel)) {
+    fail(`refModel must be one of: ${IMAGE_REF_MODELS.join(", ")}`);
+  }
+
+  const validated = {
+    refModel,
   };
 
   if (req.body.refId !== undefined && req.body.refId !== null && req.body.refId !== "") {
-    validated.refId = sanitizeObjectId(req.body.refId, "refId");
+    validated.refId = ["SiteConfig", "Offer", "System"].includes(refModel)
+      ? sanitizeString(req.body.refId, "refId", { maxLength: 120 })
+      : sanitizeObjectId(req.body.refId, "refId");
   }
 
   if (req.body.type !== undefined && req.body.type !== null && req.body.type !== "") {
     validated.type = sanitizeString(req.body.type, "type", {
       maxLength: 64,
     });
+  }
+
+  if (refModel === "System" && validated.type && !IMAGE_SYSTEM_TYPES.includes(validated.type)) {
+    fail(`type must be one of: ${IMAGE_SYSTEM_TYPES.join(", ")}`);
   }
 
   if (req.body.label !== undefined && req.body.label !== null && req.body.label !== "") {

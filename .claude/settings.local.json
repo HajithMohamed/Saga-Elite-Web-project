@@ -198,7 +198,15 @@
       "Bash(node -e ' *)",
       "Bash(node -e \"require\\('./Routes/admin-routes.js'\\); console.log\\('admin-routes OK'\\);\")",
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('tailwindcss', \\(p.devDependencies&&p.devDependencies.tailwindcss\\)||\\(p.dependencies&&p.dependencies.tailwindcss\\)\\);\")",
-      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('recharts', \\(p.dependencies&&p.dependencies.recharts\\)||\\(p.devDependencies&&p.devDependencies.recharts\\)\\);\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('recharts', \\(p.dependencies&&p.dependencies.recharts\\)||\\(p.devDependencies&&p.devDependencies.recharts\\)\\);\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  time=%{time_total}s\\\\n\" https://saga-elite.shop)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  time=%{time_total}s\\\\n\" https://saga-elite.netlify.app)",
+      "Bash(curl -s -i -H \"Origin: https://saga-elite.shop\" \"https://server-side-production-19a7.up.railway.app/socket.io/?EIO=4&transport=polling\")",
+      "Bash(curl -s -o /dev/null -w \"register POST\\(empty\\) -> HTTP %{http_code}\\\\n\" -X POST -H \"Origin: https://saga-elite.shop\" -H \"Content-Type: application/json\" -d '{}' \"https://server-side-production-19a7.up.railway.app/api/v1/auth/register\")",
+      "Bash(curl -s -o /dev/null -w 'google/sign-in -> HTTP %{http_code}  time=%{time_total}s\\\\n' -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{\"accessToken\":\"invalid\"}' https://server-side-production-19a7.up.railway.app/api/v1/google/sign-in)",
+      "Bash(curl -s -o /dev/null -w 'register\\(empty\\) -> HTTP %{http_code}  time=%{time_total}s\\\\n' -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{}' https://server-side-production-19a7.up.railway.app/api/v1/register)",
+      "Bash(curl -s -X POST -H 'Origin: https://saga-elite.shop' -H 'Content-Type: application/json' -d '{\"email\":\"diag-__CMDSUB_OUTPUT__@example.com\",\"password\":\"TestPass123!\",\"confirmPassword\":\"TestPass123!\",\"username\":\"DiagUser\"}' -w '\\\\n\\\\n--- HTTP %{http_code}  total=%{time_total}s ---\\\\n' --max-time 90 https://server-side-production-19a7.up.railway.app/api/v1/auth/register)",
+      "Bash(node Server-side/scripts/cleanup-diag-users.js)"
     ]
   }
 }

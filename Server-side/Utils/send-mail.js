@@ -19,7 +19,15 @@ const sendEmail = async (options) => {
         auth: {
             user: smtpUser,
             pass: smtpPass,
-        }
+        },
+        // Bound every send. register / verify-OTP / 2FA / forgot-password all
+        // `await sendMail(...)` BEFORE responding, so an unreachable or slow
+        // SMTP host would otherwise hang the HTTP request indefinitely and the
+        // browser reports it as a "network error". These caps make a dead SMTP
+        // reject in seconds instead, so the caller's try/catch can respond.
+        connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
+        greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 8000),
+        socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 12000),
     });
 
     const mailOptions = {

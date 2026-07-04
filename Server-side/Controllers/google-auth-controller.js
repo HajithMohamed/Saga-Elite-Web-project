@@ -101,15 +101,17 @@ const googleAuth = catchAsync(async (req, res, next) => {
         <p>Happy shopping!<br/>The Saga Elite Team</p>
     `;
 
-    try {
-        await sendMail({
-            email: user.email,
-            subject: "Welcome to Saga Elite 🎉",
-            html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
-        });
-    } catch (err) {
+    // Fire-and-forget: the account is already created and the user is being
+    // signed in — the welcome email must never block (or fail) the signup
+    // response. Awaiting it here meant a slow/dead SMTP hung the whole Google
+    // sign-up request and the browser showed a "network error".
+    sendMail({
+        email: user.email,
+        subject: "Welcome to Saga Elite 🎉",
+        html: buildEmailTemplate("Welcome to Saga Elite", welcomeBody),
+    }).catch((err) => {
         logger.error("Google sign-up welcome email failed", { error: err });
-    }
+    });
 
     return createSendToken(user, 201, res, "Account created successfully");
 });

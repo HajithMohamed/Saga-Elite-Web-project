@@ -55,6 +55,33 @@ const validateSystemImageFile = (file, type) => {
 const ADMIN_ROLES = new Set(["admin", "super_admin", "superadmin", "sub_admin"]);
 const isAdminViewer = (user) => Boolean(user && ADMIN_ROLES.has(user.role));
 const visibilityFilter = (req) => (isAdminViewer(req.userInfo) ? {} : { isActive: true });
+const URL_ONLY_REF_MODELS = new Set(["SiteConfig", "Offer"]);
+
+const normalizeImageRefModel = (value) => {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLowerCase().replace(/[\s_-]/g, "");
+  const map = {
+    product: "Product",
+    drop: "Drop",
+    system: "System",
+    review: "Review",
+    siteconfig: "SiteConfig",
+    offer: "Offer",
+  };
+
+  return map[normalized] || raw;
+};
+
+const storagePathSegment = (value, fallback = "misc") => {
+  const segment = String(value || fallback)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+  return segment || fallback;
+};
 
 // Configure Winston logger for image actions
 const actionLogger = winston.createLogger({
@@ -161,26 +188,30 @@ const uploadImages = catchAsync(async (req, res, next) => {
     return next(new AppError("refModel is required", 400));
   }
 
-  // Normalize refModel
-  imageData.refModel =
-    imageData.refModel.charAt(0).toUpperCase() +
-    imageData.refModel.slice(1).toLowerCase();
+  // Normalize refModel while preserving multi-word canonical names
+  // such as SiteConfig.
+  imageData.refModel = normalizeImageRefModel(imageData.refModel);
 
-  const validRefModels = ["Product", "Drop", "System", "Review", "Siteconfig", "Offer"];
+  const validRefModels = ["Product", "Drop", "System", "Review", "SiteConfig", "Offer"];
   if (!validRefModels.includes(imageData.refModel)) {
     return next(new AppError("Invalid refModel", 400));
   }
 
-  // System, Siteconfig, Offer images don't require valid ObjectId refId
-  if (imageData.refModel !== "System" && imageData.refModel !== "Siteconfig" && imageData.refModel !== "Offer" && !imageData.refId) {
+  // System, SiteConfig, Offer images don't require valid ObjectId refId.
+  // SiteConfig and Offer uploads are URL-only helpers used by content forms;
+  // product/drop/review uploads still attach to real Mongo documents.
+  if (
+    imageData.refModel !== "System" &&
+    !URL_ONLY_REF_MODELS.has(imageData.refModel) &&
+    !imageData.refId
+  ) {
     return next(new AppError("refId is required for this image type", 400));
   }
 
   // Validate ObjectId for standard entities
   if (
     imageData.refModel !== "System" && 
-    imageData.refModel !== "Siteconfig" && 
-    imageData.refModel !== "Offer" && 
+    !URL_ONLY_REF_MODELS.has(imageData.refModel) &&
     !mongoose.Types.ObjectId.isValid(imageData.refId)
   ) {
     return next(new AppError("Invalid refId", 400));
@@ -214,6 +245,81 @@ const uploadImages = catchAsync(async (req, res, next) => {
       const error = validateSystemImageFile(file, imageData.type);
       if (error) return next(new AppError(error, 400));
     }
+  }
+
+  if (URL_ONLY_REF_MODELS.has(imageData.refModel)) {
+    const folder = [
+      "saga-elite",
+      imageData.refModel === "SiteConfig" ? "site-config" : "offers",
+      storagePathSegment(imageData.type || imageData.refId || "content"),
+    ].join("/");
+
+    const uploadResults = await Promise.allSettled(
+      req.files.map((file) => uploadToImageStorage(file, folder))
+    );
+
+    const uploadedImages = [];
+    const failedUploads = [];
+
+    uploadResults.forEach((uploadResult, index) => {
+      if (uploadResult.status === "fulfilled") {
+        const result = uploadResult.value;
+        uploadedImages.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          type: imageData.type || "other",
+          refModel: imageData.refModel,
+          refId: imageData.refId || null,
+          label: imageData.label || "",
+          colorTag: imageData.colorTag || "",
+          order: index,
+          isPrimary: index === 0,
+          metadata: {
+            width: result.width,
+            height: result.height,
+            format: result.format,
+            sizeInBytes: result.bytes,
+          },
+        });
+        return;
+      }
+
+      failedUploads.push(
+        `Upload failed: ${uploadResult.reason?.message || String(uploadResult.reason)}`
+      );
+    });
+
+    if (failedUploads.length > 0) {
+      await Promise.allSettled(
+        uploadedImages.map((image) => deleteImageAsset(image.publicId))
+      );
+
+      const transientFailure = isTransientUploadFailure(failedUploads);
+      return next(
+        new AppError(
+          transientFailure
+            ? "Image upload service timed out. Please try again in a moment."
+            : `Upload failed: ${failedUploads.join(", ")}`,
+          transientFailure ? 503 : 500
+        )
+      );
+    }
+
+    actionLogger.info({
+      action: "upload_url_only_images",
+      userId: req.userInfo ? req.userInfo._id : null,
+      refModel: imageData.refModel,
+      refId: imageData.refId || null,
+      type: imageData.type || null,
+      numImagesUploaded: uploadedImages.length,
+    });
+
+    return res.status(201).json({
+      success: true,
+      results: uploadedImages.length,
+      images: uploadedImages,
+      url: uploadedImages[0]?.url,
+    });
   }
 
   /* ==============================
