@@ -26,8 +26,11 @@ export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
     ? propSlides.map((s, i) => ({
         id: s.id || s._id || `hero-${i}`,
         image: s.imageUrl || s.url || s.image || DEFAULT_SLIDES[i % DEFAULT_SLIDES.length].image,
+        link: s.link || null,
       }))
     : DEFAULT_SLIDES;
+
+  const activeLink = slides[currentSlide]?.link;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -72,8 +75,18 @@ export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
         </AnimatePresence>
       </div>
 
+      {/* Clickable overlay — when the active slide is a featured offer, the
+          whole hero (except the buttons/arrows below) navigates to it. */}
+      {activeLink ? (
+        <Link
+          to={activeLink}
+          aria-label={`View ${slides[currentSlide]?.label || "offer"}`}
+          className="absolute inset-0 z-[4]"
+        />
+      ) : null}
+
       {/* Hero Content Container */}
-      <div className="relative h-full max-w-[1280px] mx-auto flex flex-col justify-center px-[24px] md:px-[48px] lg:px-[80px]">
+      <div className="relative h-full max-w-[1280px] mx-auto flex flex-col justify-center px-[24px] md:px-[48px] lg:px-[80px] pointer-events-none">
         <div className="w-full md:w-[480px] lg:w-[560px] ml-0 lg:ml-[10%]">
           
           <motion.h1 
@@ -98,7 +111,7 @@ export const LuxuryDropSlider = ({ slides: propSlides = [] }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 mb-[48px]"
+            className="flex flex-col sm:flex-row gap-4 mb-[48px] pointer-events-auto"
           >
             <Link 
               to="/shopping/product-list"
