@@ -479,9 +479,11 @@ const Checkout = () => {
   const [guestVerified, setGuestVerified] = useState(false);
 
   const checkoutSteps = [
-    { id: "contact", label: "Contact", num: 1 },
-    { id: "address", label: "Delivery", num: 2 },
-    { id: "payment", label: "Payment", num: 3 },
+    { id: "contact", label: "Contact Information", num: 1 },
+    { id: "address", label: "Delivery Address", num: 2 },
+    { id: "delivery", label: "Delivery Method", num: 3 },
+    { id: "payment", label: "Payment", num: 4 },
+    { id: "review", label: "Review Order", num: 5 },
   ];
 
   const sectionAnchorByStep = {
@@ -1028,40 +1030,51 @@ const Checkout = () => {
     return next;
   };
 
-  const proceedToStep = (step) => {
-    if (step !== "__legacy__") {
-      scrollToCheckoutSection(sectionAnchorByStep[step] || step);
-      return;
-    }
+  const proceedToStep = (stepId) => {
+    if (stepId === "__legacy__") return;
+    const currentIndex = checkoutSteps.findIndex((s) => s.id === currentStep);
+    const targetIndex = checkoutSteps.findIndex((s) => s.id === stepId);
 
-    if (currentStep === "contact") {
-      const nextErrors = validateStep("contact");
-      if (Object.keys(nextErrors).length === 0) {
-        setCurrentStep("address");
-      } else {
+    // If going forward, validate current step
+    if (targetIndex > currentIndex) {
+      const nextErrors = validateStep(currentStep);
+      if (Object.keys(nextErrors).length > 0) {
         toast({
-          title: "Check your contact details",
+          title: "Check your details",
           description: "Please complete the highlighted fields before continuing.",
           variant: "destructive",
         });
-      }
-    } else if (currentStep === "address") {
-      const nextErrors = validateStep("address");
-      if (Object.keys(nextErrors).length === 0) {
-        setCurrentStep("payment");
-      } else {
-        // The delivery-address inputs live on the contact step, so send the
-        // user back there to see the highlighted fields — otherwise the button
-        // silently does nothing and the flow feels broken.
-        toast({
-          title: "Delivery address needed",
-          description: "Please complete your delivery address to continue.",
-          variant: "destructive",
-        });
-        setCurrentStep("contact");
+        return;
       }
     }
-    else if (step) setCurrentStep(step); // allow backward nav without validation
+
+    setErrors({});
+    setCurrentStep(stepId);
+    
+    // Smooth scroll to the active accordion on mobile or desktop
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        document.getElementById(`checkout-${stepId}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  };
+
+  const handleNextStep = () => {
+    const currentIndex = checkoutSteps.findIndex((s) => s.id === currentStep);
+    if (currentIndex < checkoutSteps.length - 1) {
+      proceedToStep(checkoutSteps[currentIndex + 1].id);
+    }
+  };
+
+  const getStepStatus = (stepId) => {
+    const currentIndex = checkoutSteps.findIndex((s) => s.id === currentStep);
+    const stepIndex = checkoutSteps.findIndex((s) => s.id === stepId);
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "active";
+    return "future";
   };
 
   const handleQuantity = async (item, newQuantity) => {
@@ -1278,8 +1291,9 @@ const Checkout = () => {
     toast({ title: "Copied to clipboard", variant: "success" });
   };
 
-  const currentStepNum = checkoutSteps.length;
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+  
   return (
     <div className="min-h-screen bg-page text-ink-2 pb-36 md:pb-16">
       {/* ═══════════ STICKY HEADER ═══════════ */}
@@ -1300,7 +1314,6 @@ const Checkout = () => {
       </header>
 
       <div className="mx-auto max-w-[1440px] px-4 md:px-8 pt-8">
-
         {/* ═══════════ BREADCRUMB ═══════════ */}
         <nav className="mb-8 flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted">
           <Link to="/" className="hover:text-gold-ink transition-colors">Home</Link>
@@ -1310,12 +1323,11 @@ const Checkout = () => {
           <span className="text-gold-ink font-bold">Secure Checkout</span>
         </nav>
 
-        {/* ═══════════ PROGRESS STEPPER ═══════════ */}
-        <div className="mb-10 overflow-x-auto pb-2">
-          <div className="flex items-center min-w-max">
+        {/* ═══════════ MOBILE HORIZONTAL STEPPER ═══════════ */}
+        <div className="lg:hidden mb-10 overflow-x-auto pb-2">
+          <div className="flex items-center min-w-max px-2">
             {checkoutSteps.map((step, idx) => {
-              const isActive = currentStepNum === step.num;
-              const isPast   = currentStepNum >  step.num;
+              const status = getStepStatus(step.id);
               return (
                 <React.Fragment key={step.id}>
                   <button
@@ -1325,15 +1337,15 @@ const Checkout = () => {
                   >
                     <div className={[
                       "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
-                      isPast   ? "bg-gold border-gold-ink text-black"           :
-                      isActive ? "bg-transparent border-gold-ink text-gold-ink"    :
+                      status === "completed" ? "bg-gold border-gold-ink text-black" :
+                      status === "active" ? "bg-transparent border-gold-ink text-gold-ink" :
                                  "bg-transparent border-elevated text-line"
                     ].join(" ")}>
-                      {isPast ? <Check size={14} /> : step.num}
+                      {status === "completed" ? <Check size={14} /> : step.num}
                     </div>
                     <span className={[
                       "text-[9px] uppercase tracking-widest font-bold",
-                      isActive ? "text-gold-ink" : isPast ? "text-ink-2" : "text-line"
+                      status === "active" ? "text-gold-ink" : status === "completed" ? "text-ink-2" : "text-line"
                     ].join(" ")}>
                       {step.label}
                     </span>
@@ -1341,10 +1353,10 @@ const Checkout = () => {
                   {idx < checkoutSteps.length - 1 && (
                     <div
                       className={[
-                        "h-[2px] mx-3 rounded-full transition-colors duration-500",
-                        currentStepNum > step.num ? "bg-gold" : "bg-card"
+                        "h-[2px] mx-2 rounded-full transition-colors duration-500",
+                        status === "completed" ? "bg-gold" : "bg-card"
                       ].join(" ")}
-                      style={{ minWidth: 48, flex: 1 }}
+                      style={{ minWidth: 24, flex: 1 }}
                     />
                   )}
                 </React.Fragment>
@@ -1353,658 +1365,505 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/* ═══════════ MOBILE COLLAPSIBLE SUMMARY ═══════════ */}
-        <div className="lg:hidden mb-8">
-          <details className="group bg-panel border border-card rounded-2xl overflow-hidden">
-            <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-xs uppercase tracking-widest text-ink-2">Order Summary</span>
-                <span className="text-[10px] text-muted font-bold">({itemCount} item{itemCount !== 1 ? "s" : ""})</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-gold-ink">{formatLKR(finalTotal)}</span>
-                <ChevronDown className="w-4 h-4 text-muted transition-transform duration-300 group-open:rotate-180" />
-              </div>
-            </summary>
-            <div className="p-5 border-t border-card bg-page flex flex-col gap-4">
-              {checkoutItems.map((item) => (
-                <div key={item.id} className="flex gap-4">
-                  <div className="relative w-16 h-16 bg-panel rounded-xl border border-card overflow-hidden flex-shrink-0">
-                    <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1" />
-                    <span className="absolute -top-1.5 -right-1.5 bg-gold text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
-                  </div>
-                  <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
-                    <h4 className="text-xs font-bold text-ink-2 line-clamp-2">{item.product?.name}</h4>
-                    <div className="text-[10px] text-muted uppercase tracking-wider">
-                      {[item.variant?.size, item.variant?.color].filter(Boolean).join(" · ")}
-                    </div>
-                    <div className="text-xs font-bold text-gold-ink">{formatLKR(item.unitPrice * item.quantity)}</div>
-                  </div>
-                </div>
-              ))}
-              <div className="border-t border-card pt-4 flex flex-col gap-2">
-                <div className="flex justify-between text-sm"><span className="text-muted">Subtotal</span><span className="text-ink-2 font-bold">{formatLKR(checkoutTotal)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted">Delivery{activeZone && formData.deliveryMode !== "pickup" ? ` · ${activeZone.name}` : ""}</span><span className="text-ink-2 font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span></div>
-                {couponDiscount > 0 && <div className="flex justify-between text-sm"><span className="text-green-400">Discount</span><span className="text-green-400 font-bold">-{formatLKR(couponDiscount)}</span></div>}
-                <div className="flex justify-between text-base pt-2 border-t border-gold-ink/20"><span className="font-bold text-ink-2">Total</span><span className="font-bold text-gold-ink">{formatLKR(finalTotal)}</span></div>
-              </div>
-            </div>
-          </details>
-        </div>
-
         {/* ═══════════ MAIN GRID ═══════════ */}
-        <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
+        <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start relative">
 
-          {/* LEFT 65% */}
-          <div className="w-full lg:w-[65%] flex flex-col gap-8">
-            <>
-
-              {/* ── STEP 1: CONTACT ── */}
-              {true && (
-                <motion.div id="checkout-contact" key="contact"
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8 scroll-mt-28"
-                >
-                  {/* Sign-in nudge */}
-                  {!isAuthenticated && (
-                    <div className="p-5 rounded-2xl border border-line/60 bg-panel flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div>
-                        <h4 className="font-bold text-ink-2 text-sm">Already have an account?</h4>
-                        <p className="text-[11px] text-muted mt-0.5">Sign in for faster checkout, saved addresses & exclusive rewards.</p>
-                      </div>
-                      <Link to="/auth/login" className="whitespace-nowrap px-6 py-3 rounded-xl border border-gold-ink text-gold-ink font-bold uppercase tracking-widest text-[10px] hover:bg-gold/10 transition-colors flex-shrink-0">
-                        Sign In
-                      </Link>
+          {/* LEFT PANEL: TIMELINE & ACCORDION */}
+          <div className="w-full lg:w-[60%] flex flex-col relative z-0">
+            {checkoutSteps.map((step, index) => {
+              const status = getStepStatus(step.id);
+              
+              return (
+                <div key={step.id} className="flex relative lg:mb-4" id={`checkout-${step.id}`}>
+                  {/* Vertical Line for Desktop Timeline */}
+                  {index < checkoutSteps.length - 1 && (
+                    <div className="hidden lg:block absolute left-4 top-10 bottom-[-2rem] w-[2px] z-[-1] bg-card">
+                       {/* Completed Progress Line */}
+                       <div className="w-full transition-all duration-500 bg-gold" style={{ height: status === "completed" ? "100%" : "0%" }} />
                     </div>
                   )}
 
-                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <h2 className="text-xl font-bold text-ink-2">Contact Information</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Full Name *</label>
-                        <input type="text" value={formData.fullName}
-                          onChange={(e) => updateField("fullName")(e)}
-                          placeholder="Your full name"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.fullName ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {errors.fullName && <span className="text-[10px] text-danger-ink">{errors.fullName}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Email Address *</label>
-                        <input type="email" value={formData.email}
-                          onChange={handleEmailChange} readOnly={isAuthenticated}
-                          onBlur={() => { if (!isAuthenticated) fetchGuestAddresses(formData.email); }}
-                          placeholder="you@example.com"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.email ? "border-danger-ink" : "border-card focus:border-gold-ink", isAuthenticated ? "opacity-60 cursor-not-allowed" : ""].join(" ")}
-                        />
-                        {errors.email && <span className="text-[10px] text-danger-ink">{errors.email}</span>}
-                        {errors.emailHint && <span className="text-[10px] text-gold-ink">💡 {errors.emailHint}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Phone Number *</label>
-                        <input type="tel" value={formData.phone} inputMode="tel"
-                          onChange={handlePhoneChange} onBlur={handlePhoneBlur} placeholder="07X XXX XXXX"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.phone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {errors.phone && <span className="text-[10px] text-danger-ink">{errors.phone}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">
-                          Alt. Phone <span className="normal-case font-normal text-line">(Optional)</span>
-                        </label>
-                        <input type="tel" value={formData.alternativePhone} inputMode="tel"
-                          onChange={handleAlternativePhoneChange} onBlur={handleAlternativePhoneBlur} placeholder="07X XXX XXXX"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.alternativePhone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {errors.alternativePhone && <span className="text-[10px] text-danger-ink">{errors.alternativePhone}</span>}
-                      </div>
+                  {/* Desktop Timeline Circle */}
+                  <div className="hidden lg:flex flex-col items-center mr-6 z-10 pt-1">
+                    <div className={[
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
+                      status === "completed" ? "bg-gold border-gold-ink text-black" :
+                      status === "active" ? "bg-page border-gold-ink text-gold-ink" :
+                                 "bg-page border-elevated text-line"
+                    ].join(" ")}>
+                      {status === "completed" ? <Check size={14} /> : step.num}
                     </div>
-                  </section>
+                  </div>
 
-                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <div>
-                      <h2 className="text-xl font-bold text-ink-2">Permanent Address</h2>
-                      <p className="text-[11px] text-muted mt-1">Saved to your account and auto-filled on your next purchase.</p>
-                    </div>
-
-                    {savedAddresses.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {savedAddresses.map((addr, i) => (
-                          <div key={i}
-                            onClick={() => { applySavedAddress(addr); setUseNewAddress(false); }}
-                            className={["p-4 rounded-xl border cursor-pointer transition-all", !useNewAddress ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}
-                          >
-                            <div className="text-xs font-bold text-ink-2 mb-1">{addr.label || "Saved Address"}</div>
-                            <div className="text-[10px] text-muted">{addr.street}, {addr.city}</div>
-                          </div>
-                        ))}
-                        <div onClick={() => setUseNewAddress(true)}
-                          className={["p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-center", useNewAddress ? "border-gold-ink text-gold-ink" : "border-card text-line hover:border-line"].join(" ")}
+                  {/* Step Content */}
+                  <div className="flex-1 min-w-0 w-full mb-8 lg:mb-10">
+                    <AnimatePresence mode="wait">
+                      {status === "future" && (
+                        <motion.h2 
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          className="text-xl font-bold text-line py-1.5 hidden lg:block"
                         >
-                          <span className="text-xs font-bold uppercase tracking-widest">+ New Address</span>
-                        </div>
-                      </div>
-                    )}
+                          {step.label}
+                        </motion.h2>
+                      )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2 flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
-                        <input type="text" value={formData.permStreet}
-                          onChange={updatePermField("permStreet")} placeholder="No. 12, Main Street"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {formData.sameAsPermanent && errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
-                        <input type="text" value={formData.permCity}
-                          onChange={updatePermField("permCity")} placeholder="Colombo"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {formData.sameAsPermanent && errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
-                        <select value={formData.permDistrict}
-                          onChange={updatePermField("permDistrict")}
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer", formData.sameAsPermanent && errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
+                      {status === "completed" && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          className="bg-panel border border-card rounded-2xl p-5 md:p-6 flex justify-between items-start"
                         >
-                          <option value="">Select District</option>
-                          {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                        {formData.sameAsPermanent && errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
-                        <input type="text" value={formData.permPostalCode}
-                          onChange={updatePermField("permPostalCode")} placeholder="10100"
-                          className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                        />
-                        {formData.sameAsPermanent && errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
-                      </div>
-                    </div>
-
-                    {/* Same-as-permanent toggle */}
-                    <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-card bg-page p-4 hover:border-line transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={!!formData.sameAsPermanent}
-                        onChange={(e) => toggleSameAsPermanent(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-gold cursor-pointer"
-                      />
-                      <span className="flex flex-col gap-0.5">
-                        <span className="text-xs font-bold text-ink-2">Delivery address is same as permanent address</span>
-                        <span className="text-[10px] text-muted">Untick to ship this order somewhere else — your permanent address stays saved.</span>
-                      </span>
-                    </label>
-
-                    {!formData.sameAsPermanent && (
-                      <div className="flex flex-col gap-4 rounded-xl border border-gold-ink/20 bg-gold/[0.02] p-4 md:p-5">
-                        <h3 className="text-sm font-bold text-ink-2">Delivery Address</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="md:col-span-2 flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
-                            <input type="text" value={formData.addressLine}
-                              onChange={(e) => updateField("addressLine")(e)} placeholder="No. 12, Main Street"
-                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                            />
-                            {errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
-                            <input type="text" value={formData.city}
-                              onChange={(e) => updateField("city")(e)} placeholder="Colombo"
-                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                            />
-                            {errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
-                            <select value={formData.district}
-                              onChange={(e) => updateField("district")(e)}
-                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer", errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                            >
-                              <option value="">Select District</option>
-                              {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                            {errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
-                            <input type="text" value={formData.postalCode}
-                              onChange={(e) => updateField("postalCode")(e)} placeholder="10100"
-                              className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}
-                            />
-                            {errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </section>
-
-                </motion.div>
-              )}
-
-              {/* ── STEP 2: SHIPPING ── */}
-              {true && (
-                <motion.div id="checkout-delivery" key="address"
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8 scroll-mt-28"
-                >
-                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-ink-2">Delivery Information</h2>
-                    </div>
-
-                    {!isFreeShippingQualify && formData.deliveryMode === "standard" && (
-                      <div className="p-4 rounded-xl border border-line/40 bg-page flex flex-col gap-2">
-                        <div className="flex justify-between text-[10px] uppercase tracking-widest font-bold">
-                          <span className="text-muted">Add {formatLKR(amountToFreeShipping)} more for free shipping</span>
-                          <span className="text-gold-ink">{Math.round(shippingProgress)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-card rounded-full overflow-hidden">
-                          <div className="h-full bg-gold rounded-full transition-all duration-700" style={{ width: `${shippingProgress}%` }} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Delivery zone transparency — resolved from the admin-managed
-                        shipping zones by the selected district's province. */}
-                    {activeZone && formData.deliveryMode !== "pickup" && (
-                      <div className="p-4 rounded-xl border border-gold-ink/20 bg-gold/[0.03] flex flex-col gap-3">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Delivery Zone</div>
-                            <div className="text-sm font-bold text-ink-2 mt-0.5">{activeZone.name}</div>
-                          </div>
-                          <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Estimated</div>
-                            <div className="text-sm font-bold text-ink-2 mt-0.5">{activeZone.estimatedDays || "1–3 business days"}</div>
-                          </div>
-                          <div>
-                            <div className="text-[9px] uppercase tracking-widest font-bold text-muted">Delivery Charge</div>
-                            <div className="text-sm font-bold mt-0.5">
-                              {isFreeShippingQualify && formData.deliveryMode === "standard"
-                                ? <span className="text-green-400">FREE</span>
-                                : <span className="text-gold-ink">{formatLKR(standardFee)}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-muted border-t border-gold-ink/10 pt-2.5">
-                          Delivery charges are calculated automatically based on your delivery zone
-                          ({deliveryProvince} Province).
-                          {Number(activeZone.freeAbove) > 0 && (
-                            <> Orders above {formatLKR(activeZone.freeAbove)} ship free in this zone.</>
-                          )}
-                        </p>
-                      </div>
-                    )}
+                            <h3 className="text-sm font-bold text-ink-2 mb-3 lg:hidden flex items-center gap-2">
+                              <Check size={16} className="text-gold-ink" /> {step.label}
+                            </h3>
+                            
+                            {step.id === "contact" && (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-bold text-ink-2">{formData.fullName}</span>
+                                <span className="text-sm text-muted">{formData.phone}</span>
+                                <span className="text-sm text-muted">{formData.email}</span>
+                              </div>
+                            )}
 
-                    <div className="flex flex-col gap-3">
-                      {DELIVERY_METHODS.map((method) => {
-                        const isSelected = formData.deliveryMode === method.id;
-                        const Icon = method.icon;
-                        const eta = method.id === "standard" && activeZone?.estimatedDays
-                          ? activeZone.estimatedDays
-                          : isFastDistrict ? method.fastEta : method.eta;
-                        const fee = method.id === "pickup"
-                          ? 0
-                          : method.id === "standard"
-                            ? (isFreeShippingQualify ? 0 : standardFee)
-                            : method.price;
-                        return (
-                          <div key={method.id}
-                            onClick={() => updateField("deliveryMode")(method.id)}
-                            className={["relative flex items-start gap-4 p-5 rounded-2xl border cursor-pointer transition-all duration-300", isSelected ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}
-                          >
-                            <div className={["mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-gold-ink" : "border-line"].join(" ")}>
-                              {isSelected && <div className="w-2 h-2 bg-gold rounded-full" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className={["font-bold text-sm", isSelected ? "text-gold-ink" : "text-ink-2"].join(" ")}>{method.label}</h4>
-                                <span className="font-bold text-ink-2 text-sm flex-shrink-0">
-                                  {fee === 0 ? <span className="text-green-400">FREE</span> : formatLKR(fee)}
+                            {step.id === "address" && (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-bold text-ink-2">{formData.addressLine || formData.permStreet}</span>
+                                <span className="text-sm text-muted">
+                                  {formData.city || formData.permCity}, {formData.district || formData.permDistrict} {formData.postalCode || formData.permPostalCode}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-muted mt-1">{method.desc}</p>
-                              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-elevated">
-                                <Clock size={10} className="text-cream" />
-                                <span className="text-[9px] uppercase tracking-widest text-cream font-bold">{eta}</span>
+                            )}
+
+                            {step.id === "delivery" && (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-bold text-ink-2">{DELIVERY_METHODS.find(m => m.id === formData.deliveryMode)?.label}</span>
+                                <span className="text-sm text-muted">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span>
                               </div>
-                            </div>
+                            )}
+
+                            {step.id === "payment" && (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-bold text-ink-2">{PAYMENT_METHODS.find(m => m.id === formData.paymentMethod)?.label}</span>
+                              </div>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </section>
+                          
+                          <button 
+                            onClick={() => proceedToStep(step.id)} 
+                            className="text-[10px] uppercase tracking-widest font-bold text-gold-ink hover:underline p-2 -m-2"
+                          >
+                            Edit
+                          </button>
+                        </motion.div>
+                      )}
 
-                </motion.div>
-              )}
-
-              {/* ── STEP 3: PAYMENT ── */}
-              {true && (
-                <motion.div id="checkout-payment" key="payment"
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}
-                  className="flex flex-col gap-8 scroll-mt-28"
-                >
-                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
-                    <h2 className="text-xl font-bold text-ink-2">Payment Method</h2>
-                    <p className="text-[11px] text-muted -mt-2">All transactions are encrypted and 100% secure.</p>
-
-                    <div className="flex flex-col gap-3">
-                      {PAYMENT_METHODS.map((method) => {
-                        const isSelected = formData.paymentMethod === method.id;
-                        const Icon = method.icon;
-                        return (
-                          <div key={method.id} className={["border rounded-2xl overflow-hidden transition-all duration-300", isSelected ? "border-gold-ink" : "border-card"].join(" ")}>
-                            <div
-                              onClick={() => updateField("paymentMethod")(method.id)}
-                              className={["flex items-center gap-4 p-5 cursor-pointer transition-colors", isSelected ? "bg-gold/5" : "bg-page hover:bg-panel"].join(" ")}
-                            >
-                              <div className={["w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors", isSelected ? "border-gold-ink" : "border-line"].join(" ")}>
-                                {isSelected && <div className="w-2 h-2 bg-gold rounded-full" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className={["font-bold text-sm", isSelected ? "text-gold-ink" : "text-ink-2"].join(" ")}>{method.label}</h4>
-                                  {method.badge && (
-                                    <span className="text-[8px] uppercase tracking-widest bg-line text-cream px-2 py-0.5 rounded font-bold">{method.badge}</span>
-                                  )}
+                      {status === "active" && (
+                        <motion.div
+                           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                           className="overflow-hidden"
+                        >
+                          <div className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-6">
+                            <h2 className="text-xl font-bold text-ink-2 mb-2 lg:hidden">{step.label}</h2>
+                            <h2 className="text-xl font-bold text-ink-2 mb-2 hidden lg:block">{step.label}</h2>
+                            
+                            {/* ACTIVE STEP FORMS */}
+                            {step.id === "contact" && (
+                              <div className="flex flex-col gap-6">
+                                {!isAuthenticated && (
+                                  <div className="p-4 rounded-xl border border-line/60 bg-page flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div>
+                                      <h4 className="font-bold text-ink-2 text-sm">Already have an account?</h4>
+                                      <p className="text-[11px] text-muted mt-0.5">Sign in for faster checkout.</p>
+                                    </div>
+                                    <Link to="/auth/login" className="whitespace-nowrap px-6 py-2 rounded-xl border border-gold-ink text-gold-ink font-bold uppercase tracking-widest text-[10px] hover:bg-gold/10 transition-colors flex-shrink-0">
+                                      Sign In
+                                    </Link>
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Full Name *</label>
+                                    <input type="text" value={formData.fullName} onChange={(e) => updateField("fullName")(e)} placeholder="Your full name" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.fullName ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {errors.fullName && <span className="text-[10px] text-danger-ink">{errors.fullName}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Email Address *</label>
+                                    <input type="email" value={formData.email} onChange={handleEmailChange} readOnly={isAuthenticated} onBlur={() => { if (!isAuthenticated) fetchGuestAddresses(formData.email); }} placeholder="you@example.com" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.email ? "border-danger-ink" : "border-card focus:border-gold-ink", isAuthenticated ? "opacity-60 cursor-not-allowed" : ""].join(" ")} />
+                                    {errors.email && <span className="text-[10px] text-danger-ink">{errors.email}</span>}
+                                    {errors.emailHint && <span className="text-[10px] text-gold-ink">💡 {errors.emailHint}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Phone Number *</label>
+                                    <input type="tel" value={formData.phone} inputMode="tel" onChange={handlePhoneChange} onBlur={handlePhoneBlur} placeholder="07X XXX XXXX" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.phone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {errors.phone && <span className="text-[10px] text-danger-ink">{errors.phone}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Alt. Phone <span className="normal-case font-normal text-line">(Optional)</span></label>
+                                    <input type="tel" value={formData.alternativePhone} inputMode="tel" onChange={handleAlternativePhoneChange} onBlur={handleAlternativePhoneBlur} placeholder="07X XXX XXXX" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.alternativePhone ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {errors.alternativePhone && <span className="text-[10px] text-danger-ink">{errors.alternativePhone}</span>}
+                                  </div>
                                 </div>
-                                <span className="text-[10px] text-muted">{method.sublabel}</span>
                               </div>
-                              <Icon className={["w-6 h-6 flex-shrink-0 transition-colors", isSelected ? "text-gold-ink" : "text-line"].join(" ")} />
-                            </div>
+                            )}
 
-                            <AnimatePresence>
-                              {isSelected && method.id === "manual_bank_transfer" && (
-                                <motion.div key="bank-panel"
-                                  initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                                  className="overflow-hidden border-t border-gold-ink/20 bg-page"
-                                >
-                                  <div className="p-6 flex flex-col gap-4">
-                                    <div className="p-4 rounded-xl border border-line/50 bg-panel">
-                                      {[
-                                        { label: "Bank", value: displayBankDetails.bankName },
-                                        { label: "Branch", value: displayBankDetails.branch },
-                                        { label: "Account Name", value: displayBankDetails.accountName },
-                                      ].map(({ label, value }) => (
-                                        <div key={label} className="flex justify-between items-center py-3 border-b border-card">
-                                          <span className="text-[10px] uppercase tracking-widest text-muted font-bold">{label}</span>
-                                          <span className="font-bold text-ink-2 text-sm">{value}</span>
+                            {step.id === "address" && (
+                              <div className="flex flex-col gap-6">
+                                {savedAddresses.length > 0 && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                                    {savedAddresses.map((addr, i) => (
+                                      <div key={i} onClick={() => { applySavedAddress(addr); setUseNewAddress(false); }} className={["p-4 rounded-xl border cursor-pointer transition-all", !useNewAddress ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}>
+                                        <div className="text-xs font-bold text-ink-2 mb-1">{addr.label || "Saved Address"}</div>
+                                        <div className="text-[10px] text-muted">{addr.street}, {addr.city}</div>
+                                      </div>
+                                    ))}
+                                    <div onClick={() => setUseNewAddress(true)} className={["p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-center", useNewAddress ? "border-gold-ink text-gold-ink" : "border-card text-line hover:border-line"].join(" ")}>
+                                      <span className="text-xs font-bold uppercase tracking-widest">+ New Address</span>
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
+                                    <input type="text" value={formData.permStreet} onChange={updatePermField("permStreet")} placeholder="No. 12, Main Street" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {formData.sameAsPermanent && errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
+                                    <input type="text" value={formData.permCity} onChange={updatePermField("permCity")} placeholder="Colombo" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {formData.sameAsPermanent && errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
+                                    <div className="relative">
+                                      <select value={formData.permDistrict} onChange={updatePermField("permDistrict")} className={["w-full h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer pr-10", formData.sameAsPermanent && errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}>
+                                        <option value="">Select District</option>
+                                        {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                                      </select>
+                                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+                                    </div>
+                                    {formData.sameAsPermanent && errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
+                                    <input type="text" value={formData.permPostalCode} onChange={updatePermField("permPostalCode")} placeholder="10100" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", formData.sameAsPermanent && errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                    {formData.sameAsPermanent && errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
+                                  </div>
+                                </div>
+
+                                <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border border-card bg-page p-4 hover:border-line transition-colors mt-2">
+                                  <input type="checkbox" checked={!!formData.sameAsPermanent} onChange={(e) => toggleSameAsPermanent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-gold cursor-pointer" />
+                                  <span className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold text-ink-2">Delivery address is same as permanent address</span>
+                                    <span className="text-[10px] text-muted">Untick to ship this order somewhere else.</span>
+                                  </span>
+                                </label>
+
+                                {!formData.sameAsPermanent && (
+                                  <div className="flex flex-col gap-4 rounded-xl border border-gold-ink/20 bg-gold/[0.02] p-4 md:p-5">
+                                    <h3 className="text-sm font-bold text-ink-2">Alternative Delivery Address</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="md:col-span-2 flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Street Address *</label>
+                                        <input type="text" value={formData.addressLine} onChange={(e) => updateField("addressLine")(e)} placeholder="No. 12, Main Street" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.addressLine ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                        {errors.addressLine && <span className="text-[10px] text-danger-ink">{errors.addressLine}</span>}
+                                      </div>
+                                      <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">City *</label>
+                                        <input type="text" value={formData.city} onChange={(e) => updateField("city")(e)} placeholder="Colombo" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.city ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                        {errors.city && <span className="text-[10px] text-danger-ink">{errors.city}</span>}
+                                      </div>
+                                      <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">District *</label>
+                                        <div className="relative">
+                                          <select value={formData.district} onChange={(e) => updateField("district")(e)} className={["w-full h-14 rounded-xl bg-page border px-4 text-ink-2 outline-none transition-colors appearance-none cursor-pointer pr-10", errors.district ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")}>
+                                            <option value="">Select District</option>
+                                            {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                                          </select>
+                                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
                                         </div>
-                                      ))}
-                                      <div className="flex justify-between items-center pt-3">
-                                        <span className="text-[10px] uppercase tracking-widest text-muted font-bold">Account No.</span>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-bold text-gold-ink tracking-wider">{displayBankDetails.accountNumber}</span>
-                                          <button onClick={(e) => { e.preventDefault(); copyToClipboard(displayBankDetails.accountNumber); }} className="text-muted hover:text-gold-ink transition-colors p-1"><Copy size={13} /></button>
-                                        </div>
+                                        {errors.district && <span className="text-[10px] text-danger-ink">{errors.district}</span>}
+                                      </div>
+                                      <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">Postal Code *</label>
+                                        <input type="text" value={formData.postalCode} onChange={(e) => updateField("postalCode")(e)} placeholder="10100" className={["h-14 rounded-xl bg-page border px-4 text-ink-2 placeholder-line outline-none transition-colors", errors.postalCode ? "border-danger-ink" : "border-card focus:border-gold-ink"].join(" ")} />
+                                        {errors.postalCode && <span className="text-[10px] text-danger-ink">{errors.postalCode}</span>}
                                       </div>
                                     </div>
-                                    <p className="text-[11px] text-muted leading-relaxed p-3 bg-panel rounded-xl border border-card">
-                                      ⏱ {displayBankDetails.deadline || "Pay within 24 hours to confirm your order."} You can upload your payment slip on the next page.
-                                    </p>
                                   </div>
-                                </motion.div>
-                              )}
-                              {isSelected && method.id === "card" && (
-                                <motion.div key="card-panel"
-                                  initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                                  className="overflow-hidden border-t border-gold-ink/20 bg-page"
-                                >
-                                  <div className="p-6 flex flex-col items-center text-center gap-3">
-                                    <Lock className="w-8 h-8 text-line" />
-                                    <p className="text-[11px] text-muted max-w-xs leading-relaxed">
-                                      After placing your order you'll complete payment on PayHere's secure window — your card details are never stored on our servers.
-                                    </p>
+                                )}
+                              </div>
+                            )}
+
+                            {step.id === "delivery" && (
+                              <div className="flex flex-col gap-4">
+                                {DELIVERY_METHODS.map((method) => {
+                                  const Icon = method.icon;
+                                  const isSelected = formData.deliveryMode === method.id;
+                                  
+                                  return (
+                                    <label
+                                      key={method.id}
+                                      className={["relative flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl border cursor-pointer transition-all", isSelected ? "border-gold-ink bg-gold/5" : "border-card bg-page hover:border-line"].join(" ")}
+                                    >
+                                      <div className="flex items-start gap-4">
+                                        <div className={["mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border", isSelected ? "border-gold-ink" : "border-muted"].join(" ")}>
+                                          {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-gold-ink" />}
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <div className="flex items-center gap-2">
+                                            <Icon className={["h-4 w-4", isSelected ? "text-gold-ink" : "text-muted"].join(" ")} />
+                                            <span className={["text-sm font-bold", isSelected ? "text-ink-2" : "text-muted"].join(" ")}>{method.label}</span>
+                                          </div>
+                                          <p className="mt-1 text-[11px] text-muted">{method.desc}</p>
+                                          <p className="mt-2 text-xs font-bold text-gold-ink sm:hidden">
+                                            {method.id === "pickup" ? "FREE" : method.id === "standard" && isFreeShippingQualify ? "FREE" : formatLKR(method.id === "standard" ? standardFee : method.price)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="mt-4 sm:mt-0 sm:text-right ml-9 sm:ml-0 flex flex-col sm:items-end">
+                                        <span className="hidden sm:block text-sm font-bold text-gold-ink">
+                                          {method.id === "pickup" ? "FREE" : method.id === "standard" && isFreeShippingQualify ? "FREE" : formatLKR(method.id === "standard" ? standardFee : method.price)}
+                                        </span>
+                                        <span className="text-[10px] uppercase tracking-widest text-muted mt-1">
+                                          {isFastDistrict ? method.fastEta : method.eta}
+                                        </span>
+                                      </div>
+                                      <input type="radio" name="deliveryMode" value={method.id} checked={isSelected} onChange={(e) => updateField("deliveryMode")(e)} className="hidden" />
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {step.id === "payment" && (
+                              <div className="flex flex-col gap-4">
+                                {PAYMENT_METHODS.map((method) => {
+                                  const Icon = method.icon;
+                                  const isSelected = formData.paymentMethod === method.id;
+
+                                  return (
+                                    <div key={method.id} className="flex flex-col gap-0">
+                                      <label className={["relative flex items-start gap-4 p-5 rounded-xl border cursor-pointer transition-all", isSelected ? "border-gold-ink bg-gold/5 rounded-b-none border-b-transparent" : "border-card bg-page hover:border-line"].join(" ")}>
+                                        <div className={["mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border", isSelected ? "border-gold-ink" : "border-muted"].join(" ")}>
+                                          {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-gold-ink" />}
+                                        </div>
+                                        <div className="flex flex-col flex-1">
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span className={["text-sm font-bold", isSelected ? "text-ink-2" : "text-muted"].join(" ")}>{method.label}</span>
+                                            {method.badge && <span className="rounded bg-gold/10 px-2 py-0.5 text-[9px] uppercase tracking-widest font-bold text-gold-ink">{method.badge}</span>}
+                                          </div>
+                                          <span className="mt-1 text-[11px] text-muted">{method.sublabel}</span>
+                                        </div>
+                                        <Icon className={["h-5 w-5 shrink-0", isSelected ? "text-gold-ink" : "text-muted"].join(" ")} />
+                                        <input type="radio" name="paymentMethod" value={method.id} checked={isSelected} onChange={(e) => updateField("paymentMethod")(e)} className="hidden" />
+                                      </label>
+                                      
+                                      {/* Expanded content for Manual Bank Transfer */}
+                                      <AnimatePresence>
+                                        {isSelected && method.id === "manual_bank_transfer" && (
+                                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                            <div className="border border-t-0 border-gold-ink/30 bg-gold/[0.02] rounded-b-xl p-5 pt-2">
+                                              <p className="text-[11px] text-muted mb-4">{method.description}</p>
+                                              <div className="flex flex-col gap-2 p-4 bg-page rounded-lg border border-card">
+                                                <div className="flex justify-between items-center"><span className="text-[10px] uppercase tracking-widest text-muted">Bank</span><span className="text-xs font-bold text-ink-2">{displayBankDetails.bankName}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-[10px] uppercase tracking-widest text-muted">Branch</span><span className="text-xs font-bold text-ink-2">{displayBankDetails.branch}</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-[10px] uppercase tracking-widest text-muted">Name</span><span className="text-xs font-bold text-ink-2">{displayBankDetails.accountName}</span></div>
+                                                <div className="flex justify-between items-center">
+                                                  <span className="text-[10px] uppercase tracking-widest text-muted">Acc No</span>
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-gold-ink font-mono">{displayBankDetails.accountNumber}</span>
+                                                    <button type="button" onClick={() => copyToClipboard(displayBankDetails.accountNumber)} className="p-1 text-muted hover:text-gold-ink transition-colors"><Copy className="w-3 h-3" /></button>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  );
+                                })}
+
+                                <div className="mt-4 pt-4 border-t border-card flex flex-col gap-2">
+                                  <label className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={formData.termsAccepted} onChange={(e) => updateField("termsAccepted")(e)} className="mt-0.5 h-4 w-4 accent-gold" />
+                                    <span className="text-[11px] text-muted leading-tight">
+                                      I have read and agree to the <Link to="/legal/terms" className="text-gold-ink hover:underline" target="_blank">Terms & Conditions</Link>, <Link to="/legal/privacy" className="text-gold-ink hover:underline" target="_blank">Privacy Policy</Link>, and <Link to="/legal/shipping" className="text-gold-ink hover:underline" target="_blank">Shipping Policy</Link>.
+                                    </span>
+                                  </label>
+                                  {errors.termsAccepted && <span className="text-[10px] text-danger-ink">{errors.termsAccepted}</span>}
+                                </div>
+                              </div>
+                            )}
+
+                            {step.id === "review" && (
+                              <div className="flex flex-col gap-6">
+                                <div className="rounded-xl border border-gold-ink/20 bg-gold/[0.02] p-5">
+                                  <h3 className="text-xs font-bold uppercase tracking-widest text-gold-ink mb-2">Final Review</h3>
+                                  <p className="text-sm text-muted mb-4">Please check your details in the order summary on the right (or bottom) before placing your order.</p>
+                                  <div className="text-sm text-ink-2 flex justify-between border-b border-card pb-2">
+                                    <span>Total to pay:</span>
+                                    <span className="font-bold text-gold-ink">{formatLKR(finalTotal)}</span>
                                   </div>
-                                </motion.div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Continue Button for each step */}
+                            <button
+                              type="button"
+                              onClick={step.id === "review" ? handleSubmit : handleNextStep}
+                              disabled={isSubmitting}
+                              className="mt-2 h-14 w-full rounded-xl bg-gold text-black font-bold uppercase tracking-widest hover:bg-gold-ink transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {isSubmitting ? (
+                                <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                              ) : step.id === "review" ? (
+                                formData.paymentMethod === "card" ? <><CreditCard className="w-5 h-5"/> Pay Securely via PayHere</> : <><Check className="w-5 h-5"/> Confirm Order</>
+                              ) : (
+                                "Continue"
                               )}
-                            </AnimatePresence>
+                            </button>
+                            
                           </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-
-                  {/* Order Notes */}
-                  <section className="bg-panel border border-card rounded-2xl p-6 md:p-8 flex flex-col gap-4">
-                    <h3 className="text-base font-bold text-ink-2">
-                      Order Notes <span className="text-line text-xs font-normal normal-case">(Optional)</span>
-                    </h3>
-                    <textarea value={formData.notes}
-                      onChange={(e) => updateField("notes")(e)}
-                      placeholder="Special delivery instructions, gate codes, etc..."
-                      maxLength={500}
-                      className="h-28 rounded-xl bg-page border border-card focus:border-gold-ink p-4 text-ink-2 placeholder-line outline-none transition-colors resize-none text-sm"
-                    />
-                    <span className="text-[10px] text-line self-end">{(formData.notes || "").length}/500</span>
-                  </section>
-
-                  {/* Terms */}
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={formData.termsAccepted}
-                      onChange={(e) => updateField("termsAccepted")(e)}
-                      className="mt-1 w-4 h-4 accent-gold flex-shrink-0"
-                    />
-                    <span className="text-[11px] text-muted leading-relaxed">
-                      I agree to the{" "}
-                      <Link to="/terms" className="text-gold-ink hover:underline">Terms & Conditions</Link>{" "}
-                      and{" "}
-                      <Link to="/privacy" className="text-gold-ink hover:underline">Privacy Policy</Link>.
-                    </span>
-                  </label>
-                  {errors.termsAccepted && <span className="text-[10px] text-danger-ink -mt-4">{errors.termsAccepted}</span>}
-
-                  {/* CTA — desktop only; on mobile the sticky bottom bar places the order */}
-                  <button onClick={handleSubmit} disabled={isSubmitting}
-                    className="w-full bg-gold text-black h-16 rounded-xl font-black uppercase tracking-[0.18em] text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_6px_30px_rgba(242,202,80,0.25)] hidden lg:flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting
-                      ? <><Loader2 className="animate-spin" size={18} /> Processing...</>
-                      : <><Lock size={16} /> Place Secure Order</>
-                    }
-                  </button>
-
-                  {/* Trust badges */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-card">
-                    {[
-                      { icon: ShieldCheck, label: "Secure Checkout"  },
-                      { icon: Lock,        label: "SSL Protected"    },
-                      { icon: Truck,       label: "Island Delivery"  },
-                      { icon: Check,       label: "Easy Returns"     },
-                    ].map(({ icon: Icon, label }) => (
-                      <div key={label} className="flex flex-col items-center gap-2 text-center">
-                        <Icon className="w-5 h-5 text-gold-ink" />
-                        <span className="text-[9px] uppercase tracking-widest text-muted font-bold">{label}</span>
-                      </div>
-                    ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </motion.div>
-              )}
-
-            </>
+                </div>
+              );
+            })}
           </div>
 
-          {/* RIGHT 35% — STICKY SUMMARY (Desktop only) */}
-          <div className="w-full lg:w-[35%] hidden lg:block">
-            <div className="sticky top-[110px] flex flex-col gap-6">
+          {/* RIGHT PANEL: STICKY ORDER SUMMARY */}
+          <div className="w-full lg:w-[40%] max-w-[420px] ml-auto">
+            <div className="sticky top-24 rounded-2xl border border-card bg-panel p-6 flex flex-col gap-6 shadow-xl">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-ink-2 flex justify-between items-center">
+                Order Summary
+                <span className="text-[10px] text-muted normal-case">{itemCount} items</span>
+              </h3>
 
-              <div className="bg-panel border border-card rounded-[24px] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-                <h3 className="text-lg font-bold text-ink-2 mb-6">Order Summary</h3>
-
-                {/* Items */}
-                <div className="flex flex-col gap-5 max-h-[350px] overflow-y-auto pr-1 mb-6">
-                  {checkoutItems.map((item) => (
-                    <div key={item.id} className="flex gap-4">
-                      <div className="relative w-[72px] h-[72px] bg-page rounded-xl border border-card overflow-hidden flex-shrink-0">
-                        <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-contain p-1.5" />
-                        <span className="absolute -top-1.5 -right-1.5 bg-gold text-black w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black">{item.quantity}</span>
+              {/* Items List */}
+              <div className="flex flex-col gap-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                {checkoutItems.map((item) => (
+                  <div key={item.id} className="flex gap-4 group">
+                    <div className="relative w-20 h-24 bg-page rounded-xl border border-card overflow-hidden flex-shrink-0">
+                      <img src={getVariantImage(item.product, item.variant?.color)} alt={item.product?.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                      <span className="absolute top-1 right-1 bg-gold text-black w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">{item.quantity}</span>
+                    </div>
+                    <div className="flex-1 flex flex-col py-1 min-w-0">
+                      <h4 className="text-sm font-bold text-ink-2 line-clamp-2 leading-tight mb-1">{item.product?.name}</h4>
+                      <div className="text-[10px] text-muted uppercase tracking-widest mb-auto">
+                        {[item.variant?.size, item.variant?.color].filter(Boolean).join(" · ")}
                       </div>
-                      <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                        <h4 className="text-xs font-bold text-ink-2 line-clamp-2 leading-snug">{item.product?.name}</h4>
-                        <div className="text-[9px] text-muted uppercase tracking-wider font-bold">
-                          {[item.variant?.size, item.variant?.color].filter(Boolean).join(" · ")}
-                        </div>
+                      <div className="flex items-end justify-between mt-2">
                         <div className="text-sm font-bold text-gold-ink">{formatLKR(item.unitPrice * item.quantity)}</div>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Promo code */}
-                <div className="flex gap-2 mb-3">
-                  <input type="text" placeholder="Gift card or discount code"
-                    value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    className="flex-1 h-11 bg-page border border-card focus:border-gold-ink rounded-xl px-4 text-sm text-ink-2 placeholder-line outline-none transition-colors"
-                  />
-                  <button onClick={() => applyCouponCode()} disabled={!couponInput || couponApplying}
-                    className="h-11 px-5 bg-line text-cream rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-40 flex items-center justify-center"
-                  >
-                    {couponApplying ? <Loader2 size={14} className="animate-spin" /> : "Apply"}
-                  </button>
-                </div>
-                {appliedCoupon && (
-                  <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-xl mb-3">
-                    <span className="text-[10px] uppercase tracking-widest text-green-400 font-bold flex items-center gap-1.5">
-                      <Gift size={11} /> {appliedCoupon.code} applied
-                    </span>
-                    <button onClick={removeCoupon} className="text-muted hover:text-danger-ink transition-colors"><Trash2 size={12} /></button>
-                  </div>
-                )}
-                {rewardSuggestions.length > 0 && !appliedCoupon && (
-                  <div className="flex flex-col gap-2 mb-4">
-                    {rewardSuggestions.map((r) => (
-                      <button key={r.code} onClick={() => applyCouponCode(r.code)}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl border border-line/40 hover:border-gold-ink/40 bg-page transition-colors text-left group"
-                      >
-                        <span className="text-[10px] font-bold text-cream uppercase tracking-widest group-hover:text-gold-ink">{r.code}</span>
-                        <span className="text-[10px] text-muted">Tap to apply</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Totals */}
-                <div className="border-t border-card pt-5 flex flex-col gap-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted">Subtotal</span>
-                    <span className="text-ink-2 font-bold">{formatLKR(checkoutTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted">Shipping ({selectedDelivery.label})</span>
-                    <span className="font-bold">{shippingFee === 0 ? <span className="text-green-400">FREE</span> : <span className="text-ink-2">{formatLKR(shippingFee)}</span>}</span>
-                  </div>
-                  {activeZone && formData.deliveryMode !== "pickup" && (
-                    <p className="text-[9px] uppercase tracking-widest text-line -mt-1.5">
-                      {activeZone.name} · {activeZone.estimatedDays || "1–3 business days"}
-                    </p>
-                  )}
-                  {couponDiscount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-400">Discount ({appliedCoupon?.code})</span>
-                      <span className="text-green-400 font-bold">-{formatLKR(couponDiscount)}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="border-t border-gold-ink/20 mt-4 pt-5 flex justify-between items-end">
-                  <div>
-                    <span className="text-base font-bold text-ink-2">Total</span>
-                    <div className="text-[9px] uppercase tracking-widest text-line mt-0.5">incl. all charges</div>
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xs text-muted font-bold">LKR</span>
-                    <span className="text-[28px] font-black text-gold-ink leading-none">{finalTotal.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trust block */}
-              <div className="bg-panel border border-card rounded-2xl p-5 flex flex-col gap-3">
-                {[
-                  { icon: ShieldCheck, label: "Secure & Encrypted Checkout"    },
-                  { icon: Truck,       label: "Islandwide Delivery Available"   },
-                  { icon: Package,     label: "Careful Packaging Guaranteed"    },
-                ].map(({ icon: Icon, label }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-gold-ink flex-shrink-0" />
-                    <span className="text-[10px] uppercase tracking-widest text-muted font-bold">{label}</span>
                   </div>
                 ))}
               </div>
 
+              {/* Reward/Coupon */}
+              <div className="border-t border-card pt-6">
+                {!appliedCoupon ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-ink-2">Gift Card or Reward Code</span>
+                      <button type="button" onClick={() => setCouponExpanded(!couponExpanded)} className="text-[10px] text-gold-ink hover:underline uppercase tracking-widest font-bold">
+                        {couponExpanded ? "Cancel" : "Add"}
+                      </button>
+                    </div>
+                    <AnimatePresence>
+                      {couponExpanded && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="flex gap-2 overflow-hidden">
+                          <input type="text" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} placeholder="Enter code" className="h-12 flex-1 rounded-xl bg-page border border-card px-4 text-sm text-ink-2 outline-none focus:border-gold-ink transition-colors uppercase placeholder:normal-case" />
+                          <button type="button" onClick={() => applyCouponCode(couponInput)} disabled={couponApplying || !couponInput.trim()} className="h-12 px-6 rounded-xl bg-ink-2 text-page font-bold text-xs uppercase tracking-widest hover:bg-gold-ink hover:text-black transition-colors disabled:opacity-50">
+                            Apply
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    {/* Render suggested rewards */}
+                    {rewardSuggestions.length > 0 && !couponExpanded && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {rewardSuggestions.map(r => (
+                          <button key={r.code} type="button" onClick={() => applyCouponCode(r.code)} className="px-3 py-1.5 rounded border border-gold-ink/30 bg-gold/5 text-[10px] text-gold-ink font-bold hover:bg-gold/10 transition-colors">
+                            Apply {r.code}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gold/10 border border-gold-ink/30">
+                    <div className="flex items-center gap-3">
+                      <Gift className="w-5 h-5 text-gold-ink" />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-gold-ink">{appliedCoupon.code}</span>
+                        <span className="text-[10px] text-muted">{appliedCoupon.title}</span>
+                      </div>
+                    </div>
+                    <button type="button" onClick={removeCoupon} className="text-muted hover:text-danger-ink transition-colors p-2">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-card pt-6 flex flex-col gap-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted">Subtotal</span>
+                  <span className="text-ink-2 font-bold">{formatLKR(checkoutTotal)}</span>
+                </div>
+                
+                <div className="flex justify-between items-center text-sm group">
+                  <div className="flex items-center gap-1.5 text-muted">
+                    <span>Delivery</span>
+                    {activeZone && formData.deliveryMode !== "pickup" && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card group-hover:bg-line/40 transition-colors">{activeZone.name}</span>
+                    )}
+                  </div>
+                  <span className="text-ink-2 font-bold">{shippingFee === 0 ? "FREE" : formatLKR(shippingFee)}</span>
+                </div>
+
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between items-center text-sm text-green-400">
+                    <span>Reward Discount</span>
+                    <span className="font-bold">-{formatLKR(couponDiscount)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-end mt-4 pt-4 border-t border-gold-ink/20">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-ink-2">Total</span>
+                    <span className="text-[10px] text-muted">Including taxes</span>
+                  </div>
+                  <span className="text-2xl font-bold text-gold-ink">{formatLKR(finalTotal)}</span>
+                </div>
+              </div>
+              
+              {/* Trust badges */}
+              <div className="mt-2 flex flex-col gap-3 p-4 rounded-xl bg-page border border-card">
+                 <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-4 h-4 text-gold-ink shrink-0" />
+                    <span className="text-[10px] text-muted">Secure Encrypted Checkout</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <Truck className="w-4 h-4 text-gold-ink shrink-0" />
+                    <span className="text-[10px] text-muted">Nationwide Delivery across SL</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <Clock className="w-4 h-4 text-gold-ink shrink-0" />
+                    <span className="text-[10px] text-muted">24/7 Dedicated Support</span>
+                 </div>
+              </div>
             </div>
           </div>
 
         </div>
       </div>
-
-      {/* ═══════════ MOBILE STICKY BOTTOM BAR ═══════════ */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-page/95 backdrop-blur-xl border-t-2 border-gold-ink px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="flex items-center justify-between mb-2.5">
-          <div>
-            <div className="text-[9px] uppercase tracking-widest text-muted font-bold">Total Due</div>
-            <div className="text-xl font-black text-gold-ink">{formatLKR(finalTotal)}</div>
-          </div>
-          <div className="text-[10px] text-muted">{itemCount} item{itemCount !== 1 ? "s" : ""}</div>
-        </div>
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full bg-gold text-black h-14 rounded-xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50"
-        >
-          {isSubmitting
-            ? <><Loader2 className="animate-spin" size={16} /> Processing...</>
-            : <><Lock size={14} /> Place Secure Order</>
-          }
-        </button>
-      </div>
-
-      {/* ═══════════ OTP MODAL ═══════════ */}
-      {otpModal.open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-panel p-8 border border-card shadow-2xl flex flex-col gap-5">
-            <div>
-              <h3 className="text-xl font-bold text-ink">Verify Your Email</h3>
-              <p className="text-[11px] text-muted mt-1">
-                Enter the 4-digit code sent to <span className="text-gold-ink">{formData.email}</span>.
-              </p>
-            </div>
-            <input type="text" value={otpModal.code}
-              onChange={(e) => setOtpModal((prev) => ({ ...prev, code: e.target.value }))}
-              placeholder="0000" maxLength={4}
-              className="w-full h-16 rounded-xl bg-page border border-card focus:border-gold-ink text-center text-3xl tracking-[0.6em] text-ink font-black outline-none"
-            />
-            {!otpModal.sent ? (
-              <button onClick={sendGuestOtp} disabled={otpModal.sending}
-                className="w-full bg-gold text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {otpModal.sending ? <><Loader2 className="animate-spin" size={14} /> Sending...</> : "Send Code"}
-              </button>
-            ) : (
-              <button onClick={verifyGuestOtp} disabled={otpModal.verifying}
-                className="w-full bg-gold text-black h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {otpModal.verifying ? <><Loader2 className="animate-spin" size={14} /> Verifying...</> : "Verify & Place Order"}
-              </button>
-            )}
-            <button
-              onClick={() => setOtpModal({ open: false, sending: false, sent: false, code: "", verifying: false })}
-              className="text-muted text-[10px] font-bold uppercase tracking-widest hover:text-ink transition-colors text-center"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
