@@ -24,6 +24,7 @@
   "author": "Hajith Mohamed",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.9.0",
     "compression": "^1.8.1",
@@ -41,7 +42,6 @@
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
-    "openai": "^6.37.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.18.0",
     "slugify": "^1.6.6",

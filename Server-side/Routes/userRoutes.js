@@ -18,6 +18,7 @@ const {
   updateAdminUserStatus,
   bulkTagUsers,
   triggerAdminPasswordReset,
+  adminSetCustomerPassword,
   deleteAdminUser,
   getCart,
   addToCart,
@@ -49,6 +50,7 @@ router.get("/admin/users", adminMiddleware, requirePermission("users"), paginate
 router.get("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), getAdminUserDetail);
 router.patch("/admin/users/:id/status", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), validateAdminUserStatus, adminLogMiddleware, updateAdminUserStatus);
 router.post("/admin/users/:id/reset-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, triggerAdminPasswordReset);
+router.post("/admin/users/:id/change-password", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, adminSetCustomerPassword);
 router.delete("/admin/users/:id", adminMiddleware, requirePermission("users"), validateObjectIdParam("id", "user id"), adminLogMiddleware, deleteAdminUser);
 router.patch("/admin/users/bulk/tag", adminMiddleware, requirePermission("users"), validateBulkUserTag, adminLogMiddleware, bulkTagUsers);
 

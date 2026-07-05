@@ -28,7 +28,7 @@ Your site runs on three services:
 | **Email / SMTP** (`SMTP_*`, `FROM_EMAIL`) | Railway | Your email provider (e.g. Gmail App Password, SendGrid, Mailgun) |
 | **Website → API URL** (`VITE_API_URL`) | Netlify | Your Railway service URL + `/api` |
 | **Google / Facebook login** (optional) | Railway + Netlify | Google Cloud Console / Meta for Developers |
-| **WhatsApp, PayHere, OpenAI** (optional) | Railway | The respective provider dashboards |
+| **WhatsApp, PayHere, Anthropic/Claude** (optional) | Railway | The respective provider dashboards |
 
 The complete annotated lists are in `Server-side/.env.example` (backend) and
 `Client-Side/.env.example` (website). Names there match the dashboards exactly.

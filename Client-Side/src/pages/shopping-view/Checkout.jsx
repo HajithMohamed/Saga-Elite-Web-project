@@ -449,6 +449,25 @@ const Checkout = () => {
     }
     return merged;
   });
+  const paymentReturnToastShown = useRef(false);
+
+  useEffect(() => {
+    if (paymentReturnToastShown.current) return;
+
+    const paymentStatus = location.state?.paymentStatus;
+    if (!["cancelled", "failed"].includes(paymentStatus)) return;
+
+    paymentReturnToastShown.current = true;
+    toast({
+      title: paymentStatus === "failed" ? "Payment failed" : "Payment was cancelled",
+      description:
+        location.state?.message ||
+        (paymentStatus === "failed"
+          ? "Please retry the card payment or choose another method."
+          : "You can retry the card payment or choose another method."),
+      variant: paymentStatus === "failed" ? "destructive" : "default",
+    });
+  }, [location.state]);
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);

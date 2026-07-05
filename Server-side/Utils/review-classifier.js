@@ -1,21 +1,21 @@
 // Lightweight per-review classifier. Runs async after a review is saved so
 // admin moderation has toxicity/spam/sentiment signals to act on.
 //
-// Falls back gracefully when OPENAI_API_KEY is missing — we just don't enrich.
+// Falls back gracefully when ANTHROPIC_API_KEY is missing — we just don't enrich.
 // Existing rule-based sentiment logic in reviewController stays in place; this
 // fills in the richer fields when the model is available.
 
-let OpenAI;
+let Anthropic;
 try {
-  OpenAI = require("openai");
+  Anthropic = require("@anthropic-ai/sdk");
 } catch {
-  OpenAI = null;
+  Anthropic = null;
 }
 
 const Review = require("../Models/Review");
 const logger = require("./logger");
 
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
 
 const SYSTEM_PROMPT = `You classify customer product reviews for a luxury streetwear brand.
 Respond ONLY with a JSON object of this shape:
@@ -38,28 +38,44 @@ const clamp = (n, min, max) => {
   return Math.max(min, Math.min(max, Math.round(v)));
 };
 
+// Tolerant JSON extraction — Claude is instructed to return JSON-only, but we
+// still strip any markdown fences / stray prose before parsing.
+const extractJson = (text) => {
+  let cleaned = String(text || "").trim();
+  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) cleaned = fenced[1].trim();
+  if (!cleaned.startsWith("{")) {
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
+  }
+  return JSON.parse(cleaned);
+};
+
 const callClassifier = async ({ title, content, rating }) => {
-  if (!OpenAI) return null;
-  const apiKey = process.env.OPENAI_API_KEY;
+  if (!Anthropic) return null;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
-  const client = new OpenAI({ apiKey });
+  const client = new Anthropic({ apiKey });
   const userPrompt = `Rating: ${rating} / 5\nTitle: ${title || "(none)"}\nReview: ${content || ""}`;
 
-  const completion = await client.chat.completions.create({
+  // No temperature/response_format — sampling params are rejected on Claude 4.x.
+  const message = await client.messages.create({
     model: DEFAULT_MODEL,
-    response_format: { type: "json_object" },
-    temperature: 0.2,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
+    max_tokens: 512,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userPrompt }],
   });
 
-  const raw = completion.choices?.[0]?.message?.content || "{}";
+  const raw =
+    (message.content || [])
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("") || "{}";
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = extractJson(raw);
   } catch {
     return null;
   }

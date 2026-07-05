@@ -25,6 +25,7 @@ const {
   formatAmount,
   generateCheckoutHash,
   verifyNotifySignature,
+  resolvePayHereNotifyUrl,
 } = require("../Utils/payhere-service");
 
 const ACTIVE_STATUSES = ["pending_payment", "proof_submitted"];
@@ -250,8 +251,17 @@ const syncOrderWithPayment = async (order, payment, { status, paymentStatus, cle
   }
   order.referenceNumber = payment.referenceNumber;
   order.paymentProofUrl = payment.proofUrl || order.paymentProofUrl || null;
+  order.transactionId =
+    payment.payhere?.paymentId ||
+    payment.cardDetails?.gatewayReference ||
+    payment.bankVerification?.transactionId ||
+    order.transactionId;
   order.status = status;
   order.paymentStatus = paymentStatus;
+
+  if (paymentStatus === "paid") {
+    order.paymentVerifiedAt = payment.verifiedAt || order.paymentVerifiedAt || new Date();
+  }
 
   if (clearExpiry) {
     order.expiresAt = undefined;
@@ -270,6 +280,7 @@ const buildManualPaymentSummary = (payment) => ({
   currency: payment.currency,
   paymentType: payment.paymentType || "manual_bank_transfer",
   cardDetails: payment.cardDetails || null,
+  payhere: payment.payhere || null,
   proofUrl: payment.proofUrl,
   proofSubmittedAt: payment.proofSubmittedAt,
   status: payment.status,
@@ -793,14 +804,38 @@ const submitSampleCardPayment = catchAsync(async (req, res, next) => {
 
 const trimTrailingSlash = (value) => String(value || "").replace(/\/+$/, "");
 
+const PAYHERE_NOTIFY_CONFIG_ERROR =
+  "Card payments need a publicly reachable PayHere notify URL. Set PAYHERE_NOTIFY_URL, or set BACKEND_URL to your public API origin.";
+
+const getPayHereNotifyConfig = (req) => {
+  const config = resolvePayHereNotifyUrl(req);
+
+  if (!config.isPublic) {
+    logger.warn("PayHere notify URL is not publicly reachable", {
+      source: config.source,
+      hasNotifyUrl: Boolean(config.notifyUrl),
+    });
+  }
+
+  return config;
+};
+
 // Public — the frontend uses this to decide whether to launch PayHere or fall
 // back to the legacy sample card form. Never exposes the merchant secret.
 const getPayHereConfig = catchAsync(async (req, res) => {
+  const configured = isPayHereConfigured();
+  const notifyConfig = configured
+    ? getPayHereNotifyConfig(req)
+    : { isPublic: false, source: "not-configured" };
+
   return res.status(200).json({
     success: true,
     data: {
-      enabled: isPayHereConfigured(),
+      enabled: configured && notifyConfig.isPublic,
+      configured,
       sandbox: isPayHereSandbox(),
+      notifyReady: configured && notifyConfig.isPublic,
+      notifySource: notifyConfig.source,
     },
   });
 });
@@ -1033,6 +1068,16 @@ const initiatePayHereCardPayment = catchAsync(async (req, res, next) => {
     }
   }
 
+  const notifyConfig = getPayHereNotifyConfig(req);
+  if (!notifyConfig.isPublic) {
+    logger.error("PayHere initiate blocked: notify URL is not public", {
+      orderId: String(order._id),
+      source: notifyConfig.source,
+      hasNotifyUrl: Boolean(notifyConfig.notifyUrl),
+    });
+    return next(new AppError(PAYHERE_NOTIFY_CONFIG_ERROR, 503));
+  }
+
   // Reuse an in-flight card record if the customer relaunched the popup;
   // otherwise create one. The referenceNumber doubles as the PayHere order_id
   // so the notify webhook can map back to this payment.
@@ -1085,19 +1130,19 @@ const initiatePayHereCardPayment = catchAsync(async (req, res, next) => {
   const firstName = firstNameRaw || "Saga";
   const lastName = restName.join(" ") || "Customer";
 
-  const backendUrl = trimTrailingSlash(process.env.BACKEND_URL || "");
-  const notifyUrl =
-    process.env.PAYHERE_NOTIFY_URL ||
-    (backendUrl ? `${backendUrl}/api/webhooks/payhere` : "");
+  const notifyUrl = notifyConfig.notifyUrl;
   const shopUrl = trimTrailingSlash(clientShopUrl());
   const returnUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=success`;
   const cancelUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=cancelled`;
 
-  if (!notifyUrl) {
-    logger.warn(
-      "PayHere initiate: BACKEND_URL / PAYHERE_NOTIFY_URL is not set — the notify webhook will not fire, so payments cannot auto-confirm"
-    );
-  }
+  logger.info("PayHere payment initiated", {
+    orderId: String(order._id),
+    referenceNumber: orderRef,
+    amount: formatAmount(amount),
+    currency,
+    sandbox: isPayHereSandbox(),
+    notifySource: notifyConfig.source,
+  });
 
   return res.status(200).json({
     success: true,
@@ -1149,6 +1194,15 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
     card_no: cardNo,
   } = req.body || {};
 
+  logger.info("PayHere notify received", {
+    orderRef,
+    paymentId: paymentId || null,
+    statusCode,
+    method: method || null,
+    amount: payhereAmount || null,
+    currency: payhereCurrency || null,
+  });
+
   if (!isPayHereConfigured()) {
     logger.error("PayHere notify received but the gateway is not configured");
     return res.status(503).send("PayHere not configured");
@@ -1163,6 +1217,12 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
     payhereCurrency,
     statusCode,
     receivedSig,
+  });
+
+  logger.info("PayHere notify signature checked", {
+    orderRef,
+    signatureValid,
+    merchantMatched: merchantId === getMerchantId(),
   });
 
   if (merchantId !== getMerchantId() || !signatureValid) {
@@ -1206,6 +1266,11 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
   // effects once we've verified this payment.
   if (payment.status === "verified") {
     await payment.save({ validateModifiedOnly: true });
+    logger.info("PayHere notify ignored as duplicate verified payment", {
+      orderRef,
+      paymentId: payment._id,
+      statusCode,
+    });
     return res.status(200).send("OK");
   }
 
@@ -1277,6 +1342,13 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
     }
 
     await notifyCardPaymentVerified(payment, order, "payhere");
+    logger.info("PayHere payment verified and order updated", {
+      orderRef,
+      paymentId: payment._id,
+      orderId: order?._id,
+      orderStatus: order?.status,
+      paymentStatus: order?.paymentStatus,
+    });
     return res.status(200).send("OK");
   }
 
@@ -1285,6 +1357,11 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
   if (String(statusCode) === PAYHERE_STATUS.PENDING) {
     payment.status = "pending_payment";
     await payment.save({ validateModifiedOnly: true });
+    logger.info("PayHere payment left pending", {
+      orderRef,
+      paymentId: payment._id,
+      statusCode,
+    });
     return res.status(200).send("OK");
   }
 
@@ -1302,6 +1379,13 @@ const handlePayHereNotify = catchAsync(async (req, res) => {
   }
 
   await notifyCardPaymentFailed(payment, order, statusMessage);
+  logger.warn("PayHere payment failed or cancelled", {
+    orderRef,
+    paymentId: payment._id,
+    statusCode,
+    statusMessage: statusMessage || null,
+    orderId: order?._id,
+  });
   return res.status(200).send("OK");
 });
 

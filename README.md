@@ -86,11 +86,11 @@ Before running `npm run dev`, you need accounts and API credentials for several 
 - **Get it:** <https://developers.facebook.com/> → WhatsApp product → grab Phone Number ID and a long-lived System User access token; pick any string as the verify token for the webhook.
 - **Env vars:** `WHATSAPP_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_ORDER_NOTIFY_NUMBERS` (comma-separated, digits only with country code, no `+`).
 
-#### 9. OpenAI — review classification & recommendations
+#### 9. Anthropic (Claude) — AI Insights & review classification
 
-- **Purpose:** AI moderates reviews and generates product recommendations.
-- **Get it:** <https://platform.openai.com/api-keys> → Create new secret key.
-- **Env vars:** `OPENAI_API_KEY`, `OPENAI_MODEL` (optional, defaults to `gpt-4o-mini`).
+- **Purpose:** Claude powers the admin AI Insights generator and enriches review moderation (toxicity / spam / sentiment).
+- **Get it:** <https://console.anthropic.com/settings/keys> → Create Key.
+- **Env vars:** `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (optional, defaults to `claude-opus-4-8`). Leave `ANTHROPIC_API_KEY` blank to disable AI features (no errors).
 
 #### 10. IMAP bank inbox — auto-confirm manual payments
 

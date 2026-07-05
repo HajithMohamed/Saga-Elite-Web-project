@@ -5,11 +5,11 @@ try {
   console.warn("[recommendations-job] node-cron is not installed; scheduler disabled.");
 }
 
-let OpenAI = null;
+let Anthropic = null;
 try {
-  OpenAI = require("openai");
+  Anthropic = require("@anthropic-ai/sdk");
 } catch (_error) {
-  console.warn("[recommendations-job] openai package is not installed; analysis disabled.");
+  console.warn("[recommendations-job] @anthropic-ai/sdk is not installed; analysis disabled.");
 }
 
 const Review = require("../Models/Review");
@@ -19,38 +19,58 @@ const Drop = require("../Models/Drop");
 const User = require("../Models/User");
 const Recommendation = require("../Models/Recommendation");
 
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const DEFAULT_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
 const REVIEW_WINDOW_DAYS = 90;
 const ORDER_WINDOW_DAYS = 30;
 const ANALYTICS_WINDOW_DAYS = 30;
 const MAX_REVIEWS_PER_RUN = 300;
 
-const getOpenAIClient = () => {
-  if (!OpenAI) throw new Error("OpenAI SDK is not installed.");
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
-  return new OpenAI({ apiKey });
+const getAnthropicClient = () => {
+  if (!Anthropic) throw new Error("Anthropic SDK is not installed.");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured.");
+  return new Anthropic({ apiKey });
 };
 
-const callOpenAI = async (systemPrompt, userPrompt) => {
-  const client = getOpenAIClient();
-  const completion = await client.chat.completions.create({
+// Claude returns free-form text. We ask for JSON-only in the system prompt but
+// still defensively strip markdown fences / surrounding prose before parsing,
+// so a stray ```json wrapper or preamble never fails the whole run.
+const extractJsonObject = (text) => {
+  let cleaned = String(text || "").trim();
+  const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) cleaned = fenced[1].trim();
+  if (!cleaned.startsWith("{")) {
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
+  }
+  return JSON.parse(cleaned);
+};
+
+// Anthropic Messages API. Note: `temperature` and OpenAI's `response_format`
+// are not passed — sampling params are rejected on Claude 4.x models. We steer
+// JSON output via the system prompt and parse the returned text defensively.
+const callAnthropic = async (systemPrompt, userPrompt) => {
+  const client = getAnthropicClient();
+  const message = await client.messages.create({
     model: DEFAULT_MODEL,
-    response_format: { type: "json_object" },
-    temperature: 0.4,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
+    max_tokens: 4096,
+    system: `${systemPrompt}\n\nRespond with ONLY a single valid JSON object — no markdown, no code fences, and no text before or after the JSON.`,
+    messages: [{ role: "user", content: userPrompt }],
   });
-  const raw = completion.choices?.[0]?.message?.content || "{}";
+  const raw = (message.content || [])
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("");
   let parsed;
   try {
-    parsed = JSON.parse(raw);
+    parsed = extractJsonObject(raw);
   } catch (err) {
-    throw new Error(`OpenAI returned invalid JSON: ${err.message}`);
+    throw new Error(`Claude returned invalid JSON: ${err.message}`);
   }
-  return { parsed, tokensUsed: completion.usage?.total_tokens || 0 };
+  const usage = message.usage || {};
+  const tokensUsed = (usage.input_tokens || 0) + (usage.output_tokens || 0);
+  return { parsed, tokensUsed };
 };
 
 const allowedSeverities = ["high", "medium", "low"];
@@ -122,7 +142,7 @@ const generateReviewRecommendations = async () => {
   const systemPrompt = `You are a senior CX analyst for a luxury fashion brand. Analyse customer reviews and produce JSON: {summary, items: [{title, detail, severity, frequency, category, refIds}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = recurring issues; refIds = up to 5 example review _ids. Categories: fit/quality/delivery/style/value. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Approved reviews from last ${REVIEW_WINDOW_DAYS} days (${reviews.length} of ${total}):\n${JSON.stringify(reviews.map((r) => ({ id: String(r._id), ...r })))}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation(
     "reviews",
     parsed,
@@ -152,7 +172,7 @@ const generateProductRecommendations = async () => {
   const systemPrompt = `You are a merchandising strategist for a luxury fashion brand. Analyse the catalog signals and produce JSON: {summary, items: [{title, detail, severity, category}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = specific products to flag (promote, retire, restock, rework). recommendations = portfolio-level moves. Use product names from the data. Limit to 8 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Catalog signals:\nBest sellers (last 30d sold counts): ${JSON.stringify(bestSellers)}\nSlow movers: ${JSON.stringify(slowMovers)}\nMost viewed (low conversion): ${JSON.stringify(mostViewedNotPurchased)}\nMost wishlisted: ${JSON.stringify(mostWished)}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation(
     "products",
     parsed,
@@ -191,7 +211,7 @@ const generateDropRecommendations = async () => {
   const systemPrompt = `You are a drop-strategy expert for a luxury streetwear brand. Analyse the last 6 drops and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. recommendations should cover: timing, theme, size of next drop, pricing, marketing window. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Recent drops (newest first):\n${JSON.stringify(dropPayload)}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation("drops", parsed, { dropsAnalyzed: drops.length }, tokensUsed);
 };
 
@@ -240,7 +260,7 @@ const generateAnalyticsRecommendations = async () => {
   const systemPrompt = `You are an e-commerce growth analyst. Analyse the KPI snapshot (recent vs prior period) and produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = KPIs needing attention. recommendations = concrete moves with expected % impact. Limit to 6 items and 6 recommendations.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `KPI snapshot:\n${JSON.stringify(snapshot, null, 2)}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation("analytics", parsed, snapshot, tokensUsed);
 };
 
@@ -270,7 +290,7 @@ const generateBusinessImprovements = async () => {
   const systemPrompt = `You are an operations consultant for a luxury e-commerce brand. From the signals below, identify operational fixes that will reduce friction and lift retention. Produce JSON: {summary, items: [{title, detail, severity}], recommendations: [{area, action, priority, expectedImpact, supportingData}], trendsObserved}. items = pain points. recommendations = fixes (logistics, returns, sizing, customer service, payment, etc). Limit to 6 of each.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Low-rating reviews (≤2 stars, last 60d): ${JSON.stringify(lowReviews)}\nOrder summary (last 60d): ${JSON.stringify(orderSummary)}\nAging products (idle 60+ days): ${JSON.stringify(agingProducts)}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation(
     "improvements",
     parsed,
@@ -301,7 +321,7 @@ const generateBusinessIdeas = async () => {
   const systemPrompt = `You are a creative business strategist for a luxury fashion brand. Suggest growth ideas based on catalog coverage + customer feedback themes. Produce JSON: {summary, items: [{title, detail}], recommendations: [{area, action, priority, expectedImpact}], trendsObserved}. items = idea ideas (e.g., "Launch eco-line", "Add monthly drop subscription"). recommendations = how to validate/launch each. Be bold but realistic. Limit to 6 of each.${CONFIDENCE_INSTRUCTION}`;
   const userPrompt = `Catalog by category: ${JSON.stringify(productsByCategory)}\nCustomer pain themes: ${JSON.stringify(customerThemes)}\nTotal users: ${totalUsers}`;
 
-  const { parsed, tokensUsed } = await callOpenAI(systemPrompt, userPrompt);
+  const { parsed, tokensUsed } = await callAnthropic(systemPrompt, userPrompt);
   return persistRecommendation(
     "ideas",
     parsed,

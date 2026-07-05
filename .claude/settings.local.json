@@ -212,7 +212,13 @@
       "WebSearch",
       "WebFetch(domain:support.payhere.lk)",
       "Bash(curl -s -m 20 -w \"\\\\nHTTP %{http_code}\\\\n\" \"https://server-side-production-19a7.up.railway.app/api/v1/card-payment/payhere/config\")",
-      "Bash(curl -s -m 20 -w \"\\\\nHTTP %{http_code}\\\\n\" \"https://server-side-production-19a7.up.railway.app/health\")"
+      "Bash(curl -s -m 20 -w \"\\\\nHTTP %{http_code}\\\\n\" \"https://server-side-production-19a7.up.railway.app/health\")",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(node -e \"require\\('@anthropic-ai/sdk'\\); require\\('./Utils/recommendations-job'\\); require\\('./Utils/review-classifier'\\); require\\('./Controllers/recommendations-controller'\\); require\\('./Controllers/integration-status-controller'\\); require\\('./Controllers/auth-controller'\\); console.log\\('OK: AI + auth modules load cleanly'\\);\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node \"/c/Users/Admin/AppData/Local/Temp/claude/C--Fullstack-development-course-Saga-Elite-Web-Project/c8a3cb4c-a722-491d-8b46-76beda0f557f/scratchpad/refactor-users.cjs\" \"src/pages/admin-view/Users.jsx\")",
+      "Bash(awk '{ print length\\($0\\) \" chars \\(16 = Gmail app password\\)\" }')"
     ]
   }
 }

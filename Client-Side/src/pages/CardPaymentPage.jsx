@@ -2,7 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  CreditCard,
+  Loader2,
+  Lock,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  XCircle,
+} from "lucide-react";
 
 import { toast } from "@/hooks/use-toast";
 import {
@@ -147,6 +156,57 @@ const SuccessPanel = ({ reference, verified }) => (
   </motion.div>
 );
 
+const PaymentOutcomePanel = ({ type, reference, onRetry, onCheckout }) => {
+  const isCancelled = type === "cancelled";
+  const Icon = isCancelled ? RotateCcw : XCircle;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: MOTION_EASE }}
+      className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10"
+    >
+      <div className="mx-auto flex max-w-md flex-col items-center text-center">
+        <div className={cn("rounded-full p-5", isCancelled ? "bg-gold/10" : "bg-rose-500/10")}>
+          <Icon className={cn("h-10 w-10", isCancelled ? "text-gold-ink" : "text-rose-300")} />
+        </div>
+        <h2 className="se-serif mt-6 text-2xl text-ink-2">
+          {isCancelled ? "Payment cancelled" : "Payment failed"}
+        </h2>
+        {reference ? (
+          <p className="se-body mt-3 text-sm text-muted">
+            Reference <span className="se-mono text-ink-2">{reference}</span>
+          </p>
+        ) : null}
+        <p className="se-body mt-5 text-sm text-cream">
+          {isCancelled
+            ? "No card payment was captured. You can retry the same order or return to checkout and choose another method."
+            : "PayHere could not confirm this card payment. Your order was not duplicated; retry the payment when you're ready."}
+        </p>
+        <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 bg-gold px-5 text-[10px] font-bold uppercase tracking-[0.24em] text-black transition-colors hover:bg-white"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={onCheckout}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 border border-gold-ink/20 bg-gold/5 px-5 text-[10px] font-bold uppercase tracking-[0.24em] text-gold-ink transition-colors hover:bg-gold/15"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Checkout
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const CardPaymentPage = () => {
   const { orderId: orderIdParam } = useParams();
   const [searchParams] = useSearchParams();
@@ -166,7 +226,7 @@ const CardPaymentPage = () => {
 
   // loading → probing config; payhere → gateway ready; unavailable → not configured.
   const [gatewayMode, setGatewayMode] = useState("loading");
-  const [phState, setPhState] = useState("idle"); // idle | initiating | redirecting | confirming | failed
+  const [phState, setPhState] = useState("idle"); // idle | initiating | redirecting | confirming | failed | cancelled
   const [payReference, setPayReference] = useState(null);
   const [email, setEmail] = useState(presetEmail);
   const [emailError, setEmailError] = useState(null);
@@ -243,6 +303,27 @@ const CardPaymentPage = () => {
     }
   };
 
+  const retryPayment = () => {
+    setSubmitted(null);
+    setPayReference(null);
+    clearRedirected(orderId);
+    startPayHere();
+  };
+
+  const returnToCheckout = () => {
+    clearRedirected(orderId);
+    navigate("/shopping/checkout", {
+      state: {
+        orderId,
+        paymentStatus: phState === "failed" ? "failed" : "cancelled",
+        message:
+          phState === "failed"
+            ? "Payment failed. Please try again."
+            : "Payment was cancelled. Please try again.",
+      },
+    });
+  };
+
   // Handle the return from PayHere (?payment=success|cancelled), and otherwise
   // auto-launch the gateway so card checkout goes straight to PayHere.
   useEffect(() => {
@@ -252,6 +333,9 @@ const CardPaymentPage = () => {
 
     if (outcome === "cancelled") {
       clearRedirected(orderId);
+      setSubmitted(null);
+      setPayReference(readStored(`payhere_ref_${orderId}`));
+      setPhState("cancelled");
       toast({
         title: "Payment cancelled",
         description: "You can try the card payment again below.",
@@ -283,6 +367,19 @@ const CardPaymentPage = () => {
           return;
         }
         setPhState("idle");
+        if (result === "verified" && isAuthenticated) {
+          navigate("/shopping/checkout-success", {
+            replace: true,
+            state: {
+              orderId,
+              amount: presetAmount,
+              paymentMethod: "card",
+              paymentStatus: "paid",
+              email: presetEmail,
+            },
+          });
+          return;
+        }
         setSubmitted({ reference: ref, verified: result === "verified" });
       })();
       return;
@@ -350,6 +447,13 @@ const CardPaymentPage = () => {
               please don't close this page.
             </p>
           </div>
+        ) : phState === "cancelled" || phState === "failed" ? (
+          <PaymentOutcomePanel
+            type={phState}
+            reference={payReference}
+            onRetry={retryPayment}
+            onCheckout={returnToCheckout}
+          />
         ) : gatewayMode === "unavailable" ? (
           <div className="rounded-[2rem] border border-gold-ink/10 bg-page p-6 sm:p-10 text-center">
             <h2 className="se-serif text-2xl text-ink-2">Card payment is unavailable</h2>

@@ -597,6 +597,8 @@ const changePassword = catchAsync(async (req, res, next) => {
     }
 
     user.password = newPassword;
+    // If this user was forced to rotate (super-admin reset), they've now done so.
+    user.mustChangePassword = false;
 
     await user.save();
 
@@ -760,6 +762,10 @@ const resetPassword = catchAsync(async(req, res, next)=>{
         return next(new AppError("Passwords are not matched!!",400));
     }
 
+    if (String(newPassword).length < 8) {
+        return next(new AppError("New password must be at least 8 characters long", 400));
+    }
+
     const user = await User.findOne({email});
 
     if(!user || !user.resetPasswordOtp){
@@ -774,6 +780,11 @@ const resetPassword = catchAsync(async(req, res, next)=>{
     }
 
     user.password = newPassword;
+    // Clear the super-admin-forced rotation flag. Without this, login() keeps
+    // returning `must_change_password` forever — even after a successful reset —
+    // so an admin whose password was reset by a super admin can never sign in.
+    // This is the root-cause fix for "Admin Reset Password not working".
+    user.mustChangePassword = false;
 
     user.resetPasswordOtp = undefined;
     user.resetPasswordOtpExpires = undefined;
