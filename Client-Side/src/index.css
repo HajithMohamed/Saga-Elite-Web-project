@@ -290,11 +290,11 @@
   }
 
   .se-input {
-    @apply w-full h-[56px] bg-panel border border-ink/10 rounded-[16px] px-4 text-ink placeholder-ink/30 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors;
+    @apply w-full h-[56px] bg-panel border border-ink/10 rounded-[16px] px-4 text-ink placeholder-ink/50 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors;
   }
 
   .se-textarea {
-    @apply w-full h-[160px] bg-panel border border-ink/10 rounded-[16px] p-4 text-ink placeholder-ink/30 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors resize-none;
+    @apply w-full h-[160px] bg-panel border border-ink/10 rounded-[16px] p-4 text-ink placeholder-ink/50 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink focus:outline-none transition-colors resize-none;
   }
 
   /* ── Contact page glass / gold system ─────────────── */

@@ -25,7 +25,7 @@ const Header = ({ onMenuToggle }) => {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-line bg-page/80 px-4 md:px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-line bg-page/80 px-4 md:px-6 backdrop-blur-md">
       <div className="flex flex-1 items-center gap-6">
         <button
           type="button"

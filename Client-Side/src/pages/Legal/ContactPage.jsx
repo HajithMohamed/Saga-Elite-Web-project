@@ -23,6 +23,24 @@ import { InstagramSection, Newsletter } from "@/components/landing/CommunitySect
 import { Reveal } from "@/components/ui/editorial";
 import LuxuryInput from "@/components/auth-components/LuxuryInput";
 
+const LuxurySelect = ({ id, label, error, options, ...props }) => (
+  <div className="flex flex-col gap-2 relative">
+    <label htmlFor={id} className="se-label text-[10px] uppercase tracking-[0.2em] text-muted ml-1">{label}</label>
+    <select
+      id={id}
+      className={`h-[56px] w-full rounded-[16px] border bg-page px-4 text-[14px] text-ink-2 outline-none transition-all duration-300 ${
+        error ? "border-rose-500/50 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30" : "border-ink/10 focus:border-gold-ink focus:ring-1 focus:ring-gold-ink/30"
+      }`}
+      {...props}
+    >
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+    {error && <span className="absolute -bottom-5 left-1 text-[10px] text-rose-500">{error}</span>}
+  </div>
+);
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HERO_BG = "https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?w=1920&q=80";
 
@@ -50,7 +68,7 @@ const ContactPage = () => {
   usePageMeta({ title: "Contact Us", fullTitle: true });
   const { data: about, loading } = useShopAbout();
   
-  const [form, setForm] = useState({ name: "", email: "", phone: "", orderNumber: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", orderNumber: "", subject: "General Inquiry", customSubject: "", message: "" });
   const [touched, setTouched] = useState({});
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,7 +121,7 @@ const ContactPage = () => {
       await axios.post(`${API_BASE}/contact`, {
         name: form.name.trim(),
         email: form.email.trim(),
-        subject: form.orderNumber ? `Order #${form.orderNumber} - ${form.subject}` : form.subject.trim() || "General inquiry",
+        subject: form.orderNumber ? `Order #${form.orderNumber} - ${form.subject === "Other" ? form.customSubject : form.subject}` : (form.subject === "Other" ? form.customSubject : form.subject).trim() || "General inquiry",
         message: form.message.trim(),
       });
       setIsSuccess(true);
@@ -201,7 +219,7 @@ const ContactPage = () => {
                 </div>
                 <h3 className="font-sans text-xl font-semibold mb-2">Message Received</h3>
                 <p className="se-body text-muted mb-8">Thank you for contacting us. Your reference number has been sent to your email.</p>
-                <button onClick={() => { setIsSuccess(false); setForm({ name: "", email: "", phone: "", orderNumber: "", subject: "", message: "" }); setTouched({}); }} className="text-gold-ink uppercase tracking-wider text-xs font-bold hover:underline">
+                <button onClick={() => { setIsSuccess(false); setForm({ name: "", email: "", phone: "", orderNumber: "", subject: "General Inquiry", customSubject: "", message: "" }); setTouched({}); }} className="text-gold-ink uppercase tracking-wider text-xs font-bold hover:underline">
                   Send Another Message
                 </button>
               </div>
@@ -215,9 +233,30 @@ const ContactPage = () => {
                 <LuxuryInput id="email" label="Email Address" placeholder="you@email.com" type="email" value={form.email} error={touched.email ? errors.email : ""} onChange={(e) => { setForm(p => ({ ...p, email: e.target.value })); setTouched(p => ({ ...p, email: true })); }} />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <LuxuryInput id="subject" label="Subject" placeholder="General Inquiry" value={form.subject} onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))} />
-                  <LuxuryInput id="orderNumber" label="Order Number (Optional)" placeholder="#SE-12345" value={form.orderNumber} onChange={(e) => setForm(p => ({ ...p, orderNumber: e.target.value }))} />
+                  <LuxurySelect 
+                    id="subject" 
+                    label="Subject" 
+                    value={form.subject} 
+                    onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))} 
+                    options={[
+                      { value: "General Inquiry", label: "General Inquiry" },
+                      { value: "Order Status", label: "Order Status" },
+                      { value: "Returns & Exchanges", label: "Returns & Exchanges" },
+                      { value: "Product Question", label: "Product Question" },
+                      { value: "Other", label: "Other" }
+                    ]}
+                  />
+                  {form.subject === "Other" ? (
+                    <LuxuryInput id="customSubject" label="Please Specify" placeholder="Your subject" value={form.customSubject} onChange={(e) => setForm(p => ({ ...p, customSubject: e.target.value }))} />
+                  ) : (
+                    <LuxuryInput id="orderNumber" label="Order Number (Optional)" placeholder="#SE-12345" value={form.orderNumber} onChange={(e) => setForm(p => ({ ...p, orderNumber: e.target.value }))} />
+                  )}
                 </div>
+                {form.subject === "Other" && (
+                  <div className="mt-1 mb-3">
+                    <LuxuryInput id="orderNumber" label="Order Number (Optional)" placeholder="#SE-12345" value={form.orderNumber} onChange={(e) => setForm(p => ({ ...p, orderNumber: e.target.value }))} />
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2 relative">
                   <label htmlFor="message" className="se-label text-[10px] uppercase tracking-[0.2em] text-muted ml-1">Message</label>

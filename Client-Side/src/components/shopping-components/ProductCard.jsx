@@ -12,6 +12,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useCountdown, ColorSwatch } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
+import { AnimatePresence } from "framer-motion";
 
 const formatLKR = (value = 0) =>
   `LKR ${(Number(value) || 0).toLocaleString("en-LK", {
@@ -52,6 +53,8 @@ function DropEndingBadge({ target }) {
 const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false, tall = false }) => {
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const slug = product?.slug;
   const productHref = slug ? `/shopping/product/${slug}` : `/shopping/product-list`;
@@ -65,6 +68,10 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     e.preventDefault();
     e.stopPropagation();
     if (!product?._id) return;
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     if (inWishlist) {
       dispatch(removeFromWishlistAction(product._id));
       toast({ title: "Removed from wishlist" });
@@ -259,7 +266,8 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     [v?.size, v?.color].filter(Boolean).join(" · ") || "Add";
 
   return (
-    <div
+    <>
+      <div
       className={cn(
         "group relative flex flex-col bg-page rounded-[20px] overflow-hidden shadow-md transition-all duration-250 ease-out hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(242,202,80,0.12)] shrink-0 h-full",
         "w-full",
@@ -438,6 +446,40 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         </div>
       )}
     </div>
+      {/* Authentication Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthModal(false); }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-panel border border-line rounded-2xl p-8 relative shadow-2xl flex flex-col items-center text-center"
+            >
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowAuthModal(false); }} className="absolute top-4 right-4 text-muted hover:text-ink-2 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              <div className="w-16 h-16 rounded-full bg-page border border-line flex items-center justify-center mb-6">
+                <Heart className="w-8 h-8 text-gold-ink" />
+              </div>
+              <h3 className="se-serif text-2xl text-ink mb-3">Sign In Required</h3>
+              <p className="se-body text-sm text-muted mb-8">
+                Please sign in or create an account to save {product?.name || "this item"} to your wishlist.
+              </p>
+              <div className="w-full flex flex-col gap-3">
+                <Link to="/auth/login" className="w-full h-12 flex items-center justify-center bg-gold text-ongold uppercase tracking-widest text-xs font-bold rounded-lg hover:bg-gold-ink transition-colors">
+                  Sign In
+                </Link>
+                <Link to="/auth/register" className="w-full h-12 flex items-center justify-center bg-transparent border border-line text-ink-2 uppercase tracking-widest text-xs font-bold rounded-lg hover:border-gold-ink transition-colors">
+                  Create Account
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

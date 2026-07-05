@@ -37,6 +37,11 @@ const buildListingUrl = (segments = []) => {
   return `/shopping/product-list?${query.toString()}`;
 };
 
+const getUnitPrice = (product, variant) => {
+  const base = Number(product?.basePrice || 0) + Number(variant?.priceAdjustment || 0);
+  return base * (1 - Number(product?.discountPercent || 0) / 100);
+};
+
 const SORT_OPTIONS = [
   { value: "new", label: "Newest" },
   { value: "best_selling", label: "Best Selling" },
@@ -125,7 +130,7 @@ const ProductListing = () => {
     let lo = Infinity;
     let hi = -Infinity;
     for (const p of products) {
-      const price = Number(p.basePrice || 0);
+      const price = getUnitPrice(p, p.variants?.[0]);
       if (price < lo) lo = price;
       if (price > hi) hi = price;
     }
@@ -179,15 +184,10 @@ const ProductListing = () => {
       p.delete("sizes"); p.delete("brands"); p.delete("min"); p.delete("max");
     });
 
-  const unitPrice = (product, variant) => {
-    const base = product.basePrice + (variant?.priceAdjustment || 0);
-    return base * (1 - (product.discountPercent || 0) / 100);
-  };
-
   const sortedProducts = useMemo(() => {
     const list = [...products];
-    if (sortParam === "price_low") list.sort((a, b) => unitPrice(a, a.variants?.[0]) - unitPrice(b, b.variants?.[0]));
-    else if (sortParam === "price_high") list.sort((a, b) => unitPrice(b, b.variants?.[0]) - unitPrice(a, a.variants?.[0]));
+    if (sortParam === "price_low") list.sort((a, b) => getUnitPrice(a, a.variants?.[0]) - getUnitPrice(b, b.variants?.[0]));
+    else if (sortParam === "price_high") list.sort((a, b) => getUnitPrice(b, b.variants?.[0]) - getUnitPrice(a, a.variants?.[0]));
     else if (sortParam === "best_selling") list.sort((a, b) => (Number(b.soldCount) || 0) - (Number(a.soldCount) || 0));
     else if (sortParam === "highest_rated") list.sort((a, b) => (Number(b.averageRating || b.rating) || 0) - (Number(a.averageRating || a.rating) || 0));
     else if (sortParam === "most_popular") list.sort((a, b) => (Number(b.wishCount) || 0) - (Number(a.wishCount) || 0));
@@ -230,7 +230,7 @@ const ProductListing = () => {
         return brandsParam.includes(b);
       })
       .filter((p) => {
-        const price = Number(p.basePrice || 0);
+        const price = getUnitPrice(p, p.variants?.[0]);
         return price >= priceMinParam && price <= priceMaxParam;
       });
   }, [sortedProducts, keywordKey, inStockOnly, limitedOnly, colorsParam, sizesParam, brandsParam, priceMinParam, priceMaxParam]);
@@ -480,7 +480,7 @@ const ProductListing = () => {
                         onClearAll={clearAllFilters} priceMin={priceBounds.min} priceMax={priceBounds.max}
                       />
                     </div>
-                    <div className="p-4 border-t border-ink/5 bg-page flex gap-3 sticky bottom-0">
+                    <div className="p-4 pb-10 border-t border-ink/5 bg-page flex gap-3 sticky bottom-0">
                       <button onClick={() => { clearAllFilters(); setRefineOpen(false); }} className="flex-1 py-4 border border-line text-ink-2 uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Reset</button>
                       <button onClick={() => setRefineOpen(false)} className="flex-1 py-4 bg-gold text-ongold uppercase tracking-widest text-[11px] font-bold rounded-[16px]">Apply Options</button>
                     </div>

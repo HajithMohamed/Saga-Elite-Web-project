@@ -290,24 +290,24 @@ const MainHeader = () => {
             >
               {theme === "light" ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-[18px] h-[18px]" />}
             </button>
-            <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
+            <button aria-label="Search" onClick={() => setSearchOpen((prev) => !prev)} className="hidden sm:block text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
               <Search className="w-[18px] h-[18px]" />
             </button>
             <Link to="/shopping/account/wishlist" aria-label="Wishlist" className="relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300 hidden sm:block">
               <Heart className="w-[18px] h-[18px]" />
               <AnimatedBadge count={wishlistCount} />
             </Link>
-            {user && <NotificationsDropdown />}
+            {user && <div className="hidden sm:block"><NotificationsDropdown /></div>}
             {user && (
               <Link to="/shopping/rewards" className="hidden sm:block text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300" aria-label="My rewards">
                 <TicketPercent className="w-[18px] h-[18px]" />
               </Link>
             )}
-            <Link to="/shopping/cart" aria-label="Shopping cart" className="relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
+            <Link to="/shopping/cart" aria-label="Shopping cart" className="hidden sm:block relative text-cream hover:text-gold-ink hover:scale-110 transition-all duration-300">
               <ShoppingBag className="w-[18px] h-[18px]" />
               <AnimatedBadge count={cartCount} />
             </Link>
-            <div className="relative" ref={userMenuRef}>
+            <div className="hidden sm:block relative" ref={userMenuRef}>
               <button
                 aria-label={user ? 'Account menu' : 'Sign in'}
                 onClick={() => user ? setUserMenuOpen((v) => !v) : openAuthDrawer('login')}
@@ -402,7 +402,7 @@ const MainHeader = () => {
             className="fixed inset-0 z-[60] bg-page flex flex-col pt-20 px-8 pb-12 lg:hidden"
           >
             <button onClick={() => setMobileOpen(false)} aria-label="Close drawer" className="absolute top-8 right-8 text-cream hover:text-ink-2"><X className="w-8 h-8" /></button>
-            <div className="flex flex-col gap-6 mt-12 flex-grow">
+            <div className="flex flex-col gap-6 mt-12 flex-grow overflow-y-auto overscroll-contain pb-10">
               {navItems.map((item, i) => (
                 <motion.div
                   key={item.key}
