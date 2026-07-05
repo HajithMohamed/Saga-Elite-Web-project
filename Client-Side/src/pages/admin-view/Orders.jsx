@@ -254,7 +254,6 @@ const Orders = () => {
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [invoiceDownloadingId, setInvoiceDownloadingId] = useState(null);
   const [detailOrder, setDetailOrder] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [bulkPending, setBulkPending] = useState(false);
 
   const sensors = useSensors(
@@ -412,11 +411,6 @@ const Orders = () => {
     return map;
   }, [filteredOrders]);
 
-  useEffect(() => {
-    if (filteredOrders.length > 0 && !selectedOrder && viewMode === "table") {
-      setSelectedOrder(filteredOrders[0]);
-    }
-  }, [filteredOrders, selectedOrder, viewMode]);
 
   const handleStatusChange = useCallback(
     async (orderId, status) => {
@@ -704,7 +698,7 @@ const Orders = () => {
                         column={column}
                         orders={ordersByColumn[column.id] || []}
                         updatingOrderId={updatingOrderId}
-                        onSelect={setSelectedOrder}
+                        onSelect={setDetailOrder}
                       />
                     ))}
                   </div>
@@ -748,15 +742,12 @@ const Orders = () => {
                 </thead>
                 <tbody>
                   {ordersPg.pageItems.map((order) => {
-                    const isSelected = selectedOrder?._id === order._id;
                     return (
                       <motion.tr
                         key={order._id}
                         variants={itemVariants}
-                        onClick={() => setSelectedOrder(order)}
-                        className={`border-t border-line/40 align-top transition-colors cursor-pointer ${
-                          isSelected ? "bg-gold-deep/[0.15] border-l-2 border-gold-ink2" : "hover:bg-panel"
-                        }`}
+                        onClick={() => setDetailOrder(order)}
+                        className={`border-t border-line/40 align-top transition-colors cursor-pointer hover:bg-panel`}
                       >
                         <td className="w-10 px-3 py-3 align-middle" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center">
@@ -808,148 +799,6 @@ const Orders = () => {
             )}
           </div>
 
-            {/* Right side Details Panel */}
-            {!showKanban && selectedOrder && (
-              <div className="w-full xl:w-[260px] shrink-0">
-                <div className="rounded-[20px] border border-ink/10 bg-page p-4 sticky top-6 text-sm">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-ink tracking-tight uppercase se-mono">
-                        {String(selectedOrder._id).slice(-12)}
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">{formatDate(selectedOrder.createdAt)}</p>
-                    </div>
-                    <button onClick={() => setSelectedOrder(null)} className="text-ink/40 hover:text-ink shrink-0 ml-2">&times;</button>
-                  </div>
-
-                  <div className="space-y-4 mb-6">
-                    <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
-                      <span className="text-ink/40">Status</span>
-                      <StatusBadge status={selectedOrder.status} />
-                    </div>
-                    <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
-                      <span className="text-ink/40">Payment</span>
-                      <span className="text-gold-ink2 font-medium uppercase tracking-wider text-[10px]">{formatPaymentMethod(selectedOrder.paymentMethod)}</span>
-                    </div>
-                    <div className="flex justify-between items-start border-b border-ink/[0.05] pb-2">
-                      <span className="text-ink/40 pt-0.5">Customer</span>
-                      <span className="text-ink text-right break-words max-w-[160px]">{getCustomerName(selectedOrder)}</span>
-                    </div>
-                    {(() => {
-                      const phone = getOrderPhone(selectedOrder);
-                      if (!phone) return null;
-                      return (
-                        <div className="flex justify-between items-center border-b border-ink/[0.05] pb-2">
-                          <span className="text-ink/40">Contact</span>
-                          <span className="text-ink text-xs">{phone}</span>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  {/* Items List */}
-                  <div className="mb-6">
-                    <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Order Items ({selectedOrder.items?.length || 0})</h4>
-                    <ul className="space-y-3 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
-                      {(selectedOrder.items || []).map((line, idx) => (
-                        <li key={idx} className="flex justify-between text-xs items-center">
-                          <div className="flex flex-col">
-                            <span className="text-ink max-w-[180px] truncate" title={line.name || line.product?.name || "Item"}>{line.name || line.product?.name || "Item"}</span>
-                            <span className="text-ink/40 mt-0.5">Qty: {line.quantity || 1}</span>
-                          </div>
-                          <span className="text-gold-ink2">LKR {formatCurrency((line.price || 0) * (line.quantity || 1))}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Pricing breakdown */}
-                  <div className="border-t border-ink/[0.05] pt-4 space-y-2 text-xs">
-                    <div className="flex justify-between text-ink/60">
-                      <span>Subtotal</span>
-                      <span>LKR {formatCurrency(selectedOrder.totalAmount - (selectedOrder.shippingFee || 0) + (selectedOrder.discountAmount || 0))}</span>
-                    </div>
-                    {selectedOrder.discountAmount > 0 && (
-                      <div className="flex justify-between text-emerald-400">
-                        <span>Discount</span>
-                        <span>- LKR {formatCurrency(selectedOrder.discountAmount)}</span>
-                      </div>
-                    )}
-                    {selectedOrder.shippingFee > 0 && (
-                      <div className="flex justify-between text-ink/60">
-                        <span>Shipping</span>
-                        <span>LKR {formatCurrency(selectedOrder.shippingFee)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-gold-ink2 font-bold text-sm pt-2 border-t border-ink/[0.05] mt-2">
-                      <span>Total</span>
-                      <span>LKR {formatCurrency(selectedOrder.totalAmount)}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="mt-8 space-y-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {STATUS_OPTIONS.map((s) => {
-                        const Icon = STATUS_ICONS[s.value] || Clock;
-                        const isCurrent = selectedOrder.status === s.value;
-                        const isBusy = updatingOrderId === selectedOrder._id;
-                        
-                        return (
-                          <button
-                            key={s.value}
-                            type="button"
-                            disabled={isBusy || isCurrent}
-                            onClick={() => handleStatusChange(selectedOrder._id, s.value)}
-                            title={`Change status to ${s.label}`}
-                            className={`p-2 rounded-sm border transition flex items-center justify-center
-                              ${isCurrent 
-                                ? "border-gold-ink2 bg-gold-deep/10 text-gold-ink2 cursor-default opacity-100" 
-                                : "border-line bg-transparent text-muted hover:border-gold-ink hover:text-gold-ink cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                              }
-                            `}
-                          >
-                            <Icon className="h-4 w-4" strokeWidth={1.5} />
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDetailOrder(selectedOrder)}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-line bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-cream transition hover:border-gold-ink hover:text-gold-ink"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Full Details
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadInvoice(selectedOrder)}
-                        disabled={invoiceDownloadingId === selectedOrder._id}
-                        className="flex-1 inline-flex justify-center items-center gap-2 rounded-sm border border-line bg-transparent px-3 py-2 text-[10px] tracking-[0.22em] uppercase text-cream transition hover:border-gold-ink hover:text-gold-ink disabled:opacity-50"
-                      >
-                        {invoiceDownloadingId === selectedOrder._id ? (
-                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> PDF…</>
-                        ) : (
-                          <><FileDown className="h-3.5 w-3.5" /> Invoice</>
-                        )}
-                      </button>
-                    </div>
-
-                    {(selectedOrder.status === "delivered" || selectedOrder.status === "refund_requested") && (
-                      <button
-                        type="button"
-                        onClick={() => setRefundOrderTarget(selectedOrder)}
-                        className="w-full inline-flex justify-center items-center gap-2 rounded-sm border border-danger-ink/40 bg-danger-ink/10 px-3 py-2.5 text-[10px] tracking-[0.22em] uppercase text-danger-ink hover:bg-danger-ink/20"
-                      >
-                        Issue Refund
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </motion.div>
         )}
       </motion.div>

@@ -53,9 +53,15 @@ const SORT_OPTIONS = [
 ];
 
 const PAGE_SIZE = 12;
-const FETCH_LIMIT = 60;
+const FETCH_LIMIT = 100;
 const PRICE_MIN = 0;
 const PRICE_MAX = 50000;
+
+const readNumberParam = (value, fallback) => {
+  if (value === null) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 const ProductListing = () => {
   usePageMeta({ title: "Shop All Products" });
@@ -66,7 +72,7 @@ const ProductListing = () => {
   const [refineOpen, setRefineOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(true); // desktop inline sidebar visibility
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,6 +94,9 @@ const ProductListing = () => {
   const colorsParam = useMemo(() => (searchParams.get("colors") || "").split(",").map((c) => c.trim().toLowerCase()).filter(Boolean), [searchParams]);
   const sizesParam = useMemo(() => (searchParams.get("sizes") || "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean), [searchParams]);
   const brandsParam = useMemo(() => (searchParams.get("brands") || "").split(",").map((b) => b.trim().toLowerCase()).filter(Boolean), [searchParams]);
+  const minPriceQuery = searchParams.get("min");
+  const maxPriceQuery = searchParams.get("max");
+  const hasPriceQuery = minPriceQuery !== null || maxPriceQuery !== null;
 
   // ── Facets derived from the loaded catalog (no hardcoded options) ──
   const availableColors = useMemo(() => {
@@ -126,6 +135,7 @@ const ProductListing = () => {
   }, [products]);
 
   const priceBounds = useMemo(() => {
+    if (hasPriceQuery) return { min: PRICE_MIN, max: PRICE_MAX };
     if (!products.length) return { min: PRICE_MIN, max: PRICE_MAX };
     let lo = Infinity;
     let hi = -Infinity;
@@ -139,10 +149,10 @@ const ProductListing = () => {
     lo = Math.max(0, Math.floor(lo / 500) * 500);
     hi = Math.ceil(hi / 500) * 500;
     return { min: lo, max: hi };
-  }, [products]);
+  }, [hasPriceQuery, products]);
 
-  const priceMinParam = searchParams.get("min") !== null ? Number(searchParams.get("min")) : priceBounds.min;
-  const priceMaxParam = searchParams.get("max") !== null ? Number(searchParams.get("max")) : priceBounds.max;
+  const priceMinParam = readNumberParam(minPriceQuery, priceBounds.min);
+  const priceMaxParam = readNumberParam(maxPriceQuery, priceBounds.max);
 
   useEffect(() => {
     if (categoryParam === "drops" || filterParam === "drops") {
@@ -276,6 +286,16 @@ const ProductListing = () => {
         if (subCategoryParam) query.set("subCategory", subCategoryParam);
         if (categoryPathParam) query.set("categoryPath", categoryPathParam);
       }
+      if (keywordParam) query.set("search", keywordParam);
+      if (colorsParam.length) query.set("colors", colorsParam.join(","));
+      if (sizesParam.length) query.set("sizes", sizesParam.join(","));
+      if (brandsParam.length) query.set("brands", brandsParam.join(","));
+      if (minPriceQuery !== null && Number.isFinite(Number(minPriceQuery))) {
+        query.set("minPrice", minPriceQuery);
+      }
+      if (maxPriceQuery !== null && Number.isFinite(Number(maxPriceQuery))) {
+        query.set("maxPrice", maxPriceQuery);
+      }
       const response = await axios.get(`${API_BASE}/products/get-all-products?${query.toString()}`);
       setProducts(response.data?.data || []);
     } catch (err) {
@@ -285,7 +305,19 @@ const ProductListing = () => {
     } finally {
       if (!silent) setIsLoading(false);
     }
-  }, [categoryParam, categoryPathParam, filterParam, isOffersListing, subCategoryParam]);
+  }, [
+    brandsParam,
+    categoryParam,
+    categoryPathParam,
+    colorsParam,
+    filterParam,
+    isOffersListing,
+    keywordParam,
+    maxPriceQuery,
+    minPriceQuery,
+    sizesParam,
+    subCategoryParam,
+  ]);
 
   useEffect(() => { fetchListingData(); }, [fetchListingData]);
 
