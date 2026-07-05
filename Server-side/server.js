@@ -130,6 +130,8 @@ app.get("/health", (_req, res) => {
 app.use("/api/webhooks/whatsapp", whatsappWebhookRoutes);
 app.use("/api/webhooks/bank-sms", require("./Routes/bank-sms-webhook-routes"));
 app.use("/api/webhooks/payhere", require("./Routes/payhere-webhook-routes"));
+// Backward-compatible alias for earlier setup docs / dashboard entries.
+app.use("/api/v1/payhere/notify", require("./Routes/payhere-webhook-routes"));
 
 // Dev-only test routes. The router self-blocks production via NODE_ENV
 // checks in every handler, but we also gate the mount itself so we don't

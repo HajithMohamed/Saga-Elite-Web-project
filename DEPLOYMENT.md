@@ -165,7 +165,7 @@ features if missing.
 | `MANUAL_PAYMENT_*` | Bank-transfer display details on checkout | see `Server-side/.env.example` | Optional |
 | `BANK_INBOX_*` / `BANK_SMS_WEBHOOK_SECRET` | Auto-confirm bank transfers | see template | Optional |
 | `WHATSAPP_*` | WhatsApp Cloud API (order alerts / OTP) | see template | Optional |
-| `OPENAI_API_KEY` / `OPENAI_MODEL` | Review classification & recommendations | `sk-...` / `gpt-4o-mini` | Optional |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | AI Insights & review classification (Claude) | `sk-ant-...` / `claude-opus-4-8` | Optional |
 
 > Do **not** set `PORT` — Railway injects it. The full annotated list is in
 > **`Server-side/.env.example`**.

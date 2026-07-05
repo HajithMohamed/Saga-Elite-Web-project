@@ -111,6 +111,8 @@ const normalizeWishlistItem = (product) => ({
 const buildAdminUserSummary = (user, orderStats = {}, notificationStats = {}, customerStats = {}) => ({
   _id: user._id,
   email: user.email,
+  username: user.username || null,
+  phoneNumber: user.phoneNumber || null,
   role: user.role,
   provider: user.provider,
   profilePicture: user.profilePicture || null,
@@ -394,7 +396,7 @@ const getAdminUsers = catchAsync(async (req, res, next) => {
 const getAdminUserDetail = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.params.id)
     .select(
-      "email role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
+      "email username phoneNumber role provider profilePicture isVerified isActive membership tags adminNotes totalSpent orderCount lastOrderAt savedPaymentMethod cart wishlist addresses createdAt updatedAt"
     )
     .populate({ path: "adminNotes.author", select: "email name" })
     .lean();
@@ -675,6 +677,62 @@ const triggerAdminPasswordReset = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: `Password reset email sent to ${user.email}`,
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin-set customer password (super/permitted admin sets a new password
+| directly — distinct from the OTP email reset). Validates strength, relies
+| on the User pre-save hook to hash, and clears mustChangePassword so the
+| customer can sign in immediately with the new credentials.
+|--------------------------------------------------------------------------
+*/
+const adminSetCustomerPassword = catchAsync(async (req, res, next) => {
+  const { newPassword, confirmPassword } = req.body;
+
+  if (!newPassword || !confirmPassword) {
+    return next(new AppError("New password and confirmation are required", 400));
+  }
+
+  if (newPassword !== confirmPassword) {
+    return next(new AppError("Passwords do not match", 400));
+  }
+
+  if (String(newPassword).length < 8) {
+    return next(new AppError("Password must be at least 8 characters long", 400));
+  }
+
+  const user = await User.findById(req.params.id).select("+password");
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (!isCustomerRole(user.role)) {
+    return next(
+      new AppError("Only customer accounts can be updated from user management", 403)
+    );
+  }
+
+  if (user.provider && user.provider !== "local") {
+    return next(
+      new AppError(
+        `This account signs in with ${user.provider}; it has no local password to change.`,
+        400
+      )
+    );
+  }
+
+  user.password = newPassword; // Pre-save hook in User.js hashes it.
+  user.mustChangePassword = false;
+  await user.save({ validateBeforeSave: false });
+
+  req.adminAction = `Set a new password for customer ${user.email}`;
+
+  res.status(200).json({
+    success: true,
+    message: `Password updated for ${user.email}`,
   });
 });
 
@@ -1467,6 +1525,7 @@ module.exports = {
   updateAdminUserStatus,
   bulkTagUsers,
   triggerAdminPasswordReset,
+  adminSetCustomerPassword,
   deleteAdminUser,
   getAllUsers,
   exportCustomersCsv,

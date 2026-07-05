@@ -44,8 +44,8 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
   const googleClientId = env("GOOGLE_CLIENT_ID");
   const fbAppId = env("FACEBOOK_APP_ID");
   const fbAppSecret = env("FACEBOOK_APP_SECRET");
-  const openAiKey = env("OPENAI_API_KEY");
-  const openAiModel = env("OPENAI_MODEL") || "gpt-4o-mini";
+  const anthropicKey = env("ANTHROPIC_API_KEY");
+  const anthropicModel = env("ANTHROPIC_MODEL") || "claude-opus-4-8";
   const payhereMerchantId = env("PAYHERE_MERCHANT_ID");
   const payhereSecret = env("PAYHERE_MERCHANT_SECRET");
   const payhereSandbox = env("PAYHERE_SANDBOX").toLowerCase() !== "false";
@@ -103,11 +103,11 @@ const getIntegrationStatus = catchAsync(async (req, res) => {
       envHint: "FACEBOOK_APP_ID, FACEBOOK_APP_SECRET",
     },
     {
-      service: "OpenAI",
-      description: "Review classification and receipt OCR enrichment.",
-      configured: Boolean(openAiKey),
-      maskedIdentifier: openAiKey ? openAiModel : "",
-      envHint: "OPENAI_API_KEY, OPENAI_MODEL",
+      service: "Anthropic (Claude)",
+      description: "AI Insights generation and review classification (Claude).",
+      configured: Boolean(anthropicKey),
+      maskedIdentifier: anthropicKey ? anthropicModel : "",
+      envHint: "ANTHROPIC_API_KEY, ANTHROPIC_MODEL",
     },
     {
       service: "PayHere (Card Payments)",

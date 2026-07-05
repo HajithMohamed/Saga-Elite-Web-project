@@ -66,7 +66,7 @@ const ConfidenceBar = ({ value }) => {
 
 const AIInsightsPage = () => {
   const [data, setData] = useState({});
-  const [openaiConfigured, setOpenaiConfigured] = useState(true);
+  const [aiConfigured, setAiConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
   const [activeType, setActiveType] = useState("analytics");
   const [regenerating, setRegenerating] = useState(null);
@@ -76,7 +76,7 @@ const AIInsightsPage = () => {
     try {
       const res = await fetchAllRecommendationsApi();
       setData(res.data?.data || {});
-      setOpenaiConfigured(res.data?.openaiConfigured !== false);
+      setAiConfigured(res.data?.aiConfigured !== false);
     } catch (err) {
       toast({
         title: "Couldn't load insights",
@@ -131,17 +131,17 @@ const AIInsightsPage = () => {
     <AdminPage
       eyebrow="Intelligence"
       title="AI Insights"
-      description="Automated analysis of your reviews, catalog, drops and KPIs — generated overnight by OpenAI. Regenerate any stream on demand."
+      description="Automated analysis of your reviews, catalog, drops and KPIs — generated overnight by Claude. Regenerate any stream on demand."
     >
-      {!openaiConfigured ? (
+      {!aiConfigured ? (
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
           <div>
             <p className="text-sm font-semibold text-amber-200">
-              OpenAI is not configured on the server
+              Claude (Anthropic) is not configured on the server
             </p>
             <p className="mt-1 text-xs text-amber-200/80">
-              Set <code className="rounded bg-black/30 px-1">OPENAI_API_KEY</code> in the
+              Set <code className="rounded bg-black/30 px-1">ANTHROPIC_API_KEY</code> in the
               backend environment to enable insight generation. Any previously
               generated insights are still shown below.
             </p>

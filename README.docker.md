@@ -92,7 +92,7 @@ BACKEND_URL=https://abc123.ngrok.io
 
 The notify_url sent to PayHere will be:
 ```
-https://abc123.ngrok.io/api/v1/payhere/notify
+https://abc123.ngrok.io/api/webhooks/payhere
 ```
 
 Reset `BACKEND_URL` back to `http://localhost:5001` after testing.

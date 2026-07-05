@@ -116,6 +116,24 @@ export const triggerAdminPasswordReset = createAsyncThunk(
   }
 );
 
+export const adminChangeUserPassword = createAsyncThunk(
+  "adminUsers/changePassword",
+  async ({ userId, newPassword, confirmPassword }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `${API_BASE}/user/admin/users/${userId}/change-password`,
+        { newPassword, confirmPassword },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const serverMsg = error?.response?.data?.message;
+      const message = serverMsg || error.message || "Failed to change customer password";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
 export const deleteAdminUser = createAsyncThunk(
   "adminUsers/delete",
   async (userId, thunkAPI) => {

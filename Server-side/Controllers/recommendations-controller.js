@@ -37,7 +37,7 @@ const getAllRecommendations = catchAsync(async (_req, res) => {
   res.status(200).json({
     success: true,
     data,
-    openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    aiConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
   });
 });
 
@@ -61,7 +61,7 @@ const getRecommendationByType = catchAsync(async (req, res, next) => {
     success: true,
     data: history[0] || null,
     history,
-    openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    aiConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
   });
 });
 
@@ -69,7 +69,7 @@ const getRecommendationByType = catchAsync(async (req, res, next) => {
 |--------------------------------------------------------------------------
 | POST /admin/recommendations/:type/regenerate — run the generator on demand
 |--------------------------------------------------------------------------
-| Synchronous: the admin clicks and waits a few seconds for the OpenAI call.
+| Synchronous: the admin clicks and waits a few seconds for the Claude call.
 | Fails clearly (503) when the key is missing, and returns a friendly message
 | when the generator skips (not enough data yet) rather than treating it as an
 | error.
@@ -80,10 +80,10 @@ const regenerateRecommendation = catchAsync(async (req, res, next) => {
     return next(new AppError("Unknown recommendation type", 400));
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return next(
       new AppError(
-        "OpenAI is not configured. Add OPENAI_API_KEY to the server environment to generate AI insights.",
+        "Claude (Anthropic) is not configured. Add ANTHROPIC_API_KEY to the server environment to generate AI insights.",
         503
       )
     );

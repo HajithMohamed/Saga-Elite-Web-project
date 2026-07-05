@@ -2,41 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  BellRing,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
-  CreditCard,
   Crown,
-  KeyRound,
-  Mail,
-  MapPin,
   RefreshCcw,
   Search,
   ShieldCheck,
   ShoppingBag,
-  Trash2,
   UserCheck,
-  UserCog,
   Users,
-  Tag as TagIcon,
-  StickyNote,
-  Plus,
-  Loader2,
-  Activity, Sparkles, CheckCircle2, Circle, Heart, Truck, Package, MessageSquare, ArrowUpRight, ArrowUp, ArrowDown, Eye, AlertTriangle, TrendingUp, Filter, Download,
+  AlertTriangle,
 } from "lucide-react";
 import { AdminPage } from "@/components/admin-components/AdminUI";
 import {
-  deleteAdminUser,
   fetchAdminUserDetail,
   fetchAdminUsers,
-  triggerAdminPasswordReset,
-  updateAdminUserStatus,
   bulkTagUsers,
 } from "@/store/admin/user-slice";
+import CustomerDetailModal from "@/components/admin-components/CustomerDetailModal";
 import { toast } from "@/hooks/use-toast";
-import { pageVariants, containerVariants, itemVariants } from "@/components/admin-components/_shared/animations";
-import { ConfirmInline } from "@/components/admin-components/_shared/ConfirmInline";
+import { pageVariants } from "@/components/admin-components/_shared/animations";
 import { StatusBadge } from "@/components/admin-components/_shared/StatusBadge";
 import { SkeletonCard } from "@/components/admin-components/_shared/SkeletonCard";
 import BulkActionBar from "@/components/admin-components/_shared/BulkActionBar";
@@ -158,13 +141,6 @@ const statCards = [
   },
 ];
 
-const activityIconMap = {
-  account_created: UserCheck,
-  profile_updated: UserCog,
-  order: ShoppingBag,
-  notification: BellRing,
-};
-
 const formatMoney = (value) => currencyFormatter.format(value || 0);
 
 const formatDate = (value, withTime = false) => {
@@ -176,16 +152,6 @@ const formatDate = (value, withTime = false) => {
       ? dateTimeFormatter.format(date)
       : dateFormatter.format(date);
 };
-
-const statusBadgeClasses = (isActive) =>
-  isActive
-    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-    : "border-red-500/20 bg-red-500/10 text-red-300";
-
-const providerBadgeClasses = (provider) =>
-  provider === "google"
-    ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
-    : "border-ink/10 bg-black/60 text-gray-300";
 
 const UsersPage = () => {
   const dispatch = useDispatch();
@@ -201,16 +167,12 @@ const UsersPage = () => {
   } = useSelector((state) => state.adminUsers);
 
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [membershipFilter, setMembershipFilter] = useState("all");
-  const [sortMode, setSortMode] = useState("newest");
+  const [sortMode] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [noteSubmitting, setNoteSubmitting] = useState(false);
-  const [tagSubmitting, setTagSubmitting] = useState(null);
 
   const listQuery = useMemo(
     () => ({
@@ -234,21 +196,6 @@ const UsersPage = () => {
   }, [loadUsers]);
 
   useEffect(() => {
-    if (!users.length) {
-      if (selectedUserId) {
-        setSelectedUserId(null);
-      }
-      return;
-    }
-
-    const selectedStillExists = users.some((user) => user._id === selectedUserId);
-
-    if (!selectedUserId || !selectedStillExists) {
-      setSelectedUserId(users[0]._id);
-    }
-  }, [users, selectedUserId]);
-
-  useEffect(() => {
     if (selectedUserId) {
       dispatch(fetchAdminUserDetail(selectedUserId));
     }
@@ -267,17 +214,6 @@ const UsersPage = () => {
       ? 0
       : Math.min(showingFrom + users.length - 1, paginationTotal);
 
-  const pageNumbers = useMemo(() => {
-    const maxButtons = 5;
-    const start = Math.max(
-      1,
-      Math.min(paginationPage - 2, totalPages - maxButtons + 1)
-    );
-    const end = Math.min(totalPages, start + maxButtons - 1);
-
-    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-  }, [paginationPage, totalPages]);
-
   useEffect(() => {
     if (!isListLoading && currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -286,7 +222,7 @@ const UsersPage = () => {
 
   const bulk = useBulkSelection(users);
   const [bulkPending, setBulkPending] = useState(false);
-  const [bulkTagDraft, setBulkTagDraft] = useState("vip");
+  const [bulkTagDraft] = useState("vip");
   const runBulkUserTag = async (mode) => {
     const ids = bulk.selectedIds;
     if (ids.length === 0) return;
@@ -333,155 +269,24 @@ const UsersPage = () => {
     }
   };
 
-  const handleStatusToggle = async () => {
-    if (!selectedUser) return;
-
-    const nextIsActive = !selectedUser.isActive;
-
-    try {
-      await dispatch(
-        updateAdminUserStatus({
-          userId: selectedUser._id,
-          isActive: nextIsActive,
-        })
-      ).unwrap();
-      toast({
-        title: nextIsActive ? "Customer activated" : "Customer deactivated",
-        description: `${selectedUser.email} is now ${nextIsActive ? "active" : "inactive"}.`,
-        variant: "success",
-      });
-      await loadUsers().unwrap();
-    } catch (statusError) {
-      toast({
-        title: "Status update failed",
-        description: statusError || "Could not update this account.",
-        variant: "destructive",
-      });
-    }
+  const openCustomer = (userId) => {
+    setSelectedUserId(userId);
+    setModalOpen(true);
   };
 
-  // Reset the note draft when switching users so we don't carry text across.
-  useEffect(() => {
-    setNoteDraft("");
-  }, [selectedUserId]);
-
-  const handleTagToggle = async (tagKey) => {
-    if (!selectedUser) return;
-    const currentTags = Array.isArray(selectedUser.tags) ? selectedUser.tags : [];
-    const nextTags = currentTags.includes(tagKey)
-      ? currentTags.filter((t) => t !== tagKey)
-      : [...currentTags, tagKey];
-
-    setTagSubmitting(tagKey);
-    try {
-      await dispatch(
-        updateAdminUserStatus({ userId: selectedUser._id, tags: nextTags })
-      ).unwrap();
-      // Refresh the detail so populated adminNotes/tags reflect the latest state.
-      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
-    } catch (tagError) {
-      toast({
-        title: "Tag update failed",
-        description: tagError || "Could not update tags.",
-        variant: "destructive",
-      });
-    } finally {
-      setTagSubmitting(null);
-    }
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedUserId(null);
   };
 
-  const handleAddNote = async () => {
-    if (!selectedUser || !noteDraft.trim()) return;
-    setNoteSubmitting(true);
-    try {
-      await dispatch(
-        updateAdminUserStatus({
-          userId: selectedUser._id,
-          addAdminNote: noteDraft.trim(),
-        })
-      ).unwrap();
-      await dispatch(fetchAdminUserDetail(selectedUser._id)).unwrap();
-      setNoteDraft("");
-      toast({ title: "Note added", variant: "success" });
-    } catch (noteError) {
-      toast({
-        title: "Could not add note",
-        description: noteError || "Try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setNoteSubmitting(false);
+  const handleCustomerDeleted = () => {
+    setModalOpen(false);
+    setSelectedUserId(null);
+    const nextPage = users.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
     }
-  };
-
-  const handleMembershipChange = async (nextMembership) => {
-    if (!selectedUser) return;
-    if ((selectedUser.membership || "standard") === nextMembership) return;
-
-    try {
-      await dispatch(
-        updateAdminUserStatus({
-          userId: selectedUser._id,
-          membership: nextMembership,
-        })
-      ).unwrap();
-      toast({
-        title: "Membership updated",
-        description: `${selectedUser.email} is now ${nextMembership}.`,
-        variant: "success",
-      });
-      await loadUsers().unwrap();
-    } catch (membershipError) {
-      toast({
-        title: "Membership update failed",
-        description: membershipError || "Could not update membership.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const executeResetPasswordConfirmed = async () => {
-    if (!selectedUser) return;
-    setResetConfirmOpen(false);
-    try {
-      await dispatch(triggerAdminPasswordReset(selectedUser._id)).unwrap();
-      toast({
-        title: "Password reset email sent",
-        description: `OTP delivered to ${selectedUser.email}.`,
-        variant: "success",
-      });
-    } catch (resetError) {
-      toast({
-        title: "Reset failed",
-        description: resetError || "Could not send password reset.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const executeDeleteConfirmed = async () => {
-    if (!selectedUser) return;
-    setDeleteConfirmOpen(false);
-    try {
-      await dispatch(deleteAdminUser(selectedUser._id)).unwrap();
-      toast({
-        title: "Customer deleted",
-        description: `${selectedUser.email} has been removed from the system.`,
-        variant: "success",
-      });
-      setSelectedUserId(null);
-      const nextPage = users.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
-      if (nextPage !== currentPage) {
-        setCurrentPage(nextPage);
-      }
-      await loadUsers({ page: nextPage }).unwrap();
-    } catch (deleteError) {
-      toast({
-        title: "Delete failed",
-        description: deleteError || "Could not delete this account.",
-        variant: "destructive",
-      });
-    }
+    loadUsers({ page: nextPage });
   };
 
   return (
@@ -628,7 +433,7 @@ const UsersPage = () => {
                         return (
                           <tr
                             key={user._id}
-                            onClick={() => setSelectedUserId(user._id)}
+                            onClick={() => openCustomer(user._id)}
                             className={`border-b border-ink/5 cursor-pointer transition-colors ${
                               isSelectedRow ? "bg-[#181510] border-l-2 border-l-gold-ink2" : "hover:bg-panel border-l-2 border-l-transparent"
                             }`}
@@ -721,236 +526,6 @@ const UsersPage = () => {
             </div>
           </section>
 
-          {/* 360 Detail View below the list */}
-          {selectedUser && (
-             <>
-             <div className="flex items-center gap-4 py-2">
-                <div className="h-px bg-gradient-to-r from-transparent via-gold-deep/30 to-transparent flex-1" />
-                <span className="font-serif text-gold-ink2 text-xl">Customer 360</span>
-                <div className="h-px bg-gradient-to-r from-transparent via-gold-deep/30 to-transparent flex-1" />
-             </div>
-             
-             {isDetailLoading ? (
-               <div className="flex items-center justify-center p-12">
-                 <Loader2 className="h-8 w-8 animate-spin text-gold-ink2" />
-               </div>
-             ) : (
-               <section className="grid grid-cols-12 gap-5">
-                 {/* LEFT PANE - Profile, Actions, Notes */}
-                 <aside className="col-span-12 lg:col-span-3 space-y-5">
-                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-6 relative overflow-hidden">
-                      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: "radial-gradient(circle at top, rgba(212,175,55,0.15), transparent 70%)" }} />
-                      <div className="relative text-center flex flex-col items-center">
-                        <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.2em] mb-4 ${membershipBadgeClasses(selectedUser.membership)}`}>
-                          {selectedUser.membership === "vip" && <Crown className="h-2.5 w-2.5" />}
-                          {selectedUser.membership || "standard"}
-                        </span>
-                        
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-sm border border-ink/10 bg-gradient-to-br from-card to-page text-xl font-serif text-gold-ink2">
-                          {(selectedUser.email || "?").slice(0, 2).toUpperCase()}
-                        </div>
-                        
-                        <div className="mt-4 flex items-center justify-center gap-2 w-full">
-                           <h2 className="text-xl font-semibold text-ink break-all">{selectedUser.email.split('@')[0]}</h2>
-                           {selectedUser.isVerified && <ShieldCheck className="h-4 w-4 text-gold-ink2" />}
-                        </div>
-                        <div className="text-[11px] font-mono text-gray-500 mt-1">{selectedUser.email}</div>
-                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mt-2">Member via {selectedUser.provider}</div>
-                      </div>
-                      
-                      <div className="h-px bg-ink/10 w-full my-5" />
-                      
-                      <ul className="space-y-3 text-xs">
-                        <li className="flex items-center gap-3 text-gray-400">
-                          <MapPin className="h-3.5 w-3.5 text-gold-ink2" />
-                          <span className="truncate">{selectedUser.addresses?.[0]?.city || "No saved city"}, {selectedUser.addresses?.[0]?.country || "LK"}</span>
-                        </li>
-                        <li className="flex items-center gap-3 text-gray-400">
-                          <Clock3 className="h-3.5 w-3.5 text-gold-ink2" />
-                          <span>Joined {formatDate(selectedUser.createdAt)}</span>
-                        </li>
-                      </ul>
-                      
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        {selectedUser.tags?.map((t) => (
-                           <span key={t} className="px-2 py-1 bg-ink/5 border border-ink/10 text-gray-300 rounded-sm text-[9px] uppercase tracking-wider">{t.replace('_', ' ')}</span>
-                        ))}
-                      </div>
-                   </div>
-
-                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
-                     <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500 block mb-4">Quick Actions</span>
-                     <div className="grid grid-cols-2 gap-2">
-                       <button onClick={handleStatusToggle} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-gold-ink2/30 transition group text-left">
-                         <UserCog className="h-4 w-4 text-gray-400 group-hover:text-gold-ink2" />
-                         <span className="text-[11px]">{selectedUser.isActive ? "Deactivate" : "Activate"}</span>
-                       </button>
-                       <button onClick={() => setResetConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-gold-ink2/30 transition group text-left">
-                         <KeyRound className="h-4 w-4 text-gray-400 group-hover:text-gold-ink2" />
-                         <span className="text-[11px]">Reset Pass</span>
-                       </button>
-                       <button onClick={() => setDeleteConfirmOpen(true)} className="flex flex-col items-start gap-2 p-3 rounded-lg border border-ink/5 bg-black/40 hover:border-red-400/30 transition group text-left col-span-2">
-                         <Trash2 className="h-4 w-4 text-gray-400 group-hover:text-red-400" />
-                         <span className="text-[11px] text-rose-200">Delete Account</span>
-                       </button>
-                     </div>
-                   </div>
-                   
-                   <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Admin Notes</span>
-                        <StickyNote className="h-3.5 w-3.5 text-gold-ink2" />
-                      </div>
-                      <div className="space-y-3 max-h-[220px] overflow-y-auto pr-2 scrollbar-thin">
-                        {(selectedUser.adminNotes || []).length === 0 ? (
-                          <div className="text-[11px] text-gray-500 italic">No internal notes</div>
-                        ) : (
-                          [...selectedUser.adminNotes].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).map((note, idx) => (
-                            <div key={idx} className="bg-black/40 border border-ink/5 p-3 rounded-xl">
-                              <p className="text-xs text-gray-300 leading-snug">{note.note}</p>
-                              <div className="text-[9px] uppercase text-gray-600 mt-2">{note.author?.email?.split('@')[0] || "Admin"} · {formatDate(note.createdAt)}</div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                      <div className="mt-4 flex gap-2">
-                        <input
-                          value={noteDraft}
-                          onChange={(e) => setNoteDraft(e.target.value)}
-                          placeholder="Type a note..."
-                          className="flex-1 bg-black/60 border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink outline-none focus:border-gold-ink2/50"
-                        />
-                        <button
-                          onClick={handleAddNote}
-                          disabled={!noteDraft.trim() || noteSubmitting}
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-gold-deep/10 text-gold-ink2 border border-gold-ink2/20 hover:bg-gold-deep/20 disabled:opacity-50"
-                        >
-                           <Plus className="h-4 w-4" />
-                        </button>
-                      </div>
-                   </div>
-                 </aside>
-
-                 {/* CENTER PANE - Activity, View Products, Orders */}
-                 <div className="col-span-12 lg:col-span-6 space-y-5">
-                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel">
-                      <div className="px-6 py-5 border-b border-ink/10">
-                        <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-gold-ink2" />
-                          <h3 className="font-serif text-xl tracking-tight text-ink">Activity Timeline</h3>
-                        </div>
-                      </div>
-                      <ol className="px-8 py-6 relative">
-                        <div className="absolute left-[40px] top-8 bottom-8 w-px bg-ink/10" />
-                        {selectedUser.activityTimeline?.length ? (
-                          selectedUser.activityTimeline.map((activity, idx) => {
-                            const ActivityIcon = activityIconMap[activity.type] || Activity;
-                            return (
-                              <li key={idx} className="relative pl-12 pb-6 last:pb-0">
-                                <span className="absolute left-0 top-0.5 h-6 w-6 rounded-md border border-ink/10 bg-panel flex items-center justify-center text-gold-ink2">
-                                  <ActivityIcon className="h-3 w-3" />
-                                </span>
-                                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
-                                  <div>
-                                    <div className="text-sm text-gray-200">{activity.title}</div>
-                                    <div className="text-[11px] text-gray-500 mt-1">{activity.description}</div>
-                                  </div>
-                                  <span className="text-[10px] font-mono whitespace-nowrap text-gray-500">{formatDate(activity.createdAt, true)}</span>
-                                </div>
-                              </li>
-                            );
-                          })
-                        ) : (
-                          <div className="text-sm text-gray-500 pl-12">No activity recorded for this account.</div>
-                        )}
-                      </ol>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-6">
-                      <div className="flex items-center gap-2 mb-5">
-                        <Package className="h-4 w-4 text-gold-ink2" />
-                        <h3 className="font-serif text-xl tracking-tight text-ink">Order History</h3>
-                      </div>
-                      <table className="w-full text-left text-sm">
-                        <thead className="text-[10px] uppercase tracking-widest text-gray-500 border-b border-ink/10">
-                           <tr>
-                             <th className="pb-3 px-2">Order</th>
-                             <th className="pb-3 px-2">Date</th>
-                             <th className="pb-3 px-2 text-right">Items</th>
-                             <th className="pb-3 px-2 text-right">Total</th>
-                             <th className="pb-3 px-2 pl-6">Status</th>
-                           </tr>
-                        </thead>
-                        <tbody>
-                          {selectedUser.recentOrders?.length ? (
-                            selectedUser.recentOrders.map(o => (
-                              <tr key={o._id} className="border-b border-ink/5 last:border-0 hover:bg-black/30 transition">
-                                <td className="py-3 px-2 font-mono text-[11px] text-gray-300">{o.referenceNumber || o._id.slice(-6).toUpperCase()}</td>
-                                <td className="py-3 px-2 text-[11px] text-gray-500">{formatDate(o.createdAt)}</td>
-                                <td className="py-3 px-2 text-right text-[12px]">{o.items?.length || 0}</td>
-                                <td className="py-3 px-2 text-right font-mono text-[12px] text-gold-ink2">{formatMoney(o.totalAmount)}</td>
-                                <td className="py-3 px-2 pl-6"><StatusBadge status={o.status || "processing"} /></td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr><td colSpan="5" className="py-6 text-center text-[12px] text-gray-500">No orders placed yet.</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                 </div>
-
-                 {/* RIGHT PANE - Insights, Churn */}
-                 <aside className="col-span-12 lg:col-span-3 space-y-5">
-                    <div className="rounded-[1.5rem] border border-gold-ink2/30 bg-gold-deep/5 p-5 relative overflow-hidden">
-                       <span className="text-[10px] uppercase tracking-[0.18em] text-gold-ink2/80 block mb-2">Lifetime Value</span>
-                       <div className="font-serif text-3xl text-ink tracking-tight">{formatMoney(selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent)}</div>
-                       <div className="text-[11px] text-gray-400 mt-2">Across {selectedUser.relationship?.orderCount || 0} orders</div>
-                       <div className="h-px bg-gold-deep/20 w-full my-4" />
-                       <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Predicted 12m</span>
-                          <span className="text-gray-300 font-mono">
-                            {formatMoney((selectedUser.intelligence?.customerLifetimeValue || selectedUser.relationship?.totalSpent) * 0.6)}
-                          </span>
-                       </div>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-ink/10 bg-panel p-5">
-                       <div className="flex items-center justify-between mb-4">
-                         <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">Viewed Categories</span>
-                         <Eye className="h-3.5 w-3.5 text-gold-ink2" />
-                       </div>
-                       <div className="flex flex-col gap-3">
-                          {selectedUser.intelligence?.preferredCategories?.length ? (
-                            selectedUser.intelligence.preferredCategories.map(cat => (
-                              <div key={cat} className="flex justify-between text-xs">
-                                <span className="text-gray-300">{cat}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <span className="text-[11px] text-gray-500 italic">No browse history</span>
-                          )}
-                       </div>
-                    </div>
-
-                    <div className="rounded-[1.5rem] border border-red-500/10 bg-red-500/5 p-5">
-                       <div className="flex items-center justify-between mb-3">
-                         <span className="text-[10px] uppercase tracking-[0.18em] text-rose-300">Churn Risk</span>
-                         <AlertTriangle className="h-4 w-4 text-rose-400" />
-                       </div>
-                       <div className="font-serif text-4xl text-ink">{selectedUser.intelligence?.predictedChurnRisk || 0}<span className="text-lg text-gray-500">/100</span></div>
-                       <div className="mt-3 text-[11px] text-rose-200/60 leading-relaxed">
-                         {selectedUser.intelligence?.predictedChurnRisk > 70 
-                           ? "High risk of abandonment. Consider an exclusive re-engagement offer."
-                           : "Customer engagement is stable."}
-                       </div>
-                    </div>
-                 </aside>
-               </section>
-             )}
-             </>
-          )}
-
           {error && (
             <div className="rounded-[1.5rem] border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
               {error}
@@ -958,20 +533,15 @@ const UsersPage = () => {
           )}
         </div>
 
-        <ConfirmInline
-          show={deleteConfirmOpen && !!selectedUser}
-          message={`Delete ${selectedUser?.email}? This removes the customer account.`}
-          onCancel={() => setDeleteConfirmOpen(false)}
-          onConfirm={executeDeleteConfirmed}
-          className="w-full max-w-md fixed bottom-4 right-4 z-50 shadow-2xl"
-        />
-        <ConfirmInline
-          show={resetConfirmOpen && !!selectedUser}
-          message={`Send a password reset OTP to ${selectedUser?.email}?`}
-          onCancel={() => setResetConfirmOpen(false)}
-          onConfirm={executeResetPasswordConfirmed}
-          className="w-full max-w-md fixed bottom-4 right-4 z-50 shadow-2xl"
-        />
+        {modalOpen && selectedUserId ? (
+          <CustomerDetailModal
+            user={selectedUser}
+            isLoading={isDetailLoading || selectedUser?._id !== selectedUserId}
+            onClose={closeModal}
+            onMutated={() => loadUsers()}
+            onDeleted={handleCustomerDeleted}
+          />
+        ) : null}
 
         <BulkActionBar
           count={bulk.count}

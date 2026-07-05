@@ -35,6 +35,7 @@ const {
     getCheckoutUrl,
     formatAmount,
     generateCheckoutHash,
+    resolvePayHereNotifyUrl,
 } = require("../Utils/payhere-service");
 
 const CASH_ORDER_EXPIRY_MS = 15 * 60 * 1000;
@@ -70,6 +71,22 @@ const clientShopUrl = () => process.env.CLIENT_URL || "http://localhost:5173";
 
 const trimTrailingSlash = (value = "") => String(value || "").trim().replace(/\/+$/, "");
 
+const PAYHERE_NOTIFY_CONFIG_ERROR =
+    "Card payments need a publicly reachable PayHere notify URL. Set PAYHERE_NOTIFY_URL, or set BACKEND_URL to your public API origin.";
+
+const getPayHereNotifyConfig = (req) => {
+    const config = resolvePayHereNotifyUrl(req);
+
+    if (!config.isPublic) {
+        logger.warn("PayHere notify URL is not publicly reachable", {
+            source: config.source,
+            hasNotifyUrl: Boolean(config.notifyUrl),
+        });
+    }
+
+    return config;
+};
+
 const normalizeEmail = (value) =>
     typeof value === "string" ? value.trim().toLowerCase() : "";
 
@@ -83,8 +100,11 @@ const resolvePayHereName = (order, email) => {
     return pickupName || (email ? email.split("@")[0] : "Saga Customer");
 };
 
-const buildPayHereCheckout = ({ order, payment, email }) => {
+const buildPayHereCheckout = ({ order, payment, email, req }) => {
     if (!order || !payment || !isPayHereConfigured()) return null;
+
+    const notifyConfig = getPayHereNotifyConfig(req);
+    if (!notifyConfig.isPublic) return null;
 
     const merchantId = getMerchantId();
     const currency = "LKR";
@@ -97,20 +117,11 @@ const buildPayHereCheckout = ({ order, payment, email }) => {
         currency,
     });
 
-    const backendUrl = trimTrailingSlash(process.env.BACKEND_URL || "");
-    const notifyUrl =
-        process.env.PAYHERE_NOTIFY_URL ||
-        (backendUrl ? `${backendUrl}/api/webhooks/payhere` : "");
+    const notifyUrl = notifyConfig.notifyUrl;
     const shopUrl = trimTrailingSlash(clientShopUrl());
     const emailQuery = email ? `&email=${encodeURIComponent(email)}` : "";
     const returnUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=success${emailQuery}`;
     const cancelUrl = `${shopUrl}/shopping/card-payment/${order._id}?payment=cancelled${emailQuery}`;
-
-    if (!notifyUrl) {
-        logger.warn(
-            "PayHere checkout: BACKEND_URL / PAYHERE_NOTIFY_URL is not set - payments cannot auto-confirm"
-        );
-    }
 
     const rawName = resolvePayHereName(order, email);
     const [firstNameRaw, ...restName] = rawName.split(/\s+/);
@@ -124,6 +135,7 @@ const buildPayHereCheckout = ({ order, payment, email }) => {
         orderId: order._id,
         amount: formatAmount(amount),
         currency,
+        notifySource: notifyConfig.source,
         payment: {
             sandbox: isPayHereSandbox(),
             merchant_id: merchantId,
@@ -233,6 +245,18 @@ const createOrder = catchAsync(async (req, res, next) => {
     const isPendingOnlinePayment = isBankTransferPayment || isCardPayment;
     const isLegacyManualPayment = paymentMethod === "manual";
     let guest = null;
+
+    let payHereNotifyConfig = null;
+    if (isCardPayment && isPayHereConfigured()) {
+        payHereNotifyConfig = getPayHereNotifyConfig(req);
+        if (!payHereNotifyConfig.isPublic) {
+            logger.error("PayHere order creation blocked: notify URL is not public", {
+                source: payHereNotifyConfig.source,
+                hasNotifyUrl: Boolean(payHereNotifyConfig.notifyUrl),
+            });
+            return next(new AppError(PAYHERE_NOTIFY_CONFIG_ERROR, 503));
+        }
+    }
 
     if (!user && guestEmailNormalized) {
         guest = await Guest.findOneAndUpdate(
@@ -654,7 +678,19 @@ const createOrder = catchAsync(async (req, res, next) => {
             order: createdOrder,
             payment: createdCardPayment,
             email: normalizeEmail(user?.email || guestEmailNormalized || ""),
+            req,
         });
+
+        if (payHereCheckout) {
+            logger.info("PayHere checkout payload prepared during order creation", {
+                orderId: String(createdOrder._id),
+                referenceNumber: createdCardPayment.referenceNumber,
+                amount: payHereCheckout.amount,
+                currency: payHereCheckout.currency,
+                sandbox: payHereCheckout.sandbox,
+                notifySource: payHereCheckout.notifySource,
+            });
+        }
     }
 
     if (isBankTransferPayment) {
