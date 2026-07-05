@@ -48,6 +48,11 @@ const FilterSidebar = ({
   const [categories, setCategories] = useState([]);
   const [searchParams] = useSearchParams();
   const currentCategory = (searchParams.get("category") || "").toLowerCase();
+  const currentSubCategory = (searchParams.get("subCategory") || "").toLowerCase();
+  const currentCategoryPath = (searchParams.get("categoryPath") || "").toLowerCase();
+  const selectedPath = currentCategoryPath
+    ? currentCategoryPath.split("/").map((s) => s.trim().toLowerCase()).filter(Boolean)
+    : [currentCategory, currentSubCategory].filter(Boolean);
 
   useEffect(() => {
     const fetchDrops = async () => {
@@ -74,28 +79,55 @@ const FilterSidebar = ({
     fetchCategories();
   }, []);
 
+  const categorySlug = (category) =>
+    String(category?.slug || category?.name || "").trim().toLowerCase();
+
+  const getParentId = (category) => {
+    const parent = category?.parentCategory;
+    if (!parent) return null;
+    return String(typeof parent === "object" && parent !== null ? parent._id : parent);
+  };
+
   const isCategoryAncestor = (ancestorId, selectedSlug) => {
     const selectedCat = categories.find(c => (c.slug || c.name).toLowerCase() === selectedSlug);
     if (!selectedCat) return false;
     let current = selectedCat;
     while (current.parentCategory) {
-      const parentId = typeof current.parentCategory === 'object' && current.parentCategory !== null
-        ? current.parentCategory._id
-        : current.parentCategory;
-      if (parentId === ancestorId) return true;
-      current = categories.find(c => c._id === parentId);
+      const parentId = getParentId(current);
+      if (parentId === String(ancestorId)) return true;
+      current = categories.find(c => String(c._id) === parentId);
       if (!current) break;
     }
     return false;
   };
 
-  const renderCategoryTree = (parentId = null, depth = 0) => {
+  const buildCategoryHref = (pathSegments) => {
+    const query = new URLSearchParams(searchParams);
+    query.delete("filter");
+    query.delete("category");
+    query.delete("subCategory");
+    query.delete("categoryPath");
+
+    if (pathSegments[0]) query.set("category", pathSegments[0]);
+    if (pathSegments[1]) query.set("subCategory", pathSegments[1]);
+    if (pathSegments.length > 1) query.set("categoryPath", pathSegments.join("/"));
+
+    const qs = query.toString();
+    return qs ? `/shopping/product-list?${qs}` : "/shopping/product-list";
+  };
+
+  const isSelectedPath = (pathSegments) =>
+    selectedPath.length === pathSegments.length &&
+    pathSegments.every((segment, index) => selectedPath[index] === segment);
+
+  const isPathPrefix = (pathSegments) =>
+    selectedPath.length > pathSegments.length &&
+    pathSegments.every((segment, index) => selectedPath[index] === segment);
+
+  const renderCategoryTree = (parentId = null, depth = 0, pathSegments = []) => {
     const children = categories.filter(c => {
       if (!parentId) return !c.parentCategory;
-      const pId = typeof c.parentCategory === 'object' && c.parentCategory !== null
-        ? c.parentCategory._id
-        : c.parentCategory;
-      return pId === parentId;
+      return getParentId(c) === String(parentId);
     });
 
     if (children.length === 0) return null;
@@ -103,18 +135,25 @@ const FilterSidebar = ({
     return (
       <div className={`space-y-2 ${depth > 0 ? 'ml-4 mt-2 border-l border-line pl-4' : ''}`}>
         {children.map(c => {
-          const isSelected = currentCategory === (c.slug || c.name).toLowerCase();
-          const isExpanded = isSelected || isCategoryAncestor(c._id, currentCategory);
+          const slug = categorySlug(c);
+          const nextPath = [...pathSegments, slug].filter(Boolean);
+          const isSelected =
+            isSelectedPath(nextPath) ||
+            (!currentCategoryPath && currentCategory === slug);
+          const isExpanded =
+            isSelected ||
+            isPathPrefix(nextPath) ||
+            isCategoryAncestor(c._id, selectedPath[selectedPath.length - 1] || currentCategory);
 
           return (
             <div key={c._id}>
-              <Link to={`/shopping/product-list?category=${c.slug || c.name}`} className="flex items-center gap-3 group cursor-pointer">
+              <Link to={buildCategoryHref(nextPath)} className="flex items-center gap-3 group cursor-pointer">
                 <div className={`w-4 h-4 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-gold border-gold-ink' : 'border-line group-hover:border-gold-ink2'}`}>
                    {isSelected && <span className="w-2 h-2 bg-page rounded-sm" />}
                 </div>
                 <span className={`text-xs uppercase tracking-wider ${isSelected ? 'text-gold-ink' : 'text-ink-2'}`}>{c.name}</span>
               </Link>
-              {isExpanded && renderCategoryTree(c._id, depth + 1)}
+              {isExpanded && renderCategoryTree(c._id, depth + 1, nextPath)}
             </div>
           );
         })}
