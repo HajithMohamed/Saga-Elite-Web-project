@@ -3,8 +3,15 @@ const catchAsync = require("../Utils/catchAsync");
 const AppError = require("../Utils/appError");
 const Offer = require("../Models/Offer");
 const Product = require("../Models/Product");
+const Customer = require("../Models/Customer");
 const filterObj = require("../Utils/filter-object");
 const { emitToAll } = require("../Utils/socket-service");
+const {
+  DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS,
+  getFlashDealCustomerClassification,
+  getFlashDealDiscountForCustomer,
+  normalizeDiscountMap,
+} = require("../Utils/reward-service");
 
 const PRODUCT_IMAGE_POPULATE = {
   path: "images",
@@ -44,7 +51,9 @@ const OFFER_FIELDS = [
   "showOnHomepage",
   "displayOrder",
   "isActive",
+  "appliesToLeastSellingItems",
   "estimatedMarginAfterDiscount",
+  "customerClassificationDiscounts",
 ];
 
 const escapeRegex = (value = "") =>
@@ -92,6 +101,114 @@ const mergeOfferProducts = (offer, categoryProducts = []) => {
   return { ...offer, products };
 };
 
+const getStockedActiveProductFilter = () => ({
+  isActive: true,
+  $or: [{ totalStock: { $gt: 0 } }, { "variants.stock": { $gt: 0 } }],
+});
+
+const getLeastSellingProductIds = async () => {
+  const stockFilter = getStockedActiveProductFilter();
+
+  const products = await Product.find(stockFilter)
+    .sort({ soldCount: 1, createdAt: -1 })
+    .limit(3)
+    .select("_id")
+    .lean();
+
+  return products.map((product) => product._id);
+};
+
+const isFlashDealsOffer = (offer = {}) =>
+  offer.type === "flash" ||
+  Boolean(offer.appliesToLeastSellingItems) ||
+  String(offer.name || "").trim().toLowerCase() === "flash deals";
+
+const formatCampaignType = (type = "") =>
+  String(type || "Offer")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const normalizePublicOffer = (offer, { customer = null, user = null } = {}) => {
+  const isFlashDeal = isFlashDealsOffer(offer);
+  const context = { customer, user };
+  const classification = isFlashDeal
+    ? getFlashDealCustomerClassification(context)
+    : null;
+  const classificationDiscounts = normalizeDiscountMap(
+    offer.customerClassificationDiscounts,
+    offer.discountPercent
+  );
+  const discountPercent = isFlashDeal
+    ? getFlashDealDiscountForCustomer(context, classificationDiscounts)
+    : Number(offer.discountPercent || 0);
+
+  return {
+    ...offer,
+    title: offer.title || offer.name,
+    campaignType: isFlashDeal ? "Flash Deals" : formatCampaignType(offer.type),
+    categories: offer.applicableCategories || [],
+    endDate: offer.endsAt || null,
+    discountPercent,
+    discountPercentage: discountPercent,
+    ...(isFlashDeal
+      ? {
+          customerClassification: classification,
+          customerClassificationDiscounts: classificationDiscounts,
+          customerSegment: classification,
+          customerSegmentDiscounts: classificationDiscounts,
+          leastSellingDeal: true,
+        }
+      : {}),
+  };
+};
+
+const hasClassificationDiscounts = (value) => {
+  if (!value) return false;
+  if (value instanceof Map) return value.size > 0;
+  return typeof value === "object" && Object.keys(value).length > 0;
+};
+
+const shouldUseClassificationDiscounts = (payload = {}, existingOffer = null) =>
+  payload.type === "flash" ||
+  existingOffer?.type === "flash" ||
+  hasClassificationDiscounts(payload.customerClassificationDiscounts) ||
+  hasClassificationDiscounts(existingOffer?.customerClassificationDiscounts);
+
+const prepareOfferPayload = async (payload, existingOffer = null) => {
+  if (payload.appliesToLeastSellingItems === true) {
+    const leastSellingProductIds = await getLeastSellingProductIds();
+    if (leastSellingProductIds.length === 0) {
+      throw new AppError("No active stocked least-selling products found", 400);
+    }
+    payload.products = leastSellingProductIds;
+    payload.applicableCategories = [];
+  }
+
+  if (shouldUseClassificationDiscounts(payload, existingOffer)) {
+    const fallbackDiscount =
+      payload.discountPercent ??
+      existingOffer?.discountPercent ??
+      DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS.guest;
+    payload.customerClassificationDiscounts = normalizeDiscountMap(
+      payload.customerClassificationDiscounts ||
+        existingOffer?.customerClassificationDiscounts,
+      fallbackDiscount
+    );
+
+    if (
+      typeof payload.discountPercent === "undefined" ||
+      payload.discountPercent === null
+    ) {
+      payload.discountPercent =
+        payload.customerClassificationDiscounts.registered ??
+        payload.customerClassificationDiscounts.guest ??
+        DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS.guest;
+    }
+  }
+
+  return payload;
+};
+
 const hydrateCategoryProducts = async (offers, req) => {
   const productLimit = Math.min(
     Math.max(Number(req.query.productLimit) || 48, 1),
@@ -137,6 +254,7 @@ const emitOfferRefresh = (action, offerId) => {
 */
 const listPublicOffers = catchAsync(async (req, res) => {
   const now = new Date();
+  const featuredOnly = String(req.query.featured || "").toLowerCase() === "true";
   const filter = {
     isActive: true,
     $and: [
@@ -145,7 +263,7 @@ const listPublicOffers = catchAsync(async (req, res) => {
     ],
   };
 
-  if (String(req.query.featured || "").toLowerCase() === "true") {
+  if (featuredOnly) {
     filter.showOnHomepage = true;
   }
 
@@ -159,7 +277,14 @@ const listPublicOffers = catchAsync(async (req, res) => {
     })
     .lean({ virtuals: true });
 
-  const hydratedOffers = await hydrateCategoryProducts(offers, req);
+  let hydratedOffers = await hydrateCategoryProducts(offers, req);
+  hydratedOffers = hydratedOffers.map((offer) =>
+    normalizePublicOffer(offer, { customer: req.customer, user: req.userInfo })
+  );
+
+  if (featuredOnly) {
+    hydratedOffers = hydratedOffers.slice(0, 1);
+  }
 
   res.status(200).json({
     success: true,
@@ -172,6 +297,16 @@ const listPublicOffers = catchAsync(async (req, res) => {
 | Admin — list all offers (active + history). Optional ?status=history|active
 |--------------------------------------------------------------------------
 */
+const listCustomerClassifications = catchAsync(async (_req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      classifications: Customer.CLASSIFICATIONS,
+      defaultDiscounts: DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS,
+    },
+  });
+});
+
 const listAdminOffers = catchAsync(async (req, res) => {
   const status = String(req.query.status || "").toLowerCase();
   const now = new Date();
@@ -215,6 +350,8 @@ const createOffer = catchAsync(async (req, res, next) => {
   if (typeof offerData.showOnHomepage === "undefined") {
     offerData.showOnHomepage = true;
   }
+
+  await prepareOfferPayload(offerData);
 
   // Validate product references if any
   if (Array.isArray(offerData.products) && offerData.products.length > 0) {
@@ -260,6 +397,15 @@ const updateOffer = catchAsync(async (req, res, next) => {
   }
 
   const update = filterObj(req.body, ...OFFER_FIELDS);
+  const existingOffer = await Offer.findById(id)
+    .select("type discountPercent customerClassificationDiscounts")
+    .lean();
+
+  if (!existingOffer) {
+    return next(new AppError("Offer not found", 404));
+  }
+
+  await prepareOfferPayload(update, existingOffer);
 
   if (Array.isArray(update.products) && update.products.length > 0) {
     const invalid = update.products.find(
@@ -276,10 +422,6 @@ const updateOffer = catchAsync(async (req, res, next) => {
   })
     .populate("products", ADMIN_PRODUCT_SELECT)
     .lean();
-
-  if (!offer) {
-    return next(new AppError("Offer not found", 404));
-  }
 
   emitOfferRefresh("updated", offer._id);
 
@@ -328,6 +470,7 @@ const deleteOffer = catchAsync(async (req, res, next) => {
 
 module.exports = {
   listPublicOffers,
+  listCustomerClassifications,
   listAdminOffers,
   createOffer,
   updateOffer,

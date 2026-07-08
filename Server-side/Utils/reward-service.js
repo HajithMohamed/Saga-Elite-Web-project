@@ -2,6 +2,7 @@ const Coupon = require("../Models/Coupon");
 const Order = require("../Models/Order");
 const UserCoupon = require("../Models/UserCoupon");
 const User = require("../Models/User");
+const Customer = require("../Models/Customer");
 const sendEmail = require("./send-mail");
 const buildEmailTemplate = require("./email-template");
 const logger = require("./logger");
@@ -20,6 +21,13 @@ const SOURCE_LABELS = {
   manual: "Member reward",
 };
 
+const DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS = Object.freeze(
+  Customer.CLASSIFICATION_KEYS.reduce((acc, key) => {
+    acc[key] = key === "vip_customer" ? 50 : key === "frequent_customer" ? 40 : 30;
+    return acc;
+  }, {})
+);
+
 const addDays = (days) => new Date(Date.now() + Number(days || 1) * 24 * 60 * 60 * 1000);
 
 const normalizeUser = async (userOrId) => {
@@ -27,6 +35,43 @@ const normalizeUser = async (userOrId) => {
   if (typeof userOrId === "object" && userOrId._id) return userOrId;
   return User.findById(userOrId);
 };
+
+const normalizeDiscountMap = (
+  discounts = {},
+  fallbackDiscount = DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS.guest
+) => {
+  const source =
+    discounts instanceof Map ? Object.fromEntries(discounts.entries()) : discounts || {};
+  return Customer.CLASSIFICATION_KEYS.reduce((acc, key) => {
+    const value = Number(source[key]);
+    acc[key] = Number.isFinite(value)
+      ? Math.max(0, Math.min(100, value))
+      : Number(fallbackDiscount || 0);
+    return acc;
+  }, {});
+};
+
+const getFlashDealCustomerClassification = ({ customer = null, user = null } = {}) =>
+  Customer.resolveClassification({ customer, user });
+
+const getFlashDealDiscountForCustomer = (
+  { customer = null, user = null } = {},
+  discounts = DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS
+) => {
+  const classification = getFlashDealCustomerClassification({ customer, user });
+  const normalizedDiscounts = normalizeDiscountMap(discounts);
+  return Number(
+    normalizedDiscounts[classification] ??
+      normalizedDiscounts.guest ??
+      DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS.guest
+  );
+};
+
+const getFlashDealCustomerSegment = (user) =>
+  getFlashDealCustomerClassification({ user });
+
+const getFlashDealDiscountForUser = (user, discounts) =>
+  getFlashDealDiscountForCustomer({ user }, discounts);
 
 const generateRewardCode = (prefix = "SAGA", length = 6) => {
   let suffix = "";
@@ -229,8 +274,14 @@ const issueVipTierReward = async (user, tier, { notify = true } = {}) => {
 };
 
 module.exports = {
+  DEFAULT_FLASH_DEAL_CLASSIFICATION_DISCOUNTS,
   SOURCE_LABELS,
   createPersonalReward,
+  getFlashDealCustomerClassification,
+  getFlashDealDiscountForCustomer,
+  getFlashDealCustomerSegment,
+  getFlashDealDiscountForUser,
+  normalizeDiscountMap,
   ensureWelcomeReward,
   issueVipTierReward,
   humanDiscount,

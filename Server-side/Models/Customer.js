@@ -1,5 +1,84 @@
 const mongoose = require("mongoose");
 
+const CUSTOMER_CLASSIFICATIONS = Object.freeze([
+  {
+    key: "guest",
+    label: "Guest",
+    description: "Browsing without a registered account.",
+  },
+  {
+    key: "new_customer",
+    label: "New Customer",
+    description: "Registered customer with no completed orders yet.",
+  },
+  {
+    key: "registered",
+    label: "Registered Customer",
+    description: "Registered customer who does not match a stronger segment.",
+  },
+  {
+    key: "frequent_customer",
+    label: "Frequent Customer",
+    description: "Repeat customer based on order count or frequent-buyer tag.",
+  },
+  {
+    key: "high_value_customer",
+    label: "High Value Customer",
+    description: "Customer with high lifetime value or high-spender tag.",
+  },
+  {
+    key: "at_risk_customer",
+    label: "At Risk Customer",
+    description: "Customer with elevated predicted churn risk.",
+  },
+  {
+    key: "vip_customer",
+    label: "VIP Customer",
+    description: "VIP membership or VIP-tagged customer.",
+  },
+]);
+
+const CUSTOMER_CLASSIFICATION_KEYS = CUSTOMER_CLASSIFICATIONS.map(
+  (classification) => classification.key
+);
+
+const normalizeTags = (tags = []) =>
+  new Set(
+    (Array.isArray(tags) ? tags : [])
+      .map((tag) => String(tag || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+const resolveCustomerClassification = ({ customer = null, user = null } = {}) => {
+  if (
+    customer?.classificationOverride &&
+    CUSTOMER_CLASSIFICATION_KEYS.includes(customer.classificationOverride)
+  ) {
+    return customer.classificationOverride;
+  }
+
+  const membership = String(user?.membership || "standard").toLowerCase();
+  const tags = normalizeTags(user?.tags);
+  const orderCount = Number(user?.orderCount || 0);
+  const totalSpent = Number(user?.totalSpent || 0);
+  const lifetimeValue = Number(customer?.customerLifetimeValue || 0);
+  const churnRisk = Number(customer?.predictedChurnRisk || 0);
+
+  if (membership === "vip" || tags.has("vip")) return "vip_customer";
+  if (
+    totalSpent >= 100000 ||
+    lifetimeValue >= 100000 ||
+    tags.has("high_spender")
+  ) {
+    return "high_value_customer";
+  }
+  if (orderCount >= 3 || tags.has("frequent_buyer")) return "frequent_customer";
+  if (churnRisk >= 70) return "at_risk_customer";
+  if (user?._id && orderCount === 0) return "new_customer";
+  if (user?._id || customer?.type === "registered") return "registered";
+  return "guest";
+};
+
 const viewedProductSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
@@ -85,6 +164,12 @@ const customerSchema = new mongoose.Schema({
   predictedChurnRisk: { type: Number, default: 0 },
   preferredCategories: { type: [String], default: [] },
   avgOrderValue: { type: Number, default: 0 },
+  classificationOverride: {
+    type: String,
+    enum: CUSTOMER_CLASSIFICATION_KEYS,
+    default: null,
+    index: true,
+  },
 
   // Preferences (unique to Customer — not in User or Guest)
   preferences: {
@@ -148,4 +233,8 @@ customerSchema.pre("save", function () {
 });
 
 const Customer = mongoose.model("Customer", customerSchema);
+Customer.CLASSIFICATIONS = CUSTOMER_CLASSIFICATIONS;
+Customer.CLASSIFICATION_KEYS = CUSTOMER_CLASSIFICATION_KEYS;
+Customer.resolveClassification = resolveCustomerClassification;
+
 module.exports = Customer;

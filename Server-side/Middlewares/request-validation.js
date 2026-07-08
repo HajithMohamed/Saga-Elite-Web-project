@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const AppError = require("../Utils/appError");
+const Customer = require("../Models/Customer");
 const {
   isValidSriLankanMobile,
   normalizeSriLankanMobile,
@@ -251,6 +252,29 @@ const sanitizeBoolean = (
   if (value === "false") return false;
 
   fail(`${field} must be a boolean`);
+};
+
+const sanitizePercentMap = (value, field, allowedKeys = []) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    fail(`${field} must be an object`);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, discountValue]) => {
+      const normalizedKey = String(key || "").trim();
+      if (!allowedKeys.includes(normalizedKey)) {
+        fail(`${field}.${normalizedKey} is not a valid customer classification`);
+      }
+      return [
+        normalizedKey,
+        sanitizeNumber(discountValue, `${field}.${normalizedKey}`, {
+          min: 0,
+          max: 100,
+        }),
+      ];
+    })
+  );
 };
 
 const sanitizeEnum = (
@@ -1563,6 +1587,10 @@ const validateOfferCreate = createValidationMiddleware((req) => {
       integer: true,
     }),
     isActive: sanitizeBoolean(req.body.isActive, "isActive"),
+    appliesToLeastSellingItems: sanitizeBoolean(
+      req.body.appliesToLeastSellingItems,
+      "appliesToLeastSellingItems"
+    ),
     estimatedMarginAfterDiscount: sanitizeNumber(
       req.body.estimatedMarginAfterDiscount,
       "estimatedMarginAfterDiscount",
@@ -1686,6 +1714,14 @@ const validateOfferCreate = createValidationMiddleware((req) => {
     validated.campaignLandingPage = sanitizeOptionalPlainText(req.body.campaignLandingPage, "campaignLandingPage", { maxLength: 200 });
   }
 
+  if (Object.prototype.hasOwnProperty.call(req.body, "customerClassificationDiscounts")) {
+    validated.customerClassificationDiscounts = sanitizePercentMap(
+      req.body.customerClassificationDiscounts,
+      "customerClassificationDiscounts",
+      Customer.CLASSIFICATION_KEYS
+    );
+  }
+
   if (validated.startsAt && validated.endsAt && validated.endsAt < validated.startsAt) {
     fail("endsAt must be after startsAt");
   }
@@ -1770,6 +1806,13 @@ const validateOfferUpdate = createValidationMiddleware((req) => {
     updates.isActive = sanitizeBoolean(req.body.isActive, "isActive");
   }
 
+  if (Object.prototype.hasOwnProperty.call(req.body, "appliesToLeastSellingItems")) {
+    updates.appliesToLeastSellingItems = sanitizeBoolean(
+      req.body.appliesToLeastSellingItems,
+      "appliesToLeastSellingItems"
+    );
+  }
+
   if (Object.prototype.hasOwnProperty.call(req.body, "estimatedMarginAfterDiscount")) {
     updates.estimatedMarginAfterDiscount = sanitizeNumber(
       req.body.estimatedMarginAfterDiscount,
@@ -1838,6 +1881,14 @@ const validateOfferUpdate = createValidationMiddleware((req) => {
 
   if (Object.prototype.hasOwnProperty.call(req.body, "campaignLandingPage")) {
     updates.campaignLandingPage = sanitizeOptionalPlainText(req.body.campaignLandingPage, "campaignLandingPage", { maxLength: 200 });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "customerClassificationDiscounts")) {
+    updates.customerClassificationDiscounts = sanitizePercentMap(
+      req.body.customerClassificationDiscounts,
+      "customerClassificationDiscounts",
+      Customer.CLASSIFICATION_KEYS
+    );
   }
 
   if (updates.startsAt && updates.endsAt && updates.endsAt < updates.startsAt) {

@@ -150,7 +150,7 @@ const fetchActiveDrops = async () => {
 
 const fetchHomepageOffers = async () => {
   const res = await axios.get(`${API_BASE}/offers`, {
-    params: { productLimit: 24 },
+    params: { productLimit: 24, featured: true },
   });
   const offers = res?.data?.data?.offers || [];
   const offersWithProducts = offers.filter(
@@ -216,7 +216,7 @@ export const getLandingData = async () => {
       id: `offer-${offer._id || index}`,
       label: offer.name || "Featured offer",
       imageUrl: offer.bannerImage,
-      link: offer.campaignLandingPage || "/shopping/offers",
+      link: offer.campaignLandingPage || `/shopping/product-list?filter=offers&offerId=${offer._id}`,
       order: (offer.displayOrder ?? 0) + 100,
     }));
 

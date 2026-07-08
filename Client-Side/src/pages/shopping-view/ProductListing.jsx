@@ -89,6 +89,7 @@ const ProductListing = () => {
   // Header search lands here as ?keyword=… — stays active until cleared.
   const keywordParam = (searchParams.get("keyword") || "").trim();
   const isOffersListing = categoryParam === "offers" || filterParam === "offers";
+  const offerIdParam = searchParams.get("offerId");
 
   // Refinements
   const colorsParam = useMemo(() => (searchParams.get("colors") || "").split(",").map((c) => c.trim().toLowerCase()).filter(Boolean), [searchParams]);
@@ -262,7 +263,10 @@ const ProductListing = () => {
         const offers = response.data?.data?.offers || [];
         const seen = new Set();
         const offerProducts = [];
+        
         for (const offer of offers) {
+          if (offerIdParam && String(offer._id) !== offerIdParam) continue;
+          
           for (const product of offer.products || []) {
             const key = String(product?._id || product?.id || "");
             if (!key || seen.has(key)) continue;
@@ -312,6 +316,7 @@ const ProductListing = () => {
     colorsParam,
     filterParam,
     isOffersListing,
+    offerIdParam,
     keywordParam,
     maxPriceQuery,
     minPriceQuery,

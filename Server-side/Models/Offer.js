@@ -138,6 +138,24 @@ const offerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    systemKey: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    appliesToLeastSellingItems: {
+      type: Boolean,
+      default: false,
+    },
+    customerClassificationDiscounts: {
+      type: Map,
+      of: {
+        type: Number,
+        min: 0,
+        max: 100,
+      },
+      default: {},
+    },
     estimatedMarginAfterDiscount: {
       type: Number,
     },
@@ -156,6 +174,13 @@ const offerSchema = new mongoose.Schema(
 
 offerSchema.index({ type: 1 });
 offerSchema.index({ showOnHomepage: 1, displayOrder: 1 });
+offerSchema.index(
+  { systemKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { systemKey: { $type: "string" } },
+  }
+);
 
 offerSchema.virtual("isLive").get(function () {
   if (!this.isActive) return false;

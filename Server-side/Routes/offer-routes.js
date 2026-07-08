@@ -1,11 +1,13 @@
 const express = require("express");
 const authMiddleware = require("../Middlewares/auth-middleware");
+const optionalAuthMiddleware = require("../Middlewares/optional-auth-middleware");
 const {
   requireAdmin,
   requirePermission,
 } = require("../Middlewares/admin-middleware");
 const {
   listPublicOffers,
+  listCustomerClassifications,
   listAdminOffers,
   createOffer,
   updateOffer,
@@ -20,9 +22,16 @@ const adminLogMiddleware = require("../Middlewares/admin-log-middleware");
 const router = express.Router();
 
 // Public — used by storefront
-router.get("/", listPublicOffers);
+router.get("/", optionalAuthMiddleware, listPublicOffers);
 
 // Admin
+router.get(
+  "/admin/classifications",
+  authMiddleware,
+  requireAdmin,
+  requirePermission("products"),
+  listCustomerClassifications
+);
 router.get(
   "/admin",
   authMiddleware,

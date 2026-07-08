@@ -14,6 +14,7 @@ import {
   Star,
   Sparkles,
   Search,
+  Zap,
 } from "lucide-react";
 import { getAllProducts } from "@/store/admin/product-slice";
 import {
@@ -78,6 +79,8 @@ const initialForm = {
   showOnHomepage: true,
   displayOrder: 0,
   isActive: true,
+  appliesToLeastSellingItems: false,
+  customerClassificationDiscounts: {},
 };
 
 const formatDate = (value) => {
@@ -106,6 +109,17 @@ const computeSuggestedDiscount = (product) => {
   return { discount: Math.max(5, Math.min(50, max)), fallback: false };
 };
 
+const normalizeDiscountMap = (classifications = [], discounts = {}, fallback = 10) =>
+  Object.fromEntries(
+    classifications.map((classification) => {
+      const value = Number(discounts?.[classification.key]);
+      return [
+        classification.key,
+        Number.isFinite(value) ? value : Number(fallback) || 0,
+      ];
+    })
+  );
+
 const AdminOffers = () => {
   const dispatch = useDispatch();
   const productList = useSelector(
@@ -122,6 +136,8 @@ const AdminOffers = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(initialForm);
   const [productSearch, setProductSearch] = useState("");
+  const [customerClassifications, setCustomerClassifications] = useState([]);
+  const [defaultClassificationDiscounts, setDefaultClassificationDiscounts] = useState({});
 
   const offersPg = usePagination(offers, 10);
   const historyPg = usePagination(historyOffers, 10);
@@ -130,7 +146,7 @@ const AdminOffers = () => {
   const fetchOffers = async () => {
     try {
       setLoading(true);
-      const [activeRes, historyRes, agingRes] = await Promise.all([
+      const [activeRes, historyRes, agingRes, classificationsRes] = await Promise.all([
         axios
           .get(`${API_BASE}/offers/admin?status=active`, {
             withCredentials: true,
@@ -146,10 +162,21 @@ const AdminOffers = () => {
             withCredentials: true,
           })
           .catch(() => ({ data: { data: { products: [] } } })),
+        axios
+          .get(`${API_BASE}/offers/admin/classifications`, {
+            withCredentials: true,
+          })
+          .catch(() => ({ data: { data: { classifications: [], defaultDiscounts: {} } } })),
       ]);
       setOffers(activeRes.data?.data?.offers || []);
       setHistoryOffers(historyRes.data?.data?.offers || []);
       setAgingStock(agingRes.data?.data?.products || []);
+      setCustomerClassifications(
+        classificationsRes.data?.data?.classifications || []
+      );
+      setDefaultClassificationDiscounts(
+        classificationsRes.data?.data?.defaultDiscounts || {}
+      );
     } catch {
       toast({
         title: "Error",
@@ -189,6 +216,16 @@ const AdminOffers = () => {
     return Math.min(...margins);
   }, [selectedProducts, formData.discountPercent]);
 
+  const defaultFlashDealDiscounts = useMemo(
+    () =>
+      normalizeDiscountMap(
+        customerClassifications,
+        defaultClassificationDiscounts,
+        formData.discountPercent || initialForm.discountPercent
+      ),
+    [customerClassifications, defaultClassificationDiscounts, formData.discountPercent]
+  );
+
   const filteredProductList = useMemo(() => {
     const q = productSearch.trim().toLowerCase();
     if (!q) return productList;
@@ -206,8 +243,22 @@ const AdminOffers = () => {
   };
 
   const startCreate = (overrides = {}) => {
+    const nextType = overrides.type || initialForm.type;
+    const classificationDiscounts =
+      nextType === "flash"
+        ? normalizeDiscountMap(
+            customerClassifications,
+            overrides.customerClassificationDiscounts ||
+              defaultClassificationDiscounts,
+            overrides.discountPercent || initialForm.discountPercent
+          )
+        : {};
     setEditingId(null);
-    setFormData({ ...initialForm, ...overrides });
+    setFormData({
+      ...initialForm,
+      ...overrides,
+      customerClassificationDiscounts: classificationDiscounts,
+    });
     setShowForm(true);
   };
 
@@ -245,6 +296,12 @@ const AdminOffers = () => {
       showOnHomepage: !!offer.showOnHomepage,
       displayOrder: offer.displayOrder || 0,
       isActive: offer.isActive ?? true,
+      appliesToLeastSellingItems: !!offer.appliesToLeastSellingItems,
+      customerClassificationDiscounts: normalizeDiscountMap(
+        customerClassifications,
+        offer.customerClassificationDiscounts || {},
+        offer.discountPercent ?? initialForm.discountPercent
+      ),
     });
     setShowForm(true);
   };
@@ -257,11 +314,12 @@ const AdminOffers = () => {
     }
     if (
       formData.productIds.length === 0 &&
-      formData.applicableCategories.length === 0
+      formData.applicableCategories.length === 0 &&
+      !formData.appliesToLeastSellingItems
     ) {
       toast({
         title: "Select products or categories",
-        description: "An offer needs at least one target.",
+        description: "An offer needs a target, or enable least-selling items.",
         variant: "destructive",
       });
       return;
@@ -295,6 +353,15 @@ const AdminOffers = () => {
       showOnHomepage: !!formData.showOnHomepage,
       displayOrder: Number(formData.displayOrder) || 0,
       isActive: !!formData.isActive,
+      appliesToLeastSellingItems: !!formData.appliesToLeastSellingItems,
+      customerClassificationDiscounts:
+        formData.type === "flash"
+          ? normalizeDiscountMap(
+              customerClassifications,
+              formData.customerClassificationDiscounts,
+              formData.discountPercent
+            )
+          : undefined,
     };
 
     try {
@@ -381,7 +448,9 @@ const AdminOffers = () => {
   const completedCount = [
     formData.name?.trim().length >= 3,
     formData.type === "fixed_amount" ? (Number(formData.discountAmount) > 0) : (Number(formData.discountPercent) > 0),
-    formData.productIds.length > 0 || formData.applicableCategories.length > 0,
+    formData.appliesToLeastSellingItems ||
+      formData.productIds.length > 0 ||
+      formData.applicableCategories.length > 0,
     formData.description?.trim().length > 0,
     Boolean(formData.startsAt) || Boolean(formData.endsAt),
   ].filter(Boolean).length;
@@ -895,13 +964,103 @@ const AdminOffers = () => {
         </div>
       </FormSection>
 
+      {formData.type === "flash" ? (
+        <FormSection
+          number={["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "05" : "04"}
+          title="Flash Deal Settings"
+          description="Configure customer classification discounts and auto-fill least-selling products."
+          action={
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-400">
+              <Zap className="h-3 w-3" /> Flash
+            </span>
+          }
+        >
+          <RailToggleRow
+            label="Auto-fill Least Selling Items"
+            helper="When enabled, the server replaces the product list with the current least-selling stocked products at save time."
+            checked={formData.appliesToLeastSellingItems}
+            onChange={(v) =>
+              setFormData({ ...formData, appliesToLeastSellingItems: v })
+            }
+          />
+
+          <FormField
+            label="Discounts by Customer Classification"
+            helper="Set a discount percentage for each customer classification. Leave unchanged to use the system defaults."
+          >
+            {customerClassifications.length === 0 ? (
+              <p className="text-xs text-ink/40">
+                No customer classifications loaded.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {customerClassifications.map((cls) => {
+                  const currentValue =
+                    formData.customerClassificationDiscounts?.[cls.key] ??
+                    defaultFlashDealDiscounts[cls.key] ??
+                    "";
+                  return (
+                    <div
+                      key={cls.key}
+                      className="flex items-center gap-3 rounded-xl border border-ink/[0.06] bg-black/20 px-3 py-2.5"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-ink/80 truncate">
+                          {cls.label}
+                        </p>
+                        {cls.description ? (
+                          <p className="text-[10px] text-ink/40 truncate">
+                            {cls.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <LuxuryInput
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={currentValue}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? "" : Number(e.target.value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              customerClassificationDiscounts: {
+                                ...prev.customerClassificationDiscounts,
+                                [cls.key]: val,
+                              },
+                            }));
+                          }}
+                          className="!w-20 text-center tabular-nums"
+                          placeholder="—"
+                        />
+                        <span className="text-[10px] font-medium text-ink/40">%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </FormField>
+        </FormSection>
+      ) : null}
+
       <FormSection
-        number={["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "05" : "04"}
+        number={
+          formData.type === "flash"
+            ? (["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "06" : "05")
+            : (["fixed_amount", "cart_value", "buy_x_get_y", "seasonal_campaign"].includes(formData.type) ? "05" : "04")
+        }
         title="Targeting"
-        description="Pick the products or categories this offer applies to. Either is enough."
+        description={
+          formData.appliesToLeastSellingItems
+            ? "Products are auto-filled from least-selling inventory. You can still add categories."
+            : "Pick the products or categories this offer applies to. Either is enough."
+        }
         action={
           <span className="text-[11px] text-ink/40">
-            {formData.productIds.length} selected
+            {formData.appliesToLeastSellingItems
+              ? "Auto-fill enabled"
+              : `${formData.productIds.length} selected`}
           </span>
         }
       >
