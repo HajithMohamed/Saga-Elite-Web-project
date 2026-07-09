@@ -242,8 +242,14 @@ const registerUser = catchAsync(async (req, res, next) => {
             html: buildEmailTemplate("Verify Your Email Address", registrationBody),
         });
     } catch (err) {
-        // log for debugging, but do not crash the whole request
-        logger.error("Registration verification email failed", { error: err });
+        // log for debugging, but do not crash the whole request. Put the real
+        // reason IN the message string — a raw Error serializes to {} in
+        // winston's JSON meta, so the actual SMTP failure would otherwise be
+        // invisible in the Railway logs.
+        logger.error(`Registration verification email failed: ${err?.message || err}`, {
+            code: err?.code || err?.responseCode || null,
+            response: err?.response || null,
+        });
         mailError = err;
     }
 
@@ -399,11 +405,19 @@ const resendOTP = catchAsync(async (req, res, next) => {
             message: "OTP sent successfully.",
         });
     } catch (error) {
+        // Surface the real reason in the server logs — the customer only sees a
+        // generic message, but this is what actually diagnoses a broken SMTP
+        // config (bad key, unverified sender, wrong host, connection refused).
+        logger.error(`resendOTP email dispatch failed: ${error?.message || error}`, {
+            email: user.email,
+            code: error?.code || error?.responseCode || null,
+            response: error?.response || null,
+        });
         user.otp = undefined;
         user.otpExpires = undefined;
         await user.save({ validateBeforeSave: false });
 
-        return next(new AppError("Error sending email, please try again."));
+        return next(new AppError("Error sending email, please try again.", 500));
     }
 });
 
