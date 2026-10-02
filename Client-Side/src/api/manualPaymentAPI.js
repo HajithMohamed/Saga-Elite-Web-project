@@ -53,7 +53,7 @@ export const submitManualPaymentProof = async ({ referenceNumber, proofUrl, emai
 };
 
 // New flow: send the receipt file directly. The server OCRs the receipt,
-// validates reference + amount, and auto-verifies / auto-rejects in one
+// scans the receipt and routes unconfirmed results to admin verification
 // round-trip. Replaces the old upload-then-submit two-step flow.
 export const submitManualPaymentReceipt = async ({ referenceNumber, file, email }) => {
   const formData = new FormData();

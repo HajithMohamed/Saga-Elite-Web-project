@@ -240,11 +240,12 @@ const processReceipt = async (buffer, mimetype, expected) => {
 
   if (!text || text.length < MIN_READABLE_TEXT_LENGTH) {
     return {
-      ok: false,
+      ok: true,
+      decision: "manual_review",
       reason: "unreadable",
-      message: isPdf
-        ? "Could not read text from this PDF. If it's a scanned document, please upload a clear photo instead."
-        : "Receipt is not clearly readable. Please upload a brighter, sharper photo or a clean scan.",
+      decisionReason: isPdf
+        ? "The scanner could not read this PDF. Our team will verify the uploaded receipt manually."
+        : "The scanner could not read this receipt. Our team will verify the uploaded receipt manually.",
       ocrText: text,
       ocrConfidence: confidence,
     };
@@ -263,15 +264,15 @@ const processReceipt = async (buffer, mimetype, expected) => {
   const referenceMatched = Boolean(matchedReference);
   const amountMatched = matchedAmount !== null;
 
-  // Sanitize-before-store: refuse the upload entirely when neither field is
-  // detectable. The receipt isn't usable as proof, so storing it is just
-  // landfill. Customer is asked to upload a clearer copy.
+  // OCR is an aid, not the authority for rejecting a legitimate bank receipt.
+  // Keep scans with no detectable fields for admin review.
   if (!referenceCandidates.length && !amountCandidates.length) {
     return {
-      ok: false,
+      ok: true,
+      decision: "manual_review",
+      decisionReason:
+        "The scanner could not detect the reference or amount. Our team will verify the receipt manually.",
       reason: "no_fields_detected",
-      message:
-        "We couldn't detect a reference number or amount on this receipt. Please upload a clearer photo or scan that shows both fields.",
       ocrText: text,
       ocrConfidence: confidence,
     };
@@ -279,18 +280,18 @@ const processReceipt = async (buffer, mimetype, expected) => {
 
   if (!referenceCandidates.length) {
     return {
-      ok: false,
+      ok: true,
+      decision: "manual_review",
+      decisionReason:
+        "The scanner could not find the reference number. Our team will verify the receipt manually.",
       reason: "reference_not_found",
-      message:
-        "We couldn't find your reference number on this receipt. Make sure the transfer remarks/description showing your reference is visible in the photo.",
       ocrText: text,
       ocrConfidence: confidence,
     };
   }
 
-  // Reference candidates exist but none matches the expected reference —
-  // this is a wrong-receipt case (could be a different order's slip). We
-  // store it so admin can audit, but auto-reject.
+  // A mismatch may be a different receipt or an OCR error. Store it for admin
+  // review rather than making an irreversible automatic rejection.
   // "ocr_matched" is intentional: this layer can only confirm the slip
   // looks right. Bank-side confirmation (via the IMAP watcher) is what
   // actually upgrades a payment to "verified".
@@ -299,17 +300,13 @@ const processReceipt = async (buffer, mimetype, expected) => {
   if (referenceMatched && amountMatched) {
     decision = "ocr_matched";
     decisionReason = `Reference ${matchedReference} and amount ${matchedAmount} both matched on the receipt — awaiting bank credit confirmation.`;
-  } else if (!referenceMatched) {
-    decision = "auto_rejected";
-    decisionReason = `Reference on receipt (${referenceCandidates[0]}) does not match the order reference (${expectedReference}).`;
-  } else if (!amountMatched) {
-    decision = "auto_rejected";
-    decisionReason = amountCandidates.length
-      ? `Amount on receipt (${amountCandidates.join(", ")}) does not match the order amount (${expectedAmount}).`
-      : `No amount could be extracted from the receipt to match against the order amount (${expectedAmount}).`;
   } else {
     decision = "manual_review";
-    decisionReason = "OCR result inconclusive — sent to admin for manual review.";
+    decisionReason = !referenceMatched
+      ? `The scanner found reference ${referenceCandidates[0]}, which could not be matched automatically. Our team will verify the receipt manually.`
+      : amountCandidates.length
+        ? `The scanner found amount ${amountCandidates.join(", ")}, which could not be matched automatically. Our team will verify the receipt manually.`
+        : "The scanner could not confirm the amount. Our team will verify the receipt manually.";
   }
 
   return {

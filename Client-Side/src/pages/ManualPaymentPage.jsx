@@ -470,8 +470,9 @@ const ManualPaymentPage = () => {
         });
       } else {
         toast({
-          title: "Proof submitted",
-          description: "Your payment proof is now awaiting manual verification.",
+          title: "Automatic verification unavailable",
+          description:
+            "We couldn't automatically verify this receipt. We've sent it to our team for manual verification, and we'll notify you after it is verified.",
           variant: "success",
         });
         setSuccessUpload(true);

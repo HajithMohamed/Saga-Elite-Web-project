@@ -134,7 +134,7 @@ const ProofSubmission = ({
                 Verification Step
               </p>
               <div className="flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-[8px] uppercase tracking-[0.2em] text-sky-400">
-                <ShieldCheck className="h-3 w-3" /> Auto-verification active
+                <ShieldCheck className="h-3 w-3" /> Scanner + admin review
               </div>
             </div>
             <h2 className="se-serif mt-3 text-[22px] text-ink-2">{title}</h2>

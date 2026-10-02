@@ -246,6 +246,10 @@ const createOrder = catchAsync(async (req, res, next) => {
     const isLegacyManualPayment = paymentMethod === "manual";
     let guest = null;
 
+    if (isCardPayment && !isPayHereConfigured()) {
+        return next(new AppError("Card payments are not available right now", 503));
+    }
+
     let payHereNotifyConfig = null;
     if (isCardPayment && isPayHereConfigured()) {
         payHereNotifyConfig = getPayHereNotifyConfig(req);
@@ -284,7 +288,7 @@ const createOrder = catchAsync(async (req, res, next) => {
             : null;
     const linkedUserId = user ? user._id : existingAccountUser?._id || undefined;
 
-    const createdOrder = await runInTransaction(async (session) => {
+    const checkoutResult = await runInTransaction(async (session) => {
         const orderItems = [];
         let totalAmount = 0;
 
@@ -546,8 +550,46 @@ const createOrder = catchAsync(async (req, res, next) => {
             await user.save({ session, validateModifiedOnly: true });
         }
 
-        return orderDocument;
+        let manualPayment = null;
+        let cardPayment = null;
+
+        if (isBankTransferPayment || isCardPayment) {
+            const referenceNumber = await generateUniqueReference(
+                orderDocument._id,
+                ManualPayment
+            );
+
+            const paymentPayload = {
+                referenceNumber,
+                orderId: orderDocument._id,
+                userId: user ? user._id : undefined,
+                guestId: guest ? guest._id : undefined,
+                amount: orderDocument.totalAmount,
+                currency: "LKR",
+                paymentType: isCardPayment ? "card" : "manual_bank_transfer",
+                status: "pending_payment",
+                ...(isCardPayment ? { cardDetails: { simulated: false } } : {}),
+            };
+
+            const [paymentDocument] = await ManualPayment.create([paymentPayload], {
+                session,
+            });
+
+            if (isCardPayment) {
+                cardPayment = paymentDocument;
+            } else {
+                manualPayment = paymentDocument;
+            }
+        }
+
+        return { orderDocument, manualPayment, cardPayment };
     });
+
+    const {
+        orderDocument: createdOrder,
+        manualPayment: createdManualPayment,
+        cardPayment: createdCardPayment,
+    } = checkoutResult;
 
     const orderNotification = {
         userId: user ? user._id : null,
@@ -652,28 +694,9 @@ const createOrder = catchAsync(async (req, res, next) => {
         }
     }
 
-    let createdManualPayment = null;
-    let createdCardPayment = null;
     let payHereCheckout = null;
 
-    if (isCardPayment && isPayHereConfigured()) {
-        const referenceNumber = await generateUniqueReference(
-            createdOrder._id,
-            ManualPayment
-        );
-
-        createdCardPayment = await ManualPayment.create({
-            referenceNumber,
-            orderId: createdOrder._id,
-            userId: user ? user._id : undefined,
-            guestId: guest ? guest._id : undefined,
-            amount: createdOrder.totalAmount,
-            currency: "LKR",
-            paymentType: "card",
-            status: "pending_payment",
-            cardDetails: { simulated: false },
-        });
-
+    if (createdCardPayment) {
         payHereCheckout = buildPayHereCheckout({
             order: createdOrder,
             payment: createdCardPayment,
@@ -694,20 +717,6 @@ const createOrder = catchAsync(async (req, res, next) => {
     }
 
     if (isBankTransferPayment) {
-        const referenceNumber = await generateUniqueReference(
-            createdOrder._id,
-            ManualPayment
-        );
-
-        createdManualPayment = await ManualPayment.create({
-            referenceNumber,
-            orderId: createdOrder._id,
-            userId: user ? user._id : undefined,
-            guestId: guest ? guest._id : undefined,
-            amount: createdOrder.totalAmount,
-            currency: "LKR",
-        });
-
         const manualPayment = createdManualPayment;
         const customerEmail = user?.email || guestEmailNormalized;
         // Carry the order email in the link so guests skip the "confirm your email"
