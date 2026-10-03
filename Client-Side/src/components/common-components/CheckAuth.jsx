@@ -3,51 +3,52 @@ import { Navigate, useLocation } from "react-router-dom";
 
 const CheckAuth = ({ isAuthenticated, user, children }) => {
   const location = useLocation();
-  const isAdminLike = user?.role === "admin" || user?.role === "super_admin" || user?.role === "superadmin" || user?.role === "sub_admin";
+  const pathname = location.pathname;
+  const normalizedRole = String(user?.role || "").toLowerCase();
+  const isAdminLike = ["admin", "super_admin", "superadmin", "sub_admin"].includes(normalizedRole);
 
-  // Allow public access to shopping routes EXCEPT account/orders (checkout & cart now allowed for guests)
-  const isShoppingRoute = location.pathname.startsWith("/shopping");
-  const isProtectedShoppingRoute = location.pathname.includes("account") ||
-                                   location.pathname.includes("orders") ||
-                                   location.pathname.includes("rewards") ||
-                                   location.pathname.includes("wishlist");
+  // Product browsing, cart, checkout, and payment lookup remain available to
+  // guests; account and order history routes require an authenticated user.
+  const isShoppingRoute = pathname.startsWith("/shopping");
+  const isProtectedShoppingRoute =
+    pathname.startsWith("/shopping/account") ||
+    pathname === "/shopping/orders" ||
+    pathname.startsWith("/shopping/orders/") ||
+    pathname.startsWith("/shopping/rewards") ||
+    pathname === "/shopping/wishlist" ||
+    pathname.startsWith("/shopping/wishlist/");
 
-  const isPublicRoute = location.pathname === "/" ||
-    location.pathname.includes("login") ||
-    location.pathname.includes("register") ||
-    location.pathname.includes('verify-otp') ||
-    location.pathname.includes('forgot-password') ||
-    location.pathname.includes('verify-reset-otp') ||
-    location.pathname.includes('reset-password-otp') ||
-    location.pathname.includes('set-new-password');
+  const isPublicRoute =
+    pathname === "/" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/un-auth-page";
 
   if (!isAuthenticated && !isPublicRoute && (!isShoppingRoute || isProtectedShoppingRoute)) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
   if (
     isAuthenticated &&
-    (location.pathname.includes("login") ||
-      location.pathname.includes("register"))
+    (pathname === "/auth/login" || pathname === "/auth/register")
   ) {
     if (isAdminLike) {
-      return <Navigate to="/admin/dashboard" />;
+      return <Navigate to="/admin/dashboard" replace />;
     } else {
-      return <Navigate to="/shopping/home" />;
+      return <Navigate to="/shopping/home" replace />;
     }
   }
   if (
     isAuthenticated &&
     isAdminLike &&
-    location.pathname.includes("shop")
+    isShoppingRoute
   ) {
-    return <Navigate to="/admin/dashboard" />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
   if (
     isAuthenticated &&
     !isAdminLike &&
-    location.pathname.includes("admin")
+    pathname.startsWith("/admin")
   ) {
-    return <Navigate to="/un-auth-page" />;
+    return <Navigate to="/un-auth-page" replace />;
   }
   return <>{children}</>;
 };

@@ -175,7 +175,7 @@ const collectCategoriesWithDescendants = async (seedCategories = []) => {
   return [...byId.values()];
 };
 
-const buildCategoryClauses = (rawValue, categories = []) => {
+const buildCategoryClauses = (rawValue, categories = [], includeSubCategory = false) => {
   const raw = String(rawValue || "").trim();
   const rawSlug = slugify(raw, { lower: true, strict: true });
   const values = new Set([raw, raw.toLowerCase(), rawSlug].filter(Boolean));
@@ -199,7 +199,9 @@ const buildCategoryClauses = (rawValue, categories = []) => {
   if (ids.length > 0) clauses.push({ categoryId: { $in: ids } });
   if (valueRegexes.length > 0) {
     clauses.push({ category: { $in: valueRegexes } });
-    clauses.push({ subCategory: { $in: valueRegexes } });
+    if (includeSubCategory) {
+      clauses.push({ subCategory: { $in: valueRegexes } });
+    }
   }
   if (pathRegexes.length > 0) clauses.push({ categoryPath: { $in: pathRegexes } });
 
@@ -221,7 +223,10 @@ const buildCategoryFilter = async ({ category, subCategory, categoryPath }) => {
     const categories = seedCategories.length
       ? await collectCategoriesWithDescendants(seedCategories)
       : [];
-    const clauses = buildCategoryClauses(category, categories);
+    // A root category must not match shared child labels such as "Clothing".
+    // Otherwise selecting Gents also returns Ladies/Unisex products whose
+    // subCategory happens to be Clothing.
+    const clauses = buildCategoryClauses(category, categories, false);
     if (clauses.length > 0) andClauses.push({ $or: clauses });
   }
 
@@ -230,7 +235,7 @@ const buildCategoryFilter = async ({ category, subCategory, categoryPath }) => {
     const categories = seedCategories.length
       ? await collectCategoriesWithDescendants(seedCategories)
       : [];
-    const clauses = buildCategoryClauses(subCategory, categories);
+    const clauses = buildCategoryClauses(subCategory, categories, true);
     if (clauses.length > 0) andClauses.push({ $or: clauses });
   }
 

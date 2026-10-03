@@ -1,6 +1,5 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { motion } from "framer-motion";
 import { ShieldOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -23,8 +22,9 @@ import { Link } from "react-router-dom";
 const PermissionGuard = ({ permission, superAdminOnly = false, children }) => {
   const { user } = useSelector((state) => state.auth);
 
+  const normalizedRole = String(user?.role || "").toLowerCase();
   const isSuperAdmin =
-    user?.role === "super_admin" || user?.role === "superadmin";
+    normalizedRole === "super_admin" || normalizedRole === "superadmin";
 
   // Super admins bypass everything
   if (isSuperAdmin) return <>{children}</>;

@@ -432,6 +432,7 @@ function App() {
                   </PermissionGuard>
                 }
               />
+              <Route path="*" element={<NotFound />} />
             </Route>
 
             {/* CHECKOUT FLOW — standalone, no storefront chrome (own secure-checkout
@@ -446,6 +447,7 @@ function App() {
             >
               <Route path="checkout" element={<Checkout />} />
               <Route path="card-payment/:orderId" element={<CardPaymentPage />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
 
             {/* OTHER */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { Eye, Heart, ShoppingBag, X, Tag, Star, Loader2 } from "lucide-react";
@@ -52,6 +52,7 @@ function DropEndingBadge({ target }) {
 
 const ProductCard = ({ product, density = "default", index = 0, className, showDealBadge = false, tall = false }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const wishlistItems = useSelector((state) => state.cart.wishlist?.items ?? []);
   const { isAuthenticated } = useSelector((state) => state.auth);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -207,6 +208,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
 
   // Quick Add overlay state.
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAction, setQuickAction] = useState("cart");
   const [adding, setAdding] = useState(false);
   const overlayRef = useRef(null);
   const inStockVariants = useMemo(
@@ -246,6 +248,7 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
     const vId = variantId || (singleVariant ? inStockVariants[0]._id : null);
     if (!vId) {
       // Multiple in-stock variants: surface the picker overlay instead of failing silently.
+      setQuickAction("cart");
       setQuickAddOpen(true);
       return;
     }
@@ -260,6 +263,37 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
         setAdding(false);
         setQuickAddOpen(false);
       });
+  };
+
+  const handleBuyNow = (e, variantId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!product?._id || isSoldOut) {
+      toast({ title: isSoldOut ? "Sold out" : "Product unavailable", variant: "destructive" });
+      return;
+    }
+
+    const selectedVariant = variantId
+      ? inStockVariants.find((variant) => String(variant._id) === String(variantId))
+      : singleVariant
+        ? inStockVariants[0]
+        : null;
+
+    if (!selectedVariant) {
+      setQuickAction("buyNow");
+      setQuickAddOpen(true);
+      return;
+    }
+
+    navigate("/shopping/checkout", {
+      state: {
+        buyNowItem: {
+          product,
+          variant: selectedVariant,
+          quantity: 1,
+        },
+      },
+    });
   };
 
   const variantChipLabel = (v) =>
@@ -387,22 +421,32 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
             )}
           </div>
           
-          <button
-            onClick={handleQuickAdd}
-            disabled={adding || isSoldOut}
-            aria-label={isSoldOut ? "Sold out" : "Add to bag"}
-            className="w-full h-[36px] md:h-[40px] lg:h-[48px] bg-gold text-ongold rounded-[16px] font-sans font-bold text-[12px] md:text-[13px] lg:text-[14px] transition-transform duration-200 hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {adding ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Adding…
-              </>
-            ) : isSoldOut ? (
-              "Sold Out"
-            ) : (
-              "Add to Bag"
-            )}
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleQuickAdd}
+              disabled={adding || isSoldOut}
+              aria-label={isSoldOut ? "Sold out" : "Add to bag"}
+              className="h-[36px] md:h-[40px] lg:h-[48px] bg-gold text-ongold rounded-[16px] font-sans font-bold text-[11px] md:text-[12px] lg:text-[13px] transition-transform duration-200 hover:-translate-y-[2px] disabled:opacity-60 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {adding ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Adding…
+                </>
+              ) : isSoldOut ? (
+                "Sold Out"
+              ) : (
+                "Add to Bag"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              disabled={isSoldOut}
+              className="h-[36px] md:h-[40px] lg:h-[48px] rounded-[16px] border border-gold-ink bg-transparent text-gold-ink font-sans font-bold text-[11px] md:text-[12px] lg:text-[13px] transition-colors hover:bg-gold hover:text-ongold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Buy Now
+            </button>
+          </div>
         </div>
       </div>
 
@@ -436,7 +480,11 @@ const ProductCard = ({ product, density = "default", index = 0, className, showD
                 key={v._id}
                 type="button"
                 disabled={adding}
-                onClick={(e) => handleQuickAdd(e, v._id)}
+                onClick={(e) =>
+                  quickAction === "buyNow"
+                    ? handleBuyNow(e, v._id)
+                    : handleQuickAdd(e, v._id)
+                }
                 className="rounded-full border border-line px-3 py-1.5 text-[11px] text-ink-2 transition-colors hover:border-gold-ink hover:text-gold-ink disabled:opacity-50"
               >
                 {variantChipLabel(v)}
